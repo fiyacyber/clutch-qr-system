@@ -1,1 +1,2 @@
-export default function Home(){return <main className="wrap"><section className="card"><h1>Clutch QR System</h1><p>Dynamic QR backend for Clutch Print Shop.</p><a className="btn" href="/admin">Admin Dashboard</a></section></main>}
+import { redirect } from "next/navigation";
+export default function Home() { redirect("/portal"); }

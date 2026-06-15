@@ -1,78 +1,32 @@
-# Clutch QR System
+# Clutch QR Portal v2
 
-Dynamic QR backend for Clutch Print Shop.
+Next.js + Supabase + Vercel portal for Clutch QR.
 
-## What it includes
-- Admin login
-- Create/update QR campaigns
-- Dynamic redirect links: `/r/your-slug`
-- Scan logging
-- QR PNG download
-- Supabase database schema
-- Vercel-ready Next.js app
+## Customer flow
 
-## Required accounts
-- Supabase
-- Vercel
-- Squarespace Domains DNS access
+1. Customer buys QR Pro on Shopify.
+2. Shopify webhook creates a Supabase Auth user and customer record.
+3. Customer logs in with magic link at `/login`.
+4. Customer can create QR codes up to their `qr_limit`, default `10`.
+5. QR codes redirect through `/qr/[slug]`, log scans, and then forward to the destination URL.
 
-## Setup
+## Admin flow
 
-### 1. Create Supabase project
-Create a new Supabase project. Open SQL Editor and run `supabase/schema.sql`.
+1. Create your own Supabase Auth user.
+2. Add a matching row in `customers` with `is_admin = true`.
+3. Visit `/admin`.
+4. Create customers and edit QR limits.
 
-### 2. Get Supabase environment values
-In Supabase Project Settings > API, copy:
-- Project URL
-- Service role key
-
-### 3. Deploy to Vercel
-Import this folder/repo as a new Vercel project.
-Set these environment variables:
+## Required Vercel env vars
 
 ```
-NEXT_PUBLIC_APP_URL=https://qr.clutchprintshop.com
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-ADMIN_PASSWORD=make-a-strong-password
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+CLUTCH_QR_BASE_URL=https://qr.clutchprintshop.com
+SHOPIFY_WEBHOOK_SECRET=
 ```
 
-Deploy.
+## Important
 
-### 4. Add custom domain in Vercel
-Project > Settings > Domains > Add:
-
-`qr.clutchprintshop.com`
-
-Vercel will show the required DNS record, usually:
-
-Type: CNAME
-Name: qr
-Value: cname.vercel-dns.com.
-
-Copy exactly what Vercel displays.
-
-### 5. Add DNS in Squarespace
-Squarespace Domains > clutchprintshop.com > DNS Settings > Custom Records > Add Record:
-
-Type: CNAME
-Host: qr
-Data/Value: cname.vercel-dns.com.
-
-Save. Return to Vercel and click Verify.
-
-### 6. Use it
-Open:
-
-`https://qr.clutchprintshop.com/admin`
-
-Create a campaign:
-- Business: John's Landscaping
-- Slug: johns-landscaping
-- Destination URL: https://johnslandscaping.com
-
-Generate the QR. The QR points to:
-
-`https://qr.clutchprintshop.com/r/johns-landscaping`
-
-You can change the destination later without changing the printed QR code.
+If you already ran the SQL in Supabase, do not rerun `supabase/schema.sql` unless the project is clean.
