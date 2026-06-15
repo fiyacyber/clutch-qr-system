@@ -28,3 +28,7 @@ export async function isCurrentUserAdmin() {
   const { customer } = await requireCustomer();
   return Boolean(customer?.is_admin);
 }
+
+export async function isAdmin() {
+  return isCurrentUserAdmin();
+}
