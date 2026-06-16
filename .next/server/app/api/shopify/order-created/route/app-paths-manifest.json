@@ -1,0 +1,3 @@
+{
+  "/api/shopify/order-created/route": "app/api/shopify/order-created/route.js"
+}
