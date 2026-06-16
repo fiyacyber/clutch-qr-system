@@ -2,23 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
-function hashIp(ip: string | null) {
-  if (!ip) return null;
-  return crypto.createHash("sha256").update(ip).digest("hex");
-}
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await context.params;
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
   const admin = createSupabaseAdminClient();
-  const { data: code } = await admin.from("qr_codes").select("*").eq("slug", params.slug).eq("is_active", true).maybeSingle();
-  if (!code) return NextResponse.redirect("https://clutchprintshop.com");
+
+  const { data: qrCode, error } = await admin
+    .from("qr_codes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single();
+
+  if (error || !qrCode) {
+    return NextResponse.redirect("https://clutchprintshop.com");
+  }
+
+  const ip =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+
+  const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
 
   await admin.from("qr_scans").insert({
-    qr_code_id: code.id,
-    slug: code.slug,
-    ip_hash: hashIp(req.headers.get("x-forwarded-for")),
+    qr_code_id: qrCode.id,
+    slug,
+    ip_hash: ipHash,
     user_agent: req.headers.get("user-agent"),
-    referrer: req.headers.get("referer")
+    referrer: req.headers.get("referer"),
   });
-  await admin.from("qr_codes").update({ scan_count: (code.scan_count || 0) + 1 }).eq("id", code.id);
-  return NextResponse.redirect(code.destination_url);
+
+  await admin
+    .from("qr_codes")
+    .update({ scan_count: Number(qrCode.scan_count || 0) + 1 })
+    .eq("id", qrCode.id);
+
+  return NextResponse.redirect(qrCode.destination_url);
 }
