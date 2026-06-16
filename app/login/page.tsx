@@ -20,9 +20,10 @@ async function sendMagicLink(formData: FormData) {
     },
   });
 
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
-  }
+if (error) {
+  console.error("OTP ERROR:", error);
+  redirect(`/login?error=${encodeURIComponent(JSON.stringify(error, null, 2))}`);
+}
 
   redirect("/login?sent=1");
 }
