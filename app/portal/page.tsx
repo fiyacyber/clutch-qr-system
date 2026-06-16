@@ -1,25 +1,9 @@
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
+import StyledQRPreview from "@/components/StyledQRPreview";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { qrUrl } from "@/lib/qr";
-
-function styledQrImageUrl({
-  url,
-  foreground,
-  background,
-}: {
-  url: string;
-  foreground?: string;
-  background?: string;
-}) {
-  const fg = (foreground || "#384862").replace("#", "");
-  const bg = (background || "#ffffff").replace("#", "");
-
-  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=${fg}&bgcolor=${bg}&data=${encodeURIComponent(
-    url
-  )}`;
-}
 
 export default async function PortalPage() {
   const { user, customer } = await requireCustomer();
@@ -51,19 +35,10 @@ export default async function PortalPage() {
   const used = qrCodes?.length || 0;
   const limit = customer.qr_limit || 10;
 
-  const codesWithImages = (qrCodes || []).map((code) => {
-    const url = qrUrl(code.slug);
-
-    return {
-      ...code,
-      url,
-      image: styledQrImageUrl({
-        url,
-        foreground: code.foreground_color,
-        background: code.background_color,
-      }),
-    };
-  });
+  const codes = (qrCodes || []).map((code) => ({
+    ...code,
+    url: qrUrl(code.slug),
+  }));
 
   return (
     <div className="page-shell">
@@ -94,10 +69,7 @@ export default async function PortalPage() {
           <div className="card">
             <h3>Total Scans</h3>
             <div className="stat">
-              {codesWithImages.reduce(
-                (sum, c) => sum + (c.scan_count || 0),
-                0
-              )}
+              {codes.reduce((sum, c) => sum + (c.scan_count || 0), 0)}
             </div>
             <p className="muted">Across all your QR codes.</p>
           </div>
@@ -134,13 +106,20 @@ export default async function PortalPage() {
         </section>
 
         <section className="grid two">
-          {codesWithImages.map((code) => (
+          {codes.map((code) => (
             <article className="card" key={code.id}>
               <h2>{code.name}</h2>
 
               <p className="muted">{code.url}</p>
 
-              <img className="qr-img" src={code.image} alt={code.name} />
+              <StyledQRPreview
+                url={code.url}
+                foregroundColor={code.foreground_color || "#384862"}
+                backgroundColor={code.background_color || "#ffffff"}
+                dotStyle={code.dot_style || "square"}
+                cornerStyle={code.corner_style || "square"}
+                logoEnabled={Boolean(code.logo_enabled)}
+              />
 
               <p>
                 <strong>Scans:</strong> {code.scan_count}
@@ -167,21 +146,19 @@ export default async function PortalPage() {
                   />
                 </label>
 
-                <div className="grid two">
-                  <label className="label">
+                <div className="color-grid">
+                  <label className="label color-label">
                     QR Color
                     <input
-                      className="input"
                       type="color"
                       name="foreground_color"
                       defaultValue={code.foreground_color || "#384862"}
                     />
                   </label>
 
-                  <label className="label">
+                  <label className="label color-label">
                     Background Color
                     <input
-                      className="input"
                       type="color"
                       name="background_color"
                       defaultValue={code.background_color || "#ffffff"}
@@ -199,6 +176,9 @@ export default async function PortalPage() {
                     <option value="square">Square</option>
                     <option value="rounded">Rounded</option>
                     <option value="dots">Dots</option>
+                    <option value="classy">Classy</option>
+                    <option value="classy-rounded">Classy Rounded</option>
+                    <option value="extra-rounded">Extra Rounded</option>
                   </select>
                 </label>
 
@@ -210,7 +190,8 @@ export default async function PortalPage() {
                     defaultValue={code.corner_style || "square"}
                   >
                     <option value="square">Square</option>
-                    <option value="rounded">Rounded</option>
+                    <option value="dot">Dot</option>
+                    <option value="extra-rounded">Extra Rounded</option>
                   </select>
                 </label>
 
@@ -226,14 +207,6 @@ export default async function PortalPage() {
 
                 <div className="actions">
                   <button className="btn primary">Save</button>
-
-                  <a
-                    className="btn ghost"
-                    href={code.image}
-                    download={`${code.slug}.png`}
-                  >
-                    Download QR
-                  </a>
                 </div>
               </form>
             </article>
