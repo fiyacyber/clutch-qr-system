@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import QRCodeEditForm from "@/components/QRCodeEditForm";
+import CustomerLogoUpload from "@/components/CustomerLogoUpload";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -97,6 +98,8 @@ export default async function PortalPage() {
               </p>
             ) : null}
           </div>
+
+          <CustomerLogoUpload customerLogoUrl={customer.logo_url} />
         </section>
 
         <section className="grid two">
