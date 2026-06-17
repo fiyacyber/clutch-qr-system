@@ -118,7 +118,6 @@ export default async function PortalPage() {
                 backgroundColor={code.background_color || "#ffffff"}
                 dotStyle={code.dot_style || "square"}
                 cornerStyle={code.corner_style || "square"}
-                logoEnabled={Boolean(code.logo_enabled)}
               />
 
               <p>
@@ -193,16 +192,6 @@ export default async function PortalPage() {
                     <option value="dot">Dot</option>
                     <option value="extra-rounded">Extra Rounded</option>
                   </select>
-                </label>
-
-                <label className="label checkbox-row">
-                  <input
-                    type="checkbox"
-                    name="logo_enabled"
-                    value="true"
-                    defaultChecked={Boolean(code.logo_enabled)}
-                  />
-                  Add Clutch logo to QR
                 </label>
 
                 <div className="actions">

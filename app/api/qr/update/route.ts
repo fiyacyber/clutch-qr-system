@@ -34,9 +34,6 @@ export async function POST(req: NextRequest) {
     form.get("corner_style") || "square"
   );
 
-  const logo_enabled =
-    String(form.get("logo_enabled") || "false") === "true";
-
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -70,7 +67,7 @@ export async function POST(req: NextRequest) {
       background_color,
       dot_style,
       corner_style,
-      logo_enabled,
+      logo_enabled: false,
     })
     .eq("id", id)
     .eq("customer_id", customer.id);

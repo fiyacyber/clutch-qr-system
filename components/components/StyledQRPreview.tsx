@@ -9,7 +9,6 @@ type StyledQRPreviewProps = {
   backgroundColor?: string;
   dotStyle?: "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
   cornerStyle?: "square" | "dot" | "extra-rounded";
-  logoEnabled?: boolean;
 };
 
 export default function StyledQRPreview({
@@ -18,7 +17,6 @@ export default function StyledQRPreview({
   backgroundColor = "#ffffff",
   dotStyle = "square",
   cornerStyle = "square",
-  logoEnabled = false,
 }: StyledQRPreviewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QRCodeStyling | null>(null);
@@ -33,7 +31,6 @@ export default function StyledQRPreview({
       height: 220,
       type: "svg",
       data: url,
-      image: logoEnabled ? "/clutch-logo.png" : undefined,
       margin: 8,
       qrOptions: {
         errorCorrectionLevel: "H",
@@ -53,15 +50,10 @@ export default function StyledQRPreview({
         color: foregroundColor,
         type: cornerStyle === "square" ? "square" : "dot",
       },
-      imageOptions: {
-        crossOrigin: "anonymous",
-        margin: 6,
-        imageSize: 0.28,
-      },
     });
 
     qrRef.current.append(ref.current);
-  }, [url, foregroundColor, backgroundColor, dotStyle, cornerStyle, logoEnabled]);
+  }, [url, foregroundColor, backgroundColor, dotStyle, cornerStyle]);
 
   return <div className="qr-preview" ref={ref} />;
 }
