@@ -2,6 +2,8 @@
 
 import { FormEvent, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import StyledQRPreview from "@/components/StyledQRPreview";
+import { qrUrl, normalizeUrl } from "@/lib/qr";
 
 type DotStyle =
   | "square"
@@ -18,6 +20,8 @@ type QRCodeEditFormProps = {
     id: string;
     name: string;
     destination_url: string;
+    slug: string;
+    scan_count?: number | null;
     foreground_color?: string | null;
     background_color?: string | null;
     dot_style?: DotStyle | null;
@@ -38,6 +42,14 @@ export default function QRCodeEditForm({ code }: QRCodeEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [name, setName] = useState(code.name);
+  const [destinationUrl, setDestinationUrl] = useState(code.destination_url);
+  const [foregroundColor, setForegroundColor] = useState(code.foreground_color || "#384862");
+  const [backgroundColor, setBackgroundColor] = useState(code.background_color || "#ffffff");
+  const [dotStyle, setDotStyle] = useState<DotStyle>(code.dot_style as DotStyle || "square");
+  const [cornerStyle, setCornerStyle] = useState<CornerStyle>(code.corner_style as CornerStyle || "square");
+  const [logoUrl, setLogoUrl] = useState(code.logo_url);
+  const [removeLogoChecked, setRemoveLogoChecked] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -103,127 +115,159 @@ export default function QRCodeEditForm({ code }: QRCodeEditFormProps) {
   }
 
   return (
-    <form
-      className="form"
-      action="/api/qr/update"
-      method="post"
-      encType="multipart/form-data"
-      onSubmit={handleSubmit}
-    >
-      <input type="hidden" name="id" value={code.id} />
+    <>
+      <StyledQRPreview
+        url={qrUrl(code.slug)}
+        foregroundColor={removeLogoChecked ? undefined : foregroundColor}
+        backgroundColor={backgroundColor}
+        dotStyle={dotStyle}
+        cornerStyle={cornerStyle}
+        logoUrl={removeLogoChecked ? undefined : logoUrl}
+      />
 
-      <label className="label">
-        Name
-        <input className="input" name="name" defaultValue={code.name} />
-      </label>
+      <p>
+        <strong>Scans:</strong> {code.scan_count || 0}
+      </p>
 
-      <label className="label">
-        Destination URL
-        <input
-          className="input"
-          name="destination_url"
-          defaultValue={code.destination_url}
-        />
-      </label>
+      <form
+        className="form"
+        action="/api/qr/update"
+        method="post"
+        encType="multipart/form-data"
+        onSubmit={handleSubmit}
+      >
+        <input type="hidden" name="id" value={code.id} />
 
-      <div className="color-grid">
-        <label className="label color-label">
-          QR Color
+        <label className="label">
+          Name
           <input
-            type="color"
-            name="foreground_color"
-            defaultValue={code.foreground_color || "#384862"}
+            className="input"
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
         </label>
 
-        <label className="label color-label">
-          Background Color
+        <label className="label">
+          Destination URL
           <input
-            type="color"
-            name="background_color"
-            defaultValue={code.background_color || "#ffffff"}
+            className="input"
+            name="destination_url"
+            value={destinationUrl}
+            onChange={(e) => setDestinationUrl(e.target.value)}
+            onBlur={(e) => setDestinationUrl(normalizeUrl(e.target.value))}
           />
         </label>
-      </div>
 
-      <label className="label">
-        Dot Style
-        <select
-          className="input"
-          name="dot_style"
-          defaultValue={code.dot_style || "square"}
-        >
-          <option value="square">Square</option>
-          <option value="rounded">Rounded</option>
-          <option value="dots">Dots</option>
-          <option value="classy">Classy</option>
-          <option value="classy-rounded">Classy Rounded</option>
-          <option value="extra-rounded">Extra Rounded</option>
-        </select>
-      </label>
+        <div className="color-grid">
+          <label className="label color-label">
+            QR Color
+            <input
+              type="color"
+              name="foreground_color"
+              value={foregroundColor}
+              onChange={(e) => setForegroundColor(e.target.value)}
+            />
+          </label>
 
-      <label className="label">
-        Corner Style
-        <select
-          className="input"
-          name="corner_style"
-          defaultValue={code.corner_style || "square"}
-        >
-          <option value="square">Square</option>
-          <option value="dot">Dot</option>
-          <option value="extra-rounded">Extra Rounded</option>
-        </select>
-      </label>
-
-      <label className="label">
-        Upload Your Logo
-        <span className="helper-text">
-          Use a square PNG with transparent background for best results. Max 1 MB.
-        </span>
-        <input
-          className="input"
-          type="file"
-          name="logo"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
-          onChange={handleLogoChange}
-        />
-      </label>
-
-      {logoError && (
-        <div className="error-message">
-          <strong>Error:</strong> {logoError}
+          <label className="label color-label">
+            Background Color
+            <input
+              type="color"
+              name="background_color"
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+            />
+          </label>
         </div>
-      )}
 
-      {selectedFile && !logoError && (
-        <div className="success-message">
-          <strong>Selected:</strong> {selectedFile.name}
-        </div>
-      )}
-
-      <div className="requirements-section">
-        <p className="requirements-title">Logo Requirements:</p>
-        <ul className="requirements-list">
-          <li>PNG, JPG, SVG, or WEBP only</li>
-          <li>Max file size: 1 MB</li>
-          <li>Recommended size: 300 × 300 px or larger</li>
-          <li>Square logos work best</li>
-          <li>Avoid detailed full-background images</li>
-        </ul>
-      </div>
-
-      {code.logo_url ? (
-        <label className="label checkbox-row">
-          <input type="checkbox" name="remove_logo" value="true" />
-          Remove uploaded logo
+        <label className="label">
+          Dot Style
+          <select
+            className="input"
+            name="dot_style"
+            value={dotStyle}
+            onChange={(e) => setDotStyle(e.target.value as DotStyle)}
+          >
+            <option value="square">Square</option>
+            <option value="rounded">Rounded</option>
+            <option value="dots">Dots</option>
+            <option value="classy">Classy</option>
+            <option value="classy-rounded">Classy Rounded</option>
+            <option value="extra-rounded">Extra Rounded</option>
+          </select>
         </label>
-      ) : null}
 
-      <div className="actions">
-        <button className="btn primary" disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save"}
-        </button>
-      </div>
-    </form>
+        <label className="label">
+          Corner Style
+          <select
+            className="input"
+            name="corner_style"
+            value={cornerStyle}
+            onChange={(e) => setCornerStyle(e.target.value as CornerStyle)}
+          >
+            <option value="square">Square</option>
+            <option value="dot">Dot</option>
+            <option value="extra-rounded">Extra Rounded</option>
+          </select>
+        </label>
+
+        <label className="label">
+          Upload Your Logo
+          <span className="helper-text">
+            Use a square PNG with transparent background for best results. Max 1 MB.
+          </span>
+          <input
+            className="input"
+            type="file"
+            name="logo"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={handleLogoChange}
+          />
+        </label>
+
+        {logoError && (
+          <div className="error-message">
+            <strong>Error:</strong> {logoError}
+          </div>
+        )}
+
+        {selectedFile && !logoError && (
+          <div className="success-message">
+            <strong>Selected:</strong> {selectedFile.name}
+          </div>
+        )}
+
+        <div className="requirements-section">
+          <p className="requirements-title">Logo Requirements:</p>
+          <ul className="requirements-list">
+            <li>PNG, JPG, SVG, or WEBP only</li>
+            <li>Max file size: 1 MB</li>
+            <li>Recommended size: 300 × 300 px or larger</li>
+            <li>Square logos work best</li>
+            <li>Avoid detailed full-background images</li>
+          </ul>
+        </div>
+
+        {logoUrl && !removeLogoChecked ? (
+          <label className="label checkbox-row">
+            <input
+              type="checkbox"
+              name="remove_logo"
+              value="true"
+              checked={removeLogoChecked}
+              onChange={(e) => setRemoveLogoChecked(e.target.checked)}
+            />
+            Remove uploaded logo
+          </label>
+        ) : null}
+
+        <div className="actions">
+          <button className="btn primary" disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import QRCodeEditForm from "@/components/QRCodeEditForm";
-import StyledQRPreview from "@/components/StyledQRPreview";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { qrUrl } from "@/lib/qr";
 
 export default async function PortalPage() {
   const { user, customer } = await requireCustomer();
@@ -36,11 +34,6 @@ export default async function PortalPage() {
   const used = qrCodes?.length || 0;
   const limit = customer.qr_limit || 10;
 
-  const codes = (qrCodes || []).map((code) => ({
-    ...code,
-    url: qrUrl(code.slug),
-  }));
-
   return (
     <div className="page-shell">
       <Header isAdmin={Boolean(customer.is_admin)} />
@@ -70,7 +63,7 @@ export default async function PortalPage() {
           <div className="card">
             <h3>Total Scans</h3>
             <div className="stat">
-              {codes.reduce((sum, c) => sum + (c.scan_count || 0), 0)}
+              {qrCodes?.reduce((sum, c) => sum + (c.scan_count || 0), 0) || 0}
             </div>
             <p className="muted">Across all your QR codes.</p>
           </div>
@@ -107,24 +100,11 @@ export default async function PortalPage() {
         </section>
 
         <section className="grid two">
-          {codes.map((code) => (
+          {qrCodes?.map((code) => (
             <article className="card" key={code.id}>
               <h2>{code.name}</h2>
 
-              <p className="muted">{code.url}</p>
-
-              <StyledQRPreview
-                url={code.url}
-                foregroundColor={code.foreground_color || "#384862"}
-                backgroundColor={code.background_color || "#ffffff"}
-                dotStyle={code.dot_style || "square"}
-                cornerStyle={code.corner_style || "square"}
-                logoUrl={code.logo_url}
-              />
-
-              <p>
-                <strong>Scans:</strong> {code.scan_count}
-              </p>
+              <p className="muted">{code.slug}</p>
 
               <QRCodeEditForm code={code} />
             </article>

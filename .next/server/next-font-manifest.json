@@ -1,0 +1,27 @@
+{
+  "app": {
+    "[project]/app/_not-found/page": [
+      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2",
+      "static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2"
+    ],
+    "[project]/app/admin/page": [
+      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2",
+      "static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2"
+    ],
+    "[project]/app/login/page": [
+      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2",
+      "static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2"
+    ],
+    "[project]/app/page": [
+      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2",
+      "static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2"
+    ],
+    "[project]/app/portal/page": [
+      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2",
+      "static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

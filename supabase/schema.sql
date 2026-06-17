@@ -13,6 +13,8 @@ create table public.customers (
   shopify_customer_id text,
   qr_limit integer not null default 10,
   is_admin boolean not null default false,
+  logo_url text,
+  logo_path text,
   created_at timestamptz default now()
 );
 
@@ -61,6 +63,23 @@ insert into storage.buckets (
 ) values (
   'qr-logos',
   'qr-logos',
+  true,
+  1048576,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+) on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+) values (
+  'customer-logos',
+  'customer-logos',
   true,
   1048576,
   array['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']

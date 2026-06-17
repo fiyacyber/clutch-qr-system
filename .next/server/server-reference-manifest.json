@@ -1,0 +1,18 @@
+{
+  "node": {
+    "403c55a88f9192fc267aa8ae2b1277b3f49367feac": {
+      "workers": {
+        "app/login/page": {
+          "moduleId": 80262,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "app/login/page.tsx"
+        }
+      },
+      "filename": "app/login/page.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_0"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "+vqpwXFMN+UE86P2Cva7+JS4zN/NhsqyhOPhyWFvm0c="
+}
