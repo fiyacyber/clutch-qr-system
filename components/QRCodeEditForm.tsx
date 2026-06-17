@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 type DotStyle =
   | "square"
@@ -25,11 +26,64 @@ type QRCodeEditFormProps = {
   };
 };
 
+const ERROR_MESSAGES: Record<string, string> = {
+  logo_type_not_supported:
+    "File type not supported. Please use PNG, JPG, SVG, or WEBP.",
+  logo_too_large: "File is too large. Maximum size is 1 MB.",
+  logo_upload_failed: "Failed to upload logo. Please try again.",
+  qr_save_failed: "Failed to save QR code. Please try again.",
+};
+
 export default function QRCodeEditForm({ code }: QRCodeEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error && ERROR_MESSAGES[error]) {
+      setLogoError(ERROR_MESSAGES[error]);
+    }
+  }, [searchParams]);
+
+  function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setLogoError(null);
+
+      // Client-side validation
+      const allowedTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/svg+xml",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        setLogoError("File type not supported. Please use PNG, JPG, SVG, or WEBP.");
+        return;
+      }
+
+      const maxSize = 1024 * 1024; // 1 MB
+      if (file.size > maxSize) {
+        setLogoError(
+          `File is too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum size is 1 MB.`
+        );
+        return;
+      }
+    } else {
+      setSelectedFile(null);
+      setLogoError(null);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // Clear any previous errors
+    setLogoError(null);
 
     const form = event.currentTarget;
     setIsSaving(true);
@@ -122,14 +176,41 @@ export default function QRCodeEditForm({ code }: QRCodeEditFormProps) {
       </label>
 
       <label className="label">
-        Logo
+        Upload Your Logo
+        <span className="helper-text">
+          Use a square PNG with transparent background for best results. Max 1 MB.
+        </span>
         <input
           className="input"
           type="file"
           name="logo"
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          onChange={handleLogoChange}
         />
       </label>
+
+      {logoError && (
+        <div className="error-message">
+          <strong>Error:</strong> {logoError}
+        </div>
+      )}
+
+      {selectedFile && !logoError && (
+        <div className="success-message">
+          <strong>Selected:</strong> {selectedFile.name}
+        </div>
+      )}
+
+      <div className="requirements-section">
+        <p className="requirements-title">Logo Requirements:</p>
+        <ul className="requirements-list">
+          <li>PNG, JPG, SVG, or WEBP only</li>
+          <li>Max file size: 1 MB</li>
+          <li>Recommended size: 300 × 300 px or larger</li>
+          <li>Square logos work best</li>
+          <li>Avoid detailed full-background images</li>
+        </ul>
+      </div>
 
       {code.logo_url ? (
         <label className="label checkbox-row">
