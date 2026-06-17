@@ -118,13 +118,19 @@ export default async function PortalPage() {
                 backgroundColor={code.background_color || "#ffffff"}
                 dotStyle={code.dot_style || "square"}
                 cornerStyle={code.corner_style || "square"}
+                logoUrl={code.logo_url}
               />
 
               <p>
                 <strong>Scans:</strong> {code.scan_count}
               </p>
 
-              <form className="form" action="/api/qr/update" method="post">
+              <form
+                className="form"
+                action="/api/qr/update"
+                method="post"
+                encType="multipart/form-data"
+              >
                 <input type="hidden" name="id" value={code.id} />
 
                 <label className="label">
@@ -193,6 +199,23 @@ export default async function PortalPage() {
                     <option value="extra-rounded">Extra Rounded</option>
                   </select>
                 </label>
+
+                <label className="label">
+                  Logo
+                  <input
+                    className="input"
+                    type="file"
+                    name="logo"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  />
+                </label>
+
+                {code.logo_url ? (
+                  <label className="label checkbox-row">
+                    <input type="checkbox" name="remove_logo" value="true" />
+                    Remove uploaded logo
+                  </label>
+                ) : null}
 
                 <div className="actions">
                   <button className="btn primary">Save</button>

@@ -27,6 +27,8 @@ create table public.qr_codes (
   dot_style text not null default 'square',
   corner_style text not null default 'square',
   logo_enabled boolean not null default false,
+  logo_url text,
+  logo_path text,
   scan_count integer not null default 0,
   is_active boolean not null default true,
   created_at timestamptz default now(),
@@ -49,6 +51,23 @@ create index qr_scans_qr_code_id_idx on public.qr_scans(qr_code_id);
 create index qr_scans_created_at_idx on public.qr_scans(created_at);
 create index customers_auth_user_id_idx on public.customers(auth_user_id);
 create index customers_email_idx on public.customers(email);
+
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+) values (
+  'qr-logos',
+  'qr-logos',
+  true,
+  1048576,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+) on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 create or replace function public.set_updated_at()
 returns trigger as $$
