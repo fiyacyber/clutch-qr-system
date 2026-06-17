@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import QRExportMenu from "@/components/QRExportMenu";
 
 type DotStyle =
   | "square"
@@ -30,6 +31,7 @@ export default function StyledQRPreview({
   logoUrl,
 }: StyledQRPreviewProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const exportSlug = url.split(/[?#]/)[0].split("/").filter(Boolean).pop();
 
   useEffect(() => {
     let isMounted = true;
@@ -89,5 +91,10 @@ export default function StyledQRPreview({
     };
   }, [url, foregroundColor, backgroundColor, dotStyle, cornerStyle, logoUrl]);
 
-  return <div className="qr-preview" ref={ref} />;
+  return (
+    <>
+      <div className="qr-preview" ref={ref} />
+      {exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
+    </>
+  );
 }
