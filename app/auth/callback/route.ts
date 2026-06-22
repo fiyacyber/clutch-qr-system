@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createSupabaseServerClient();
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     console.error("AUTH CALLBACK ERROR:", error);
@@ -20,5 +19,38 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(new URL("/portal", request.url));
+  const userId = data?.user?.id;
+  const destination = new URL("/portal", request.url);
+  const response = NextResponse.redirect(destination);
+
+  if (!userId) {
+    return response;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: customer, error: customerError } = await admin
+    .from("customers")
+    .select("must_change_password")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+
+  if (customerError) {
+    console.error("AUTH CALLBACK customer lookup error", customerError.message || customerError);
+    return response;
+  }
+
+  if (customer?.must_change_password) {
+    response.cookies.set("clutch-must-change-password", "true", {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    response.headers.set("location", "/change-password");
+    return response;
+  }
+
+  response.cookies.delete("clutch-must-change-password");
+  return response;
 }

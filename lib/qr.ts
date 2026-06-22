@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 
 export function qrUrl(slug: string) {
-  const base = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
+  const base = process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com";
   return `${base.replace(/\/$/, "")}/qr/${slug}`;
 }
 

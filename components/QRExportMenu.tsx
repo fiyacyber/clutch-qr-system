@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, useRef, useState } from "react";
+import { MouseEvent, useState } from "react";
 import { exportQrCode, type QRExportFormat } from "@/lib/qrExport";
 import styles from "./QRExportMenu.module.css";
 
@@ -16,7 +16,6 @@ type QRExportMenuProps = {
 };
 
 export default function QRExportMenu({ slug }: QRExportMenuProps) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
   const [activeFormat, setActiveFormat] = useState<QRExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +24,6 @@ export default function QRExportMenu({ slug }: QRExportMenuProps) {
     format: QRExportFormat
   ) {
     event.preventDefault();
-    detailsRef.current?.removeAttribute("open");
     setActiveFormat(format);
     setError(null);
 
@@ -41,23 +39,19 @@ export default function QRExportMenu({ slug }: QRExportMenuProps) {
 
   return (
     <div className={styles.wrap}>
-      <details className={styles.dropdown} ref={detailsRef}>
-        <summary className={styles.trigger}>
-          {activeFormat ? `Exporting ${activeFormat.toUpperCase()}...` : "Export QR"}
-        </summary>
-        <div className={styles.menu}>
-          {EXPORT_OPTIONS.map(({ format, label }) => (
-            <button
-              key={format}
-              type="button"
-              onClick={(event) => handleExport(event, format)}
-              disabled={activeFormat !== null}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </details>
+      <p className={styles.label}>Export QR</p>
+      <div className={styles.buttonGrid}>
+        {EXPORT_OPTIONS.map(({ format, label }) => (
+          <button
+            key={format}
+            type="button"
+            onClick={(event) => handleExport(event, format)}
+            disabled={activeFormat !== null}
+          >
+            {activeFormat === format ? "..." : label}
+          </button>
+        ))}
+      </div>
       {error ? <p className={styles.error}>{error}</p> : null}
     </div>
   );

@@ -92,9 +92,9 @@ export default function StyledQRPreview({
   }, [url, foregroundColor, backgroundColor, dotStyle, cornerStyle, logoUrl]);
 
   return (
-    <>
+    <div className="styled-qr-wrap">
       <div className="qr-preview" ref={ref} />
       {exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
-    </>
+    </div>
   );
 }

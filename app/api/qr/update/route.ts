@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase-server";
 import { nanoid } from "nanoid";
 import { normalizeUrl } from "@/lib/qr";
+import { getSubscriptionLockMessage, isCustomerSubscriptionLocked } from "@/lib/plans";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -14,16 +15,6 @@ const ALLOWED_LOGO_TYPES = new Map([
   ["image/webp", "webp"],
   ["image/svg+xml", "svg"],
 ]);
-
-function redirectToPortal(req: NextRequest, error?: string) {
-  const url = new URL("/portal", req.url);
-
-  if (error) {
-    url.searchParams.set("error", error);
-  }
-
-  return NextResponse.redirect(url);
-}
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -54,6 +45,9 @@ export async function POST(req: NextRequest) {
     form.get("corner_style") || "square"
   );
 
+  const qr_type = String(form.get("qr_type") || "url");
+  const profile_id_raw = String(form.get("profile_id") || "").trim();
+
   const remove_logo =
     String(form.get("remove_logo") || "false") === "true";
 
@@ -70,7 +64,7 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createSupabaseAdminClient();
@@ -82,8 +76,13 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!customer) {
-    return NextResponse.redirect(
-      new URL("/portal?error=no_customer", req.url)
+    return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+  }
+
+  if (isCustomerSubscriptionLocked(customer)) {
+    return NextResponse.json(
+      { error: getSubscriptionLockMessage(customer) },
+      { status: 402 }
     );
   }
 
@@ -96,7 +95,7 @@ export async function POST(req: NextRequest) {
 
   if (qrError || !qrCode) {
     console.error("QR LOOKUP ERROR:", qrError);
-    return redirectToPortal(req, "qr_not_found");
+    return NextResponse.json({ error: "QR code not found" }, { status: 404 });
   }
 
   let logo_enabled = Boolean(qrCode.logo_url);
@@ -115,11 +114,17 @@ export async function POST(req: NextRequest) {
     const extension = ALLOWED_LOGO_TYPES.get(logoFile.type);
 
     if (!extension) {
-      return redirectToPortal(req, "logo_type_not_supported");
+      return NextResponse.json(
+        { error: "File type not supported. Please use PNG, JPG, SVG, or WEBP." },
+        { status: 400 }
+      );
     }
 
     if (logoFile.size > MAX_LOGO_SIZE) {
-      return redirectToPortal(req, "logo_too_large");
+      return NextResponse.json(
+        { error: "File is too large. Maximum size is 1 MB." },
+        { status: 400 }
+      );
     }
 
     const nextLogoPath = `${customer.id}/${id}/${nanoid(12)}.${extension}`;
@@ -133,7 +138,10 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) {
       console.error("QR LOGO UPLOAD ERROR:", uploadError);
-      return redirectToPortal(req, "logo_upload_failed");
+      return NextResponse.json(
+        { error: "Failed to upload logo. Please try again." },
+        { status: 500 }
+      );
     }
 
     oldLogoPath = logo_path;
@@ -144,15 +152,40 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(nextLogoPath).data.publicUrl;
   }
 
+  let resolvedDestination = destination_url;
+  let profile_id: string | null = null;
+
+  if (qr_type === "connect_profile") {
+    if (!profile_id_raw) {
+      return NextResponse.json({ error: "Select a Clutch Connect profile." }, { status: 400 });
+    }
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id, slug")
+      .eq("id", profile_id_raw)
+      .eq("customer_id", customer.id)
+      .maybeSingle();
+
+    if (!profile) {
+      return NextResponse.json({ error: "Selected profile was not found." }, { status: 404 });
+    }
+
+    profile_id = profile.id;
+    resolvedDestination = `${process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com"}/u/${profile.slug}`;
+  }
+
   const { error } = await admin
     .from("qr_codes")
     .update({
       name,
-      destination_url,
+      destination_url: resolvedDestination,
       foreground_color,
       background_color,
       dot_style,
       corner_style,
+      qr_type: qr_type === "connect_profile" ? "connect_profile" : "url",
+      profile_id,
       logo_enabled,
       logo_url,
       logo_path,
@@ -167,7 +200,10 @@ export async function POST(req: NextRequest) {
       await admin.storage.from(QR_LOGO_BUCKET).remove([logo_path]);
     }
 
-    return redirectToPortal(req, "qr_update_failed");
+    return NextResponse.json(
+      { error: "Failed to save QR code. Please try again." },
+      { status: 500 }
+    );
   } else if (oldLogoPath && oldLogoPath !== logo_path) {
     const { error: removeError } = await admin.storage
       .from(QR_LOGO_BUCKET)
@@ -178,5 +214,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return redirectToPortal(req);
+  return NextResponse.json({ success: true });
 }

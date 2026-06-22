@@ -17,7 +17,8 @@ const QR_OPTIONS = {
 };
 
 export function getExportShortUrl(slug: string) {
-  return `https://qr.clutchprintshop.com/${encodeURIComponent(slug)}`;
+  const base = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
+  return `${base.replace(/\/$/, "")}/qr/${encodeURIComponent(slug)}`;
 }
 
 export function getQrExportFilename(slug: string, format: QRExportFormat) {

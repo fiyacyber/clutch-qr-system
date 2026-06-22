@@ -40,15 +40,18 @@ async function sendMagicLink(formData: FormData) {
   redirect("/login?sent=1");
 }
 
+
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{
     sent?: string;
     error?: string;
+    email?: string;
   }>;
 }) {
   const params = await searchParams;
+  const prefilledEmail = params.email ? decodeURIComponent(params.email) : "";
 
   return (
     <main className="login-wrap">
@@ -64,20 +67,16 @@ export default async function LoginPage({
         <h1>Clutch QR Dashboard</h1>
 
         <p className="muted">
-          Enter the same email used at checkout. We&apos;ll send a secure sign-in
-          link.
+          Enter your email to receive a magic link, or use your password if you
+          already have one.
         </p>
 
         {params.sent ? (
-          <p className="alert">
-            Check your email for your sign-in link.
-          </p>
+          <p className="alert">Check your email for your sign-in link.</p>
         ) : null}
 
         {params.error ? (
-          <p className="alert">
-            Error: {decodeURIComponent(params.error)}
-          </p>
+          <p className="alert">Error: {decodeURIComponent(params.error)}</p>
         ) : null}
 
         <form className="form" action={sendMagicLink}>
@@ -87,6 +86,7 @@ export default async function LoginPage({
               className="input"
               name="email"
               type="email"
+              defaultValue={prefilledEmail}
               required
               placeholder="you@company.com"
             />
@@ -96,6 +96,35 @@ export default async function LoginPage({
             Send Login Link
           </button>
         </form>
+
+        <div style={{ marginTop: 24 }}>
+          <p className="muted">Or sign in with your password:</p>
+          <form className="form" action="/api/auth/login-password" method="post">
+            <label className="label">
+              Email
+              <input
+                className="input"
+                name="email"
+                type="email"
+                required
+                placeholder="you@company.com"
+              />
+            </label>
+            <label className="label">
+              Password
+              <input
+                className="input"
+                name="password"
+                type="password"
+                required
+                placeholder="Enter your password"
+              />
+            </label>
+            <button className="btn secondary" type="submit">
+              Sign in with Password
+            </button>
+          </form>
+        </div>
       </section>
     </main>
   );

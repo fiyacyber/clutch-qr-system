@@ -3,6 +3,13 @@
 
 create extension if not exists "pgcrypto";
 
+create table public.customer_groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  description text,
+  created_at timestamptz default now()
+);
+
 create table public.customers (
   id uuid primary key default gen_random_uuid(),
   auth_user_id uuid references auth.users(id) on delete cascade,
@@ -11,11 +18,26 @@ create table public.customers (
   last_name text,
   company_name text,
   shopify_customer_id text,
+  shopify_order_id text,
+  shopify_subscription_id text,
+  customer_group_id uuid references public.customer_groups(id) on delete set null,
   qr_limit integer not null default 10,
+  plan text not null default 'qr_pro' check (plan in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin')),
+  plan_code text not null default 'qr_pro' check (plan_code in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin')),
+  subscription_status text not null default 'active' check (subscription_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
+  plan_status text not null default 'active' check (plan_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
+  onboarding_status text not null default 'not_started' check (onboarding_status in ('not_started', 'invited', 'active', 'needs_help', 'blocked')),
+  onboarding_note text,
+  internal_notes text,
+  last_admin_reviewed_at timestamptz,
+  must_change_password boolean not null default false,
+  temp_password_created_at timestamptz,
+  onboarding_email_sent_at timestamptz,
   is_admin boolean not null default false,
   logo_url text,
   logo_path text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 create table public.qr_codes (
@@ -44,6 +66,31 @@ create table public.qr_scans (
   ip_hash text,
   user_agent text,
   referrer text,
+  device_type text,
+  browser text,
+  operating_system text,
+  referrer_source text,
+  country text,
+  region text,
+  city text,
+  latitude double precision,
+  longitude double precision,
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_content text,
+  utm_term text,
+  created_at timestamptz default now()
+);
+
+create table public.webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  shopify_event_id text not null unique,
+  topic text not null,
+  shopify_order_id text,
+  shopify_subscription_id text,
+  status text not null default 'processing' check (status in ('processing', 'completed', 'skipped', 'duplicate', 'error')),
+  error_message text,
   created_at timestamptz default now()
 );
 
@@ -51,8 +98,29 @@ create index qr_codes_customer_id_idx on public.qr_codes(customer_id);
 create index qr_codes_slug_idx on public.qr_codes(slug);
 create index qr_scans_qr_code_id_idx on public.qr_scans(qr_code_id);
 create index qr_scans_created_at_idx on public.qr_scans(created_at);
+create index qr_scans_device_type_idx on public.qr_scans(device_type);
+create index qr_scans_browser_idx on public.qr_scans(browser);
+create index qr_scans_operating_system_idx on public.qr_scans(operating_system);
+create index qr_scans_referrer_source_idx on public.qr_scans(referrer_source);
+create index qr_scans_location_idx on public.qr_scans(country, region, city);
+create index qr_scans_utm_source_idx on public.qr_scans(utm_source);
+create index qr_scans_utm_medium_idx on public.qr_scans(utm_medium);
+create index qr_scans_utm_campaign_idx on public.qr_scans(utm_campaign);
 create index customers_auth_user_id_idx on public.customers(auth_user_id);
 create index customers_email_idx on public.customers(email);
+create index customers_plan_idx on public.customers(plan);
+create index customers_customer_group_id_idx on public.customers(customer_group_id);
+create index customers_onboarding_status_idx on public.customers(onboarding_status);
+create index customers_plan_code_idx on public.customers(plan_code);
+create index customers_subscription_status_idx on public.customers(subscription_status);
+create index customers_shopify_customer_id_idx on public.customers(shopify_customer_id);
+create index customers_shopify_order_id_idx on public.customers(shopify_order_id);
+create index customers_shopify_subscription_id_idx on public.customers(shopify_subscription_id);
+create index webhook_events_topic_idx on public.webhook_events(topic);
+create index webhook_events_shopify_order_id_idx on public.webhook_events(shopify_order_id);
+create index webhook_events_shopify_subscription_id_idx on public.webhook_events(shopify_subscription_id);
+create index webhook_events_status_idx on public.webhook_events(status);
+create index webhook_events_created_at_idx on public.webhook_events(created_at);
 
 insert into storage.buckets (
   id,
@@ -101,6 +169,11 @@ before update on public.qr_codes
 for each row
 execute function public.set_updated_at();
 
+create trigger set_customers_updated_at
+before update on public.customers
+for each row
+execute function public.set_updated_at();
+
 create or replace function public.current_user_is_admin()
 returns boolean as $$
 begin
@@ -131,9 +204,14 @@ for each row
 execute function public.enforce_qr_limit();
 
 alter table public.customers enable row level security;
+alter table public.customer_groups enable row level security;
 alter table public.qr_codes enable row level security;
 alter table public.qr_scans enable row level security;
+alter table public.webhook_events enable row level security;
 
+create policy "Admins can view customer groups" on public.customer_groups for select using (public.current_user_is_admin());
+create policy "Admins can insert customer groups" on public.customer_groups for insert with check (public.current_user_is_admin());
+create policy "Admins can update customer groups" on public.customer_groups for update using (public.current_user_is_admin()) with check (public.current_user_is_admin());
 create policy "Customers can view own profile" on public.customers for select using (auth.uid() = auth_user_id or public.current_user_is_admin());
 create policy "Admins can insert customers" on public.customers for insert with check (public.current_user_is_admin());
 create policy "Admins can update customers" on public.customers for update using (public.current_user_is_admin()) with check (public.current_user_is_admin());
@@ -141,11 +219,14 @@ create policy "Customers can view own QR codes" on public.qr_codes for select us
 create policy "Admins can insert QR codes" on public.qr_codes for insert with check (public.current_user_is_admin());
 create policy "Customers and admins can update QR codes" on public.qr_codes for update using (customer_id in (select id from public.customers where auth_user_id = auth.uid()) or public.current_user_is_admin()) with check (customer_id in (select id from public.customers where auth_user_id = auth.uid()) or public.current_user_is_admin());
 create policy "Customers can view own QR scans" on public.qr_scans for select using (qr_code_id in (select q.id from public.qr_codes q join public.customers c on q.customer_id = c.id where c.auth_user_id = auth.uid()) or public.current_user_is_admin());
+create policy "Admins can view webhook events" on public.webhook_events for select using (public.current_user_is_admin());
 
 revoke update on public.qr_codes from authenticated;
 grant update (name, destination_url) on public.qr_codes to authenticated;
 grant select on public.customers to authenticated;
+grant select, insert, update on public.customer_groups to authenticated;
 grant select on public.qr_codes to authenticated;
 grant select on public.qr_scans to authenticated;
+grant select on public.webhook_events to authenticated;
 grant insert, update on public.customers to authenticated;
 grant insert, update on public.qr_codes to authenticated;
