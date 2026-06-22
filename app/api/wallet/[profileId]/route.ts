@@ -1,12 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  return NextResponse.json(
-    {
-      enabled: false,
-      message:
-        "Add to Apple Wallet is coming soon. This will be enabled after PassKit certificates and environment variables are configured.",
-    },
-    { status: 501 }
-  );
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ profileId: string }> }
+) {
+  const { profileId } = await context.params;
+  return NextResponse.redirect(new URL(`/api/wallet/apple/${profileId}`, req.url));
 }

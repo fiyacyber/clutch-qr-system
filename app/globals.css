@@ -1624,7 +1624,7 @@ button:disabled {
   max-width: 840px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   gap: 12px;
 }
 
@@ -1674,6 +1674,29 @@ button:disabled {
 .connect-action-secondary {
   background: white;
   border-color: var(--clutch-border);
+}
+
+.connect-action-wallet {
+  background: white;
+  border-color: rgba(56, 72, 98, 0.22);
+  box-shadow: 0 6px 18px rgba(56, 72, 98, 0.08);
+}
+
+.connect-action-wallet:hover,
+.connect-action-wallet:focus {
+  border-color: var(--connect-accent);
+  box-shadow: 0 10px 28px rgba(56, 72, 98, 0.14);
+}
+
+.connect-action-icon-svg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.connect-action-icon-svg svg {
+  width: 1.2em;
+  height: 1.2em;
 }
 
 .connect-action-accent {
@@ -1997,6 +2020,15 @@ button:disabled {
 
   .connect-action-icon {
     font-size: 1.2rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .connect-action-icon svg {
+    width: 1.25em;
+    height: 1.25em;
   }
 
   .connect-links-section {
@@ -2073,7 +2105,7 @@ button:disabled {
   }
 
   .connect-actions-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 

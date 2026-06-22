@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { isEmailConfigured, sendTransactionalEmail } from "@/lib/email";
+import { buildOnboardingEmailTemplate } from "@/lib/email-templates";
 import { PLAN_DEFINITIONS, type PlanCode, normalizePlanCode } from "@/lib/plans";
 
 type ProvisioningPlan = Exclude<PlanCode, "admin">;
@@ -212,46 +213,6 @@ async function createOrFindAuthUser(admin: SupabaseClient, email: string, tempor
   return findAuthUserByEmail(admin, email);
 }
 
-function buildOnboardingText(
-  email: string,
-  temporaryPassword: string,
-  planCode: ProvisioningPlan
-) {
-  const portalUrl = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
-  const plan = PLAN_DEFINITIONS[planCode];
-  const intro =
-    planCode === "free_qr"
-      ? "Your print order includes 1 free dynamic Clutch QR Code."
-      : `Your account has been created for ${plan.name} access.`;
-
-  return `Welcome to Clutch ${plan.name}!\n\n${intro}\n\nPortal URL: ${portalUrl}/login\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nYou'll be asked to change this password after login.\n`;
-}
-
-function buildOnboardingHtml(
-  email: string,
-  temporaryPassword: string,
-  planCode: ProvisioningPlan
-) {
-  const portalUrl = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
-  const plan = PLAN_DEFINITIONS[planCode];
-  const intro =
-    planCode === "free_qr"
-      ? "Your print order includes 1 free dynamic Clutch QR Code."
-      : `Your account has been created for ${plan.name} access.`;
-
-  return `
-    <div style="font-family: Arial, sans-serif; color: #384862; line-height: 1.6;">
-      <h1 style="color: #384862;">Welcome to Clutch ${plan.name}</h1>
-      <p>${intro}</p>
-      <p><strong>Setup link:</strong> <a href="${portalUrl}/login?email=${encodeURIComponent(email)}">${portalUrl}/login?email=${encodeURIComponent(email)}</a></p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Temporary password:</strong> ${temporaryPassword}</p>
-      <p>After you sign in, you will be prompted to create a new password.</p>
-      <p style="color: #FFA665; font-weight: 700;">Need more QR codes or advanced analytics? Upgrade anytime from your portal.</p>
-    </div>
-  `;
-}
-
 export async function sendCustomerOnboardingEmail({
   email,
   temporaryPassword,
@@ -263,22 +224,34 @@ export async function sendCustomerOnboardingEmail({
   planCode: ProvisioningPlan;
   idempotencyKey: string;
 }) {
-  const message = buildOnboardingText(email, temporaryPassword, planCode);
+  const portalUrl = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
+  const loginUrl = `${portalUrl}/login?email=${encodeURIComponent(email)}`;
   const plan = PLAN_DEFINITIONS[planCode];
+  const intro =
+    planCode === "free_qr"
+      ? "Your print order includes one free dynamic Clutch QR Code."
+      : `Your account has been created for ${plan.name} access.`;
+  const message = buildOnboardingEmailTemplate({
+    email,
+    temporaryPassword,
+    planName: plan.name,
+    intro,
+    loginUrl,
+  });
 
   if (isEmailConfigured()) {
     await sendTransactionalEmail({
       to: email,
       subject: `Welcome to Clutch ${plan.name}`,
-      text: message,
-      html: buildOnboardingHtml(email, temporaryPassword, planCode),
+      text: message.text,
+      html: message.html,
       idempotencyKey,
     });
     return;
   }
 
   if (process.env.NODE_ENV !== "production") {
-    console.log("ONBOARDING EMAIL (DEV):", message);
+    console.log("ONBOARDING EMAIL (DEV):", message.text);
     return;
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { FaApple, FaGooglePay } from "react-icons/fa6";
 
 type PublicLink = {
   id: string;
@@ -138,7 +139,6 @@ export default function ConnectPublicProfile({
 
   return (
     <main className="connect-public-shell" style={{ ["--connect-accent" as string]: colors.accent }}>
-      {/* Hero Section */}
       <section
         className="connect-hero"
         style={
@@ -169,9 +169,36 @@ export default function ConnectPublicProfile({
         {bio ? <p className="connect-bio">{bio}</p> : null}
       </section>
 
-      {/* Action Buttons */}
       <section className="connect-actions-section">
         <div className="connect-actions-grid">
+          <a
+            href={`/api/vcard/${profileId}`}
+            className="connect-action connect-action-secondary"
+            onClick={() => trackEvent(profileId, "vcard_download", { slug })}
+          >
+            <span className="connect-action-icon">📇</span>
+            <span className="connect-action-text">Save Contact</span>
+          </a>
+          <a
+            href={`/api/wallet/apple/${profileId}`}
+            className="connect-action connect-action-secondary"
+            onClick={() => trackEvent(profileId, "apple_wallet_download", { slug })}
+          >
+            <span className="connect-action-icon" aria-hidden="true">
+              <FaApple />
+            </span>
+            <span className="connect-action-text">Add to Apple Wallet</span>
+          </a>
+          <a
+            href={`/api/wallet/google/${profileId}`}
+            className="connect-action connect-action-secondary"
+            onClick={() => trackEvent(profileId, "google_wallet_add", { slug })}
+          >
+            <span className="connect-action-icon" aria-hidden="true">
+              <FaGooglePay />
+            </span>
+            <span className="connect-action-text">Add to Google Wallet</span>
+          </a>
           {callHref ? (
             <a
               href={callHref}
@@ -215,14 +242,6 @@ export default function ConnectPublicProfile({
             </a>
           ) : null}
           <a
-            href={`/api/vcard/${profileId}`}
-            className="connect-action connect-action-secondary"
-            onClick={() => trackEvent(profileId, "vcard_download", { slug })}
-          >
-            <span className="connect-action-icon">📇</span>
-            <span className="connect-action-text">Save Contact</span>
-          </a>
-          <a
             href="#lead-form"
             className="connect-action connect-action-accent"
             onClick={() => trackEvent(profileId, "quote_cta_click", { slug })}
@@ -233,7 +252,6 @@ export default function ConnectPublicProfile({
         </div>
       </section>
 
-      {/* Custom Links */}
       {links.length > 0 ? (
         <section className="connect-links-section">
           <div className="connect-links-container">
@@ -261,7 +279,6 @@ export default function ConnectPublicProfile({
         </section>
       ) : null}
 
-      {/* Lead Form */}
       <section className="connect-lead-section" id="lead-form">
         <div className="connect-lead-card">
           <h2>Request a Quote</h2>
@@ -297,11 +314,11 @@ export default function ConnectPublicProfile({
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="connect-footer">
         <p>
           Powered by <strong>Clutch Connect</strong>
         </p>
+        <p>A smart business card platform by Clutch Print Shop</p>
         <a href="https://clutchprintshop.com" target="_blank" rel="noreferrer">
           clutchprintshop.com
         </a>
