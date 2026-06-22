@@ -15,6 +15,33 @@ type DotStyle =
 
 type CornerStyle = "square" | "dot" | "extra-rounded";
 
+type PrintAssetType =
+  | "standard_business_card"
+  | "flyer"
+  | "yard_sign"
+  | "poster"
+  | "brochure"
+  | "door_hanger"
+  | "direct_mail"
+  | "table_tent"
+  | "other_print";
+
+const PRINT_ASSET_OPTIONS: Array<{ value: PrintAssetType; label: string }> = [
+  { value: "standard_business_card", label: "Standard Business Card" },
+  { value: "flyer", label: "Flyer" },
+  { value: "yard_sign", label: "Yard Sign" },
+  { value: "poster", label: "Poster" },
+  { value: "brochure", label: "Brochure" },
+  { value: "door_hanger", label: "Door Hanger" },
+  { value: "direct_mail", label: "Direct Mail" },
+  { value: "table_tent", label: "Table Tent" },
+  { value: "other_print", label: "Other Print Piece" },
+];
+
+function slugify(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 type QRCodeCreateStudioFormProps = {
   used: number;
   limit: number;
@@ -23,16 +50,39 @@ type QRCodeCreateStudioFormProps = {
   connectProfiles?: Array<{ id: string; slug: string; business_name?: string | null; contact_name?: string | null }>;
 };
 
-function appendCampaignParams(url: string, campaignName: string, teamMember = "") {
+function appendCampaignParams({
+  url,
+  campaignName,
+  assetType,
+  owner,
+  pieceDetail,
+  placement,
+}: {
+  url: string;
+  campaignName: string;
+  assetType: PrintAssetType;
+  owner?: string;
+  pieceDetail?: string;
+  placement?: string;
+}) {
   const safe = normalizeUrl(url);
   const parsed = new URL(safe);
-  parsed.searchParams.set("utm_source", "business_card");
+  parsed.searchParams.set("utm_source", assetType);
   parsed.searchParams.set("utm_medium", "print");
   parsed.searchParams.set(
     "utm_campaign",
-    campaignName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "business-card-campaign"
+    slugify(campaignName) || `print-${assetType.replace(/_/g, "-")}`
   );
-  if (teamMember.trim()) parsed.searchParams.set("utm_content", teamMember.trim());
+
+  const contentParts = [owner?.trim(), pieceDetail?.trim()].filter(Boolean);
+  if (contentParts.length > 0) {
+    parsed.searchParams.set("utm_content", contentParts.join(" | "));
+  }
+
+  if (placement?.trim()) {
+    parsed.searchParams.set("utm_term", slugify(placement) || placement.trim());
+  }
+
   return parsed.toString();
 }
 
@@ -59,25 +109,51 @@ export default function QRCodeCreateStudioForm({
   const [dotStyle, setDotStyle] = useState<DotStyle>("square");
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("square");
 
-  const [useBusinessCampaign, setUseBusinessCampaign] = useState(true);
+  const [usePrintTracking, setUsePrintTracking] = useState(true);
+  const [printAssetType, setPrintAssetType] = useState<PrintAssetType>("standard_business_card");
   const [campaignName, setCampaignName] = useState("");
-  const [teamMember, setTeamMember] = useState("");
-  const [businessTitle, setBusinessTitle] = useState("");
+  const [campaignOwner, setCampaignOwner] = useState("");
+  const [pieceDetail, setPieceDetail] = useState("");
+  const [placementNote, setPlacementNote] = useState("");
   const [previewLogoUrl, setPreviewLogoUrl] = useState<string | undefined>(undefined);
 
   const canCreate = !isLocked && used < limit;
 
   const finalUrl = useMemo(() => {
+    let baseUrl = "";
+
     if (qrType === "connect_profile") {
       const profile = connectProfiles.find((item) => item.id === selectedProfileId);
-      return profile ? `https://connect.clutchprintshop.com/u/${profile.slug}` : "";
+      baseUrl = profile ? `https://connect.clutchprintshop.com/u/${profile.slug}` : "";
+    } else {
+      if (!destinationUrl.trim()) return "";
+      baseUrl = normalizeUrl(destinationUrl);
     }
 
-    if (!destinationUrl.trim()) return "";
-    const normalized = normalizeUrl(destinationUrl);
-    if (!useBusinessCampaign) return normalized;
-    return appendCampaignParams(normalized, campaignName || name || "business-card", teamMember);
-  }, [qrType, selectedProfileId, connectProfiles, destinationUrl, useBusinessCampaign, campaignName, name, teamMember]);
+    if (!baseUrl) return "";
+    if (!usePrintTracking) return baseUrl;
+
+    return appendCampaignParams({
+      url: baseUrl,
+      campaignName: campaignName || name || "print-campaign",
+      assetType: printAssetType,
+      owner: campaignOwner,
+      pieceDetail,
+      placement: placementNote,
+    });
+  }, [
+    qrType,
+    selectedProfileId,
+    connectProfiles,
+    destinationUrl,
+    usePrintTracking,
+    campaignName,
+    name,
+    printAssetType,
+    campaignOwner,
+    pieceDetail,
+    placementNote,
+  ]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -143,7 +219,6 @@ export default function QRCodeCreateStudioForm({
       formData.append("background_color", backgroundColor);
       formData.append("dot_style", dotStyle);
       formData.append("corner_style", cornerStyle);
-      formData.append("business_title", businessTitle.trim());
       if (logoFile) formData.append("logo", logoFile);
 
       const response = await fetch("/api/qr/create", {
@@ -183,7 +258,7 @@ export default function QRCodeCreateStudioForm({
         />
 
         <div className="create-studio-summary">
-          <p><span>Campaign URL</span><strong>{finalUrl || "Add destination URL"}</strong></p>
+          <p><span>Final Redirect URL</span><strong>{finalUrl || "Add destination URL"}</strong></p>
           <p><span>Usage</span><strong>{used}/{limit} QR codes</strong></p>
         </div>
       </div>
@@ -197,7 +272,7 @@ export default function QRCodeCreateStudioForm({
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Business Card - Front Desk"
+            placeholder="Yard Sign - Spring Promo"
             maxLength={100}
             required
           />
@@ -246,47 +321,75 @@ export default function QRCodeCreateStudioForm({
         </label>
 
         <div className="business-card-panel">
-          <p className="eyebrow">Business Card Campaign</p>
+          <p className="eyebrow">Print Campaign Tracking</p>
           <label className="checkbox-row">
             <input
               type="checkbox"
-              checked={useBusinessCampaign}
-              onChange={(e) => setUseBusinessCampaign(e.target.checked)}
+              checked={usePrintTracking}
+              onChange={(e) => setUsePrintTracking(e.target.checked)}
             />
-            Auto-attach business-card campaign UTM tracking
+            Auto-attach print campaign UTM tracking
           </label>
 
-          {useBusinessCampaign ? (
+          {usePrintTracking ? (
             <div className="business-card-fields">
+              <label className="label">
+                Print Piece Type
+                <select
+                  className="input"
+                  value={printAssetType}
+                  onChange={(e) => setPrintAssetType(e.target.value as PrintAssetType)}
+                >
+                  {PRINT_ASSET_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+
               <label className="label">
                 Campaign Name
                 <input
                   className="input"
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="summer-networking-2026"
+                  placeholder="summer-neighborhood-campaign-2026"
                 />
               </label>
 
               <label className="label">
-                Team Member / Card Owner
+                Team Member / Owner (optional)
                 <input
                   className="input"
-                  value={teamMember}
-                  onChange={(e) => setTeamMember(e.target.value)}
+                  value={campaignOwner}
+                  onChange={(e) => setCampaignOwner(e.target.value)}
                   placeholder="Jane - Sales"
                 />
               </label>
 
               <label className="label">
-                Business Card Title (optional)
+                Piece Detail (optional)
                 <input
                   className="input"
-                  value={businessTitle}
-                  onChange={(e) => setBusinessTitle(e.target.value)}
-                  placeholder="Senior Account Manager"
+                  value={pieceDetail}
+                  onChange={(e) => setPieceDetail(e.target.value)}
+                  placeholder="Front side, version B"
                 />
               </label>
+
+              <label className="label">
+                Placement / Distribution Note (optional)
+                <input
+                  className="input"
+                  value={placementNote}
+                  onChange={(e) => setPlacementNote(e.target.value)}
+                  placeholder="Downtown route or lobby stand"
+                />
+              </label>
+
+              <span className="helper-text">
+                UTM mapping: source = print piece type, medium = print, campaign = campaign name,
+                content = owner + piece detail, term = placement note.
+              </span>
             </div>
           ) : null}
         </div>

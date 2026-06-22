@@ -6,6 +6,7 @@ import {
   getScanBrowser,
   getScanOs,
   getScanLocation,
+  getScanPrintPieceType,
   generateInsights,
   getBestHour,
   QRAnalyticsScan,
@@ -58,6 +59,7 @@ export default async function QRAnalyticsPage({
   const browserBreakdown = countValues(qrScans.map(getScanBrowser));
   const osBreakdown = countValues(qrScans.map(getScanOs));
   const locationBreakdown = countValues(qrScans.map(getScanLocation));
+  const printPieceTypeBreakdown = countValues(qrScans.map(getScanPrintPieceType));
   const insights = generateInsights([code as QRAnalyticsCode], qrScans);
   const bestHour = getBestHour(qrScans);
 
@@ -184,6 +186,28 @@ export default async function QRAnalyticsPage({
           Tip: Each cell represents an hour. Darker orange = more scans
         </div>
       </div>
+
+      {/* Print Piece Type Breakdown */}
+      {printPieceTypeBreakdown.length > 0 && printPieceTypeBreakdown.some(item => item.label !== "Not specified") && (
+        <div className="chart-container">
+          <div className="chart-title">Print Piece Type</div>
+          <div className="chart-bars">
+            {printPieceTypeBreakdown.map((item) => (
+              <div className="chart-bar-row" key={item.label}>
+                <span>{item.label}</span>
+                <div className="chart-bar-track">
+                  <i
+                    style={{
+                      width: `${(item.value / Math.max(...printPieceTypeBreakdown.map((d) => d.value), 1)) * 100}%`,
+                    }}
+                  />
+                </div>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="analytics-two-col">

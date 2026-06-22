@@ -39,6 +39,7 @@ export type AnalyticsFilters = {
   browser?: string;
   location?: string;
   referrer?: string;
+  printPieceType?: string;
 };
 
 export type CountItem = {
@@ -141,6 +142,28 @@ export function getScanLocation(scan: QRAnalyticsScan) {
   return parts.length ? parts.join(", ") : "Unknown location";
 }
 
+export function getPrintPieceTypeLabel(utm_source?: string | null) {
+  if (!utm_source) return "Not specified";
+  
+  const labelMap: Record<string, string> = {
+    "standard_business_card": "Standard Business Card",
+    "flyer": "Flyer",
+    "yard_sign": "Yard Sign",
+    "poster": "Poster",
+    "brochure": "Brochure",
+    "door_hanger": "Door Hanger",
+    "direct_mail": "Direct Mail",
+    "table_tent": "Table Tent",
+    "other_print": "Other Print Piece",
+  };
+  
+  return labelMap[utm_source] || utm_source.replace(/_/g, " ").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+export function getScanPrintPieceType(scan: QRAnalyticsScan) {
+  return getPrintPieceTypeLabel(scan.utm_source);
+}
+
 export function countValues(values: string[]) {
   const counts = new Map<string, number>();
   values.forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
@@ -179,6 +202,7 @@ export function applyAnalyticsFilters(scans: QRAnalyticsScan[], filters: Analyti
     if (filters.browser && getScanBrowser(scan) !== filters.browser) return false;
     if (filters.location && getScanLocation(scan) !== filters.location) return false;
     if (filters.referrer && getScanReferrer(scan) !== filters.referrer) return false;
+    if (filters.printPieceType && scan.utm_source !== filters.printPieceType) return false;
 
     return true;
   });

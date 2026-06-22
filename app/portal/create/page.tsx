@@ -48,7 +48,7 @@ export default async function CreatePortalPage() {
             <p className="eyebrow">Create QR</p>
             <h1>QR Design Studio</h1>
             <p>
-              Build a campaign-ready QR code with full visual customization and business card tracking tags.
+              Build a trackable QR for flyers, standard business cards, yard signs, and other print campaigns.
             </p>
           </div>
 

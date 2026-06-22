@@ -232,7 +232,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             ) : (
               <div className="create-form-wrap">
                 <p className="muted">
-                  Open the dedicated QR builder for full customization, business card campaign settings,
+                  Open the dedicated QR builder for full customization, print campaign tracking settings,
                   and live design preview.
                 </p>
                 <div className="actions">

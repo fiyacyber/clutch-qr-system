@@ -546,7 +546,7 @@ button:disabled {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin: 0 0 18px;
+  margin: 24px 0 18px;
 }
 
 .create-studio-grid {
