@@ -1500,8 +1500,11 @@ button:disabled {
   --connect-accent: #ffa665;
   min-height: 100vh;
   background: linear-gradient(180deg, #f8f9fb 0%, #f3f5f9 100%);
+  display: flex;
+  flex-direction: column;
 }
 
+/* Hero Section */
 .connect-hero {
   position: relative;
   display: flex;
@@ -1509,8 +1512,8 @@ button:disabled {
   align-items: center;
   justify-content: flex-end;
   gap: 20px;
-  min-height: 420px;
-  padding: 60px 24px 40px;
+  min-height: 480px;
+  padding: 60px 24px 48px;
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -1524,12 +1527,11 @@ button:disabled {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, 
-    rgba(56, 72, 98, 0.3) 0%, 
-    rgba(56, 72, 98, 0.5) 30%,
-    rgba(56, 72, 98, 0.75) 70%,
-    rgba(56, 72, 98, 0.85) 100%);
+    rgba(56, 72, 98, 0.2) 0%, 
+    rgba(56, 72, 98, 0.4) 30%,
+    rgba(56, 72, 98, 0.7) 70%,
+    rgba(56, 72, 98, 0.9) 100%);
   pointer-events: none;
-  z-index: 1;
 }
 
 .connect-hero > * {
@@ -1538,29 +1540,47 @@ button:disabled {
 }
 
 .connect-avatar {
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   border: 6px solid white;
   object-fit: cover;
-  box-shadow: 0 20px 50px rgba(56, 72, 98, 0.3);
-  margin-bottom: 12px;
+  box-shadow: 0 24px 60px rgba(56, 72, 98, 0.4);
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.connect-avatar-fallback {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 6px solid white;
+  background: linear-gradient(135deg, var(--connect-accent), #ff9650);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 900;
+  color: white;
+  box-shadow: 0 24px 60px rgba(56, 72, 98, 0.4);
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .connect-eyebrow {
   margin: 0;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
   font-weight: 950;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.connect-hero h1 {
-  margin: 12px 0 6px;
+.connect-name {
+  margin: 12px 0 8px;
   color: white;
   font-family: var(--font-exo2), Arial, sans-serif;
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(2.2rem, 6vw, 3.8rem);
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -1568,114 +1588,128 @@ button:disabled {
 
 .connect-title {
   margin: 0 0 8px;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
   font-weight: 600;
 }
 
 .connect-company {
-  margin: 0 0 14px;
-  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 16px;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.95rem;
   font-weight: 500;
 }
 
 .connect-bio {
   margin: 0;
-  max-width: 580px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: clamp(0.9rem, 2vw, 1.05rem);
-  line-height: 1.6;
+  max-width: 640px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(0.95rem, 2vw, 1.08rem);
+  line-height: 1.65;
   font-weight: 400;
 }
 
-/* Action Buttons Card */
-.connect-actions-card {
+/* Actions Section */
+.connect-actions-section {
   background: white;
-  border-top: 1px solid var(--clutch-border);
   border-bottom: 1px solid var(--clutch-border);
-  padding: 28px 24px;
+  padding: 32px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(56, 72, 98, 0.05);
 }
 
 .connect-actions-grid {
-  max-width: 800px;
+  max-width: 840px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
 }
 
 .connect-action {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 52px;
-  padding: 12px 16px;
+  gap: 8px;
+  min-height: 56px;
+  padding: 12px 12px;
   background: var(--clutch-bg);
   border: 2px solid var(--clutch-border);
   border-radius: 14px;
   color: var(--clutch-navy);
   font-weight: 850;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  text-align: center;
 }
 
-.connect-action:hover {
+.connect-action-icon {
+  font-size: 1.4rem;
+  display: block;
+}
+
+.connect-action-text {
+  display: block;
+  line-height: 1.2;
+}
+
+.connect-action:hover,
+.connect-action:focus {
   background: white;
   border-color: var(--connect-accent);
-  color: var(--connect-accent);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(255, 166, 101, 0.15);
+}
+
+.connect-action-primary {
+  background: white;
+  border-color: var(--clutch-border);
+}
+
+.connect-action-secondary {
+  background: white;
+  border-color: var(--clutch-border);
 }
 
 .connect-action-accent {
   background: var(--connect-accent);
   border-color: var(--connect-accent);
   color: white;
-  box-shadow: 0 8px 24px rgba(255, 166, 101, 0.25);
+  box-shadow: 0 8px 20px rgba(255, 166, 101, 0.3);
 }
 
 .connect-action-accent:hover {
   background: #ff9650;
   border-color: #ff9650;
-  box-shadow: 0 12px 32px rgba(255, 166, 101, 0.35);
+  box-shadow: 0 12px 32px rgba(255, 166, 101, 0.4);
 }
 
-/* Custom Links Card */
-.connect-links-card {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 24px;
+/* Links Section */
+.connect-links-section {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  width: 100%;
 }
 
-.connect-links-card h2 {
-  margin: 0 0 20px;
-  color: var(--clutch-navy);
-  font-family: var(--font-exo2), Arial, sans-serif;
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-}
-
-.connect-links-grid {
+.connect-links-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .connect-link-button {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 160px;
-  padding: 20px 16px;
+  gap: 16px;
+  padding: 18px 20px;
   background: white;
   border: 2px solid var(--clutch-border);
-  border-radius: 18px;
+  border-radius: 16px;
   text-decoration: none;
   color: var(--clutch-navy);
   transition: all 0.3s ease;
@@ -1684,71 +1718,43 @@ button:disabled {
 
 .connect-link-button:hover {
   border-color: var(--connect-accent);
-  box-shadow: 0 12px 36px rgba(255, 166, 101, 0.2);
-  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(255, 166, 101, 0.18);
+  transform: translateX(4px);
 }
 
-.connect-link-button span {
+.connect-link-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   background: var(--clutch-orange-soft);
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--connect-accent);
-  font-weight: 900;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
-.connect-link-button strong {
+.connect-link-label {
   display: block;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 850;
-  text-align: center;
-  line-height: 1.4;
   word-break: break-word;
 }
 
-/* Wallet Card */
-.connect-wallet-card {
-  max-width: 800px;
-  margin: 32px auto 0;
-  padding: 0 24px 40px;
-  text-align: center;
+/* Lead Section */
+.connect-lead-section {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  width: 100%;
 }
 
-.connect-wallet-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 12px 28px;
-  background: white;
-  border: 2px solid var(--clutch-border);
-  border-radius: 14px;
-  color: var(--clutch-navy);
-  font-weight: 850;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.connect-wallet-button:not(:disabled):hover {
-  border-color: var(--connect-accent);
-  color: var(--connect-accent);
-  transform: translateY(-2px);
-}
-
-/* Lead Form Card */
 .connect-lead-card {
-  max-width: 620px;
-  margin: 48px auto 40px;
-  padding: 40px 28px;
   background: white;
   border: 2px solid var(--clutch-border);
   border-radius: 22px;
+  padding: 40px;
   box-shadow: 0 16px 48px rgba(56, 72, 98, 0.08);
 }
 
@@ -1756,12 +1762,12 @@ button:disabled {
   margin: 0 0 12px;
   color: var(--clutch-navy);
   font-family: var(--font-exo2), Arial, sans-serif;
-  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-size: clamp(1.4rem, 4vw, 2rem);
   font-weight: 900;
   letter-spacing: -0.03em;
 }
 
-.connect-lead-card > p:first-of-type {
+.connect-lead-description {
   margin: 0 0 24px;
   color: var(--clutch-muted);
   font-size: 1rem;
@@ -1824,7 +1830,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  padding: 12px 24px;
+  padding: 12px 28px;
   margin-top: 8px;
   background: var(--connect-accent);
   border: none;
@@ -1850,143 +1856,273 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Footer */
+.connect-footer {
+  margin-top: auto;
+  padding: 28px 24px;
+  border-top: 1px solid var(--clutch-border);
+  background: white;
+  text-align: center;
+  color: var(--clutch-muted);
+  font-size: 0.85rem;
+}
+
+.connect-footer p {
+  margin: 0 0 8px;
+}
+
+.connect-footer strong {
+  color: var(--clutch-navy);
+  font-weight: 900;
+}
+
+.connect-footer a {
+  color: var(--connect-accent);
+  font-weight: 850;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.connect-footer a:hover {
+  color: #ff9650;
+  text-decoration: underline;
+}
+
+/* Links Editor Styles */
+.connect-links-editor {
+  display: grid;
+  gap: 24px;
+}
+
+.link-preview {
+  padding: 14px;
+  background: var(--clutch-orange-soft);
+  border: 1px solid var(--clutch-border-strong);
+  border-radius: 12px;
+}
+
+.link-preview .eyebrow {
+  margin: 0 0 8px;
+}
+
+.link-preview code {
+  display: block;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--clutch-navy);
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.links-list {
+  display: grid;
+  gap: 12px;
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background: var(--clutch-bg);
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+}
+
+.link-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-label {
+  margin: 0;
+  color: var(--clutch-navy);
+  font-weight: 850;
+  font-size: 0.95rem;
+}
+
+.link-url {
+  margin: 4px 0 0;
+  color: var(--clutch-muted);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .connect-hero {
-    min-height: 340px;
-    padding: 48px 20px 28px;
+    min-height: 380px;
+    padding: 48px 20px 32px;
     gap: 16px;
   }
 
-  .connect-avatar {
-    width: 100px;
-    height: 100px;
+  .connect-avatar,
+  .connect-avatar-fallback {
+    width: 110px;
+    height: 110px;
+    font-size: 2.4rem;
     border-width: 5px;
   }
 
-  .connect-hero h1 {
-    margin: 10px 0 4px;
+  .connect-name {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
   }
 
-  .connect-title {
-    font-size: 1.1rem;
+  .connect-actions-section {
+    position: relative;
+    padding: 24px 20px;
   }
 
   .connect-actions-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 10px;
   }
 
   .connect-action {
-    min-height: 48px;
-    font-size: 0.85rem;
-    padding: 10px 12px;
+    min-height: 52px;
+    font-size: 0.8rem;
+    padding: 10px 10px;
   }
 
-  .connect-links-grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 14px;
+  .connect-action-icon {
+    font-size: 1.2rem;
+  }
+
+  .connect-links-section {
+    padding: 36px 20px;
   }
 
   .connect-link-button {
-    min-height: 140px;
-    padding: 16px 12px;
-    border-radius: 14px;
+    padding: 16px 16px;
+    gap: 12px;
   }
 
-  .connect-link-button span {
-    width: 48px;
-    height: 48px;
-    font-size: 1rem;
+  .connect-link-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
   }
 
-  .connect-link-button strong {
-    font-size: 0.85rem;
+  .connect-link-label {
+    font-size: 0.95rem;
+  }
+
+  .connect-lead-section {
+    padding: 36px 20px;
   }
 
   .connect-lead-card {
-    margin: 36px auto 32px;
-    padding: 28px 20px;
+    padding: 28px;
     border-radius: 18px;
   }
 
   .connect-lead-card h2 {
     font-size: clamp(1.2rem, 4vw, 1.6rem);
   }
+
+  .connect-input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .connect-footer {
+    padding: 20px 16px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
   .connect-hero {
-    min-height: 300px;
+    min-height: 340px;
     padding: 40px 16px 24px;
   }
 
-  .connect-avatar {
+  .connect-avatar,
+  .connect-avatar-fallback {
     width: 90px;
     height: 90px;
+    font-size: 2rem;
   }
 
-  .connect-hero h1 {
-    font-size: clamp(1.6rem, 5vw, 2.4rem);
+  .connect-name {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    margin: 10px 0 6px;
+  }
+
+  .connect-title {
+    font-size: 1rem;
   }
 
   .connect-bio {
     font-size: 0.9rem;
   }
 
-  .connect-actions-card {
-    padding: 20px 16px;
+  .connect-actions-section {
+    padding: 18px 16px;
   }
 
   .connect-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
 
   .connect-action {
-    min-height: 44px;
-    font-size: 0.8rem;
-    border-radius: 10px;
+    min-height: 48px;
+    font-size: 0.75rem;
+    padding: 8px 8px;
   }
 
-  .connect-links-card {
-    margin: 32px auto;
-    padding: 0 16px;
+  .connect-action-icon {
+    font-size: 1.1rem;
   }
 
-  .connect-links-card h2 {
-    font-size: 1.2rem;
-    margin-bottom: 16px;
-  }
-
-  .connect-links-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+  .connect-links-section {
+    padding: 28px 16px;
   }
 
   .connect-link-button {
-    min-height: 130px;
-    gap: 10px;
-    padding: 14px 10px;
+    padding: 14px 12px;
+    gap: 12px;
   }
 
-  .connect-link-button span {
-    width: 44px;
-    height: 44px;
+  .connect-link-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
   }
 
-  .connect-link-button strong {
-    font-size: 0.8rem;
+  .connect-link-label {
+    font-size: 0.9rem;
+  }
+
+  .connect-lead-section {
+    padding: 28px 16px;
   }
 
   .connect-lead-card {
-    margin: 28px 16px 24px;
     padding: 20px 16px;
+    border-radius: 14px;
   }
 
   .connect-lead-card h2 {
     font-size: 1.3rem;
     margin-bottom: 10px;
+  }
+
+  .connect-lead-description {
+    font-size: 0.9rem;
+    margin-bottom: 18px;
   }
 
   .connect-input {
@@ -1998,5 +2134,21 @@ button:disabled {
   .connect-submit {
     min-height: 44px;
     font-size: 0.85rem;
+  }
+
+  .connect-footer {
+    padding: 16px 12px;
+    font-size: 0.75rem;
+  }
+
+  .link-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .link-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

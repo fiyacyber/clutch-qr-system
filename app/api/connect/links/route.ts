@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { requireCustomer } from "@/lib/auth";
+import { getPlatform } from "@/lib/platforms";
 
 function safeUrl(value: string) {
   const trimmed = value.trim();
@@ -31,11 +32,29 @@ export async function POST(req: NextRequest) {
 
   if (action === "create") {
     const label = String(form.get("label") || "").trim();
-    const url = safeUrl(String(form.get("url") || ""));
+    let url = String(form.get("url") || "").trim();
+    const platform = String(form.get("platform") || "custom").trim();
     const icon = String(form.get("icon") || "link").trim();
 
     if (!label || !url) {
       return NextResponse.json({ error: "Label and URL are required." }, { status: 400 });
+    }
+
+    // If platform is not custom, try to build the full URL
+    if (platform !== "custom") {
+      const p = getPlatform(platform);
+      if (p) {
+        try {
+          url = p.buildUrl(url);
+        } catch (e) {
+          // If building fails, use the URL as-is
+          url = safeUrl(url);
+        }
+      } else {
+        url = safeUrl(url);
+      }
+    } else {
+      url = safeUrl(url);
     }
 
     const { data: maxRow } = await admin
@@ -51,6 +70,7 @@ export async function POST(req: NextRequest) {
     const { error } = await admin.from("profile_links").insert({
       profile_id: profileId,
       label,
+      platform: platform !== "custom" ? platform : null,
       url,
       icon,
       sort_order,
