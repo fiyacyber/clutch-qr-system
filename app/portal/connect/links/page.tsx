@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
+import ConnectLinksEditor from "@/components/ConnectLinksEditor";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -56,21 +57,13 @@ export default async function PortalConnectLinksPage({ searchParams }: LinksPage
 
         {params.saved === "1" ? <div className="success-message">Links saved.</div> : null}
 
-        <section className="card">
-          <p className="eyebrow">Add Link</p>
-          <form className="admin-form-grid" action="/api/connect/links" method="post">
-            <input type="hidden" name="action" value="create" />
-            <input type="hidden" name="profile_id" value={profile.id} />
-            <input className="input" name="label" placeholder="Label" required />
-            <input className="input" name="url" placeholder="https://example.com" required />
-            <input className="input" name="icon" placeholder="instagram / link / calendar" />
-            <button className="btn primary" type="submit">Add Link</button>
-          </form>
-        </section>
+        <ConnectLinksEditor profileId={profile.id} existingLinks={links || []} />
 
-        <section className="card" style={{ marginTop: "16px" }}>
-          <p className="eyebrow">Existing Links</p>
-          {(links || []).length ? (
+        {(links || []).length > 0 && (
+          <section className="card" style={{ marginTop: "40px" }}>
+            <p className="eyebrow">Advanced Management</p>
+            <h3>Reorder & Manage Links</h3>
+
             <div className="comparison-table">
               {(links || []).map((link: any) => (
                 <form key={link.id} className="admin-row-form" action="/api/connect/links" method="post">
@@ -80,7 +73,7 @@ export default async function PortalConnectLinksPage({ searchParams }: LinksPage
 
                   <input className="input" name="label" defaultValue={link.label} />
                   <input className="input" name="url" defaultValue={link.url} />
-                  <input className="input" name="icon" defaultValue={link.icon || ""} />
+                  <input className="input" name="icon" defaultValue={link.icon || ""} placeholder="instagram, link, etc" />
                   <input className="input" type="number" name="sort_order" defaultValue={link.sort_order || 0} />
                   <select className="input" name="is_active" defaultValue={String(link.is_active)}>
                     <option value="true">Active</option>
@@ -101,10 +94,8 @@ export default async function PortalConnectLinksPage({ searchParams }: LinksPage
                 </form>
               ))}
             </div>
-          ) : (
-            <div className="analytics-empty">No custom links yet. Add your first link above.</div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
