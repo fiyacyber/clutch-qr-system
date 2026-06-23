@@ -36,15 +36,35 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
     </div>
   ),
 
-  "contact-buttons": ({ block, profile }) => (
+  "contact-buttons": ({ block, profile, profileId }) => (
     <div className={`builder-block builder-block-contact builder-contact-${block.settings.style || 'grid'}`}>
       {profile.phone && (
-        <a href={`tel:${profile.phone}`} className="builder-button builder-button-call">
+        <a
+          href={`tel:${profile.phone}`}
+          onClick={() =>
+            trackBlockEvent({
+              profileId,
+              blockId: block.id,
+              eventType: "phone",
+            })
+          }
+          className="builder-button builder-button-call"
+        >
           <span>📞</span> Call
         </a>
       )}
       {profile.email && (
-        <a href={`mailto:${profile.email}`} className="builder-button builder-button-email">
+        <a
+          href={`mailto:${profile.email}`}
+          onClick={() =>
+            trackBlockEvent({
+              profileId,
+              blockId: block.id,
+              eventType: "email",
+            })
+          }
+          className="builder-button builder-button-email"
+        >
           <span>✉️</span> Email
         </a>
       )}
@@ -167,11 +187,48 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
     </div>
   ),
 
-  "social-media-links": ({ block, profile }) => {
-    // TODO: Render social links from profile
+  "social-media-links": ({ block, profile, profileId }) => {
+    const socialPlatforms = [
+      { key: "instagram", icon: "📷", url: (h: string) => `https://instagram.com/${h}` },
+      { key: "facebook", icon: "👥", url: (h: string) => `https://facebook.com/${h}` },
+      { key: "twitter", icon: "𝕏", url: (h: string) => `https://twitter.com/${h}` },
+      { key: "linkedin", icon: "💼", url: (h: string) => `https://linkedin.com/in/${h}` },
+      { key: "youtube", icon: "🎥", url: (h: string) => `https://youtube.com/@${h}` },
+      { key: "tiktok", icon: "🎵", url: (h: string) => `https://tiktok.com/@${h}` },
+    ];
+
+    const links = socialPlatforms
+      .map((platform) => {
+        const handle = (profile as any)[`${platform.key}_handle`] || (profile as any)[platform.key];
+        if (!handle) return null;
+        return { ...platform, handle };
+      })
+      .filter(Boolean);
+
+    if (links.length === 0) return null;
+
     return (
       <div className="builder-block builder-block-social">
-        {/* Social links will be added here */}
+        {links.map((link: any) => (
+          <a
+            key={link.key}
+            href={link.url(link.handle)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() =>
+              trackBlockEvent({
+                profileId,
+                blockId: block.id,
+                eventType: `social_${link.key}`,
+                metadata: { platform: link.key },
+              })
+            }
+            className="builder-button builder-button-social"
+            title={link.key}
+          >
+            <span>{link.icon}</span>
+          </a>
+        ))}
       </div>
     );
   },
@@ -196,7 +253,16 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
       {block.settings.title && (
         <h3 className="builder-hours-title">{block.settings.title}</h3>
       )}
-      {/* Hours content will be rendered here */}
+      {block.settings.hours && Object.keys(block.settings.hours).length > 0 && (
+        <div className="builder-hours-list">
+          {Object.entries(block.settings.hours).map(([day, time]: any) => (
+            <div key={day} className="builder-hours-item">
+              <span className="builder-hours-day">{day}</span>
+              <span className="builder-hours-time">{time}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   ),
 
@@ -216,8 +282,20 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
   ),
 
   "form-block": ({ block, forms }) => {
-    // TODO: Render form from forms map
-    return <div className="builder-block builder-block-form">{/* Form */}</div>;
+    const form = forms.get(block.settings.formId);
+    return (
+      <div className="builder-block builder-block-form">
+        {form?.title && <h3 className="builder-form-title">{form.title}</h3>}
+        {form?.description && (
+          <p className="builder-form-description">{form.description}</p>
+        )}
+        {!form && (
+          <p className="builder-form-placeholder">
+            {block.settings.formLabel || "Contact Form"}
+          </p>
+        )}
+      </div>
+    );
   },
 
   "apple-wallet-button": ({ block }) => (
@@ -234,10 +312,26 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
     </button>
   ),
 
-  "qr-code-block": ({ profile }) => (
+  "qr-code-block": ({ block, profile, profileId }) => (
     <div className="builder-block builder-block-qr">
-      {/* QR code will be rendered here */}
-      <p className="builder-qr-placeholder">QR Code</p>
+      <p className="builder-qr-title">
+        {block.settings.label || "Scan to save contact"}
+      </p>
+      <div className="builder-qr-placeholder">
+        <a
+          href={`/api/vcard/${profileId}`}
+          onClick={() =>
+            trackBlockEvent({
+              profileId,
+              blockId: block.id,
+              eventType: "qr_code",
+            })
+          }
+          className="builder-qr-link"
+        >
+          📱 Download vCard
+        </a>
+      </div>
     </div>
   ),
 };
