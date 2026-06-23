@@ -4,9 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Palette, PlusCircle } from "lucide-react";
 import { BuilderConfig, BlockType } from "@/lib/builder-types";
-import { createDefaultBuilderConfig, addBlockToConfig } from "@/lib/builder-config";
+import { createDefaultBuilderConfig, addBlockToConfig, updateBlockSettings, toggleBlockVisibility } from "@/lib/builder-config";
 import BlockLibrary from "./BlockLibrary";
-import BuilderCanvas from "./BuilderCanvas";
+import BuilderCanvas, { BlockSettingsPanel } from "./BuilderCanvas";
 import BuilderPreview from "./BuilderPreview";
 import TemplateSelector from "./TemplateSelector";
 
@@ -30,8 +30,18 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("content");
+  const [useInspector, setUseInspector] = useState(false);
   const savedConfigRef = useRef<string | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(min-width: 1200px)");
+    const apply = () => setUseInspector(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
 
   useEffect(() => {
     async function loadConfig() {
@@ -105,6 +115,8 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
     previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
   };
 
+  const selectedBlock = config && selectedBlockId ? config.blocks.find((block) => block.id === selectedBlockId) || null : null;
+
   if (!config) {
     return (
       <div className="saas-builder-loading">
@@ -131,7 +143,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
         </header>
 
         {/* 3-column layout */}
-        <div className="saas-workspace">
+        <div className={`saas-workspace${useInspector && selectedBlock ? " has-inspector" : ""}`}>
           {/* Left panel */}
           <div className="saas-left-panel">
             <div className="saas-sidebar-header">
@@ -223,6 +235,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
                     onConfigChange={handleConfigChange}
                     selectedBlockId={selectedBlockId}
                     onSelectBlock={setSelectedBlockId}
+                    inlineEditing={!useInspector}
                   />
                 </motion.div>
               ) : activeSidebarTab === "design" ? (
@@ -290,6 +303,30 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
           <div className="saas-preview-center" ref={previewRef}>
             <BuilderPreview config={config} profile={profile} />
           </div>
+
+          {useInspector && selectedBlock ? (
+            <aside className="saas-right-inspector">
+              <div className="saas-right-inspector-header">
+                <p className="saas-right-inspector-kicker">Inspector</p>
+                <h3 className="saas-right-inspector-title">{selectedBlock.type.replace(/-/g, " ")}</h3>
+              </div>
+              <div className="saas-right-inspector-body">
+                <BlockSettingsPanel
+                  block={selectedBlock}
+                  onUpdate={(settings) => {
+                    if (Object.prototype.hasOwnProperty.call(settings, "__toggleVisibility")) {
+                      const show = Boolean(settings.__toggleVisibility);
+                      if (show !== selectedBlock.visible) {
+                        handleConfigChange(toggleBlockVisibility(config, selectedBlock.id));
+                      }
+                      return;
+                    }
+                    handleConfigChange(updateBlockSettings(config, selectedBlock.id, settings));
+                  }}
+                />
+              </div>
+            </aside>
+          ) : null}
         </div>
       </div>
 

@@ -29,6 +29,7 @@ interface BuilderCanvasProps {
   onConfigChange: (config: BuilderConfig) => void;
   selectedBlockId: string | null;
   onSelectBlock: (id: string | null) => void;
+  inlineEditing?: boolean;
 }
 
 const BLOCK_LABELS: Record<string, string> = {
@@ -96,6 +97,7 @@ export default function BuilderCanvas({
   onConfigChange,
   selectedBlockId,
   onSelectBlock,
+  inlineEditing = true,
 }: BuilderCanvasProps) {
   const handleDeleteBlock = (blockId: string) => {
     const newConfig = removeBlockFromConfig(config, blockId);
@@ -227,7 +229,7 @@ export default function BuilderCanvas({
 
                 {/* Settings panel (animated expand) */}
                 <AnimatePresence>
-                  {selectedBlockId === block.id && (
+                  {inlineEditing && selectedBlockId === block.id && (
                     <motion.div
                       layout
                       className="saas-settings-panel"
@@ -267,7 +269,7 @@ interface BlockSettingsPanelProps {
   onUpdate: (settings: Record<string, any>) => void;
 }
 
-function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
+export function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
   switch (block.type as string) {
     case "profile-hero":
       return <ProfileHeroEditor block={block} onUpdate={onUpdate} />;

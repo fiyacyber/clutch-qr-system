@@ -3303,8 +3303,8 @@ button:disabled {
 
 /* ── Top navigation bar ──────────────────────────────────── */
 .saas-topbar {
-  height: 48px;
-  min-height: 48px;
+  height: 42px;
+  min-height: 42px;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -3312,7 +3312,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
+  padding: 0 14px;
   position: relative;
   z-index: 50;
 }
@@ -3476,10 +3476,14 @@ button:disabled {
 /* ── Workspace layout ────────────────────────────────────── */
 .saas-workspace {
   display: grid;
-  grid-template-columns: 364px 1fr;
+  grid-template-columns: 340px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.saas-workspace.has-inspector {
+  grid-template-columns: 340px minmax(0, 1fr) 320px;
 }
 
 /* ── Left panel (blocks/library) ────────────────────────── */
@@ -3498,7 +3502,7 @@ button:disabled {
   position: sticky;
   top: 0;
   z-index: 4;
-  padding: 16px 14px 12px;
+  padding: 10px 12px 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -3509,7 +3513,7 @@ button:disabled {
 .saas-sidebar-header-copy {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .saas-sidebar-kicker {
@@ -3523,14 +3527,14 @@ button:disabled {
 
 .saas-sidebar-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.98rem;
   line-height: 1.15;
   color: var(--b-text);
 }
 
 .saas-sidebar-subtitle {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   line-height: 1.45;
   color: var(--b-muted);
 }
@@ -3588,7 +3592,7 @@ button:disabled {
 
 .sidebar-tabs {
   position: sticky;
-  top: 154px;
+  top: 118px;
   z-index: 3;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3631,6 +3635,7 @@ button:disabled {
 .sidebar-panel {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .saas-design-shell {
@@ -3691,7 +3696,8 @@ button:disabled {
   justify-content: center;
   min-height: 0;
   overflow-y: auto;
-  padding: 32px 24px 48px;
+  overflow-x: hidden;
+  padding: 16px 18px 24px;
 }
 
 /* ── Canvas (blocks list) ────────────────────────────────── */
@@ -4444,6 +4450,7 @@ button:disabled {
   align-items: center;
   width: 100%;
   min-height: 100%;
+  max-width: 420px;
 }
 
 .saas-preview-label-row {
@@ -4452,7 +4459,7 @@ button:disabled {
   justify-content: space-between;
   width: 100%;
   max-width: 420px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .saas-preview-label {
@@ -4475,7 +4482,7 @@ button:disabled {
 
 /* Outer glow/shadow wrapper */
 .saas-device-outer {
-  width: 402px;
+  width: min(360px, 100%);
   max-width: 100%;
   position: relative;
   filter: drop-shadow(0 24px 48px rgba(0,0,0,0.42)) drop-shadow(0 2px 12px rgba(255,166,101,0.1));
@@ -4485,9 +4492,9 @@ button:disabled {
 .saas-device-frame {
   width: 100%;
   background: linear-gradient(180deg, #222730 0%, #181c24 100%);
-  border-radius: 44px;
+  border-radius: 40px;
   border: 1.5px solid rgba(255,255,255,0.14);
-  padding: 16px 8px 20px;
+  padding: 12px 8px 16px;
   display: flex;
   flex-direction: column;
   box-shadow:
@@ -4499,17 +4506,17 @@ button:disabled {
 
 /* Notch area */
 .saas-device-notch {
-  height: 30px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .saas-notch-island {
   display: block;
-  width: 104px;
-  height: 24px;
+  width: 94px;
+  height: 20px;
   background: linear-gradient(180deg, #090b10 0%, #12151b 100%);
   border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.08);
@@ -4520,14 +4527,14 @@ button:disabled {
 .saas-device-screen {
   flex: 1;
   background: #ffffff;
-  border-radius: 32px;
+  border-radius: 30px;
   overflow: hidden;
-  min-height: 640px;
-  max-height: 70vh;
+  min-height: 520px;
+  max-height: min(680px, calc(100vh - 170px));
   overflow-y: auto;
   position: relative;
   scrollbar-width: none;
-  padding: 10px;
+  padding: 8px;
 }
 
 .saas-device-screen::-webkit-scrollbar {
@@ -4537,10 +4544,50 @@ button:disabled {
 /* Home bar */
 .saas-device-bar {
   height: 4px;
-  width: 100px;
+  width: 90px;
   background: rgba(255,255,255,0.3);
   border-radius: 4px;
   margin: 12px auto 0;
+}
+
+.saas-right-inspector {
+  border-left: 1px solid var(--b-border);
+  background: linear-gradient(180deg, rgba(12, 18, 32, 0.98), rgba(8, 13, 24, 0.98));
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.saas-right-inspector-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.saas-right-inspector-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--b-subtle);
+  text-transform: uppercase;
+}
+
+.saas-right-inspector-title {
+  margin: 5px 0 0;
+  font-size: 0.95rem;
+  color: var(--b-text);
+  text-transform: capitalize;
+}
+
+.saas-right-inspector-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
 }
 
 /* ── Public profile (inside device screen) ───────────────── */
@@ -4796,6 +4843,10 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.saas-device-screen .builder-contact-primary-pills {
+  grid-template-columns: 1fr;
 }
 
 .builder-contact-primary-pills > * {
@@ -5566,8 +5617,11 @@ button:disabled {
   .saas-workspace {
     grid-template-columns: 340px 1fr;
   }
+  .saas-workspace.has-inspector {
+    grid-template-columns: 340px 1fr;
+  }
   .saas-device-outer {
-    width: 340px;
+    width: min(330px, 100%);
   }
 }
 
@@ -5577,10 +5631,19 @@ button:disabled {
     grid-template-rows: 1fr auto;
     overflow-y: auto;
   }
+  .saas-workspace.has-inspector {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
   .saas-left-panel {
     border-right: none;
     border-bottom: 1px solid var(--b-border);
     height: min(58vh, 720px);
+  }
+  .saas-right-inspector {
+    border-left: none;
+    border-top: 1px solid var(--b-border);
+    max-height: 44vh;
   }
   .saas-sidebar-header,
   .sidebar-tabs {
@@ -5614,7 +5677,12 @@ button:disabled {
   }
   .saas-device-outer {
     width: 100%;
-    max-width: 360px;
+    max-width: 334px;
+  }
+
+  .saas-device-screen {
+    min-height: 470px;
+    max-height: calc(100vh - 160px);
   }
 }
 
