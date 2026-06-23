@@ -193,10 +193,10 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
 
     const links = socialPlatforms
       .map((platform) => {
-        const handle = (profile as any)[`${platform}_handle`] || (profile as any)[platform];
+        const value = (profile as any)[`${platform}_handle`] || (profile as any)[platform];
         const socialInfo = SOCIAL_ICONS[platform as keyof typeof SOCIAL_ICONS];
-        if (!handle || !socialInfo) return null;
-        return { platform, handle, ...socialInfo };
+        if (!value || !socialInfo) return null;
+        return { platform, value, ...socialInfo };
       })
       .filter(Boolean);
 
@@ -205,7 +205,7 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
     return (
       <div className="builder-block builder-block-social">
         {links.map((link: any) => {
-          const url = getSocialUrl(link.platform, link.handle);
+          const url = getSocialUrl(link.platform, link.value);
           if (!url) return null;
           
           return (
@@ -238,7 +238,9 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
                   link.color;
               }}
             >
-              <span className="social-initial">{link.name.charAt(0)}</span>
+              <span className="social-icon-emoji" style={{ fontSize: "1.3rem" }}>
+                {link.icon}
+              </span>
             </a>
           );
         })}

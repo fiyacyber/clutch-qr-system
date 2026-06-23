@@ -3117,12 +3117,20 @@ button:disabled {
   cursor: pointer;
   color: white;
   font-weight: 800;
-  font-size: 1rem;
+  line-height: 1;
 }
 
 .builder-button-social:hover {
   transform: scale(1.1) translateY(-2px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.social-icon-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: normal;
 }
 
 .social-initial {
@@ -3243,19 +3251,25 @@ button:disabled {
 
 .builder-layout {
   display: grid;
-  grid-template-columns: 280px 1fr 320px;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
   flex: 1;
   gap: 0;
   overflow: hidden;
+  height: 100%;
 }
 
 /* Sidebar - Block Library */
 .builder-sidebar {
   background: white;
-  border-right: 1px solid var(--clutch-border);
+  border-top: 1px solid var(--clutch-border);
+  border-right: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  order: 3;
+  min-height: 240px;
+  max-height: 40vh;
 }
 
 .builder-block-library {
@@ -3359,10 +3373,14 @@ button:disabled {
 /* Canvas - Block List */
 .builder-canvas-container {
   background: white;
-  border-right: 1px solid var(--clutch-border);
+  border-right: none;
+  border-bottom: 1px solid var(--clutch-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  order: 2;
+  flex: 1;
+  min-height: 300px;
 }
 
 .builder-canvas {
@@ -3548,6 +3566,10 @@ button:disabled {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  order: 1;
+  min-height: 380px;
+  max-height: 50vh;
+  border-bottom: 1px solid var(--clutch-border);
 }
 
 .builder-preview {
@@ -3700,22 +3722,48 @@ button:disabled {
 
 @media (max-width: 1400px) {
   .builder-layout {
-    grid-template-columns: 240px 1fr 280px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .builder-preview-panel {
+    min-height: 320px;
+    max-height: 45vh;
+  }
+
+  .builder-canvas-container {
+    min-height: 250px;
+  }
+
+  .builder-sidebar {
+    min-height: 200px;
+    max-height: 35vh;
   }
 }
 
 @media (max-width: 1200px) {
   .builder-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .builder-preview-panel {
+    min-height: 280px;
+    max-height: 40vh;
   }
 
   .builder-canvas-container,
   .builder-sidebar {
-    display: none;
+    display: flex;
   }
 
-  .builder-preview-panel {
-    min-height: 500px;
+  .builder-canvas-container {
+    min-height: 200px;
+  }
+
+  .builder-sidebar {
+    min-height: 180px;
+    max-height: 30vh;
   }
 }
 
