@@ -2,6 +2,7 @@
 
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
 import { removeBlockFromConfig, toggleBlockVisibility, updateBlockSettings } from "@/lib/builder-config";
+import IconSelector from "./IconSelector";
 
 interface BuilderCanvasProps {
   config: BuilderConfig;
@@ -308,16 +309,11 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               placeholder="https://example.com"
             />
           </label>
-          <label>
-            Icon (emoji)
-            <input
-              type="text"
-              value={block.settings.icon || ""}
-              onChange={(e) => handleChange("icon", e.target.value)}
-              placeholder="🔗"
-              maxLength={2}
-            />
-          </label>
+          <IconSelector
+            value={block.settings.icon || "🔗"}
+            onChange={(icon) => handleChange("icon", icon)}
+            label="Icon"
+          />
         </div>
       );
 

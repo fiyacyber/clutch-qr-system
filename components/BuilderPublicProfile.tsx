@@ -2,6 +2,7 @@
 
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
 import { trackBlockEvent } from "@/lib/builder-analytics";
+import { SOCIAL_ICONS, getSocialUrl } from "@/lib/icon-system";
 import { useCallback } from "react";
 
 interface BuilderBlockProps {
@@ -188,20 +189,14 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
   ),
 
   "social-media-links": ({ block, profile, profileId }) => {
-    const socialPlatforms = [
-      { key: "instagram", icon: "📷", url: (h: string) => `https://instagram.com/${h}` },
-      { key: "facebook", icon: "👥", url: (h: string) => `https://facebook.com/${h}` },
-      { key: "twitter", icon: "𝕏", url: (h: string) => `https://twitter.com/${h}` },
-      { key: "linkedin", icon: "💼", url: (h: string) => `https://linkedin.com/in/${h}` },
-      { key: "youtube", icon: "🎥", url: (h: string) => `https://youtube.com/@${h}` },
-      { key: "tiktok", icon: "🎵", url: (h: string) => `https://tiktok.com/@${h}` },
-    ];
+    const socialPlatforms = Object.keys(SOCIAL_ICONS).slice(0, 6); // First 6 main platforms
 
     const links = socialPlatforms
       .map((platform) => {
-        const handle = (profile as any)[`${platform.key}_handle`] || (profile as any)[platform.key];
-        if (!handle) return null;
-        return { ...platform, handle };
+        const handle = (profile as any)[`${platform}_handle`] || (profile as any)[platform];
+        const socialInfo = SOCIAL_ICONS[platform as keyof typeof SOCIAL_ICONS];
+        if (!handle || !socialInfo) return null;
+        return { platform, handle, ...socialInfo };
       })
       .filter(Boolean);
 
@@ -209,26 +204,44 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
 
     return (
       <div className="builder-block builder-block-social">
-        {links.map((link: any) => (
-          <a
-            key={link.key}
-            href={link.url(link.handle)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() =>
-              trackBlockEvent({
-                profileId,
-                blockId: block.id,
-                eventType: `social_${link.key}`,
-                metadata: { platform: link.key },
-              })
-            }
-            className="builder-button builder-button-social"
-            title={link.key}
-          >
-            <span>{link.icon}</span>
-          </a>
-        ))}
+        {links.map((link: any) => {
+          const url = getSocialUrl(link.platform, link.handle);
+          if (!url) return null;
+          
+          return (
+            <a
+              key={link.platform}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                trackBlockEvent({
+                  profileId,
+                  blockId: block.id,
+                  eventType: `social_${link.platform}`,
+                  metadata: { platform: link.platform },
+                })
+              }
+              className="builder-button builder-button-social"
+              title={link.name}
+              style={{
+                backgroundColor: link.color,
+                borderColor: link.color,
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
+                  link.hoverColor;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
+                  link.color;
+              }}
+            >
+              <span className="social-initial">{link.name.charAt(0)}</span>
+            </a>
+          );
+        })}
       </div>
     );
   },
