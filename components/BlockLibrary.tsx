@@ -213,9 +213,9 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
             <div key={category} className="library-category">
               <h4 className="category-title">{categoryLabels[category]}</h4>
               <div className="category-blocks">
-                {blocks.map((block) => (
+                {blocks.map((block, idx) => (
                   <button
-                    key={block.type}
+                    key={`${block.type}-${block.label}-${idx}`}
                     className="library-block-item"
                     onClick={() => onAddBlock(block.type)}
                     title={block.description}
