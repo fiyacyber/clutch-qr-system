@@ -30,6 +30,12 @@
   z-index: 1;
 }
 
+.contentSingle {
+  width: 100%;
+  max-width: 460px;
+  z-index: 1;
+}
+
 /* Branding Side */
 .brandingSide {
   display: flex;

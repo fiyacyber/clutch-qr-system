@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
@@ -42,45 +41,8 @@ export default async function LoginPage({
   return (
     <div className={styles.container}>
       <div className={styles.background} />
-      
-      <div className={styles.content}>
-        {/* Left Side - Branding */}
-        <div className={styles.brandingSide}>
-          <div className={styles.brandingContent}>
-            <Image
-              src="/clutch-banner.png"
-              alt="Clutch"
-              width={300}
-              height={112}
-              priority
-            />
-            <h1 className={styles.brandingTitle}>QR Code Dashboard</h1>
-            <p className={styles.brandingSubtitle}>
-              Create, track, and manage QR codes for all your print marketing campaigns.
-            </p>
-            
-            <div className={styles.featureList}>
-              <div className={styles.featureItem}>
-                <span className={styles.featureIcon}>✓</span>
-                <span>Unlimited QR codes</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureIcon}>✓</span>
-                <span>Real-time analytics</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureIcon}>✓</span>
-                <span>Custom branding</span>
-              </div>
-              <div className={styles.featureItem}>
-                <span className={styles.featureIcon}>✓</span>
-                <span>Linktree profiles</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Right Side - Login Form */}
+      <div className={styles.contentSingle}>
         <div className={styles.formSide}>
           <div className={styles.formCard}>
             <div className={styles.formHeader}>
