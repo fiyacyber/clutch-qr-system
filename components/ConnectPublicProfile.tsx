@@ -187,7 +187,10 @@ export default function ConnectPublicProfile({
             onClick={() => trackEvent(profileId, "vcard_download", { slug })}
           >
             <span className="connect-action-icon">📇</span>
-            <span className="connect-action-text">Save Contact</span>
+            <span className="connect-action-copy">
+              <span className="connect-action-title">Save Contact</span>
+              <span className="connect-action-subtitle">Add to your contacts</span>
+            </span>
           </a>
           <a
             href={`/api/wallet/apple/${profileId}`}
@@ -222,7 +225,10 @@ export default function ConnectPublicProfile({
               onClick={() => trackEvent(profileId, "call_click", { slug })}
             >
               <span className="connect-action-icon">☎️</span>
-              <span className="connect-action-text">Call</span>
+              <span className="connect-action-copy">
+                <span className="connect-action-title">Call</span>
+                <span className="connect-action-subtitle">Tap to call now</span>
+              </span>
             </a>
           ) : null}
           {textHref ? (
@@ -232,7 +238,10 @@ export default function ConnectPublicProfile({
               onClick={() => trackEvent(profileId, "text_click", { slug })}
             >
               <span className="connect-action-icon">💬</span>
-              <span className="connect-action-text">Text</span>
+              <span className="connect-action-copy">
+                <span className="connect-action-title">Text</span>
+                <span className="connect-action-subtitle">Send a message</span>
+              </span>
             </a>
           ) : null}
           {emailHref ? (
@@ -242,7 +251,10 @@ export default function ConnectPublicProfile({
               onClick={() => trackEvent(profileId, "email_click", { slug })}
             >
               <span className="connect-action-icon">✉️</span>
-              <span className="connect-action-text">Email</span>
+              <span className="connect-action-copy">
+                <span className="connect-action-title">Email</span>
+                <span className="connect-action-subtitle">Send an email</span>
+              </span>
             </a>
           ) : null}
           {webHref ? (
@@ -254,7 +266,10 @@ export default function ConnectPublicProfile({
               onClick={() => trackEvent(profileId, "website_click", { slug })}
             >
               <span className="connect-action-icon">🌐</span>
-              <span className="connect-action-text">Website</span>
+              <span className="connect-action-copy">
+                <span className="connect-action-title">Website</span>
+                <span className="connect-action-subtitle">Visit my website</span>
+              </span>
             </a>
           ) : null}
           <a
@@ -263,7 +278,10 @@ export default function ConnectPublicProfile({
             onClick={() => trackEvent(profileId, "quote_cta_click", { slug })}
           >
             <span className="connect-action-icon">✨</span>
-            <span className="connect-action-text">Get Quote</span>
+            <span className="connect-action-copy">
+              <span className="connect-action-title">Get Quote</span>
+              <span className="connect-action-subtitle">Tell us about your project</span>
+            </span>
           </a>
         </div>
       </section>
@@ -285,36 +303,56 @@ export default function ConnectPublicProfile({
       {showLeadForm ? (
         <section className="connect-lead-section" id="lead-form">
           <div className="connect-lead-card">
-            <h2>Request a Quote</h2>
-            <p className="connect-lead-description">Tell us what you need and we will follow up quickly.</p>
+            <div className="connect-lead-layout">
+              <div>
+                <h2>Request a Quote</h2>
+                <p className="connect-lead-description">Tell us about your project and we will follow up quickly.</p>
 
-            {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
-            {rateLimited ? (
-              <div className="connect-error">Too many requests. Please wait one minute and try again.</div>
-            ) : null}
-            {error ? <div className="connect-error">Something went wrong. Please try again.</div> : null}
+                {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
+                {rateLimited ? (
+                  <div className="connect-error">Too many requests. Please wait one minute and try again.</div>
+                ) : null}
+                {error ? <div className="connect-error">Something went wrong. Please try again.</div> : null}
 
-            <form action="/api/connect/leads" method="post" className="connect-lead-form">
-              <input type="hidden" name="profile_id" value={profileId} />
-              <input type="hidden" name="slug" value={slug} />
+                <form action="/api/connect/leads" method="post" className="connect-lead-form">
+                  <input type="hidden" name="profile_id" value={profileId} />
+                  <input type="hidden" name="slug" value={slug} />
 
-              <input name="name" placeholder="Your name" className="connect-input" required />
-              <input name="email" type="email" placeholder="Your email" className="connect-input" />
-              <input name="phone" placeholder="Your phone" className="connect-input" />
-              <textarea name="message" placeholder="How can we help?" className="connect-input" rows={3} />
+                  <div className="connect-lead-grid">
+                    <input name="name" placeholder="Your name" className="connect-input" required />
+                    <input name="email" type="email" placeholder="Your email" className="connect-input" />
+                    <input name="phone" placeholder="Your phone" className="connect-input" />
+                    <textarea name="message" placeholder="How can we help?" className="connect-input" rows={3} />
+                  </div>
 
-              <input
-                name="company_website"
-                className="connect-honeypot"
-                autoComplete="off"
-                tabIndex={-1}
-                aria-hidden="true"
-              />
+                  <input
+                    name="company_website"
+                    className="connect-honeypot"
+                    autoComplete="off"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
 
-              <button className="connect-submit" type="submit">
-                Send Request
-              </button>
-            </form>
+                  <button className="connect-submit" type="submit">
+                    Send Request
+                  </button>
+                </form>
+              </div>
+
+              <aside className="connect-lead-visual" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined}>
+                <div className="connect-lead-visual-overlay">
+                  <p className="connect-lead-visual-title">Fast Response</p>
+                  <p className="connect-lead-visual-copy">We typically respond within 1 business day.</p>
+                </div>
+              </aside>
+            </div>
+
+            <div className="connect-trust-row">
+              <article><strong>Trusted</strong><span>Committed to quality and reliability</span></article>
+              <article><strong>Fast Response</strong><span>Quick replies, no waiting around</span></article>
+              <article><strong>Quality Work</strong><span>Top-notch service every time</span></article>
+              <article><strong>Local & Reliable</strong><span>Proudly serving our community</span></article>
+            </div>
           </div>
         </section>
       ) : null}

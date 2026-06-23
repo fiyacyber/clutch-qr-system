@@ -3,6 +3,15 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { requireCustomer } from "@/lib/auth";
 import { buildDefaultProfileSlug, normalizeSlug, asPublicWebsite } from "@/lib/connect";
 
+const CONNECT_AVATAR_BUCKET = "customer-logos";
+const MAX_AVATAR_SIZE = 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+]);
+
 export async function POST(req: NextRequest) {
   const { user, customer } = await requireCustomer();
 
@@ -21,6 +30,7 @@ export async function POST(req: NextRequest) {
   const website = asPublicWebsite(String(form.get("website") || ""));
   const bio = String(form.get("bio") || "").trim();
   const avatar_url = String(form.get("avatar_url") || "").trim() || null;
+  const avatarEntry = form.get("avatar");
   const cover_url = String(form.get("cover_url") || "").trim() || null;
   const theme_color = String(form.get("theme_color") || "#FFA665").trim();
   const slugInput = String(form.get("slug") || "").trim();
@@ -37,6 +47,35 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createSupabaseAdminClient();
+
+  let resolvedAvatarUrl = avatar_url;
+
+  if (avatarEntry && typeof avatarEntry !== "string" && avatarEntry.size > 0) {
+    if (!ALLOWED_AVATAR_TYPES.has(avatarEntry.type)) {
+      return NextResponse.json({ error: "Profile photo type not supported." }, { status: 400 });
+    }
+
+    if (avatarEntry.size > MAX_AVATAR_SIZE) {
+      return NextResponse.json({ error: "Profile photo must be 1MB or smaller." }, { status: 400 });
+    }
+
+    const avatarPath = `${customer.id}/connect-avatar`;
+    const { error: uploadError } = await admin.storage
+      .from(CONNECT_AVATAR_BUCKET)
+      .upload(avatarPath, avatarEntry, {
+        cacheControl: "0",
+        contentType: avatarEntry.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("CONNECT AVATAR UPLOAD ERROR", uploadError);
+      return NextResponse.json({ error: "Failed to upload profile photo." }, { status: 500 });
+    }
+
+    const publicUrl = admin.storage.from(CONNECT_AVATAR_BUCKET).getPublicUrl(avatarPath).data.publicUrl;
+    resolvedAvatarUrl = `${publicUrl}?v=${Date.now()}`;
+  }
 
   const { data: duplicateSlug } = await admin
     .from("profiles")
@@ -58,7 +97,7 @@ export async function POST(req: NextRequest) {
     email,
     website,
     bio,
-    avatar_url,
+    avatar_url: resolvedAvatarUrl,
     cover_url,
     theme_color: theme_color || "#FFA665",
     slug,

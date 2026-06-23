@@ -1759,23 +1759,22 @@ button:disabled {
 }
 
 .connect-action {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 12px 12px;
+  gap: 10px;
+  min-height: 70px;
+  padding: 12px 14px;
   background: var(--clutch-bg);
   border: 2px solid var(--clutch-border);
   border-radius: 14px;
   color: var(--clutch-navy);
   font-weight: 850;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.25s ease;
-  text-align: center;
+  text-align: left;
 }
 
 .connect-action-icon {
@@ -1785,6 +1784,25 @@ button:disabled {
 
 .connect-action-text {
   display: block;
+  line-height: 1.2;
+}
+
+.connect-action-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.connect-action-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--clutch-navy);
+  line-height: 1.1;
+}
+
+.connect-action-subtitle {
+  font-size: 0.75rem;
+  color: var(--clutch-muted);
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -1820,6 +1838,15 @@ button:disabled {
   justify-items: start;
   text-align: left;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
+}
+
+.connect-action-wallet .connect-action-subtitle,
+.connect-action-accent .connect-action-subtitle {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.connect-action-accent .connect-action-title {
+  color: white;
 }
 
 .connect-action-wallet:hover,
@@ -1983,6 +2010,91 @@ button:disabled {
 .connect-lead-form {
   display: grid;
   gap: 14px;
+}
+
+.connect-lead-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.connect-lead-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.connect-lead-grid textarea {
+  grid-column: span 2;
+}
+
+.connect-lead-visual {
+  border-radius: 16px;
+  min-height: 320px;
+  background:
+    linear-gradient(165deg, rgba(18, 30, 50, 0.28), rgba(18, 30, 50, 0.74)),
+    radial-gradient(circle at 20% 20%, rgba(255, 166, 101, 0.28), transparent 40%),
+    linear-gradient(135deg, #d8dde6 0%, #bcc5d4 100%);
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(56, 72, 98, 0.12);
+}
+
+.connect-lead-visual-overlay {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(13, 23, 40, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.connect-lead-visual-title {
+  margin: 0 0 4px;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.connect-lead-visual-copy {
+  margin: 0;
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.connect-trust-row {
+  margin-top: 18px;
+  border-top: 1px solid var(--clutch-border);
+  padding-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.connect-trust-row article {
+  background: #f7f9fc;
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 3px;
+}
+
+.connect-trust-row strong {
+  color: var(--clutch-navy);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.connect-trust-row span {
+  color: var(--clutch-muted);
+  font-size: 0.74rem;
+  line-height: 1.25;
 }
 
 .connect-input {
@@ -2181,7 +2293,7 @@ button:disabled {
   }
 
   .connect-action {
-    min-height: 52px;
+    min-height: 56px;
     font-size: 0.8rem;
     padding: 10px 10px;
   }
@@ -2225,6 +2337,18 @@ button:disabled {
   .connect-lead-card {
     padding: 28px;
     border-radius: 18px;
+  }
+
+  .connect-lead-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-lead-visual {
+    min-height: 210px;
+  }
+
+  .connect-trust-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .connect-lead-card h2 {
@@ -2307,9 +2431,18 @@ button:disabled {
   }
 
   .connect-action {
-    min-height: 48px;
+    min-height: 54px;
     font-size: 0.75rem;
     padding: 8px 8px;
+    gap: 8px;
+  }
+
+  .connect-action-title {
+    font-size: 0.86rem;
+  }
+
+  .connect-action-subtitle {
+    font-size: 0.68rem;
   }
 
   .connect-action-icon {
@@ -2342,6 +2475,18 @@ button:disabled {
   .connect-lead-card {
     padding: 20px 16px;
     border-radius: 14px;
+  }
+
+  .connect-lead-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-lead-grid textarea {
+    grid-column: auto;
+  }
+
+  .connect-trust-row {
+    grid-template-columns: 1fr;
   }
 
   .connect-lead-card h2 {

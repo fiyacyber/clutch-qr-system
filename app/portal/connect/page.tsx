@@ -85,7 +85,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         <section className="card">
           <p className="eyebrow">Profile Editor</p>
           <h2>Public Profile Settings</h2>
-          <form className="form" action="/api/connect/profile" method="post">
+          <form className="form" action="/api/connect/profile" method="post" encType="multipart/form-data">
             <input type="hidden" name="profile_id" value={profile?.id || ""} />
 
             <div className="admin-form-grid">
@@ -116,6 +116,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               <label className="label">
                 Avatar URL
                 <input className="input" name="avatar_url" defaultValue={profile?.avatar_url || ""} />
+              </label>
+              <label className="label">
+                Profile Picture Upload
+                <input
+                  className="input"
+                  type="file"
+                  name="avatar"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                />
               </label>
               <label className="label">
                 Cover URL
