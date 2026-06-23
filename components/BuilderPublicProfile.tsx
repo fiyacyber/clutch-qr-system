@@ -1,11 +1,14 @@
 "use client";
 
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
+import { trackBlockEvent } from "@/lib/builder-analytics";
+import { useCallback } from "react";
 
 interface BuilderBlockProps {
   block: BuilderBlock;
   profile: any;
   forms: Map<string, any>;
+  profileId: string;
 }
 
 /**
@@ -48,10 +51,17 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
     </div>
   ),
 
-  "phone-button": ({ block, profile }) =>
+  "phone-button": ({ block, profile, profileId }) =>
     profile.phone ? (
       <a
         href={`tel:${profile.phone}`}
+        onClick={() =>
+          trackBlockEvent({
+            profileId,
+            blockId: block.id,
+            eventType: "phone",
+          })
+        }
         className="builder-block builder-block-phone builder-button"
       >
         {block.settings.showIcon && <span>📞</span>}
@@ -59,10 +69,17 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
       </a>
     ) : null,
 
-  "email-button": ({ block, profile }) =>
+  "email-button": ({ block, profile, profileId }) =>
     profile.email ? (
       <a
         href={`mailto:${profile.email}`}
+        onClick={() =>
+          trackBlockEvent({
+            profileId,
+            blockId: block.id,
+            eventType: "email",
+          })
+        }
         className="builder-block builder-block-email builder-button"
       >
         {block.settings.showIcon && <span>✉️</span>}
@@ -70,12 +87,19 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
       </a>
     ) : null,
 
-  "website-button": ({ block, profile }) =>
+  "website-button": ({ block, profile, profileId }) =>
     profile.website ? (
       <a
         href={profile.website}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() =>
+          trackBlockEvent({
+            profileId,
+            blockId: block.id,
+            eventType: "website",
+          })
+        }
         className="builder-block builder-block-website builder-button"
       >
         {block.settings.showIcon && <span>🌐</span>}
@@ -83,13 +107,20 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
       </a>
     ) : null,
 
-  "directions-button": ({ block, profile }) => {
+  "directions-button": ({ block, profile, profileId }) => {
     const query = profile.business_name || profile.contact_name;
     return query ? (
       <a
         href={`https://www.google.com/maps/search/${encodeURIComponent(query)}`}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() =>
+          trackBlockEvent({
+            profileId,
+            blockId: block.id,
+            eventType: "directions",
+          })
+        }
         className="builder-block builder-block-directions builder-button"
       >
         {block.settings.showIcon && <span>📍</span>}
@@ -97,6 +128,26 @@ const BlockRenderers: Record<string, React.ComponentType<BuilderBlockProps>> = {
       </a>
     ) : null;
   },
+
+  "custom-link-button": ({ block, profileId }) => (
+    <a
+      href={block.settings.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() =>
+        trackBlockEvent({
+          profileId,
+          blockId: block.id,
+          eventType: "custom_link",
+          metadata: { url: block.settings.url },
+        })
+      }
+      className="builder-block builder-block-custom builder-button"
+    >
+      {block.settings.icon && <span>{block.settings.icon}</span>}
+      {block.settings.label}
+    </a>
+  ),
 
   "request-quote-button": ({ block }) => (
     <button className="builder-block builder-block-quote builder-button">
@@ -217,7 +268,7 @@ export default function BuilderPublicProfile({
         if (!BlockComponent) return null;
 
         return (
-          <BlockComponent key={block.id} block={block} profile={profile} forms={forms} />
+          <BlockComponent key={block.id} block={block} profile={profile} forms={forms} profileId={profile.id} />
         );
       })}
     </div>
