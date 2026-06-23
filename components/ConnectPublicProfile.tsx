@@ -146,6 +146,10 @@ export default function ConnectPublicProfile({
   const textHref = phone ? `sms:${phone}` : "";
   const emailHref = email ? `mailto:${email}` : "";
   const webHref = website || "";
+  const directionsQuery = businessName || contactName || "";
+  const directionsHref = directionsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(directionsQuery)}`
+    : "";
 
   return (
     <main className="connect-public-shell" style={{ ["--connect-accent" as string]: colors.accent }}>
@@ -180,10 +184,10 @@ export default function ConnectPublicProfile({
       </section>
 
       <section className="connect-actions-section">
-        <div className="connect-actions-grid">
+        <div className="connect-actions-shell">
           <a
             href={`/api/vcard/${profileId}`}
-            className="connect-action connect-action-secondary"
+            className="connect-action connect-action-featured"
             onClick={() => trackEvent(profileId, "vcard_download", { slug })}
           >
             <span className="connect-action-icon">📇</span>
@@ -192,97 +196,123 @@ export default function ConnectPublicProfile({
               <span className="connect-action-subtitle">Add to your contacts</span>
             </span>
           </a>
-          <a
-            href={`/api/wallet/apple/${profileId}`}
-            className="connect-action connect-action-secondary connect-action-wallet"
-            onClick={() => trackEvent(profileId, "apple_wallet_download", { slug })}
-          >
-            <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
-              <FaApple />
-            </span>
-            <span className="connect-action-wallet-copy">
-              <span className="connect-action-wallet-top">Add to</span>
-              <span className="connect-action-wallet-bottom">Apple Wallet</span>
-            </span>
-          </a>
-          <a
-            href={`/api/wallet/google/${profileId}`}
-            className="connect-action connect-action-secondary connect-action-wallet"
-            onClick={() => trackEvent(profileId, "google_wallet_add", { slug })}
-          >
-            <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
-              <FaGooglePay />
-            </span>
-            <span className="connect-action-wallet-copy">
-              <span className="connect-action-wallet-top">Add to</span>
-              <span className="connect-action-wallet-bottom">Google Wallet</span>
-            </span>
-          </a>
-          {callHref ? (
+          <div className="connect-actions-grid connect-actions-primary">
+            {callHref ? (
+              <a
+                href={callHref}
+                className="connect-action connect-action-primary"
+                onClick={() => trackEvent(profileId, "call_click", { slug })}
+              >
+                <span className="connect-action-icon">☎️</span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Call</span>
+                  <span className="connect-action-subtitle">Tap to call now</span>
+                </span>
+              </a>
+            ) : null}
+            {textHref ? (
+              <a
+                href={textHref}
+                className="connect-action connect-action-primary"
+                onClick={() => trackEvent(profileId, "text_click", { slug })}
+              >
+                <span className="connect-action-icon">💬</span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Text</span>
+                  <span className="connect-action-subtitle">Send a message</span>
+                </span>
+              </a>
+            ) : null}
+            {emailHref ? (
+              <a
+                href={emailHref}
+                className="connect-action connect-action-primary"
+                onClick={() => trackEvent(profileId, "email_click", { slug })}
+              >
+                <span className="connect-action-icon">✉️</span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Email</span>
+                  <span className="connect-action-subtitle">Send an email</span>
+                </span>
+              </a>
+            ) : null}
+          </div>
+
+          <div className="connect-actions-grid connect-actions-secondary">
+            {webHref ? (
+              <a
+                href={webHref}
+                className="connect-action connect-action-secondary-lite"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackEvent(profileId, "website_click", { slug })}
+              >
+                <span className="connect-action-icon">🌐</span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Website</span>
+                  <span className="connect-action-subtitle">Visit my website</span>
+                </span>
+              </a>
+            ) : null}
+            {directionsHref ? (
+              <a
+                href={directionsHref}
+                className="connect-action connect-action-secondary-lite"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackEvent(profileId, "directions_click", { slug })}
+              >
+                <span className="connect-action-icon">📍</span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Directions</span>
+                  <span className="connect-action-subtitle">Get directions</span>
+                </span>
+              </a>
+            ) : null}
             <a
-              href={callHref}
-              className="connect-action connect-action-primary"
-              onClick={() => trackEvent(profileId, "call_click", { slug })}
+              href="#lead-form"
+              className="connect-action connect-action-secondary-lite"
+              onClick={() => trackEvent(profileId, "quote_cta_click", { slug })}
             >
-              <span className="connect-action-icon">☎️</span>
+              <span className="connect-action-icon">✨</span>
               <span className="connect-action-copy">
-                <span className="connect-action-title">Call</span>
-                <span className="connect-action-subtitle">Tap to call now</span>
+                <span className="connect-action-title">Request Quote</span>
+                <span className="connect-action-subtitle">Tell us about your project</span>
               </span>
             </a>
-          ) : null}
-          {textHref ? (
-            <a
-              href={textHref}
-              className="connect-action connect-action-primary"
-              onClick={() => trackEvent(profileId, "text_click", { slug })}
-            >
-              <span className="connect-action-icon">💬</span>
-              <span className="connect-action-copy">
-                <span className="connect-action-title">Text</span>
-                <span className="connect-action-subtitle">Send a message</span>
-              </span>
-            </a>
-          ) : null}
-          {emailHref ? (
-            <a
-              href={emailHref}
-              className="connect-action connect-action-primary"
-              onClick={() => trackEvent(profileId, "email_click", { slug })}
-            >
-              <span className="connect-action-icon">✉️</span>
-              <span className="connect-action-copy">
-                <span className="connect-action-title">Email</span>
-                <span className="connect-action-subtitle">Send an email</span>
-              </span>
-            </a>
-          ) : null}
-          {webHref ? (
-            <a
-              href={webHref}
-              className="connect-action connect-action-primary"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => trackEvent(profileId, "website_click", { slug })}
-            >
-              <span className="connect-action-icon">🌐</span>
-              <span className="connect-action-copy">
-                <span className="connect-action-title">Website</span>
-                <span className="connect-action-subtitle">Visit my website</span>
-              </span>
-            </a>
-          ) : null}
-          <a
-            href="#lead-form"
-            className="connect-action connect-action-accent"
-            onClick={() => trackEvent(profileId, "quote_cta_click", { slug })}
-          >
-            <span className="connect-action-icon">✨</span>
-            <span className="connect-action-copy">
-              <span className="connect-action-title">Get Quote</span>
-              <span className="connect-action-subtitle">Tell us about your project</span>
-            </span>
-          </a>
+          </div>
+
+          <div className="connect-premium-panel">
+            <p className="connect-premium-label">Save this business card</p>
+            <div className="connect-premium-grid">
+              <a
+                href={`/api/wallet/apple/${profileId}`}
+                className="connect-action connect-action-wallet"
+                onClick={() => trackEvent(profileId, "apple_wallet_download", { slug })}
+              >
+                <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
+                  <FaApple />
+                </span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Save to Apple Wallet</span>
+                  <span className="connect-action-subtitle">Optional premium save</span>
+                </span>
+              </a>
+              <a
+                href={`/api/wallet/google/${profileId}`}
+                className="connect-action connect-action-wallet"
+                onClick={() => trackEvent(profileId, "google_wallet_add", { slug })}
+              >
+                <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
+                  <FaGooglePay />
+                </span>
+                <span className="connect-action-copy">
+                  <span className="connect-action-title">Save to Google Wallet</span>
+                  <span className="connect-action-subtitle">Optional premium save</span>
+                </span>
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
