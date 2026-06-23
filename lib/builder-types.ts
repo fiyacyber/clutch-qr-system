@@ -27,7 +27,8 @@ export interface BuilderBlock {
   type: BlockType;
   order: number;
   visible: boolean;
-  settings: Record<string, any>;
+  data?: Record<string, any>;
+  settings?: Record<string, any>; // Backward compatibility
 }
 
 export interface FormField {
@@ -75,6 +76,17 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
     showName: true,
     showTitle: true,
     showBio: true,
+    avatarGlowEnabled: true,
+    avatarGlowColor: "#FF6B2C",
+    avatarGlowOpacity: 0.35,
+    avatarGlowBlur: 18,
+    avatarGlowSpread: 10,
+    verifiedBadgeEnabled: false,
+    verifiedBadgeColor: "#f59e0b",
+    verifiedBadgeIconColor: "#0f172a",
+    verifiedBadgeIcon: "checkmark",
+    verifiedBadgePosition: "bottom-right",
+    verifiedBadgeSize: 24,
   },
   "contact-buttons": {
     style: "grid", // grid | row

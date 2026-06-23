@@ -38,15 +38,18 @@ export function createBlock(
   order: number,
   customSettings?: Record<string, any>
 ): BuilderBlock {
+  const initialData = {
+    ...defaultBlockSettings[type],
+    ...(customSettings || {}),
+  };
+
   return {
     id: generateBlockId(type),
     type,
     order,
     visible: true,
-    settings: {
-      ...defaultBlockSettings[type],
-      ...(customSettings || {}),
-    },
+    data: initialData,
+    settings: initialData,
   };
 }
 
@@ -181,8 +184,12 @@ export function updateBlockSettings(
       block.id === blockId
         ? {
             ...block,
+            data: {
+              ...(block.data || block.settings || {}),
+              ...newSettings,
+            },
             settings: {
-              ...block.settings,
+              ...(block.settings || block.data || {}),
               ...newSettings,
             },
           }

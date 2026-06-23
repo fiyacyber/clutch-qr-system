@@ -8,7 +8,20 @@ import {
   updateBlockSettings,
   generateBlockId,
 } from "@/lib/builder-config";
-import IconSelector from "./IconSelector";
+import {
+  ProfileHeroEditor,
+  ContactButtonsEditor,
+  PhoneBlockEditor,
+  BookingBlockEditor,
+  SocialLinksEditor,
+  ServicesEditor,
+  TextSectionEditor,
+  ImageBlockEditor,
+  BusinessHoursEditor,
+  FormBlockEditor,
+  WalletButtonEditor,
+  QRCodeBlockEditor,
+} from "./builder/blockEditors";
 
 interface BuilderCanvasProps {
   config: BuilderConfig;
@@ -128,7 +141,7 @@ export default function BuilderCanvas({
                 exit={{ opacity: 0, y: -12, scale: 0.97 }}
                 transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                 className={`saas-block-card${selectedBlockId === block.id ? " selected" : ""}${!block.visible ? " hidden" : ""}`}
-                onClick={() => onSelectBlock(selectedBlockId === block.id ? null : block.id)}
+                onClick={() => onSelectBlock(block.id)}
               >
                 {/* Block header row */}
                 <div className="saas-block-row">
@@ -218,7 +231,15 @@ export default function BuilderCanvas({
                       <div className="saas-settings-inner">
                         <BlockSettingsPanel
                           block={block}
-                          onUpdate={(settings) => handleUpdateSettings(block.id, settings)}
+                          onUpdate={(settings) => {
+                            if (Object.prototype.hasOwnProperty.call(settings, "__toggleVisibility")) {
+                              if (Boolean(settings.__toggleVisibility) !== block.visible) {
+                                handleToggleVisibility(block.id);
+                              }
+                              return;
+                            }
+                            handleUpdateSettings(block.id, settings);
+                          }}
                         />
                       </div>
                     </motion.div>
@@ -239,199 +260,62 @@ interface BlockSettingsPanelProps {
 }
 
 function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
-  const set = (key: string, value: any) => onUpdate({ [key]: value });
-
-  switch (block.type) {
+  switch (block.type as string) {
     case "profile-hero":
-      return (
-        <div className="saas-fields">
-          <Toggle label="Show profile picture" checked={block.settings.showProfilePicture} onChange={(v) => set("showProfilePicture", v)} />
-          <Toggle label="Show name" checked={block.settings.showName} onChange={(v) => set("showName", v)} />
-          <Toggle label="Show title" checked={block.settings.showTitle} onChange={(v) => set("showTitle", v)} />
-          <Toggle label="Show bio" checked={block.settings.showBio} onChange={(v) => set("showBio", v)} />
-        </div>
-      );
+      return <ProfileHeroEditor block={block} onUpdate={onUpdate} />;
 
     case "text-section":
-      return (
-        <div className="saas-fields">
-          <Field label="Heading">
-            <input type="text" value={block.settings.heading || ""} onChange={(e) => set("heading", e.target.value)} placeholder="Section heading" />
-          </Field>
-          <Field label="Content">
-            <textarea value={block.settings.content || ""} onChange={(e) => set("content", e.target.value)} placeholder="Your text content" rows={4} />
-          </Field>
-        </div>
-      );
+      return <TextSectionEditor block={block} onUpdate={onUpdate} />;
 
     case "image-banner":
-      return (
-        <div className="saas-fields">
-          <Field label="Image URL">
-            <input type="text" value={block.settings.imageUrl || ""} onChange={(e) => set("imageUrl", e.target.value)} placeholder="https://..." />
-          </Field>
-          <Field label="Alt text">
-            <input type="text" value={block.settings.altText || ""} onChange={(e) => set("altText", e.target.value)} placeholder="Describe the image" />
-          </Field>
-          <Field label="Caption">
-            <input type="text" value={block.settings.caption || ""} onChange={(e) => set("caption", e.target.value)} placeholder="Optional caption" />
-          </Field>
-        </div>
-      );
+      return <ImageBlockEditor block={block} onUpdate={onUpdate} />;
 
     case "services-list":
-      return (
-        <div className="saas-fields">
-          <Field label="Title">
-            <input type="text" value={block.settings.title || ""} onChange={(e) => set("title", e.target.value)} placeholder="Services" />
-          </Field>
-          <Field label="Services (one per line)">
-            <textarea
-              value={(block.settings.items || []).join("\n")}
-              onChange={(e) => set("items", e.target.value.split("\n").filter(Boolean))}
-              placeholder={"Service 1\nService 2\nService 3"}
-              rows={4}
-            />
-          </Field>
-        </div>
-      );
+      return <ServicesEditor block={block} onUpdate={onUpdate} />;
 
     case "phone-button":
+      return <PhoneBlockEditor block={block} onUpdate={onUpdate} />;
+
     case "email-button":
     case "website-button":
     case "directions-button":
-      return (
-        <div className="saas-fields">
-          <Field label="Button Label">
-            <input
-              type="text"
-              value={block.settings.label || ""}
-              onChange={(e) => set("label", e.target.value)}
-              placeholder={block.type === "phone-button" ? "Call Us" : block.type === "email-button" ? "Send Email" : block.type === "website-button" ? "Visit Website" : "Get Directions"}
-            />
-          </Field>
-          <Toggle label="Show icon" checked={block.settings.showIcon !== false} onChange={(v) => set("showIcon", v)} />
-        </div>
-      );
+      return <PhoneBlockEditor block={block} onUpdate={onUpdate} />;
 
     case "request-quote-button":
+      return <BookingBlockEditor block={block} onUpdate={onUpdate} />;
+
     case "apple-wallet-button":
     case "google-wallet-button":
-      return (
-        <div className="saas-fields">
-          <Field label="Button Label">
-            <input
-              type="text"
-              value={block.settings.label || ""}
-              onChange={(e) => set("label", e.target.value)}
-              placeholder={block.type === "request-quote-button" ? "Request Quote" : "Add to Wallet"}
-            />
-          </Field>
-          <Toggle label="Show icon" checked={block.settings.showIcon !== false} onChange={(v) => set("showIcon", v)} />
-        </div>
-      );
+      return <WalletButtonEditor block={block} onUpdate={onUpdate} />;
 
     case "custom-link-button":
-      return (
-        <div className="saas-fields">
-          <Field label="Button Label">
-            <input type="text" value={block.settings.label || ""} onChange={(e) => set("label", e.target.value)} placeholder="Click here" />
-          </Field>
-          <Field label="URL">
-            <input type="text" value={block.settings.url || ""} onChange={(e) => set("url", e.target.value)} placeholder="https://example.com" />
-          </Field>
-          <IconSelector value={block.settings.icon || "🔗"} onChange={(icon) => set("icon", icon)} label="Icon" />
-        </div>
-      );
+      return <BookingBlockEditor block={block} onUpdate={onUpdate} />;
 
     case "contact-buttons":
-      return (
-        <div className="saas-fields">
-          <Field label="Layout Style">
-            <select value={block.settings.style || "grid"} onChange={(e) => set("style", e.target.value)}>
-              <option value="grid">Grid</option>
-              <option value="stack">Stack</option>
-              <option value="buttons">Buttons</option>
-            </select>
-          </Field>
-        </div>
-      );
+      return <ContactButtonsEditor block={block} onUpdate={onUpdate} />;
 
     case "social-media-links":
-      return (
-        <div className="saas-fields">
-          <Toggle label="Show platform labels" checked={block.settings.showLabels !== false} onChange={(v) => set("showLabels", v)} />
-          <Toggle label="Show tooltips on hover" checked={block.settings.showTooltips !== false} onChange={(v) => set("showTooltips", v)} />
-        </div>
-      );
+      return <SocialLinksEditor block={block} onUpdate={onUpdate} />;
+
+    case "contact":
+      return <ContactButtonsEditor block={block} onUpdate={onUpdate} />;
+
+    case "social-links":
+      return <SocialLinksEditor block={block} onUpdate={onUpdate} />;
+
+    case "image-block":
+      return <ImageBlockEditor block={block} onUpdate={onUpdate} />;
 
     case "business-hours":
-      return (
-        <div className="saas-fields">
-          <Field label="Section Title">
-            <input type="text" value={block.settings.title || ""} onChange={(e) => set("title", e.target.value)} placeholder="Business Hours" />
-          </Field>
-          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-            <Field key={day} label={day}>
-              <input
-                type="text"
-                value={block.settings.hours?.[day] || ""}
-                onChange={(e) => set("hours", { ...block.settings.hours, [day]: e.target.value })}
-                placeholder={day === "Saturday" || day === "Sunday" ? "Closed" : "9:00 AM – 5:00 PM"}
-              />
-            </Field>
-          ))}
-        </div>
-      );
+      return <BusinessHoursEditor block={block} onUpdate={onUpdate} />;
 
     case "form-block":
-      return (
-        <div className="saas-fields">
-          <Field label="Form Label">
-            <input type="text" value={block.settings.formLabel || ""} onChange={(e) => set("formLabel", e.target.value)} placeholder="Contact Form" />
-          </Field>
-          <p className="saas-field-hint">Full form configuration is in the Forms section.</p>
-        </div>
-      );
+      return <FormBlockEditor block={block} onUpdate={onUpdate} />;
 
     case "qr-code-block":
-      return (
-        <div className="saas-fields">
-          <Field label="Label">
-            <input type="text" value={block.settings.label || ""} onChange={(e) => set("label", e.target.value)} placeholder="Scan to save contact" />
-          </Field>
-          <Toggle label="Show label" checked={block.settings.showLabel !== false} onChange={(v) => set("showLabel", v)} />
-        </div>
-      );
+      return <QRCodeBlockEditor block={block} onUpdate={onUpdate} />;
 
     default:
       return <p className="saas-field-hint">No settings available for this block.</p>;
   }
-}
-
-/* Shared field components */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="saas-field">
-      <span className="saas-field-label">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="saas-toggle-row">
-      <span className="saas-field-label">{label}</span>
-      <button
-        type="button"
-        className={`saas-toggle${checked ? " on" : ""}`}
-        onClick={() => onChange(!checked)}
-        role="switch"
-        aria-checked={checked}
-      >
-        <span className="saas-toggle-thumb" />
-      </button>
-    </label>
-  );
 }
