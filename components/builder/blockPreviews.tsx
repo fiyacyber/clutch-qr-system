@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BuilderBlock } from "@/lib/builder-types";
 import { trackBlockEvent } from "@/lib/builder-analytics";
-import { createInitials, getBlockData } from "./blockUtils";
+import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 
 export interface BlockPreviewProps {
   block: BuilderBlock;
@@ -13,6 +13,75 @@ export interface BlockPreviewProps {
 
 function Placeholder({ text }: { text: string }) {
   return <p className="builder-placeholder-text">{text}</p>;
+}
+
+function ActionChevron() {
+  return (
+    <span className="builder-action-chevron" aria-hidden="true">
+      ›
+    </span>
+  );
+}
+
+type ActionCardProps = {
+  icon: string;
+  title: string;
+  subtitle?: string;
+  href?: string;
+  external?: boolean;
+  className?: string;
+  placeholder?: boolean;
+  onClick?: () => void;
+};
+
+function ActionCard({
+  icon,
+  title,
+  subtitle,
+  href,
+  external,
+  className,
+  placeholder,
+  onClick,
+}: ActionCardProps) {
+  const classes = [
+    "builder-button",
+    "builder-action-card",
+    placeholder ? "builder-button-placeholder" : "",
+    className || "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!placeholder && href) {
+    return (
+      <a
+        href={href}
+        className={classes}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noreferrer" : undefined}
+        onClick={onClick}
+      >
+        <span className="builder-action-icon" aria-hidden="true">{icon}</span>
+        <span className="builder-action-content">
+          <span className="builder-action-title">{title}</span>
+          {subtitle ? <span className="builder-action-subtitle">{subtitle}</span> : null}
+        </span>
+        <ActionChevron />
+      </a>
+    );
+  }
+
+  return (
+    <div className={classes} aria-disabled="true">
+      <span className="builder-action-icon" aria-hidden="true">{icon}</span>
+      <span className="builder-action-content">
+        <span className="builder-action-title">{title}</span>
+        {subtitle ? <span className="builder-action-subtitle">{subtitle}</span> : null}
+      </span>
+      <ActionChevron />
+    </div>
+  );
 }
 
 function HeroAvatar({ data, profile }: { data: any; profile: any }) {
@@ -101,6 +170,7 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
 
   return (
     <div className="builder-block builder-block-hero" style={{ "--builder-accent": data.brandColor || undefined } as React.CSSProperties}>
+      <div className="builder-hero-cover" aria-hidden="true" />
       {data.showProfilePicture !== false && (
         <div className="builder-hero-avatar-wrap">
           {glowEnabled && (
@@ -135,9 +205,11 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
           )}
         </div>
       )}
-      <h1 className="builder-hero-name">{data.businessName || profile.business_name || "Your Business Name"}</h1>
-      <p className="builder-hero-title">{data.title || profile.title || "Your Title"}</p>
-      <p className="builder-hero-bio">{data.bio || profile.bio || "Add a short bio to introduce your business."}</p>
+      <div className="builder-hero-text">
+        <h1 className="builder-hero-name">{data.businessName || profile.business_name || "Your Business Name"}</h1>
+        <p className="builder-hero-title">{data.title || profile.title || "Your Title"}</p>
+        <p className="builder-hero-bio">{data.bio || profile.bio || "Add a short bio to introduce your business."}</p>
+      </div>
     </div>
   );
 }
@@ -152,35 +224,75 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
 
   return (
     <div className={`builder-block builder-block-contact builder-contact-${data.style || "grid"}`}>
-      {data.showPhone !== false ? (
-        phone ? (
-          <a href={`tel:${phone}`} className="builder-button" onClick={() => trackBlockEvent({ profileId, blockId: block.id, eventType: "phone" })}><span>📞</span>Call</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>📞</span>Call</div>
-      ) : null}
-      {data.showEmail !== false ? (
-        email ? (
-          <a href={`mailto:${email}`} className="builder-button" onClick={() => trackBlockEvent({ profileId, blockId: block.id, eventType: "email" })}><span>✉️</span>Email</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>✉️</span>Email</div>
-      ) : null}
-      {data.showWebsite !== false ? (
-        website ? (
-          <a href={website} target="_blank" rel="noreferrer" className="builder-button" onClick={() => trackBlockEvent({ profileId, blockId: block.id, eventType: "website" })}><span>🌐</span>Website</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>🌐</span>Website</div>
-      ) : null}
-      {data.showAddress ? (
-        address ? (
-          <a href={`https://maps.google.com/?q=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer" className="builder-button"><span>📍</span>Address</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>📍</span>Address</div>
-      ) : null}
-      {data.showSms ? (
-        sms ? (
-          <a href={`sms:${sms}`} className="builder-button"><span>💬</span>Text</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>💬</span>Text</div>
-      ) : null}
-      {data.showCustom ? (
-        data.customUrl ? (
-          <a href={data.customUrl} target="_blank" rel="noreferrer" className="builder-button"><span>🔗</span>{data.customLabel || "Custom"}</a>
-        ) : <div className="builder-button builder-button-placeholder"><span>🔗</span>{data.customLabel || "Custom"}</div>
+      <div className="builder-contact-primary-pills">
+        {data.showPhone !== false ? (
+          <ActionCard
+            icon="📞"
+            title="Call"
+            subtitle={phone || undefined}
+            href={phone ? `tel:${phone}` : undefined}
+            placeholder={!phone}
+            className="builder-action-pill"
+            onClick={phone ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "phone" }) : undefined}
+          />
+        ) : null}
+        {data.showEmail !== false ? (
+          <ActionCard
+            icon="✉️"
+            title="Email"
+            subtitle={email || undefined}
+            href={email ? `mailto:${email}` : undefined}
+            placeholder={!email}
+            className="builder-action-pill"
+            onClick={email ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "email" }) : undefined}
+          />
+        ) : null}
+        {data.showWebsite !== false ? (
+          <ActionCard
+            icon="🌐"
+            title="Website"
+            subtitle={website || undefined}
+            href={website || undefined}
+            external={Boolean(website)}
+            placeholder={!website}
+            className="builder-action-pill"
+            onClick={website ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "website" }) : undefined}
+          />
+        ) : null}
+      </div>
+
+      {(data.showAddress || data.showSms || data.showCustom) ? (
+        <div className="builder-contact-secondary-list">
+          {data.showAddress ? (
+            <ActionCard
+              icon="📍"
+              title="Directions"
+              subtitle={address || "Add an address"}
+              href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
+              external={Boolean(address)}
+              placeholder={!address}
+            />
+          ) : null}
+          {data.showSms ? (
+            <ActionCard
+              icon="💬"
+              title="Text"
+              subtitle={sms || undefined}
+              href={sms ? `sms:${sms}` : undefined}
+              placeholder={!sms}
+            />
+          ) : null}
+          {data.showCustom ? (
+            <ActionCard
+              icon="🔗"
+              title={data.customLabel || "Custom"}
+              subtitle={data.customUrl || "Add a custom URL"}
+              href={data.customUrl || undefined}
+              external={Boolean(data.customUrl)}
+              placeholder={!data.customUrl}
+            />
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -188,36 +300,80 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
 
 export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   const data = getBlockData(block);
+  const type = normalizeBlockType(String((block as any).type));
+
+  if (type === "email-button") {
+    const email = data.email || profile.email;
+    return (
+      <div className="builder-block">
+        <ActionCard
+          icon="✉️"
+          title={data.label || "Email"}
+          subtitle={email || undefined}
+          href={email ? `mailto:${email}` : undefined}
+          placeholder={!email}
+        />
+      </div>
+    );
+  }
+
+  if (type === "website-button") {
+    const website = data.website || profile.website;
+    return (
+      <div className="builder-block">
+        <ActionCard
+          icon="🌐"
+          title={data.label || "Website"}
+          subtitle={website || undefined}
+          href={website || undefined}
+          external={Boolean(website)}
+          placeholder={!website}
+        />
+      </div>
+    );
+  }
+
   const phone = data.phone || profile.phone;
   const behavior = data.behavior || "call";
   const href = behavior === "sms" ? `sms:${phone || ""}` : `tel:${phone || ""}`;
-  return phone ? (
-    <a href={href} className="builder-block builder-button">
-      <span>{behavior === "sms" ? "💬" : "📞"}</span>
-      {data.label || "Call"}
-    </a>
-  ) : (
-    <div className="builder-block builder-button builder-button-placeholder">
-      <span>{behavior === "sms" ? "💬" : "📞"}</span>
-      {data.label || "Call"}
+
+  return (
+    <div className="builder-block">
+      <ActionCard
+        icon={behavior === "sms" ? "💬" : "📞"}
+        title={data.label || (behavior === "sms" ? "Text" : "Call")}
+        subtitle={phone || undefined}
+        href={phone ? href : undefined}
+        placeholder={!phone}
+      />
     </div>
   );
 }
 
 export function BookingBlockPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
-  if (data.url) {
-    return (
-      <a href={data.url} target="_blank" rel="noreferrer" className="builder-block builder-button">
-        <span>📅</span>
-        {data.label || "Request / Book"}
-      </a>
-    );
-  }
+  const type = normalizeBlockType(String((block as any).type));
+
+  const icon =
+    type === "directions-button" ? "📍" :
+    type === "custom-link-button" ? "🔗" :
+    "📅";
+  const defaultTitle =
+    type === "directions-button" ? "Directions" :
+    type === "custom-link-button" ? "Custom Link" :
+    "Request / Book";
+  const subtitle = data.description || data.url || undefined;
+
   return (
-    <div className="builder-block builder-button builder-button-placeholder">
-      <span>📅</span>
-      {data.label || "Request / Book"}
+    <div className="builder-block">
+      <ActionCard
+        icon={icon}
+        title={data.label || defaultTitle}
+        subtitle={subtitle}
+        href={data.url || undefined}
+        external={Boolean(data.url)}
+        placeholder={!data.url}
+      />
     </div>
   );
 }
@@ -239,7 +395,7 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
         <a
           key={link.id || idx}
           href={link.value || "#"}
-          className="builder-button builder-button-social"
+          className="builder-button builder-action-card builder-button-social"
           target="_blank"
           rel="noreferrer"
           onClick={(e) => {
@@ -247,7 +403,12 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
           }}
           title={link.platform || "Social"}
         >
-          {(link.platform || "S").slice(0, 1)}
+          <span className="builder-action-icon" aria-hidden="true">{(link.platform || "S").slice(0, 1)}</span>
+          <span className="builder-action-content">
+            <span className="builder-action-title">{link.platform || "Social"}</span>
+            {link.value ? <span className="builder-action-subtitle">{link.value}</span> : null}
+          </span>
+          <ActionChevron />
         </a>
       ))}
     </div>
@@ -362,20 +523,17 @@ export function WalletButtonPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
   const icon = String((block as any).type).includes("apple") ? "🍎" : "🔵";
   const label = data.label || "Add to Wallet";
-
-  if (data.url) {
-    return (
-      <a href={data.url} target="_blank" rel="noreferrer" className="builder-block builder-button builder-button-wallet">
-        {data.showIcon !== false && <span>{icon}</span>}
-        {label}
-      </a>
-    );
-  }
-
   return (
-    <div className="builder-block builder-button builder-button-wallet builder-button-placeholder">
-      {data.showIcon !== false && <span>{icon}</span>}
-      {label}
+    <div className="builder-block">
+      <ActionCard
+        icon={data.showIcon !== false ? icon : "💳"}
+        title={label}
+        subtitle={data.url || undefined}
+        href={data.url || undefined}
+        external={Boolean(data.url)}
+        placeholder={!data.url}
+        className="builder-button-wallet"
+      />
     </div>
   );
 }
