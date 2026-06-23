@@ -76,6 +76,18 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
     setSaveSuccess(false);
   };
 
+  const handleToggleDarkMode = () => {
+    if (!config) return;
+    const newConfig = {
+      ...config,
+      theme: {
+        ...config.theme,
+        darkMode: !config.theme.darkMode,
+      },
+    };
+    setConfig(newConfig);
+  };
+
   if (!config) {
     return (
       <div className="builder-editor">
@@ -86,13 +98,20 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
 
   return (
     <>
-      <div className="builder-editor">
+      <div className="builder-editor" data-theme={config.theme.darkMode ? "dark" : "light"}>
         <div className="builder-header">
           <div>
             <h1>Profile Builder</h1>
             <p>Customize your profile with blocks</p>
           </div>
           <div className="builder-header-actions">
+            <button
+              className="btn secondary"
+              onClick={handleToggleDarkMode}
+              title={config.theme.darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {config.theme.darkMode ? "☀️ Light" : "🌙 Dark"}
+            </button>
             <button
               className="btn secondary"
               onClick={() => setShowTemplates(true)}

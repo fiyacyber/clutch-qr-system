@@ -368,6 +368,7 @@ export default function BuilderPublicProfile({
   return (
     <div
       className="builder-public-profile"
+      data-theme={config.theme.darkMode ? "dark" : "light"}
       style={{ "--builder-accent": config.theme.accentColor } as React.CSSProperties}
     >
       {config.blocks.map((block) => {

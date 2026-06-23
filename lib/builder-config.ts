@@ -27,8 +27,7 @@ export function createDefaultTheme(accentColor?: string): BuilderTheme {
     layout: "default",
     showProfilePicture: true,
     showBio: true,
-    showFooter: true,
-  };
+    showFooter: true,    darkMode: false,  };
 }
 
 /**

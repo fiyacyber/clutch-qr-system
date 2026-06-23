@@ -49,6 +49,7 @@ function generateTemplate(
         showProfilePicture: true,
         showBio: true,
         showFooter: true,
+        darkMode: false,
       },
       blocks: builtBlocks,
       forms: [],

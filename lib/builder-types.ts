@@ -56,6 +56,7 @@ export interface BuilderTheme {
   showProfilePicture: boolean;
   showBio: boolean;
   showFooter: boolean;
+  darkMode: boolean;
 }
 
 export interface BuilderConfig {
