@@ -47,7 +47,7 @@ export default async function LoginPage({
           <div className={styles.formCard}>
             <div className={styles.formHeader}>
               <h2>Sign In</h2>
-              <p>Access your QR code dashboard</p>
+              <p>Access your Clutch portal</p>
             </div>
 
             {params.error ? (
