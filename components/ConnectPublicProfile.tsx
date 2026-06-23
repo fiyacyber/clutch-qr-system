@@ -169,6 +169,45 @@ export default function ConnectPublicProfile({
         {bio ? <p className="connect-bio">{bio}</p> : null}
       </section>
 
+      <section className="connect-card-showcase-section" aria-label="Smart card showcase">
+        <div className="connect-card-showcase" aria-hidden="true">
+          <div className="connect-card-showcase-headings">
+            <p>Solid Steel</p>
+            <p>Dynamic Clutch QR</p>
+          </div>
+
+          <div className="connect-card-showcase-stage">
+            <div className="connect-card-grid">
+              <div className="connect-card connect-card-black connect-card-front">
+                <span className="connect-card-logo">C</span>
+              </div>
+              <div className="connect-card connect-card-black connect-card-back">
+                <div className="connect-card-qr">
+                  {Array.from({ length: 25 }).map((_, i) => (
+                    <i key={`black-${i}`}></i>
+                  ))}
+                </div>
+              </div>
+              <div className="connect-card connect-card-pearl connect-card-front">
+                <span className="connect-card-logo connect-card-logo-dark">C</span>
+              </div>
+              <div className="connect-card connect-card-pearl connect-card-back">
+                <div className="connect-card-qr">
+                  {Array.from({ length: 25 }).map((_, i) => (
+                    <i key={`pearl-${i}`}></i>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="connect-card-finish-lines">
+            <p>Matte Black - Silver Engraving</p>
+            <p>Silver Pearl - Black Engraving</p>
+          </div>
+        </div>
+      </section>
+
       <section className="connect-actions-section">
         <div className="connect-actions-grid">
           <a
@@ -181,23 +220,29 @@ export default function ConnectPublicProfile({
           </a>
           <a
             href={`/api/wallet/apple/${profileId}`}
-            className="connect-action connect-action-secondary"
+            className="connect-action connect-action-secondary connect-action-wallet"
             onClick={() => trackEvent(profileId, "apple_wallet_download", { slug })}
           >
-            <span className="connect-action-icon" aria-hidden="true">
+            <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
               <FaApple />
             </span>
-            <span className="connect-action-text">Add to Apple Wallet</span>
+            <span className="connect-action-wallet-copy">
+              <span className="connect-action-wallet-top">Add to</span>
+              <span className="connect-action-wallet-bottom">Apple Wallet</span>
+            </span>
           </a>
           <a
             href={`/api/wallet/google/${profileId}`}
-            className="connect-action connect-action-secondary"
+            className="connect-action connect-action-secondary connect-action-wallet"
             onClick={() => trackEvent(profileId, "google_wallet_add", { slug })}
           >
-            <span className="connect-action-icon" aria-hidden="true">
+            <span className="connect-action-icon connect-action-icon-svg" aria-hidden="true">
               <FaGooglePay />
             </span>
-            <span className="connect-action-text">Add to Google Wallet</span>
+            <span className="connect-action-wallet-copy">
+              <span className="connect-action-wallet-top">Add to</span>
+              <span className="connect-action-wallet-bottom">Google Wallet</span>
+            </span>
           </a>
           {callHref ? (
             <a

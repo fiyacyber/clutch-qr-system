@@ -1609,6 +1609,136 @@ button:disabled {
   font-weight: 400;
 }
 
+.connect-card-showcase-section {
+  max-width: 980px;
+  margin: -42px auto 0;
+  padding: 0 24px 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.connect-card-showcase {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255, 255, 255, 0.2), transparent 22%),
+    radial-gradient(circle at 88% 86%, rgba(255, 166, 101, 0.12), transparent 24%),
+    linear-gradient(145deg, #202a3c 0%, #0f1624 100%);
+  border: 1px solid rgba(255, 166, 101, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.32);
+  padding: clamp(14px, 2vw, 20px);
+}
+
+.connect-card-showcase-headings {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.connect-card-showcase-headings p {
+  margin: 0;
+  color: #ffa665;
+  font-family: var(--font-exo2), Arial, sans-serif;
+  font-size: clamp(0.85rem, 1.5vw, 1.15rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.connect-card-showcase-stage {
+  border-radius: 16px;
+  padding: 6px;
+}
+
+.connect-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 1.5vw, 12px);
+}
+
+.connect-card {
+  aspect-ratio: 1.586 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+}
+
+.connect-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 15%, rgba(255, 255, 255, 0.22) 42%, transparent 62%);
+  pointer-events: none;
+}
+
+.connect-card-black {
+  background: linear-gradient(135deg, #0c121e 0%, #111a2b 48%, #060a13 100%);
+}
+
+.connect-card-pearl {
+  background: linear-gradient(140deg, #f7f8fa 0%, #eceff3 48%, #d9dee8 100%);
+}
+
+.connect-card-logo {
+  align-items: center;
+  border: 3px solid #f8fafc;
+  border-radius: 8px;
+  color: #f8fafc;
+  display: inline-flex;
+  font-family: var(--font-exo2), Arial, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 900;
+  height: 30px;
+  justify-content: center;
+  left: 10px;
+  line-height: 1;
+  position: absolute;
+  top: 10px;
+  width: 30px;
+}
+
+.connect-card-logo-dark {
+  border-color: #111827;
+  color: #111827;
+}
+
+.connect-card-qr {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px;
+  width: 36px;
+}
+
+.connect-card-qr i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  background: #0f172a;
+  border-radius: 1px;
+}
+
+.connect-card-finish-lines {
+  margin-top: 12px;
+}
+
+.connect-card-finish-lines p {
+  margin: 0;
+  color: #ffa665;
+  font-family: var(--font-exo2), Arial, sans-serif;
+  font-size: clamp(0.8rem, 1.6vw, 1rem);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 /* Actions Section */
 .connect-actions-section {
   background: white;
@@ -1677,15 +1807,48 @@ button:disabled {
 }
 
 .connect-action-wallet {
-  background: white;
-  border-color: rgba(56, 72, 98, 0.22);
-  box-shadow: 0 6px 18px rgba(56, 72, 98, 0.08);
+  background: #111;
+  border-color: rgba(255, 255, 255, 0.65);
+  color: #fff;
+  min-height: 58px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  justify-items: start;
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
 }
 
 .connect-action-wallet:hover,
 .connect-action-wallet:focus {
   border-color: var(--connect-accent);
-  box-shadow: 0 10px 28px rgba(56, 72, 98, 0.14);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+}
+
+.connect-action-wallet .connect-action-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.connect-action-wallet-copy {
+  display: grid;
+  line-height: 1;
+  gap: 2px;
+}
+
+.connect-action-wallet-top {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.95;
+}
+
+.connect-action-wallet-bottom {
+  font-size: 1rem;
+  font-weight: 850;
 }
 
 .connect-action-icon-svg {
@@ -2008,6 +2171,11 @@ button:disabled {
     padding: 24px 20px;
   }
 
+  .connect-card-showcase-section {
+    margin-top: -26px;
+    padding: 0 20px 14px;
+  }
+
   .connect-actions-grid {
     gap: 10px;
   }
@@ -2102,6 +2270,35 @@ button:disabled {
 
   .connect-actions-section {
     padding: 18px 16px;
+  }
+
+  .connect-card-showcase-section {
+    margin-top: -20px;
+    padding: 0 16px 12px;
+  }
+
+  .connect-card-showcase-headings {
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+  }
+
+  .connect-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-action-wallet {
+    min-height: 52px;
+    padding: 8px 10px;
+    grid-template-columns: auto 1fr;
+  }
+
+  .connect-action-wallet .connect-action-icon {
+    font-size: 1.5rem;
+  }
+
+  .connect-action-wallet-bottom {
+    font-size: 0.84rem;
   }
 
   .connect-actions-grid {
