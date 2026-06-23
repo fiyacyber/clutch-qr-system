@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, GripVertical, Trash2, User, Mail, Phone, Share2, Link2, MapPin, ClipboardList, CalendarDays, Video, Star, Images, QrCode } from "lucide-react";
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
 import {
   removeBlockFromConfig,
@@ -50,24 +51,24 @@ const BLOCK_LABELS: Record<string, string> = {
   "qr-code-block": "QR Code",
 };
 
-const BLOCK_ICONS: Record<string, string> = {
-  "profile-hero": "👤",
-  "contact-buttons": "📱",
-  "phone-button": "☎️",
-  "email-button": "✉️",
-  "website-button": "🌐",
-  "directions-button": "📍",
-  "request-quote-button": "💬",
-  "social-media-links": "🔗",
-  "custom-link-button": "🎯",
-  "image-banner": "🖼️",
-  "text-section": "📝",
-  "business-hours": "🕐",
-  "services-list": "✓",
-  "form-block": "📋",
-  "apple-wallet-button": "🍎",
-  "google-wallet-button": "🔵",
-  "qr-code-block": "📲",
+const BLOCK_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  "profile-hero": User,
+  "contact-buttons": Link2,
+  "phone-button": Phone,
+  "email-button": Mail,
+  "website-button": Link2,
+  "directions-button": MapPin,
+  "request-quote-button": ClipboardList,
+  "social-media-links": Share2,
+  "custom-link-button": Link2,
+  "image-banner": Images,
+  "text-section": ClipboardList,
+  "business-hours": CalendarDays,
+  "services-list": Star,
+  "form-block": ClipboardList,
+  "apple-wallet-button": Link2,
+  "google-wallet-button": Link2,
+  "qr-code-block": QrCode,
 };
 
 export default function BuilderCanvas({
@@ -141,24 +142,23 @@ export default function BuilderCanvas({
                 exit={{ opacity: 0, y: -12, scale: 0.97 }}
                 transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                 className={`saas-block-card${selectedBlockId === block.id ? " selected" : ""}${!block.visible ? " hidden" : ""}`}
-                onClick={() => onSelectBlock(block.id)}
               >
                 {/* Block header row */}
-                <div className="saas-block-row">
+                <button
+                  type="button"
+                  className="saas-block-row"
+                  onClick={() => onSelectBlock(selectedBlockId === block.id ? null : block.id)}
+                >
                   {/* Drag handle + icon + name */}
                   <div className="saas-block-left">
                     <div className="saas-drag-handle" title="Drag to reorder">
-                      <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-                        <circle cx="2" cy="2" r="1.5" fill="currentColor" />
-                        <circle cx="8" cy="2" r="1.5" fill="currentColor" />
-                        <circle cx="2" cy="8" r="1.5" fill="currentColor" />
-                        <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-                        <circle cx="2" cy="14" r="1.5" fill="currentColor" />
-                        <circle cx="8" cy="14" r="1.5" fill="currentColor" />
-                      </svg>
+                      <GripVertical size={14} strokeWidth={2} />
                     </div>
                     <div className="saas-block-icon-pill">
-                      <span>{BLOCK_ICONS[block.type] || "⬜"}</span>
+                      {(() => {
+                        const Icon = BLOCK_ICONS[block.type] || Link2;
+                        return <Icon size={15} strokeWidth={2} />;
+                      })()}
                     </div>
                     <div className="saas-block-meta">
                       <span className="saas-block-name">{BLOCK_LABELS[block.type] || block.type}</span>
@@ -184,49 +184,37 @@ export default function BuilderCanvas({
                       className="saas-icon-btn"
                       onClick={() => handleDuplicate(block)}
                       title="Duplicate"
-                    >⧉</button>
+                    ><Copy size={14} strokeWidth={2} /></button>
                     <button
                       className="saas-icon-btn"
                       onClick={() => handleToggleVisibility(block.id)}
                       title={block.visible ? "Hide" : "Show"}
                     >
-                      {block.visible ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                      )}
+                      {block.visible ? <Eye size={14} strokeWidth={2} /> : <EyeOff size={14} strokeWidth={2} />}
                     </button>
                     <button
                       className="saas-icon-btn danger"
                       onClick={() => handleDeleteBlock(block.id)}
                       title="Delete"
                     >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                        <path d="M10 11v6M14 11v6" />
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                      </svg>
+                      <Trash2 size={14} strokeWidth={2} />
                     </button>
+                    <span className="saas-block-chevron" aria-hidden="true">
+                      {selectedBlockId === block.id ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
+                    </span>
                   </div>
-                </div>
+                </button>
 
                 {/* Settings panel (animated expand) */}
                 <AnimatePresence>
                   {selectedBlockId === block.id && (
                     <motion.div
+                      layout
                       className="saas-settings-panel"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                      style={{ overflow: "hidden" }}
                     >
                       <div className="saas-settings-inner">
                         <BlockSettingsPanel

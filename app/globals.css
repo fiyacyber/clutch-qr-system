@@ -3481,6 +3481,92 @@ button:disabled {
   overflow: hidden;
 }
 
+.sidebar-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.92));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--b-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.sidebar-tab:hover {
+  color: var(--b-text);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-tab.active {
+  color: #fff7f1;
+  background: linear-gradient(135deg, rgba(255, 166, 101, 0.22), rgba(255, 107, 44, 0.18));
+  border-color: rgba(255, 166, 101, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 166, 101, 0.15), 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.sidebar-panel {
+  min-height: 0;
+}
+
+.saas-design-shell {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.saas-design-card {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saas-design-kicker {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-subtle);
+}
+
+.saas-design-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--b-text);
+}
+
+.saas-design-copy {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--b-muted);
+}
+
 .saas-panel-inner {
   display: flex;
   flex-direction: column;
@@ -4301,8 +4387,19 @@ button:disabled {
 }
 
 .builder-button-placeholder {
-  opacity: 0.72;
   border-style: dashed;
+  color: inherit;
+}
+
+.builder-public-profile[data-theme="light"] .builder-button-placeholder {
+  background: #F9FAFB;
+  border-color: #D7DEE8;
+}
+
+.builder-public-profile[data-theme="dark"] .builder-button-placeholder {
+  background: #1E293B;
+  border-color: #41536B;
+  color: #E2E8F0;
 }
 
 .builder-block-unknown {

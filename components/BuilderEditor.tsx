@@ -2,12 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Layers, Palette, PlusCircle } from "lucide-react";
 import { BuilderConfig, BlockType } from "@/lib/builder-types";
 import { createDefaultBuilderConfig, addBlockToConfig } from "@/lib/builder-config";
 import BlockLibrary from "./BlockLibrary";
 import BuilderCanvas from "./BuilderCanvas";
 import BuilderPreview from "./BuilderPreview";
 import TemplateSelector from "./TemplateSelector";
+
+type SidebarTab = "content" | "design" | "blocks";
+
+const sidebarTabs: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
+  { id: "content", label: "Content", icon: <Layers size={15} /> },
+  { id: "design", label: "Design", icon: <Palette size={15} /> },
+  { id: "blocks", label: "Blocks", icon: <PlusCircle size={15} /> },
+];
 
 interface BuilderEditorProps {
   profile: any;
@@ -20,7 +29,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [activeTab, setActiveTab] = useState<"blocks" | "library">("blocks");
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("content");
   const savedConfigRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +56,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
     const newConfig = addBlockToConfig(config, type);
     setConfig(newConfig);
     setIsDirty(true);
-    setActiveTab("blocks");
+    setActiveSidebarTab("content");
   };
 
   const handleApplyTemplate = (templateConfig: BuilderConfig) => {
@@ -110,20 +119,6 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
               <span className="saas-topbar-dot" />
               Profile Builder
             </div>
-            <nav className="saas-tab-nav">
-              <button
-                className={`saas-tab${activeTab === "blocks" ? " active" : ""}`}
-                onClick={() => setActiveTab("blocks")}
-              >
-                Blocks
-              </button>
-              <button
-                className={`saas-tab${activeTab === "library" ? " active" : ""}`}
-                onClick={() => setActiveTab("library")}
-              >
-                Library
-              </button>
-            </nav>
           </div>
           <div className="saas-topbar-right">
             <button className="saas-pill-btn" onClick={() => setShowTemplates(true)}>
@@ -176,11 +171,24 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
         <div className="saas-workspace">
           {/* Left panel */}
           <div className="saas-left-panel">
+            <div className="sidebar-tabs">
+              {sidebarTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`sidebar-tab ${activeSidebarTab === tab.id ? "active" : ""}`}
+                  onClick={() => setActiveSidebarTab(tab.id)}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
             <AnimatePresence mode="wait">
-              {activeTab === "blocks" ? (
+              {activeSidebarTab === "content" ? (
                 <motion.div
-                  key="blocks"
-                  className="saas-panel-inner"
+                  key="content"
+                  className="saas-panel-inner sidebar-panel"
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
@@ -193,10 +201,56 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
                     onSelectBlock={setSelectedBlockId}
                   />
                 </motion.div>
+              ) : activeSidebarTab === "design" ? (
+                <motion.div
+                  key="design"
+                  className="saas-panel-inner sidebar-panel"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <div className="saas-design-shell">
+                    <div className="saas-design-card">
+                      <p className="saas-design-kicker">Global styling</p>
+                      <h3 className="saas-design-title">Design controls</h3>
+                      <p className="saas-design-copy">Use this space for page-wide styling without leaving the builder.</p>
+                    </div>
+
+                    <div className="saas-design-card">
+                      <label className="saas-field">
+                        <span className="saas-field-label">Theme preset</span>
+                        <select disabled>
+                          <option>Coming soon</option>
+                        </select>
+                      </label>
+                      <label className="saas-field">
+                        <span className="saas-field-label">Page background</span>
+                        <input type="text" value="Coming soon" disabled readOnly />
+                      </label>
+                      <label className="saas-field">
+                        <span className="saas-field-label">Card background</span>
+                        <input type="text" value="Coming soon" disabled readOnly />
+                      </label>
+                      <label className="saas-field">
+                        <span className="saas-field-label">Accent color</span>
+                        <input type="text" value={config.theme.accentColor || profile.theme_color || "#FFA665"} disabled readOnly />
+                      </label>
+                      <label className="saas-field">
+                        <span className="saas-field-label">Button radius</span>
+                        <input type="range" min="0" max="32" value="16" disabled readOnly />
+                      </label>
+                      <label className="saas-field">
+                        <span className="saas-field-label">Glow strength</span>
+                        <input type="range" min="0" max="100" value="35" disabled readOnly />
+                      </label>
+                    </div>
+                  </div>
+                </motion.div>
               ) : (
                 <motion.div
-                  key="library"
-                  className="saas-panel-inner"
+                  key="blocks"
+                  className="saas-panel-inner sidebar-panel"
                   initial={{ opacity: 0, x: 8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 8 }}

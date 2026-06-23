@@ -283,8 +283,10 @@ export default function PremiumColorPicker({
 
   const drawWheel = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const size = 260;
+    const wheel = wheelRef.current;
+    if (!canvas || !wheel) return;
+
+    const size = Math.max(180, Math.floor(wheel.clientWidth));
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
@@ -293,6 +295,7 @@ export default function PremiumColorPicker({
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
 
@@ -337,6 +340,14 @@ export default function PremiumColorPicker({
     if (!open) return;
     const frame = requestAnimationFrame(drawWheel);
     return () => cancelAnimationFrame(frame);
+  }, [open, hsv.v]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onResize = () => drawWheel();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, [open, hsv.v]);
 
   const handleWheelPointer = (event: React.PointerEvent<HTMLDivElement>) => {
