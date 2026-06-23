@@ -236,6 +236,284 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
         </div>
       );
 
+    case "phone-button":
+    case "email-button":
+    case "website-button":
+    case "directions-button":
+      return (
+        <div className="settings-panel">
+          <label>
+            Button Label
+            <input
+              type="text"
+              value={block.settings.label || ""}
+              onChange={(e) => handleChange("label", e.target.value)}
+              placeholder={`e.g., ${block.type === "phone-button" ? "Call Us" : block.type === "email-button" ? "Send Email" : block.type === "website-button" ? "Visit Website" : "Get Directions"}`}
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={block.settings.showIcon !== false}
+              onChange={(e) => handleChange("showIcon", e.target.checked)}
+            />
+            Show icon
+          </label>
+        </div>
+      );
+
+    case "request-quote-button":
+    case "apple-wallet-button":
+    case "google-wallet-button":
+      return (
+        <div className="settings-panel">
+          <label>
+            Button Label
+            <input
+              type="text"
+              value={block.settings.label || ""}
+              onChange={(e) => handleChange("label", e.target.value)}
+              placeholder={block.type === "request-quote-button" ? "Request Quote" : "Add to Wallet"}
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={block.settings.showIcon !== false}
+              onChange={(e) => handleChange("showIcon", e.target.checked)}
+            />
+            Show icon
+          </label>
+        </div>
+      );
+
+    case "custom-link-button":
+      return (
+        <div className="settings-panel">
+          <label>
+            Button Label
+            <input
+              type="text"
+              value={block.settings.label || ""}
+              onChange={(e) => handleChange("label", e.target.value)}
+              placeholder="Click here"
+            />
+          </label>
+          <label>
+            URL
+            <input
+              type="text"
+              value={block.settings.url || ""}
+              onChange={(e) => handleChange("url", e.target.value)}
+              placeholder="https://example.com"
+            />
+          </label>
+          <label>
+            Icon (emoji)
+            <input
+              type="text"
+              value={block.settings.icon || ""}
+              onChange={(e) => handleChange("icon", e.target.value)}
+              placeholder="🔗"
+              maxLength={2}
+            />
+          </label>
+        </div>
+      );
+
+    case "contact-buttons":
+      return (
+        <div className="settings-panel">
+          <label>
+            Layout Style
+            <select
+              value={block.settings.style || "grid"}
+              onChange={(e) => handleChange("style", e.target.value)}
+            >
+              <option value="grid">Grid</option>
+              <option value="stack">Stack</option>
+              <option value="buttons">Buttons</option>
+            </select>
+          </label>
+        </div>
+      );
+
+    case "social-media-links":
+      return (
+        <div className="settings-panel">
+          <label>
+            <input
+              type="checkbox"
+              checked={block.settings.showLabels !== false}
+              onChange={(e) => handleChange("showLabels", e.target.checked)}
+            />
+            Show platform labels
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={block.settings.showTooltips !== false}
+              onChange={(e) => handleChange("showTooltips", e.target.checked)}
+            />
+            Show tooltips on hover
+          </label>
+        </div>
+      );
+
+    case "business-hours":
+      return (
+        <div className="settings-panel">
+          <label>
+            Section Title
+            <input
+              type="text"
+              value={block.settings.title || ""}
+              onChange={(e) => handleChange("title", e.target.value)}
+              placeholder="Business Hours"
+            />
+          </label>
+          <label>
+            Monday
+            <input
+              type="text"
+              value={block.settings.hours?.Monday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Monday: e.target.value,
+                })
+              }
+              placeholder="9:00 AM - 5:00 PM"
+            />
+          </label>
+          <label>
+            Tuesday
+            <input
+              type="text"
+              value={block.settings.hours?.Tuesday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Tuesday: e.target.value,
+                })
+              }
+              placeholder="9:00 AM - 5:00 PM"
+            />
+          </label>
+          <label>
+            Wednesday
+            <input
+              type="text"
+              value={block.settings.hours?.Wednesday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Wednesday: e.target.value,
+                })
+              }
+              placeholder="9:00 AM - 5:00 PM"
+            />
+          </label>
+          <label>
+            Thursday
+            <input
+              type="text"
+              value={block.settings.hours?.Thursday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Thursday: e.target.value,
+                })
+              }
+              placeholder="9:00 AM - 5:00 PM"
+            />
+          </label>
+          <label>
+            Friday
+            <input
+              type="text"
+              value={block.settings.hours?.Friday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Friday: e.target.value,
+                })
+              }
+              placeholder="9:00 AM - 5:00 PM"
+            />
+          </label>
+          <label>
+            Saturday
+            <input
+              type="text"
+              value={block.settings.hours?.Saturday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Saturday: e.target.value,
+                })
+              }
+              placeholder="Closed"
+            />
+          </label>
+          <label>
+            Sunday
+            <input
+              type="text"
+              value={block.settings.hours?.Sunday || ""}
+              onChange={(e) =>
+                handleChange("hours", {
+                  ...block.settings.hours,
+                  Sunday: e.target.value,
+                })
+              }
+              placeholder="Closed"
+            />
+          </label>
+        </div>
+      );
+
+    case "form-block":
+      return (
+        <div className="settings-panel">
+          <label>
+            Form Label
+            <input
+              type="text"
+              value={block.settings.formLabel || ""}
+              onChange={(e) => handleChange("formLabel", e.target.value)}
+              placeholder="Contact Form"
+            />
+          </label>
+          <p className="text-muted" style={{ fontSize: "0.85rem", marginTop: "8px" }}>
+            Form configuration is available in the Forms section.
+          </p>
+        </div>
+      );
+
+    case "qr-code-block":
+      return (
+        <div className="settings-panel">
+          <label>
+            Label
+            <input
+              type="text"
+              value={block.settings.label || ""}
+              onChange={(e) => handleChange("label", e.target.value)}
+              placeholder="Scan to save contact"
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={block.settings.showLabel !== false}
+              onChange={(e) => handleChange("showLabel", e.target.checked)}
+            />
+            Show label
+          </label>
+        </div>
+      );
+
     default:
       return (
         <div className="settings-panel">
