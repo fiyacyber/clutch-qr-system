@@ -8,10 +8,13 @@ interface ConnectLinksEditorProps {
   existingLinks?: Array<{
     id: string;
     label: string;
-    platform?: string;
+    platform?: string | null;
     value?: string;
     url: string;
-    icon?: string;
+    icon?: string | null;
+    custom_color?: string | null;
+    icon_style?: string | null;
+    description?: string | null;
     sort_order?: number;
     is_active?: boolean;
   }>;
@@ -21,6 +24,9 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
   const [selectedPlatform, setSelectedPlatform] = useState<string>("custom");
   const [label, setLabel] = useState<string>("");
   const [value, setValue] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [customColor, setCustomColor] = useState<string>("");
+  const [iconStyle, setIconStyle] = useState<string>("emoji");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -38,6 +44,10 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
     form.set("label", displayLabel);
     form.set("url", displayUrl);
     form.set("icon", platform?.icon || "link");
+    form.set("platform", selectedPlatform !== "custom" ? selectedPlatform : "");
+    form.set("description", description);
+    form.set("custom_color", customColor);
+    form.set("icon_style", iconStyle);
 
     try {
       const res = await fetch("/api/connect/links", { method: "POST", body: form });
@@ -45,6 +55,9 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
         setSelectedPlatform("custom");
         setLabel("");
         setValue("");
+        setDescription("");
+        setCustomColor("");
+        setIconStyle("emoji");
         window.location.reload(); // Refresh to show new link
       }
     } finally {
@@ -118,6 +131,43 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
             </div>
           )}
 
+          <label className="label">
+            Description (optional)
+            <textarea
+              className="input"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of this link"
+              rows={2}
+            />
+          </label>
+
+          <label className="label">
+            Link Color (optional)
+            <input
+              className="input"
+              type="color"
+              value={customColor || "#FFA665"}
+              onChange={(e) => setCustomColor(e.target.value)}
+              title="Custom color for this link card"
+            />
+          </label>
+
+          <label className="label">
+            Icon Style
+            <select
+              className="input"
+              value={iconStyle}
+              onChange={(e) => setIconStyle(e.target.value)}
+            >
+              {["emoji", "solid", "outline", "none"].map((style) => (
+                <option key={style} value={style}>
+                  {style.charAt(0).toUpperCase() + style.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button className="btn primary" type="submit" disabled={!displayLabel || !displayUrl || isSubmitting}>
             {isSubmitting ? "Adding..." : "Add Link"}
           </button>
@@ -133,8 +183,26 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
             {existingLinks.map((link) => (
               <div key={link.id} className="link-row">
                 <div className="link-info">
-                  <p className="link-label">{link.label}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                    {link.custom_color && (
+                      <div
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          backgroundColor: link.custom_color,
+                          borderRadius: "4px",
+                          border: "1px solid #ccc",
+                        }}
+                        title={`Custom color: ${link.custom_color}`}
+                      />
+                    )}
+                    <p className="link-label">{link.label}</p>
+                    {link.description && <span style={{ fontSize: "0.85rem", color: "#666" }}>— {link.description}</span>}
+                  </div>
                   <p className="link-url">{link.url}</p>
+                  {link.icon_style && link.icon_style !== "emoji" && (
+                    <p style={{ fontSize: "0.8rem", color: "#999" }}>Icon style: {link.icon_style}</p>
+                  )}
                 </div>
                 <div className="link-actions">
                   <a href={`#edit-${link.id}`} className="btn ghost">
