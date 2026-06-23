@@ -27,7 +27,7 @@ export default async function PublicConnectProfilePage({
 
   const { data: linkRows } = await admin
     .from("profile_links")
-    .select("id, label, url, icon")
+    .select("id, label, url, icon, platform, custom_color, icon_style, description")
     .eq("profile_id", profile.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
@@ -58,6 +58,9 @@ export default async function PublicConnectProfilePage({
       coverUrl={profile.cover_url}
       themeColor={profile.theme_color}
       links={(linkRows || []) as any}
+      layout={(profile.layout || "grid") as any}
+      showCardShowcase={profile.show_card_showcase !== false}
+      showLeadForm={profile.show_lead_form !== false}
       sent={query.sent === "1"}
       rateLimited={query.rate_limited === "1"}
       error={query.error === "1"}

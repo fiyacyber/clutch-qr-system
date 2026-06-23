@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
     let url = String(form.get("url") || "").trim();
     const platform = String(form.get("platform") || "custom").trim();
     const icon = String(form.get("icon") || "link").trim();
+    const customColor = String(form.get("custom_color") || "").trim() || null;
+    const iconStyle = String(form.get("icon_style") || "emoji").trim();
+    const description = String(form.get("description") || "").trim() || null;
 
     if (!label || !url) {
       return NextResponse.json({ error: "Label and URL are required." }, { status: 400 });
@@ -73,6 +76,9 @@ export async function POST(req: NextRequest) {
       platform: platform !== "custom" ? platform : null,
       url,
       icon,
+      custom_color: customColor,
+      icon_style: iconStyle,
+      description: description,
       sort_order,
       is_active: true,
     });
@@ -88,12 +94,24 @@ export async function POST(req: NextRequest) {
     const label = String(form.get("label") || "").trim();
     const url = safeUrl(String(form.get("url") || ""));
     const icon = String(form.get("icon") || "link").trim();
+    const customColor = String(form.get("custom_color") || "").trim() || null;
+    const iconStyle = String(form.get("icon_style") || "emoji").trim();
+    const description = String(form.get("description") || "").trim() || null;
     const sort_order = Number(form.get("sort_order") || 0);
     const is_active = String(form.get("is_active") || "false") === "true";
 
     const { error } = await admin
       .from("profile_links")
-      .update({ label, url, icon, sort_order: Number.isFinite(sort_order) ? sort_order : 0, is_active })
+      .update({
+        label,
+        url,
+        icon,
+        custom_color: customColor,
+        icon_style: iconStyle,
+        description: description,
+        sort_order: Number.isFinite(sort_order) ? sort_order : 0,
+        is_active,
+      })
       .eq("id", linkId)
       .eq("profile_id", profileId);
 

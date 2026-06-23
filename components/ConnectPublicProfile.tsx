@@ -2,6 +2,9 @@
 
 import { useMemo } from "react";
 import { FaApple, FaGooglePay } from "react-icons/fa6";
+import ConnectLinksGrid from "@/components/ConnectLinksGrid";
+
+type LinkLayout = "grid" | "stack" | "buttons";
 
 type PublicLink = {
   id: string;
@@ -9,6 +12,9 @@ type PublicLink = {
   url: string;
   icon?: string | null;
   platform?: string | null;
+  custom_color?: string | null;
+  icon_style?: string | null;
+  description?: string | null;
 };
 
 type ConnectPublicProfileProps = {
@@ -25,6 +31,9 @@ type ConnectPublicProfileProps = {
   coverUrl?: string | null;
   themeColor?: string | null;
   links: PublicLink[];
+  layout?: LinkLayout;
+  showCardShowcase?: boolean;
+  showLeadForm?: boolean;
   sent?: boolean;
   rateLimited?: boolean;
   error?: boolean;
@@ -120,6 +129,9 @@ export default function ConnectPublicProfile({
   coverUrl,
   themeColor,
   links,
+  layout = "grid",
+  showCardShowcase = true,
+  showLeadForm = true,
   sent,
   rateLimited,
   error,
@@ -169,45 +181,46 @@ export default function ConnectPublicProfile({
         {bio ? <p className="connect-bio">{bio}</p> : null}
       </section>
 
-      <section className="connect-card-showcase-section" aria-label="Smart card showcase">
-        <div className="connect-card-showcase" aria-hidden="true">
-          <div className="connect-card-showcase-headings">
-            <p>Solid Steel</p>
-            <p>Dynamic Clutch QR</p>
-          </div>
+      {showCardShowcase ? (
+        <section className="connect-card-showcase-section" aria-label="Smart card showcase">
+          <div className="connect-card-showcase" aria-hidden="true">
+            <div className="connect-card-showcase-headings">
+              <p>Solid Steel</p>
+              <p>Dynamic Clutch QR</p>
+            </div>
 
-          <div className="connect-card-showcase-stage">
-            <div className="connect-card-grid">
-              <div className="connect-card connect-card-black connect-card-front">
-                <span className="connect-card-logo">C</span>
-              </div>
-              <div className="connect-card connect-card-black connect-card-back">
-                <div className="connect-card-qr">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <i key={`black-${i}`}></i>
-                  ))}
+            <div className="connect-card-showcase-stage">
+              <div className="connect-card-grid">
+                <div className="connect-card connect-card-black connect-card-front">
+                  <span className="connect-card-logo">C</span>
                 </div>
-              </div>
-              <div className="connect-card connect-card-pearl connect-card-front">
-                <span className="connect-card-logo connect-card-logo-dark">C</span>
-              </div>
-              <div className="connect-card connect-card-pearl connect-card-back">
-                <div className="connect-card-qr">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <i key={`pearl-${i}`}></i>
-                  ))}
+                <div className="connect-card connect-card-black connect-card-back">
+                  <div className="connect-card-qr">
+                    {Array.from({ length: 25 }).map((_, i) => (
+                      <i key={`black-${i}`}></i>
+                    ))}
+                  </div>
+                </div>
+                <div className="connect-card connect-card-pearl connect-card-front">
+                  <span className="connect-card-logo connect-card-logo-dark">C</span>
+                </div>
+                <div className="connect-card connect-card-pearl connect-card-back">
+                  <div className="connect-card-qr">
+                    {Array.from({ length: 25 }).map((_, i) => (
+                      <i key={`pearl-${i}`}></i>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="connect-card-finish-lines">
-            <p>Matte Black - Silver Engraving</p>
-            <p>Silver Pearl - Black Engraving</p>
+            <div className="connect-card-finish-lines">
+              <p>Matte Black - Silver Engraving</p>
+              <p>Silver Pearl - Black Engraving</p>
+            </div>
           </div>
-        </div>
-      </section>
-
+        </section>
+      ) : null}
       <section className="connect-actions-section">
         <div className="connect-actions-grid">
           <a
@@ -297,67 +310,56 @@ export default function ConnectPublicProfile({
         </div>
       </section>
 
-      {links.length > 0 ? (
-        <section className="connect-links-section">
-          <div className="connect-links-container">
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="connect-link-button"
-                onClick={() =>
-                  trackEvent(
-                    profileId,
-                    "link_click",
-                    { slug, label: link.label, platform: link.platform || null },
-                    link.id
-                  )
-                }
-              >
-                <span className="connect-link-icon">{iconFor(link.icon || link.platform)}</span>
-                <span className="connect-link-label">{link.label}</span>
-              </a>
-            ))}
+      <ConnectLinksGrid
+        links={links as any}
+        layout={layout}
+        profileId={profileId}
+        onLinkClick={(linkId) =>
+          trackEvent(
+            profileId,
+            "link_click",
+            { slug },
+            linkId
+          )
+        }
+      />
+
+      {showLeadForm ? (
+        <section className="connect-lead-section" id="lead-form">
+          <div className="connect-lead-card">
+            <h2>Request a Quote</h2>
+            <p className="connect-lead-description">Tell us what you need and we will follow up quickly.</p>
+
+            {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
+            {rateLimited ? (
+              <div className="connect-error">Too many requests. Please wait one minute and try again.</div>
+            ) : null}
+            {error ? <div className="connect-error">Something went wrong. Please try again.</div> : null}
+
+            <form action="/api/connect/leads" method="post" className="connect-lead-form">
+              <input type="hidden" name="profile_id" value={profileId} />
+              <input type="hidden" name="slug" value={slug} />
+
+              <input name="name" placeholder="Your name" className="connect-input" required />
+              <input name="email" type="email" placeholder="Your email" className="connect-input" />
+              <input name="phone" placeholder="Your phone" className="connect-input" />
+              <textarea name="message" placeholder="How can we help?" className="connect-input" rows={3} />
+
+              <input
+                name="company_website"
+                className="connect-honeypot"
+                autoComplete="off"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+
+              <button className="connect-submit" type="submit">
+                Send Request
+              </button>
+            </form>
           </div>
         </section>
       ) : null}
-
-      <section className="connect-lead-section" id="lead-form">
-        <div className="connect-lead-card">
-          <h2>Request a Quote</h2>
-          <p className="connect-lead-description">Tell us what you need and we will follow up quickly.</p>
-
-          {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
-          {rateLimited ? (
-            <div className="connect-error">Too many requests. Please wait one minute and try again.</div>
-          ) : null}
-          {error ? <div className="connect-error">Something went wrong. Please try again.</div> : null}
-
-          <form action="/api/connect/leads" method="post" className="connect-lead-form">
-            <input type="hidden" name="profile_id" value={profileId} />
-            <input type="hidden" name="slug" value={slug} />
-
-            <input name="name" placeholder="Your name" className="connect-input" required />
-            <input name="email" type="email" placeholder="Your email" className="connect-input" />
-            <input name="phone" placeholder="Your phone" className="connect-input" />
-            <textarea name="message" placeholder="How can we help?" className="connect-input" rows={3} />
-
-            <input
-              name="company_website"
-              className="connect-honeypot"
-              autoComplete="off"
-              tabIndex={-1}
-              aria-hidden="true"
-            />
-
-            <button className="connect-submit" type="submit">
-              Send Request
-            </button>
-          </form>
-        </div>
-      </section>
 
       <footer className="connect-footer">
         <p>

@@ -136,6 +136,32 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
                   <option value="false">Inactive</option>
                 </select>
               </label>
+              <label className="label">
+                Link Layout Style
+                <select className="input" name="layout" defaultValue={profile?.layout || "grid"}>
+                  <option value="grid">Grid (Linktree-style)</option>
+                  <option value="stack">Stack (Vertical list)</option>
+                  <option value="buttons">Buttons (Compact)</option>
+                </select>
+              </label>
+              <label className="label">
+                <input
+                  type="checkbox"
+                  name="show_card_showcase"
+                  defaultChecked={profile?.show_card_showcase !== false}
+                  value="true"
+                />
+                {" "}Show business card showcase
+              </label>
+              <label className="label">
+                <input
+                  type="checkbox"
+                  name="show_lead_form"
+                  defaultChecked={profile?.show_lead_form !== false}
+                  value="true"
+                />
+                {" "}Show lead capture form
+              </label>
             </div>
 
             <label className="label">
