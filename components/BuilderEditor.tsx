@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { BuilderConfig, BlockType } from "@/lib/builder-types";
 import { createDefaultBuilderConfig, addBlockToConfig } from "@/lib/builder-config";
 import BlockLibrary from "./BlockLibrary";
@@ -16,26 +17,28 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
   const [config, setConfig] = useState<BuilderConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [activeTab, setActiveTab] = useState<"blocks" | "library">("blocks");
+  const savedConfigRef = useRef<string | null>(null);
 
-  // Load builder config on mount
   useEffect(() => {
     async function loadConfig() {
       try {
         const res = await fetch("/api/connect/builder-config");
         const data = await res.json();
         setConfig(data.config);
-        // Show templates if profile just created (no blocks yet)
+        savedConfigRef.current = JSON.stringify(data.config);
         if (data.isDefault && data.config.blocks.length < 2) {
           setShowTemplates(true);
         }
-      } catch (error) {
-        console.error("Failed to load builder config:", error);
-        setConfig(createDefaultBuilderConfig(profile.theme_color));
+      } catch {
+        const def = createDefaultBuilderConfig(profile.theme_color);
+        setConfig(def);
+        savedConfigRef.current = JSON.stringify(def);
       }
     }
-
     loadConfig();
   }, [profile.theme_color]);
 
@@ -43,15 +46,17 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
     if (!config) return;
     const newConfig = addBlockToConfig(config, type);
     setConfig(newConfig);
+    setIsDirty(true);
+    setActiveTab("blocks");
   };
 
   const handleApplyTemplate = (templateConfig: BuilderConfig) => {
     setConfig(templateConfig);
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
     if (!config) return;
-
     setIsSaving(true);
     try {
       const res = await fetch("/api/connect/builder-config", {
@@ -59,13 +64,14 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ config }),
       });
-
       if (res.ok) {
+        savedConfigRef.current = JSON.stringify(config);
+        setIsDirty(false);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       }
-    } catch (error) {
-      console.error("Save failed:", error);
+    } catch {
+      // noop
     } finally {
       setIsSaving(false);
     }
@@ -73,80 +79,137 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
 
   const handleConfigChange = (newConfig: BuilderConfig) => {
     setConfig(newConfig);
+    setIsDirty(savedConfigRef.current !== JSON.stringify(newConfig));
     setSaveSuccess(false);
   };
 
   const handleToggleDarkMode = () => {
     if (!config) return;
-    const newConfig = {
+    handleConfigChange({
       ...config,
-      theme: {
-        ...config.theme,
-        darkMode: !config.theme.darkMode,
-      },
-    };
-    setConfig(newConfig);
+      theme: { ...config.theme, darkMode: !config.theme.darkMode },
+    });
   };
 
   if (!config) {
     return (
-      <div className="builder-editor">
-        <p>Loading builder...</p>
+      <div className="saas-builder-loading">
+        <div className="saas-loading-spinner" />
+        <span>Loading builder…</span>
       </div>
     );
   }
 
   return (
     <>
-      <div className="builder-editor" data-theme={config.theme.darkMode ? "dark" : "light"}>
-        <div className="builder-header">
-          <div>
-            <h1>Profile Builder</h1>
-            <p>Customize your profile with blocks</p>
+      <div className="saas-builder" data-theme="builder-dark">
+        {/* Top nav bar */}
+        <header className="saas-topbar">
+          <div className="saas-topbar-left">
+            <div className="saas-topbar-title">
+              <span className="saas-topbar-dot" />
+              Profile Builder
+            </div>
+            <nav className="saas-tab-nav">
+              <button
+                className={`saas-tab${activeTab === "blocks" ? " active" : ""}`}
+                onClick={() => setActiveTab("blocks")}
+              >
+                Blocks
+              </button>
+              <button
+                className={`saas-tab${activeTab === "library" ? " active" : ""}`}
+                onClick={() => setActiveTab("library")}
+              >
+                Library
+              </button>
+            </nav>
           </div>
-          <div className="builder-header-actions">
+          <div className="saas-topbar-right">
+            <button className="saas-pill-btn" onClick={() => setShowTemplates(true)}>
+              Templates
+            </button>
             <button
-              className="btn secondary"
+              className="saas-pill-btn"
               onClick={handleToggleDarkMode}
               title={config.theme.darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {config.theme.darkMode ? "☀️ Light" : "🌙 Dark"}
             </button>
+            <AnimatePresence>
+              {isDirty && !saveSuccess && (
+                <motion.span
+                  className="saas-unsaved-badge"
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Unsaved changes
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {saveSuccess && (
+                <motion.span
+                  className="saas-saved-badge"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  ✓ Saved
+                </motion.span>
+              )}
+            </AnimatePresence>
             <button
-              className="btn secondary"
-              onClick={() => setShowTemplates(true)}
-            >
-              Templates
-            </button>
-            {saveSuccess && <span className="save-indicator">✓ Saved</span>}
-            <button
-              className="btn primary"
+              className={`saas-save-btn${isSaving ? " loading" : ""}${isDirty ? " dirty" : ""}`}
               onClick={handleSave}
               disabled={isSaving}
             >
-              {isSaving ? "Saving..." : "Save Profile"}
+              {isSaving ? "Saving…" : "Save Profile"}
             </button>
           </div>
-        </div>
+        </header>
 
-        <div className="builder-layout">
-          {/* Left Sidebar: Block Library */}
-          <div className="builder-sidebar">
-            <BlockLibrary onAddBlock={handleAddBlock} />
+        {/* 3-column layout */}
+        <div className="saas-workspace">
+          {/* Left panel */}
+          <div className="saas-left-panel">
+            <AnimatePresence mode="wait">
+              {activeTab === "blocks" ? (
+                <motion.div
+                  key="blocks"
+                  className="saas-panel-inner"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <BuilderCanvas
+                    config={config}
+                    onConfigChange={handleConfigChange}
+                    selectedBlockId={selectedBlockId}
+                    onSelectBlock={setSelectedBlockId}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="library"
+                  className="saas-panel-inner"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <BlockLibrary onAddBlock={handleAddBlock} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Center: Canvas with Blocks */}
-          <div className="builder-canvas-container">
-            <BuilderCanvas
-              config={config}
-              onConfigChange={handleConfigChange}
-              selectedBlockId={selectedBlockId}
-              onSelectBlock={setSelectedBlockId}
-            />
-          </div>
-
-          {/* Right Panel: Live Preview */}
-          <div className="builder-preview-panel">
+          {/* Center preview */}
+          <div className="saas-preview-center">
             <BuilderPreview config={config} profile={profile} />
           </div>
         </div>

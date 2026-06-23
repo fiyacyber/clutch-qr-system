@@ -10,13 +10,33 @@ interface BuilderPreviewProps {
 
 export default function BuilderPreview({ config, profile }: BuilderPreviewProps) {
   return (
-    <div className="builder-preview">
-      <div className="preview-header">
-        <h3>Live Preview</h3>
-        <span className="device-indicator">📱 Mobile</span>
+    <div className="saas-preview-wrap">
+      {/* Label row */}
+      <div className="saas-preview-label-row">
+        <span className="saas-preview-label">Live Preview</span>
+        <span className="saas-preview-device-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }}>
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+          </svg>
+          Mobile
+        </span>
       </div>
-      <div className="preview-frame">
-        <BuilderPublicProfile config={config} profile={profile} />
+
+      {/* Device frame */}
+      <div className="saas-device-outer">
+        <div className="saas-device-frame">
+          {/* Notch */}
+          <div className="saas-device-notch">
+            <span className="saas-notch-island" />
+          </div>
+          {/* Screen scroll area */}
+          <div className="saas-device-screen">
+            <BuilderPublicProfile config={config} profile={profile} />
+          </div>
+          {/* Home bar */}
+          <div className="saas-device-bar" />
+        </div>
       </div>
     </div>
   );
