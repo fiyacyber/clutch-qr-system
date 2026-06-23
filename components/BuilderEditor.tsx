@@ -126,49 +126,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
             </div>
           </div>
           <div className="saas-topbar-right">
-            <button className="saas-pill-btn" onClick={() => setShowTemplates(true)}>
-              Templates
-            </button>
-            <button
-              className="saas-pill-btn"
-              onClick={handleToggleDarkMode}
-              title={config.theme.darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {config.theme.darkMode ? "☀️ Light" : "🌙 Dark"}
-            </button>
-            <AnimatePresence>
-              {isDirty && !saveSuccess && (
-                <motion.span
-                  className="saas-unsaved-badge"
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  Unsaved changes
-                </motion.span>
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {saveSuccess && (
-                <motion.span
-                  className="saas-saved-badge"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  ✓ Saved
-                </motion.span>
-              )}
-            </AnimatePresence>
-            <button
-              className={`saas-save-btn${isSaving ? " loading" : ""}${isDirty ? " dirty" : ""}`}
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving…" : "Save Profile"}
-            </button>
+            <span className="saas-topbar-meta">Live builder</span>
           </div>
         </header>
 

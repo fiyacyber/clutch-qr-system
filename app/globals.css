@@ -3302,8 +3302,8 @@ button:disabled {
 
 /* ── Top navigation bar ──────────────────────────────────── */
 .saas-topbar {
-  height: 56px;
-  min-height: 56px;
+  height: 48px;
+  min-height: 48px;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -3311,7 +3311,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 18px;
   position: relative;
   z-index: 50;
 }
@@ -3379,6 +3379,14 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.saas-topbar-meta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--b-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .saas-pill-btn {
@@ -3490,7 +3498,7 @@ button:disabled {
   padding: 16px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.99), rgba(15, 23, 42, 0.94));
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -3581,7 +3589,7 @@ button:disabled {
   z-index: 3;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
   padding: 14px 14px 12px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -3887,24 +3895,24 @@ button:disabled {
 .saas-block-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
   opacity: 0.92;
   transition: opacity 0.15s ease;
 }
 
 .saas-icon-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--b-subtle);
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   transition: all 0.15s ease;
   line-height: 1;
 }
@@ -3914,7 +3922,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   color: var(--b-subtle);
-  margin-left: 2px;
+  margin-left: 1px;
 }
 
 .saas-icon-btn:hover {
@@ -5377,7 +5385,7 @@ button:disabled {
   .saas-topbar {
     flex-wrap: wrap;
     height: auto;
-    padding: 10px 14px;
+    padding: 8px 14px;
     gap: 8px;
   }
   .saas-topbar-left, .saas-topbar-right {

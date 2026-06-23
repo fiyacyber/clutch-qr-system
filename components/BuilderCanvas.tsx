@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, GripVertical, Trash2, User, Mail, Phone, Share2, Link2, MapPin, ClipboardList, CalendarDays, Video, Star, Images, QrCode } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Eye, EyeOff, GripVertical, Trash2, User, Mail, Phone, Share2, Link2, MapPin, ClipboardList, CalendarDays, Video, Star, Images, QrCode } from "lucide-react";
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
 import {
   removeBlockFromConfig,
@@ -173,13 +173,13 @@ export default function BuilderCanvas({
                       onClick={() => handleMoveUp(idx)}
                       title="Move up"
                       disabled={idx === 0}
-                    >↑</button>
+                    ><ArrowUp size={14} strokeWidth={2} /></button>
                     <button
                       className="saas-icon-btn"
                       onClick={() => handleMoveDown(idx)}
                       title="Move down"
                       disabled={idx === config.blocks.length - 1}
-                    >↓</button>
+                    ><ArrowDown size={14} strokeWidth={2} /></button>
                     <button
                       className="saas-icon-btn"
                       onClick={() => handleDuplicate(block)}
