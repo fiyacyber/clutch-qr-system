@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase-client';
 import Link from 'next/link';
@@ -52,22 +51,7 @@ export default function ResetPasswordPage() {
     <div className={styles.container}>
       <div className={styles.background} />
       
-      <div className={styles.content}>
-        <div className={styles.brandingSide}>
-          <div className={styles.brandingContent}>
-            <Image
-              src="/clutch-banner.png"
-              alt="Clutch"
-              width={300}
-              height={112}
-              priority
-            />
-            <h1 className={styles.brandingTitle}>Set New Password</h1>
-            <p className={styles.brandingSubtitle}>
-              Create a strong password to secure your account.
-            </p>
-          </div>
-        </div>
+      <div className={styles.contentSingle}>
 
         <div className={styles.formSide}>
           <div className={styles.formCard}>

@@ -4,6 +4,7 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/sup
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next");
 
   if (!code) {
     return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = data?.user?.id;
-  const destination = new URL("/portal", request.url);
+  const safeNext = next && next.startsWith("/") ? next : "/portal";
+  const destination = new URL(safeNext, request.url);
   const response = NextResponse.redirect(destination);
 
   if (!userId) {

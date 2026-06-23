@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
@@ -17,10 +16,9 @@ async function sendPasswordReset(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
 
-  const redirectUrl =
-    process.env.CLUTCH_QR_BASE_URL
-      ? `${process.env.CLUTCH_QR_BASE_URL}/auth/reset-password`
-      : "https://qr.clutchprintshop.com/auth/reset-password";
+  const baseUrl =
+    process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
+  const redirectUrl = `${baseUrl}/auth/callback?next=/auth/reset-password`;
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl,
@@ -51,23 +49,8 @@ export default async function ForgotPasswordPage({
   return (
     <div className={styles.container}>
       <div className={styles.background} />
-      
-      <div className={styles.content}>
-        <div className={styles.brandingSide}>
-          <div className={styles.brandingContent}>
-            <Image
-              src="/clutch-banner.png"
-              alt="Clutch"
-              width={300}
-              height={112}
-              priority
-            />
-            <h1 className={styles.brandingTitle}>Reset Your Password</h1>
-            <p className={styles.brandingSubtitle}>
-              We'll send you a secure link to reset your password in seconds.
-            </p>
-          </div>
-        </div>
+
+      <div className={styles.contentSingle}>
 
         <div className={styles.formSide}>
           <div className={styles.formCard}>
