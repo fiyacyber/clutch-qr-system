@@ -45,8 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <html lang="en" className={`${montserrat.variable} ${exo2.variable}`}>
-      <body>
+    <html lang="en" className={`${montserrat.variable} ${exo2.variable}`} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
