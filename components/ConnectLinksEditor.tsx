@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { POPULAR_PLATFORMS, getPlatform, buildUrlForPlatform } from "@/lib/platforms";
+import PremiumColorPicker from "./PremiumColorPicker";
 
 interface ConnectLinksEditorProps {
   profileId: string;
@@ -144,12 +145,11 @@ export default function ConnectLinksEditor({ profileId, existingLinks = [] }: Co
 
           <label className="label">
             Link Color (optional)
-            <input
-              className="input"
-              type="color"
+            <PremiumColorPicker
               value={customColor || "#FFA665"}
-              onChange={(e) => setCustomColor(e.target.value)}
-              title="Custom color for this link card"
+              onChange={setCustomColor}
+              ariaLabel="Link card color"
+              buttonText="Choose link color"
             />
           </label>
 

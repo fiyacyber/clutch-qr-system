@@ -2,6 +2,7 @@
 
 import { BuilderBlock } from "@/lib/builder-types";
 import { getBlockData } from "./blockUtils";
+import PremiumColorPicker from "../PremiumColorPicker";
 
 export interface BlockEditorProps {
   block: BuilderBlock;
@@ -200,10 +201,12 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
       {data.avatarGlowEnabled !== false && (
         <>
           <Field label="Glow Color" tooltip="The tint used for the halo behind your avatar.">
-            <input
-              type="color"
+            <PremiumColorPicker
               value={data.avatarGlowColor || "#FF6B2C"}
-              onChange={(e) => onUpdate({ avatarGlowColor: e.target.value })}
+              onChange={(color) => onUpdate({ avatarGlowColor: color })}
+              ariaLabel="Avatar glow color"
+              buttonText="Choose glow color"
+              presets={["#FFA665", "#F59E0B", "#FF6B2C", "#384862", "#111827", "#FFFFFF"]}
             />
           </Field>
           <Field
@@ -296,17 +299,21 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
       {Boolean(data.verifiedBadgeEnabled ?? data.verified) && (
         <>
           <Field label="Badge Color" tooltip="Background color of the badge circle.">
-            <input
-              type="color"
+            <PremiumColorPicker
               value={data.verifiedBadgeColor || "#f59e0b"}
-              onChange={(e) => onUpdate({ verifiedBadgeColor: e.target.value })}
+              onChange={(color) => onUpdate({ verifiedBadgeColor: color })}
+              ariaLabel="Verified badge color"
+              buttonText="Choose badge color"
+              presets={["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"]}
             />
           </Field>
           <Field label="Badge Icon Color" tooltip="Color of the icon inside the badge.">
-            <input
-              type="color"
+            <PremiumColorPicker
               value={data.verifiedBadgeIconColor || "#0f172a"}
-              onChange={(e) => onUpdate({ verifiedBadgeIconColor: e.target.value })}
+              onChange={(color) => onUpdate({ verifiedBadgeIconColor: color })}
+              ariaLabel="Verified badge icon color"
+              buttonText="Choose icon color"
+              presets={["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"]}
             />
           </Field>
           <Field label="Badge Icon" tooltip="Pick the symbol used in the verified badge.">
@@ -351,7 +358,13 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
       </div>
 
       <Field label="Theme / Brand Color">
-        <input type="color" value={data.brandColor || "#FF6B2C"} onChange={(e) => onUpdate({ brandColor: e.target.value })} />
+        <PremiumColorPicker
+          value={data.brandColor || "#FF6B2C"}
+          onChange={(color) => onUpdate({ brandColor: color })}
+          ariaLabel="Theme / brand color"
+          buttonText="Choose brand color"
+          presets={["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"]}
+        />
       </Field>
     </div>
   );

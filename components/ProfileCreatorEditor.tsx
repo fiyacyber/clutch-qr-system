@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ConnectPublicProfile from "./ConnectPublicProfile";
+import PremiumColorPicker from "./PremiumColorPicker";
 
 interface Profile {
   id: string;
@@ -270,13 +271,11 @@ export default function ProfileCreatorEditor({
               <h3>Appearance</h3>
               <label className="label">
                 Theme Color
-                <input
-                  className="input"
-                  type="color"
+                <PremiumColorPicker
                   value={profile.theme_color}
-                  onChange={(e) =>
-                    handleInputChange("theme_color", e.target.value)
-                  }
+                  onChange={(color) => handleInputChange("theme_color", color)}
+                  ariaLabel="Profile theme color"
+                  buttonText="Choose theme color"
                 />
               </label>
               <label className="label">

@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./QRStylePanel.module.css";
+import PremiumColorPicker from "./PremiumColorPicker";
 
 export type DotStyle = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
 export type CornerStyle = "square" | "dot" | "extra-rounded";
@@ -117,21 +118,21 @@ export default function QRStylePanel({
         <div className={styles.colorRow}>
           <label className={styles.colorPicker}>
             <span className={styles.colorLabel}>QR Code</span>
-            <input
-              type="color"
+            <PremiumColorPicker
               value={foregroundColor}
-              onChange={(e) => onForegroundColorChange(e.target.value)}
-              className={styles.input}
+              onChange={onForegroundColorChange}
+              ariaLabel="QR code color"
+              buttonText="Choose QR color"
             />
             <span className={styles.colorValue}>{foregroundColor}</span>
           </label>
           <label className={styles.colorPicker}>
             <span className={styles.colorLabel}>Background</span>
-            <input
-              type="color"
+            <PremiumColorPicker
               value={backgroundColor}
-              onChange={(e) => onBackgroundColorChange(e.target.value)}
-              className={styles.input}
+              onChange={onBackgroundColorChange}
+              ariaLabel="QR background color"
+              buttonText="Choose background"
             />
             <span className={styles.colorValue}>{backgroundColor}</span>
           </label>

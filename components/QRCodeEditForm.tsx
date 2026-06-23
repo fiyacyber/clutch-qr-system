@@ -4,6 +4,7 @@ import { FormEvent, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import StyledQRPreview from "@/components/StyledQRPreview";
 import { qrUrl, normalizeUrl } from "@/lib/qr";
+import PremiumColorPicker from "@/components/PremiumColorPicker";
 
 type DotStyle =
   | "square"
@@ -282,21 +283,23 @@ export default function QRCodeEditForm({ code, connectProfiles = [] }: QRCodeEdi
             <div className="color-grid">
               <label className="label color-label">
                 QR Color
-                <input
-                  type="color"
-                  name="foreground_color"
+                <PremiumColorPicker
                   value={foregroundColor}
-                  onChange={(e) => setForegroundColor(e.target.value)}
+                  onChange={setForegroundColor}
+                  ariaLabel="QR color"
+                  buttonText="Choose QR color"
+                  name="foreground_color"
                 />
               </label>
 
               <label className="label color-label">
                 Background Color
-                <input
-                  type="color"
-                  name="background_color"
+                <PremiumColorPicker
                   value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  onChange={setBackgroundColor}
+                  ariaLabel="QR background color"
+                  buttonText="Choose background"
+                  name="background_color"
                 />
               </label>
             </div>
