@@ -144,13 +144,13 @@ export default function BuilderCanvas({
                 className={`saas-block-card${selectedBlockId === block.id ? " selected" : ""}${!block.visible ? " hidden" : ""}`}
               >
                 {/* Block header row */}
-                <button
-                  type="button"
-                  className="saas-block-row"
-                  onClick={() => onSelectBlock(selectedBlockId === block.id ? null : block.id)}
-                >
+                <div className="saas-block-row">
                   {/* Drag handle + icon + name */}
-                  <div className="saas-block-left">
+                  <button
+                    type="button"
+                    className="saas-block-main"
+                    onClick={() => onSelectBlock(selectedBlockId === block.id ? null : block.id)}
+                  >
                     <div className="saas-drag-handle" title="Drag to reorder">
                       <GripVertical size={14} strokeWidth={2} />
                     </div>
@@ -164,7 +164,7 @@ export default function BuilderCanvas({
                       <span className="saas-block-name">{BLOCK_LABELS[block.type] || block.type}</span>
                       <span className="saas-block-index">#{idx + 1}</span>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Action buttons */}
                   <div className="saas-block-actions" onClick={(e) => e.stopPropagation()}>
@@ -203,7 +203,7 @@ export default function BuilderCanvas({
                       {selectedBlockId === block.id ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
                     </span>
                   </div>
-                </button>
+                </div>
 
                 {/* Settings panel (animated expand) */}
                 <AnimatePresence>

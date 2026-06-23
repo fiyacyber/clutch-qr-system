@@ -2,42 +2,40 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { CalendarDays, ClipboardList, GalleryVerticalEnd, ImageIcon, Link2, Mail, MapPin, MessageSquarePlus, Phone, PlusCircle, Share2, Star, User, Video } from "lucide-react";
 import { BlockType } from "@/lib/builder-types";
 
 interface BlockLibraryItem {
-  type: BlockType;
+  id: string;
+  type?: BlockType;
   label: string;
   description: string;
-  icon: string;
-  category: "layout" | "contact" | "content" | "premium";
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  category: "core" | "contact" | "growth";
+  available: boolean;
 }
 
 const BLOCK_LIBRARY: BlockLibraryItem[] = [
-  { type: "profile-hero", label: "Profile Hero", description: "Photo, name, title, bio", icon: "👤", category: "layout" },
-  { type: "contact-buttons", label: "Contact Buttons", description: "Call, email, text group", icon: "📱", category: "contact" },
-  { type: "phone-button", label: "Phone Button", description: "Single phone action", icon: "☎️", category: "contact" },
-  { type: "email-button", label: "Email Button", description: "Single email action", icon: "✉️", category: "contact" },
-  { type: "website-button", label: "Website Button", description: "Link to your website", icon: "🌐", category: "contact" },
-  { type: "directions-button", label: "Directions", description: "Google Maps link", icon: "📍", category: "contact" },
-  { type: "request-quote-button", label: "Request Quote", description: "Lead capture button", icon: "💬", category: "contact" },
-  { type: "custom-link-button", label: "Custom Link", description: "Any custom URL", icon: "🎯", category: "contact" },
-  { type: "social-media-links", label: "Social Media Grid", description: "All social links", icon: "🔗", category: "content" },
-  { type: "text-section", label: "Text Section", description: "Heading and body text", icon: "📝", category: "content" },
-  { type: "image-banner", label: "Image / Banner", description: "Upload an image", icon: "🖼️", category: "content" },
-  { type: "business-hours", label: "Business Hours", description: "Operating hours", icon: "🕐", category: "content" },
-  { type: "services-list", label: "Services List", description: "List your offerings", icon: "✓", category: "content" },
-  { type: "form-block", label: "Form Block", description: "Custom contact form", icon: "📋", category: "content" },
-  { type: "apple-wallet-button", label: "Apple Wallet", description: "Add to Apple Wallet", icon: "🍎", category: "premium" },
-  { type: "google-wallet-button", label: "Google Wallet", description: "Save to Google Wallet", icon: "🔵", category: "premium" },
-  { type: "qr-code-block", label: "QR Code", description: "Your profile QR code", icon: "📲", category: "premium" },
+  { id: "profile", type: "profile-hero", label: "Profile", description: "Photo, name, role, and bio", icon: User, category: "core", available: true },
+  { id: "email", type: "email-button", label: "Email", description: "Single email call-to-action", icon: Mail, category: "contact", available: true },
+  { id: "phone", type: "phone-button", label: "Phone", description: "Single phone or text action", icon: Phone, category: "contact", available: true },
+  { id: "social", type: "social-media-links", label: "Social links", description: "Display your social network grid", icon: Share2, category: "contact", available: true },
+  { id: "button", type: "custom-link-button", label: "Button", description: "Add a custom link button", icon: Link2, category: "contact", available: true },
+  { id: "location", type: "directions-button", label: "Location", description: "Send visitors to your map listing", icon: MapPin, category: "contact", available: true },
+  { id: "lead-form", type: "form-block", label: "Lead form", description: "Capture inquiries directly in-page", icon: ClipboardList, category: "growth", available: true },
+  { id: "calendar", label: "Calendar", description: "Embed booking and availability", icon: CalendarDays, category: "growth", available: false },
+  { id: "video", label: "Video", description: "Feature a product or intro video", icon: Video, category: "growth", available: false },
+  { id: "reviews", label: "Reviews", description: "Showcase testimonials and ratings", icon: Star, category: "growth", available: false },
+  { id: "gallery", label: "Gallery", description: "Create an image gallery section", icon: GalleryVerticalEnd, category: "growth", available: false },
+  { id: "contact-buttons", type: "contact-buttons", label: "Contact group", description: "Call, email, website, and more", icon: MessageSquarePlus, category: "core", available: true },
+  { id: "image", type: "image-banner", label: "Image", description: "Banner or promo image block", icon: ImageIcon, category: "core", available: true },
 ];
 
-const CATEGORIES = ["layout", "contact", "content", "premium"] as const;
+const CATEGORIES = ["core", "contact", "growth"] as const;
 const CATEGORY_LABELS: Record<typeof CATEGORIES[number], string> = {
-  layout: "Layout",
-  contact: "Contact",
-  content: "Content",
-  premium: "⚡ Premium",
+  core: "Core blocks",
+  contact: "Contact actions",
+  growth: "Growth + media",
 };
 
 interface BlockLibraryProps {
@@ -81,7 +79,7 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
           ) : (
             <div className="saas-lib-group">
               {filtered.map((block, idx) => (
-                <LibraryItem key={`${block.type}-${idx}`} block={block} onAdd={onAddBlock} />
+                <LibraryItem key={`${block.id}-${idx}`} block={block} onAdd={onAddBlock} />
               ))}
             </div>
           )
@@ -93,7 +91,7 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
                 <span className="saas-lib-section-label">{CATEGORY_LABELS[cat]}</span>
                 <div className="saas-lib-group">
                   {items.map((block, idx) => (
-                    <LibraryItem key={`${block.type}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} />
+                    <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} />
                   ))}
                 </div>
               </div>
@@ -106,22 +104,30 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
 }
 
 function LibraryItem({ block, onAdd }: { block: BlockLibraryItem; onAdd: (t: BlockType) => void }) {
+  const Icon = block.icon;
   return (
-    <motion.button
-      className="saas-lib-item"
-      onClick={() => onAdd(block.type)}
-      whileHover={{ x: 3 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ duration: 0.15 }}
-      title={block.description}
-    >
-      <span className="saas-lib-icon">{block.icon}</span>
+    <motion.div className={`saas-lib-item${block.available ? "" : " coming-soon"}`} whileHover={block.available ? { y: -2 } : undefined} transition={{ duration: 0.15 }}>
+      <div className="saas-lib-icon"><Icon size={18} strokeWidth={2} /></div>
       <div className="saas-lib-meta">
         <span className="saas-lib-name">{block.label}</span>
         <span className="saas-lib-desc">{block.description}</span>
       </div>
-      <span className="saas-lib-add">+</span>
-    </motion.button>
+      <button
+        type="button"
+        className={`saas-lib-add-btn${block.available ? "" : " disabled"}`}
+        onClick={() => block.available && block.type && onAdd(block.type)}
+        disabled={!block.available}
+      >
+        {block.available ? (
+          <>
+            <PlusCircle size={14} strokeWidth={2} />
+            <span>Add</span>
+          </>
+        ) : (
+          <span>Coming soon</span>
+        )}
+      </button>
+    </motion.div>
   );
 }
 

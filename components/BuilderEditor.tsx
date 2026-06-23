@@ -31,6 +31,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("content");
   const savedConfigRef = useRef<string | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadConfig() {
@@ -98,6 +99,10 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
       ...config,
       theme: { ...config.theme, darkMode: !config.theme.darkMode },
     });
+  };
+
+  const handlePreviewFocus = () => {
+    previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
   };
 
   if (!config) {
@@ -171,6 +176,67 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
         <div className="saas-workspace">
           {/* Left panel */}
           <div className="saas-left-panel">
+            <div className="saas-sidebar-header">
+              <div className="saas-sidebar-header-copy">
+                <p className="saas-sidebar-kicker">Clutch Connect Builder</p>
+                <h2 className="saas-sidebar-title">Customize your public profile</h2>
+                <p className="saas-sidebar-subtitle">Edit content, adjust design, and manage blocks without leaving the live preview.</p>
+              </div>
+
+              <div className="saas-sidebar-actions">
+                <button type="button" className="saas-sidebar-btn ghost" onClick={handlePreviewFocus}>
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  className={`saas-sidebar-btn primary${isSaving ? " loading" : ""}`}
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+
+              <div className="saas-sidebar-status-row">
+                <button className="saas-pill-btn" onClick={() => setShowTemplates(true)}>
+                  Templates
+                </button>
+                <button
+                  className="saas-pill-btn"
+                  onClick={handleToggleDarkMode}
+                  title={config.theme.darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {config.theme.darkMode ? "☀️ Light" : "🌙 Dark"}
+                </button>
+                <AnimatePresence>
+                  {isDirty && !saveSuccess && (
+                    <motion.span
+                      className="saas-unsaved-badge"
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Unsaved changes
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {saveSuccess && (
+                    <motion.span
+                      className="saas-saved-badge"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      ✓ Saved
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
             <div className="sidebar-tabs">
               {sidebarTabs.map((tab) => (
                 <button
@@ -263,7 +329,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
           </div>
 
           {/* Center preview */}
-          <div className="saas-preview-center">
+          <div className="saas-preview-center" ref={previewRef}>
             <BuilderPreview config={config} profile={profile} />
           </div>
         </div>
