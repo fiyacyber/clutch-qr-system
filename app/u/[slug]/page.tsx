@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
+import { validateBuilderConfig } from "@/lib/builder-config";
 import ConnectPublicProfile from "@/components/ConnectPublicProfile";
+import BuilderPublicProfile from "@/components/BuilderPublicProfile";
 
 export default async function PublicConnectProfilePage({
   params,
@@ -43,6 +45,12 @@ export default async function PublicConnectProfilePage({
     metadata: { slug },
   });
 
+  // Check if profile has builder_config and it's valid
+  if (profile.builder_config && validateBuilderConfig(profile.builder_config)) {
+    return <BuilderPublicProfile config={profile.builder_config} profile={profile} />;
+  }
+
+  // Fall back to legacy ConnectPublicProfile renderer
   return (
     <ConnectPublicProfile
       profileId={profile.id}
