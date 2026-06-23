@@ -73,108 +73,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         </section>
 
         <section className="create-page-nav">
-          <Link className="btn ghost" href="/portal/connect/links">Manage Links</Link>
-          <Link className="btn secondary" href="/portal/connect/leads">View Leads</Link>
+          <Link className="btn primary" href="/portal/connect/edit">Edit Public Page</Link>
           {profile?.slug ? (
-            <Link className="btn primary" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link>
+            <Link className="btn secondary" href={`/u/${profile.slug}`} target="_blank">View Public Profile</Link>
           ) : null}
+          <Link className="btn ghost" href="/portal/connect/links">Manage Links</Link>
+          <Link className="btn ghost" href="/portal/connect/leads">View Leads</Link>
         </section>
 
         {params.saved === "1" ? <div className="success-message">Profile saved.</div> : null}
-
-        <section className="card">
-          <p className="eyebrow">Profile Editor</p>
-          <h2>Public Profile Settings</h2>
-          <form className="form" action="/api/connect/profile" method="post" encType="multipart/form-data">
-            <input type="hidden" name="profile_id" value={profile?.id || ""} />
-
-            <div className="admin-form-grid">
-              <label className="label">
-                Business Name
-                <input className="input" name="business_name" defaultValue={profile?.business_name || customer.company_name || ""} />
-              </label>
-              <label className="label">
-                Contact Name
-                <input className="input" name="contact_name" defaultValue={profile?.contact_name || customer.first_name || ""} />
-              </label>
-              <label className="label">
-                Title
-                <input className="input" name="title" defaultValue={profile?.title || ""} placeholder="Owner / Sales Manager" />
-              </label>
-              <label className="label">
-                Phone
-                <input className="input" name="phone" defaultValue={profile?.phone || ""} placeholder="+1 555 555 5555" />
-              </label>
-              <label className="label">
-                Email
-                <input className="input" type="email" name="email" defaultValue={profile?.email || customer.email || ""} />
-              </label>
-              <label className="label">
-                Website
-                <input className="input" name="website" defaultValue={profile?.website || ""} placeholder="clutchprintshop.com" />
-              </label>
-              <label className="label">
-                Avatar URL
-                <input className="input" name="avatar_url" defaultValue={profile?.avatar_url || ""} />
-              </label>
-              <label className="label">
-                Profile Picture Upload
-                <input
-                  className="input"
-                  type="file"
-                  name="avatar"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                />
-              </label>
-              <label className="label">
-                Cover URL
-                <input className="input" name="cover_url" defaultValue={profile?.cover_url || ""} />
-              </label>
-              <label className="label">
-                Theme Color
-                <input className="input" type="color" name="theme_color" defaultValue={profile?.theme_color || "#FFA665"} />
-              </label>
-              <label className="label">
-                Profile Slug
-                <input className="input" name="slug" defaultValue={profile?.slug || fallbackSlug} />
-              </label>
-              <label className="label">
-                Status
-                <select className="input" name="is_active" defaultValue={String(profile?.is_active ?? true)}>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-              </label>
-              <label className="label">
-                Link Layout Style
-                <select className="input" name="layout" defaultValue={profile?.layout || "grid"}>
-                  <option value="grid">Grid (Linktree-style)</option>
-                  <option value="stack">Stack (Vertical list)</option>
-                  <option value="buttons">Buttons (Compact)</option>
-                </select>
-              </label>
-              <label className="label">
-                <input
-                  type="checkbox"
-                  name="show_lead_form"
-                  defaultChecked={profile?.show_lead_form !== false}
-                  value="true"
-                />
-                {" "}Show lead capture form
-              </label>
-            </div>
-
-            <label className="label">
-              Bio
-              <textarea className="input" name="bio" rows={4} defaultValue={profile?.bio || ""} />
-            </label>
-
-            <div className="actions">
-              <button className="btn primary" type="submit">Save Profile</button>
-              {profile?.slug ? <Link className="btn ghost" href={`/u/${profile.slug}`} target="_blank">Preview Public Page</Link> : null}
-            </div>
-          </form>
-        </section>
 
         <section className="analytics-grid" style={{ marginTop: "18px" }}>
           <article className="analytics-card">
