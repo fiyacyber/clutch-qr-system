@@ -147,15 +147,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               <label className="label">
                 <input
                   type="checkbox"
-                  name="show_card_showcase"
-                  defaultChecked={profile?.show_card_showcase !== false}
-                  value="true"
-                />
-                {" "}Show business card showcase
-              </label>
-              <label className="label">
-                <input
-                  type="checkbox"
                   name="show_lead_form"
                   defaultChecked={profile?.show_lead_form !== false}
                   value="true"

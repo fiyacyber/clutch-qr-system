@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const slugInput = String(form.get("slug") || "").trim();
   const is_active = String(form.get("is_active") || "true") !== "false";
   const layout = String(form.get("layout") || "grid") as "grid" | "stack" | "buttons";
-  const show_card_showcase = String(form.get("show_card_showcase") || "true") !== "false";
+  const show_card_showcase = false;
   const show_lead_form = String(form.get("show_lead_form") || "true") !== "false";
 
   const rawSlugSource = slugInput || business_name || contact_name || customer.company_name || customer.email;

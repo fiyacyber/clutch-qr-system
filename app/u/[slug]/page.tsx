@@ -59,7 +59,6 @@ export default async function PublicConnectProfilePage({
       themeColor={profile.theme_color}
       links={(linkRows || []) as any}
       layout={(profile.layout || "grid") as any}
-      showCardShowcase={profile.show_card_showcase !== false}
       showLeadForm={profile.show_lead_form !== false}
       sent={query.sent === "1"}
       rateLimited={query.rate_limited === "1"}

@@ -32,7 +32,6 @@ type ConnectPublicProfileProps = {
   themeColor?: string | null;
   links: PublicLink[];
   layout?: LinkLayout;
-  showCardShowcase?: boolean;
   showLeadForm?: boolean;
   sent?: boolean;
   rateLimited?: boolean;
@@ -130,7 +129,6 @@ export default function ConnectPublicProfile({
   themeColor,
   links,
   layout = "grid",
-  showCardShowcase = true,
   showLeadForm = true,
   sent,
   rateLimited,
@@ -181,46 +179,6 @@ export default function ConnectPublicProfile({
         {bio ? <p className="connect-bio">{bio}</p> : null}
       </section>
 
-      {showCardShowcase ? (
-        <section className="connect-card-showcase-section" aria-label="Smart card showcase">
-          <div className="connect-card-showcase" aria-hidden="true">
-            <div className="connect-card-showcase-headings">
-              <p>Solid Steel</p>
-              <p>Dynamic Clutch QR</p>
-            </div>
-
-            <div className="connect-card-showcase-stage">
-              <div className="connect-card-grid">
-                <div className="connect-card connect-card-black connect-card-front">
-                  <span className="connect-card-logo">C</span>
-                </div>
-                <div className="connect-card connect-card-black connect-card-back">
-                  <div className="connect-card-qr">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <i key={`black-${i}`}></i>
-                    ))}
-                  </div>
-                </div>
-                <div className="connect-card connect-card-pearl connect-card-front">
-                  <span className="connect-card-logo connect-card-logo-dark">C</span>
-                </div>
-                <div className="connect-card connect-card-pearl connect-card-back">
-                  <div className="connect-card-qr">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <i key={`pearl-${i}`}></i>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="connect-card-finish-lines">
-              <p>Matte Black - Silver Engraving</p>
-              <p>Silver Pearl - Black Engraving</p>
-            </div>
-          </div>
-        </section>
-      ) : null}
       <section className="connect-actions-section">
         <div className="connect-actions-grid">
           <a
