@@ -1,0 +1,249 @@
+.container {
+  display: grid;
+  gap: 0;
+  padding: clamp(18px, 3vw, 24px);
+  background: #fff;
+  border: 1px solid var(--clutch-border);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(56, 72, 98, 0.04);
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.section:first-child {
+  padding-top: 0;
+}
+
+.divider {
+  height: 1px;
+  background: var(--clutch-border);
+  margin: 0;
+}
+
+.heading {
+  margin: 0;
+  color: var(--clutch-navy);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Theme Grid */
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.themeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border: 2px solid var(--clutch-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--clutch-navy);
+}
+
+.themeCard:hover {
+  border-color: var(--clutch-orange);
+  transform: translateY(-1px);
+}
+
+.themeCard.active {
+  border-color: var(--clutch-orange);
+  background: var(--clutch-orange-soft);
+  box-shadow: 0 4px 12px rgba(255, 166, 101, 0.16);
+}
+
+.themeSwatch {
+  width: 100%;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.08);
+}
+
+.themeLabel {
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Color Picker */
+.colorRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.colorPicker {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: #fafbfc;
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.colorLabel {
+  color: var(--clutch-navy);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.input[type="color"] {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.colorValue {
+  color: var(--clutch-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+/* Select Fields */
+.selectLabel {
+  display: grid;
+  gap: 8px;
+  color: var(--clutch-navy);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.select {
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--clutch-border);
+  border-radius: 8px;
+  color: var(--clutch-navy);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.select:hover,
+.select:focus {
+  border-color: var(--clutch-orange);
+  outline: none;
+}
+
+/* Size Grid */
+.sizeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.sizeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: #fff;
+  border: 2px solid var(--clutch-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sizeCard:hover {
+  border-color: var(--clutch-orange);
+  transform: translateY(-1px);
+}
+
+.sizeCard.active {
+  border-color: var(--clutch-orange);
+  background: var(--clutch-orange-soft);
+  box-shadow: 0 4px 12px rgba(255, 166, 101, 0.16);
+}
+
+.sizeLabel {
+  color: var(--clutch-navy);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sizeValue {
+  color: var(--clutch-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Upload Box */
+.uploadBox {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: #fafbfc;
+  border: 2px dashed var(--clutch-border-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.uploadBox:hover {
+  background: var(--clutch-orange-soft);
+  border-color: var(--clutch-orange);
+}
+
+.uploadLabel {
+  color: var(--clutch-navy);
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: block;
+}
+
+.fileInput {
+  display: none;
+}
+
+.uploadHint {
+  color: var(--clutch-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: block;
+}
+
+@media (max-width: 1200px) {
+  .container {
+    padding: 16px;
+  }
+
+  .section {
+    padding: 14px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .colorRow {
+    grid-template-columns: 1fr;
+  }
+
+  .sizeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .themeGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

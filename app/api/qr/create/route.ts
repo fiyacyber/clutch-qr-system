@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
   const corner_style = String(form.get("corner_style") || "square");
   const qr_type = String(form.get("qr_type") || "url");
   const profile_id_raw = String(form.get("profile_id") || "").trim();
+  const theme = String(form.get("theme") || "default");
+  const download_size = String(form.get("download_size") || "print");
 
   const logoEntry = form.get("logo");
   const logoFile =
@@ -190,6 +192,8 @@ export async function POST(req: NextRequest) {
     corner_style,
     qr_type: qr_type === "connect_profile" ? "connect_profile" : "url",
     profile_id,
+    theme,
+    download_size,
     logo_enabled,
     logo_url,
     logo_path,
