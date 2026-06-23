@@ -1,0 +1,142 @@
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase-client';
+import Link from 'next/link';
+import styles from '../../login/login.module.css';
+
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setLoading(true);
+
+    const supabase = createSupabaseBrowserClient();
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+      return;
+    }
+
+    setSuccess(true);
+    setTimeout(() => {
+      router.push('/portal');
+    }, 2000);
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.background} />
+      
+      <div className={styles.content}>
+        <div className={styles.brandingSide}>
+          <div className={styles.brandingContent}>
+            <Image
+              src="/clutch-banner.png"
+              alt="Clutch"
+              width={300}
+              height={112}
+              priority
+            />
+            <h1 className={styles.brandingTitle}>Set New Password</h1>
+            <p className={styles.brandingSubtitle}>
+              Create a strong password to secure your account.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.formSide}>
+          <div className={styles.formCard}>
+            <div className={styles.formHeader}>
+              <h2>Create New Password</h2>
+              <p>Enter your new password below</p>
+            </div>
+
+            {success ? (
+              <div className={styles.successAlert}>
+                <div className={styles.successIcon}>✓</div>
+                <h3>Password updated!</h3>
+                <p>Redirecting you to your dashboard...</p>
+              </div>
+            ) : (
+              <>
+                {error && (
+                  <div className={styles.alert}>
+                    {error}
+                  </div>
+                )}
+
+                <form className={styles.form} onSubmit={handleResetPassword}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>New Password</label>
+                    <input
+                      className={styles.input}
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Confirm Password</label>
+                    <input
+                      className={styles.input}
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter your password"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  <button
+                    className={styles.submitButton}
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? 'Updating...' : 'Update Password'}
+                    {!loading && <span className={styles.arrowIcon}>→</span>}
+                  </button>
+                </form>
+              </>
+            )}
+
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+              <Link href="/login" className={styles.signupLink}>
+                Back to Sign In
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,131 +1,143 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import Link from "next/link";
+import styles from "./login.module.css";
 
-async function sendMagicLink(formData: FormData) {
+async function handlePasswordSignIn(formData: FormData) {
   "use server";
 
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
+  const password = String(formData.get("password") || "").trim();
 
-  if (!email) {
-    redirect("/login?error=missing-email");
+  if (!email || !password) {
+    redirect("/login?error=missing-credentials");
   }
 
   const supabase = await createSupabaseServerClient();
-
-  const redirectUrl =
-    process.env.CLUTCH_QR_BASE_URL
-      ? `${process.env.CLUTCH_QR_BASE_URL}/auth/callback`
-      : "https://qr.clutchprintshop.com/auth/callback";
-
-  const { error } = await supabase.auth.signInWithOtp({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    options: {
-      emailRedirectTo: redirectUrl,
-    },
+    password,
   });
 
   if (error) {
-    console.error("OTP ERROR:", error);
-
-    redirect(
-      `/login?error=${encodeURIComponent(
-        JSON.stringify(error, null, 2)
-      )}`
-    );
+    console.error("PASSWORD SIGNIN ERROR:", error);
+    redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/login?sent=1");
+  redirect("/portal");
 }
-
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    sent?: string;
     error?: string;
-    email?: string;
   }>;
 }) {
   const params = await searchParams;
-  const prefilledEmail = params.email ? decodeURIComponent(params.email) : "";
 
   return (
-    <main className="login-wrap">
-      <section className="login-card">
-        <Image
-          src="/clutch-banner.png"
-          alt="Clutch"
-          width={480}
-          height={180}
-          priority
-        />
-
-        <h1>Clutch QR Dashboard</h1>
-
-        <p className="muted">
-          Enter your email to receive a magic link, or use your password if you
-          already have one.
-        </p>
-
-        {params.sent ? (
-          <p className="alert">Check your email for your sign-in link.</p>
-        ) : null}
-
-        {params.error ? (
-          <p className="alert">Error: {decodeURIComponent(params.error)}</p>
-        ) : null}
-
-        <form className="form" action={sendMagicLink}>
-          <label className="label">
-            Email
-            <input
-              className="input"
-              name="email"
-              type="email"
-              defaultValue={prefilledEmail}
-              required
-              placeholder="you@company.com"
+    <div className={styles.container}>
+      <div className={styles.background} />
+      
+      <div className={styles.content}>
+        {/* Left Side - Branding */}
+        <div className={styles.brandingSide}>
+          <div className={styles.brandingContent}>
+            <Image
+              src="/clutch-banner.png"
+              alt="Clutch"
+              width={300}
+              height={112}
+              priority
             />
-          </label>
-
-          <button className="btn primary" type="submit">
-            Send Login Link
-          </button>
-        </form>
-
-        <div style={{ marginTop: 24 }}>
-          <p className="muted">Or sign in with your password:</p>
-          <form className="form" action="/api/auth/login-password" method="post">
-            <label className="label">
-              Email
-              <input
-                className="input"
-                name="email"
-                type="email"
-                required
-                placeholder="you@company.com"
-              />
-            </label>
-            <label className="label">
-              Password
-              <input
-                className="input"
-                name="password"
-                type="password"
-                required
-                placeholder="Enter your password"
-              />
-            </label>
-            <button className="btn secondary" type="submit">
-              Sign in with Password
-            </button>
-          </form>
+            <h1 className={styles.brandingTitle}>QR Code Dashboard</h1>
+            <p className={styles.brandingSubtitle}>
+              Create, track, and manage QR codes for all your print marketing campaigns.
+            </p>
+            
+            <div className={styles.featureList}>
+              <div className={styles.featureItem}>
+                <span className={styles.featureIcon}>✓</span>
+                <span>Unlimited QR codes</span>
+              </div>
+              <div className={styles.featureItem}>
+                <span className={styles.featureIcon}>✓</span>
+                <span>Real-time analytics</span>
+              </div>
+              <div className={styles.featureItem}>
+                <span className={styles.featureIcon}>✓</span>
+                <span>Custom branding</span>
+              </div>
+              <div className={styles.featureItem}>
+                <span className={styles.featureIcon}>✓</span>
+                <span>Linktree profiles</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+
+        {/* Right Side - Login Form */}
+        <div className={styles.formSide}>
+          <div className={styles.formCard}>
+            <div className={styles.formHeader}>
+              <h2>Sign In</h2>
+              <p>Access your QR code dashboard</p>
+            </div>
+
+            {params.error ? (
+              <div className={styles.alert}>
+                {decodeURIComponent(params.error)}
+              </div>
+            ) : null}
+
+            <form className={styles.form} action={handlePasswordSignIn}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Email Address</label>
+                <input
+                  className={styles.input}
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <div className={styles.labelRow}>
+                  <label className={styles.label}>Password</label>
+                  <Link href="/forgot-password" className={styles.forgotLink}>
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  className={styles.input}
+                  name="password"
+                  type="password"
+                  required
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button className={styles.submitButton} type="submit">
+                Sign In
+                <span className={styles.arrowIcon}>→</span>
+              </button>
+            </form>
+
+            <div className={styles.divider}>or</div>
+
+            <p className={styles.helpText}>
+              Don't have an account? <a href="https://clutchprintshop.com" className={styles.signupLink}>Get started</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
