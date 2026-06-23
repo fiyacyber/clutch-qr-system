@@ -51,6 +51,26 @@ const BLOCK_LABELS: Record<string, string> = {
   "qr-code-block": "QR Code",
 };
 
+const BLOCK_SUBTITLES: Record<string, string> = {
+  "profile-hero": "Profile and branding",
+  "contact-buttons": "Pinned contact actions",
+  "phone-button": "Single action",
+  "email-button": "Single action",
+  "website-button": "Single action",
+  "directions-button": "Single action",
+  "request-quote-button": "Lead capture CTA",
+  "social-media-links": "Network links",
+  "custom-link-button": "Custom destination",
+  "image-banner": "Media block",
+  "text-section": "Rich text block",
+  "business-hours": "Business details",
+  "services-list": "Offerings list",
+  "form-block": "Lead form",
+  "apple-wallet-button": "Wallet action",
+  "google-wallet-button": "Wallet action",
+  "qr-code-block": "Scan destination",
+};
+
 const BLOCK_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
   "profile-hero": User,
   "contact-buttons": Link2,
@@ -162,7 +182,7 @@ export default function BuilderCanvas({
                     </div>
                     <div className="saas-block-meta">
                       <span className="saas-block-name">{BLOCK_LABELS[block.type] || block.type}</span>
-                      <span className="saas-block-index">#{idx + 1}</span>
+                      <span className="saas-block-index">{BLOCK_SUBTITLES[block.type] || `Block #${idx + 1}`}</span>
                     </div>
                   </button>
 
@@ -211,9 +231,9 @@ export default function BuilderCanvas({
                     <motion.div
                       layout
                       className="saas-settings-panel"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ maxHeight: 0, opacity: 0, y: -8 }}
+                      animate={{ maxHeight: 1600, opacity: 1, y: 0 }}
+                      exit={{ maxHeight: 0, opacity: 0, y: -8 }}
                       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                     >
                       <div className="saas-settings-inner">

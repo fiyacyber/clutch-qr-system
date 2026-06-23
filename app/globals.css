@@ -3292,7 +3292,8 @@ button:disabled {
 
 .saas-builder {
   width: 100%;
-  height: calc(100vh - 82px); /* subtract header height */
+  height: 100vh;
+  min-height: 100vh;
   background: var(--b-bg);
   display: flex;
   flex-direction: column;
@@ -3477,6 +3478,7 @@ button:disabled {
   display: grid;
   grid-template-columns: 364px 1fr;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -3488,6 +3490,7 @@ button:disabled {
   border-right: 1px solid var(--b-border);
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -3626,6 +3629,7 @@ button:disabled {
 }
 
 .sidebar-panel {
+  flex: 1;
   min-height: 0;
 }
 
@@ -3673,15 +3677,19 @@ button:disabled {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 /* ── Preview center ──────────────────────────────────────── */
 .saas-preview-center {
-  background: var(--b-bg);
+  background:
+    radial-gradient(circle at top, rgba(255, 166, 101, 0.1), transparent 26%),
+    linear-gradient(180deg, #0c1324 0%, #10182d 100%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  min-height: 0;
   overflow-y: auto;
   padding: 32px 24px 48px;
 }
@@ -3691,6 +3699,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -3728,11 +3737,12 @@ button:disabled {
 
 .saas-canvas-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .saas-canvas-list::-webkit-scrollbar {
@@ -3783,7 +3793,7 @@ button:disabled {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px;
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  overflow: hidden;
+  overflow: visible;
   backdrop-filter: blur(14px);
 }
 
@@ -3809,9 +3819,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   gap: 8px;
-  min-height: 48px;
+  min-height: 60px;
   width: 100%;
   border: none;
   background: transparent;
@@ -3856,8 +3866,8 @@ button:disabled {
 }
 
 .saas-block-icon-pill {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   background: var(--b-surface);
   border: 1px solid var(--b-border);
   border-radius: 7px;
@@ -3877,7 +3887,7 @@ button:disabled {
 
 .saas-block-name {
   font-size: 0.83rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--b-text);
   white-space: nowrap;
   overflow: hidden;
@@ -3886,7 +3896,7 @@ button:disabled {
 }
 
 .saas-block-index {
-  font-size: 0.7rem;
+  font-size: 0.69rem;
   color: var(--b-subtle);
   font-weight: 500;
 }
@@ -3943,10 +3953,11 @@ button:disabled {
 /* ── Settings panel (animated expand) ───────────────────── */
 .saas-settings-panel {
   border-top: 1px solid var(--b-border);
+  overflow: hidden;
 }
 
 .saas-settings-inner {
-  padding: 12px;
+  padding: 14px;
 }
 
 .saas-fields {
@@ -4432,6 +4443,7 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  min-height: 100%;
 }
 
 .saas-preview-label-row {
@@ -4463,56 +4475,59 @@ button:disabled {
 
 /* Outer glow/shadow wrapper */
 .saas-device-outer {
-  width: 390px;
+  width: 402px;
   max-width: 100%;
   position: relative;
-  filter: drop-shadow(0 32px 64px rgba(0,0,0,0.6)) drop-shadow(0 0 1px rgba(255,255,255,0.08));
+  filter: drop-shadow(0 24px 48px rgba(0,0,0,0.42)) drop-shadow(0 2px 12px rgba(255,166,101,0.1));
 }
 
 /* Phone bezel */
 .saas-device-frame {
   width: 100%;
-  background: #1A1A1E;
+  background: linear-gradient(180deg, #222730 0%, #181c24 100%);
   border-radius: 44px;
-  border: 1.5px solid rgba(255,255,255,0.1);
-  padding: 14px 6px 20px;
+  border: 1.5px solid rgba(255,255,255,0.14);
+  padding: 16px 8px 20px;
   display: flex;
   flex-direction: column;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.06),
-    0 0 0 8px rgba(15,23,42,0.8);
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.24),
+    0 0 0 6px rgba(15,23,42,0.45);
   position: relative;
 }
 
 /* Notch area */
 .saas-device-notch {
-  height: 28px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .saas-notch-island {
   display: block;
-  width: 90px;
-  height: 22px;
-  background: #0A0A0C;
+  width: 104px;
+  height: 24px;
+  background: linear-gradient(180deg, #090b10 0%, #12151b 100%);
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* Screen content */
 .saas-device-screen {
   flex: 1;
-  background: white;
+  background: #ffffff;
   border-radius: 32px;
   overflow: hidden;
-  min-height: 600px;
+  min-height: 640px;
   max-height: 70vh;
   overflow-y: auto;
   position: relative;
   scrollbar-width: none;
+  padding: 10px;
 }
 
 .saas-device-screen::-webkit-scrollbar {
@@ -4532,28 +4547,30 @@ button:disabled {
 .builder-public-profile {
   width: 100%;
   min-height: 100%;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 10px;
+  border-radius: 24px;
+  overflow: hidden;
 }
 
 .builder-public-profile[data-theme="dark"] {
-  background: #0F172A;
+  background: linear-gradient(180deg, #111a2d 0%, #0b1324 100%);
 }
 
 /* Profile hero */
 .builder-block-hero {
-  padding: 40px 20px 28px;
+  padding: 44px 24px 30px;
   text-align: center;
-  background: linear-gradient(160deg, rgba(255, 107, 44, 0.06) 0%, transparent 60%);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: linear-gradient(180deg, rgba(255, 166, 101, 0.11) 0%, rgba(255,255,255,0) 58%);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 .builder-hero-avatar-wrap {
   position: relative;
   width: fit-content;
-  margin: 0 auto 16px;
+  margin: 0 auto 18px;
 }
 
 .builder-avatar-glow-layer {
@@ -4569,8 +4586,8 @@ button:disabled {
 }
 
 .builder-hero-avatar {
-  width: 120px;
-  height: 120px;
+  width: 126px;
+  height: 126px;
   border-radius: 50%;
   border: 3px solid var(--builder-accent, #FF6B2C);
   object-fit: cover;
@@ -4578,7 +4595,7 @@ button:disabled {
   display: block;
   position: relative;
   z-index: 1;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 6px rgba(255, 107, 44, 0.1);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.18), 0 0 0 8px rgba(255, 107, 44, 0.08);
 }
 
 .builder-hero-avatar-fallback {
@@ -4598,8 +4615,8 @@ button:disabled {
 }
 
 .builder-hero-name {
-  margin: 0 0 6px;
-  font-size: 1.5rem;
+  margin: 0 0 8px;
+  font-size: 1.65rem;
   font-weight: 700;
   color: #111827;
   line-height: 1.2;
@@ -4611,7 +4628,7 @@ button:disabled {
 }
 
 .builder-hero-title {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 0.92rem;
   color: #6B7280;
   font-weight: 500;
@@ -4624,9 +4641,9 @@ button:disabled {
 .builder-hero-bio {
   margin: 0 auto;
   max-width: 340px;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: #374151;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .builder-public-profile[data-theme="dark"] .builder-hero-bio {
@@ -4636,7 +4653,7 @@ button:disabled {
 /* Shared block wrapper */
 .builder-block {
   width: 100%;
-  padding: 16px 20px;
+  padding: 0 4px;
 }
 
 .builder-preview-hidden-block {
@@ -4702,18 +4719,18 @@ button:disabled {
 
 /* Contact buttons */
 .builder-block-contact {
-  padding: 12px 16px;
+  padding: 0 4px 2px;
 }
 
 .builder-contact-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .builder-contact-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -4724,10 +4741,10 @@ button:disabled {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 12px 16px;
-  background: #F9FAFB;
-  border: 1.5px solid #E5E7EB;
-  border-radius: 10px;
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(148,163,184,0.22);
+  border-radius: 14px;
   font-weight: 600;
   font-size: 0.88rem;
   color: #111827;
@@ -4742,7 +4759,7 @@ button:disabled {
   color: var(--builder-accent, #FF6B2C);
   background: rgba(255, 107, 44, 0.04);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 44, 0.12);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .builder-button span {
@@ -4750,9 +4767,10 @@ button:disabled {
 }
 
 .builder-public-profile[data-theme="dark"] .builder-button {
-  background: #1E293B;
-  border-color: #334155;
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(148, 163, 184, 0.18);
   color: #E2E8F0;
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.22);
 }
 
 .builder-public-profile[data-theme="dark"] .builder-button:hover {
@@ -5377,7 +5395,7 @@ button:disabled {
     padding: 24px 16px;
   }
   .saas-device-outer {
-    width: 320px;
+    width: 336px;
   }
 }
 
