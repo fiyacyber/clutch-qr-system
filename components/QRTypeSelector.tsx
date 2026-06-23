@@ -2,7 +2,7 @@
 
 import styles from "./QRTypeSelector.module.css";
 
-export type QRType = "url" | "text" | "wifi" | "email" | "sms" | "image" | "pdf" | "vcard" | "connect_profile";
+export type QRType = "flyers" | "business_cards" | "brochures" | "postcards" | "door_hangers" | "yard_signs";
 
 type QRTypeOption = {
   value: QRType;
@@ -13,15 +13,12 @@ type QRTypeOption = {
 };
 
 const QR_TYPES: QRTypeOption[] = [
-  { value: "url", label: "URL", icon: "🔗" },
-  { value: "text", label: "Text", icon: "📝", disabled: true, comingSoon: true },
-  { value: "wifi", label: "Wi-Fi", icon: "📶", disabled: true, comingSoon: true },
-  { value: "email", label: "Email", icon: "✉️", disabled: true, comingSoon: true },
-  { value: "sms", label: "SMS", icon: "💬", disabled: true, comingSoon: true },
-  { value: "image", label: "Image", icon: "🖼️", disabled: true, comingSoon: true },
-  { value: "pdf", label: "PDF", icon: "📄", disabled: true, comingSoon: true },
-  { value: "vcard", label: "vCard", icon: "👤", disabled: true, comingSoon: true },
-  { value: "connect_profile", label: "Connect", icon: "🌐" },
+  { value: "flyers", label: "Flyers", icon: "📄" },
+  { value: "business_cards", label: "Business Cards", icon: "💼" },
+  { value: "brochures", label: "Brochures", icon: "📑" },
+  { value: "postcards", label: "Postcards", icon: "📮" },
+  { value: "door_hangers", label: "Door Hangers", icon: "🚪" },
+  { value: "yard_signs", label: "Yard Signs", icon: "🪧" },
 ];
 
 type QRTypeSelectorProps = {
@@ -32,7 +29,7 @@ type QRTypeSelectorProps = {
 export default function QRTypeSelector({ value, onChange }: QRTypeSelectorProps) {
   return (
     <div className={styles.container}>
-      <p className={styles.heading}>Select QR Type</p>
+      <p className={styles.heading}>Select Mailing Piece</p>
       <div className={styles.grid}>
         {QR_TYPES.map((type) => (
           <button

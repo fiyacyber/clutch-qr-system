@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     form.get("corner_style") || "square"
   );
 
-  const qr_type = String(form.get("qr_type") || "url");
+  const qr_type = String(form.get("qr_type") || "flyers");
   const profile_id_raw = String(form.get("profile_id") || "").trim();
 
   const remove_logo =
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
       background_color,
       dot_style,
       corner_style,
-      qr_type: qr_type === "connect_profile" ? "connect_profile" : "url",
+      qr_type,
       profile_id,
       theme,
       download_size,

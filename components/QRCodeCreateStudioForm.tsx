@@ -104,7 +104,7 @@ export default function QRCodeCreateStudioForm({
   // Basic QR Fields
   const [name, setName] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
-  const [qrType, setQrType] = useState<QRType>("url");
+  const [qrType, setQrType] = useState<QRType | "connect_profile">("flyers");
   const [selectedProfileId, setSelectedProfileId] = useState("");
 
   // Style Fields
@@ -150,12 +150,10 @@ export default function QRCodeCreateStudioForm({
     if (qrType === "connect_profile") {
       const profile = connectProfiles.find((item) => item.id === selectedProfileId);
       baseUrl = profile ? `https://connect.clutchprintshop.com/u/${profile.slug}` : "";
-    } else if (qrType === "url") {
+    } else {
+      // All mailing piece types use destination URL
       if (!destinationUrl.trim()) return "";
       baseUrl = normalizeUrl(destinationUrl);
-    } else {
-      // Other QR types not yet supported
-      return "";
     }
 
     if (!baseUrl) return "";
@@ -216,7 +214,7 @@ export default function QRCodeCreateStudioForm({
       return;
     }
 
-    if (qrType === "url" && !destinationUrl.trim()) {
+    if (qrType !== "connect_profile" && !destinationUrl.trim()) {
       setError("Destination URL is required.");
       return;
     }
@@ -279,10 +277,11 @@ export default function QRCodeCreateStudioForm({
       {/* Left Column: QR Type Selector */}
       <div className={styles.leftColumn}>
         <QRTypeSelector
-          value={qrType}
+          value={qrType as QRType}
           onChange={(type) => {
-            setQrType(type);
-            if (type !== "url" && type !== "connect_profile") {
+            setQrType(type as QRType | "connect_profile");
+            const validTypes = ["flyers", "business_cards", "brochures", "postcards", "door_hangers", "yard_signs", "connect_profile"];
+            if (!validTypes.includes(type)) {
               setError("This QR type is coming soon!");
             } else {
               setError(null);

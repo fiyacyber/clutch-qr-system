@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const background_color = String(form.get("background_color") || "#ffffff");
   const dot_style = String(form.get("dot_style") || "square");
   const corner_style = String(form.get("corner_style") || "square");
-  const qr_type = String(form.get("qr_type") || "url");
+  const qr_type = String(form.get("qr_type") || "flyers");
   const profile_id_raw = String(form.get("profile_id") || "").trim();
   const theme = String(form.get("theme") || "default");
   const download_size = String(form.get("download_size") || "print");
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     background_color,
     dot_style,
     corner_style,
-    qr_type: qr_type === "connect_profile" ? "connect_profile" : "url",
+    qr_type,
     profile_id,
     theme,
     download_size,

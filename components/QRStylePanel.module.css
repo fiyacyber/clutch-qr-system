@@ -44,11 +44,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 16px 12px;
   background: #fff;
   border: 2px solid var(--clutch-border);
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.85rem;
@@ -68,10 +68,10 @@
 }
 
 .themeSwatch {
-  width: 100%;
-  height: 32px;
-  border-radius: 8px;
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.08);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .themeLabel {
@@ -81,41 +81,54 @@
 
 /* Color Picker */
 .colorRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
 }
 
 .colorPicker {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  padding: 12px;
-  background: #fafbfc;
-  border: 1px solid var(--clutch-border);
-  border-radius: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   cursor: pointer;
 }
 
 .colorLabel {
   color: var(--clutch-navy);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  text-align: center;
+  width: 100%;
 }
 
 .input[type="color"] {
-  width: 100%;
-  height: 48px;
-  border: 1px solid var(--clutch-border);
-  border-radius: 8px;
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--clutch-border);
+  border-radius: 50%;
   cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.input[type="color"]:hover {
+  border-color: var(--clutch-orange);
+  box-shadow: 0 4px 12px rgba(255, 166, 101, 0.16);
 }
 
 .colorValue {
   color: var(--clutch-muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   font-family: monospace;
   text-transform: uppercase;
+  text-align: center;
 }
 
 /* Select Fields */
