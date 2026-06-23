@@ -73,9 +73,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         </section>
 
         <section className="create-page-nav">
-          <Link className="btn primary" href="/portal/connect/edit">Edit Public Page</Link>
+          <Link className="btn primary" href="/portal/connect/build">🎨 Profile Builder</Link>
+          <Link className="btn secondary" href="/portal/connect/edit">Edit Public Page</Link>
           {profile?.slug ? (
-            <Link className="btn secondary" href={`/u/${profile.slug}`} target="_blank">View Public Profile</Link>
+            <Link className="btn tertiary" href={`/u/${profile.slug}`} target="_blank">View Public Profile</Link>
           ) : null}
           <Link className="btn ghost" href="/portal/connect/links">Manage Links</Link>
           <Link className="btn ghost" href="/portal/connect/leads">View Leads</Link>
