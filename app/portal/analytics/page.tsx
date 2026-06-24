@@ -110,6 +110,42 @@ export default async function AnalyticsPage({
     ...data.connectEvents.map(r => r.created_at),
   ]);
 
+  const cityPointMap = new Map<
+    string,
+    { lat: number; lon: number; scans: number; visitors: Set<string>; label: string }
+  >();
+  for (const scan of data.qrScans as any[]) {
+    const lat = Number(scan.latitude);
+    const lon = Number(scan.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    const city = scan.city || "Unknown city";
+    const region = scan.region || "";
+    const country = scan.country || "";
+    const label = [city, region, country].filter(Boolean).join(", ");
+    const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${label}`;
+    const existing = cityPointMap.get(key);
+    if (existing) {
+      existing.scans += 1;
+      if (scan.ip_hash) existing.visitors.add(scan.ip_hash);
+    } else {
+      cityPointMap.set(key, {
+        lat,
+        lon,
+        scans: 1,
+        visitors: new Set(scan.ip_hash ? [scan.ip_hash] : []),
+        label,
+      });
+    }
+  }
+  const mapPoints = Array.from(cityPointMap.values()).map((p) => ({
+    lat: p.lat,
+    lon: p.lon,
+    scans: p.scans,
+    uniqueVisitors: p.visitors.size,
+    label: p.label,
+  }));
+
   /* ── Geo / device breakdown ── */
   const countryData = Object.entries(
     [...data.qrScans, ...data.connectEvents].reduce<Record<string, number>>((acc, r) => {
@@ -155,6 +191,7 @@ export default async function AnalyticsPage({
       connectRows={connectRows}
       scansOverTime={scansOverTime}
       countryData={countryData}
+      mapPoints={mapPoints}
       cityRows={cityRows}
       deviceRows={deviceRows}
       browserRows={browserRows}

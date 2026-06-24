@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -50,11 +50,19 @@ const DEMO_MAX = 742;
 
 interface WorldMapProps {
   countryData: { name: string; scans: number }[];
+  mapPoints: { lat: number; lon: number; scans: number; uniqueVisitors: number; label: string }[];
   viewBy?: string;
 }
 
-export default function WorldMap({ countryData, viewBy = "Scans" }: WorldMapProps) {
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; value: number } | null>(null);
+export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: WorldMapProps) {
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    name: string;
+    value: number;
+    uniqueVisitors?: number;
+    topCity?: string;
+  } | null>(null);
   const hasReal = countryData.length > 0;
   const byName = new Map(countryData.map(d => [d.name.toLowerCase(), d.scans]));
   const realMax = hasReal ? Math.max(...countryData.map(d => d.scans), 1) : DEMO_MAX;
@@ -108,6 +116,32 @@ export default function WorldMap({ countryData, viewBy = "Scans" }: WorldMapProp
               })
             }
           </Geographies>
+
+          {mapPoints.map((point, idx) => {
+            const size = Math.max(2, Math.min(10, 2 + point.scans / 10));
+            return (
+              <Marker key={`${point.label}-${idx}`} coordinates={[point.lon, point.lat]}>
+                <circle
+                  r={size}
+                  fill="#FF7A1A"
+                  fillOpacity={0.45}
+                  stroke="#ff7a1a"
+                  strokeWidth={1}
+                  onMouseMove={(e) => {
+                    setTooltip({
+                      x: e.clientX,
+                      y: e.clientY,
+                      name: point.label,
+                      value: point.scans,
+                      uniqueVisitors: point.uniqueVisitors,
+                      topCity: point.label.split(",")[0]?.trim() || point.label,
+                    });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              </Marker>
+            );
+          })}
         </ZoomableGroup>
       </ComposableMap>
 
@@ -121,6 +155,18 @@ export default function WorldMap({ countryData, viewBy = "Scans" }: WorldMapProp
             <span>{viewBy}</span>
             <span className="ca-map-tt-val">{tooltip.value.toLocaleString()}</span>
           </div>
+          {typeof tooltip.uniqueVisitors === "number" ? (
+            <div className="ca-map-tt-row">
+              <span>Unique Visitors</span>
+              <span className="ca-map-tt-val">{tooltip.uniqueVisitors.toLocaleString()}</span>
+            </div>
+          ) : null}
+          {tooltip.topCity ? (
+            <div className="ca-map-tt-row">
+              <span>Top City</span>
+              <span className="ca-map-tt-val">{tooltip.topCity}</span>
+            </div>
+          ) : null}
         </div>
       )}
 

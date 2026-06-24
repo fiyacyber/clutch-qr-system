@@ -39,6 +39,7 @@ export interface DashboardProps {
   connectRows: ConnectRow[];
   scansOverTime: { date: string; scans: number }[];
   countryData: { name: string; scans: number }[];
+  mapPoints: { lat: number; lon: number; scans: number; uniqueVisitors: number; label: string }[];
   cityRows: { label: string; value: number }[];
   deviceRows: { label: string; value: number }[];
   browserRows: { label: string; value: number }[];
@@ -220,7 +221,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                     </div>
                   </div>
                 </div>
-                <WorldMap countryData={props.countryData} viewBy={viewBy} />
+                <WorldMap countryData={props.countryData} mapPoints={props.mapPoints} viewBy={viewBy} />
               </div>
 
               {/* 3-column row */}
@@ -426,7 +427,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                     </div>
                   </div>
                 </div>
-                <WorldMap countryData={props.countryData} viewBy={viewBy} />
+                <WorldMap countryData={props.countryData} mapPoints={props.mapPoints} viewBy={viewBy} />
               </div>
               <div className="ca-card">
                 <div className="ca-card-head"><h2 className="ca-card-title">All Locations</h2></div>
