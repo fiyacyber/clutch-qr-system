@@ -119,6 +119,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const [geoCity, setGeoCity] = useState("all");
   const [geoCampaign, setGeoCampaign] = useState("all");
   const [geoQrCode, setGeoQrCode] = useState("all");
+  const [showDashboardFilters, setShowDashboardFilters] = useState(false);
   const [dangerModal, setDangerModal] = useState<"signout" | "delete" | null>(null);
 
   const analyticsTab = useMemo(() => {
@@ -435,6 +436,56 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportAnalyticsCsv() {
+    const rows: Array<Array<string | number | null | undefined>> = [
+      ["Metric", "Value"],
+      ["Total Scans", props.totalScans],
+      ["Unique Visitors", props.uniqueVisitors],
+      ["Link Clicks", props.linkClicks],
+      ["Clutch Connect Views", props.connectViews],
+      ["Leads Captured", props.leadsCaptured],
+      ["Active QR Codes", props.activeQrCodes],
+      [],
+      ["QR Campaign", "Destination", "Total Scans", "Unique Visitors", "Last Scan", "Linked Profile"],
+      ...filteredQrRows.map((row) => [
+        row.name,
+        row.destination,
+        row.totalScans,
+        row.uniqueVisitors,
+        row.lastScan || "",
+        row.linkedProfileName || "",
+      ]),
+      [],
+      ["Connect Profile", "Profile Views", "Link Clicks", "Top Clicked Link", "Leads Captured", "Linked QR Code"],
+      ...props.connectRows.map((row) => [
+        row.profileName,
+        row.profileViews,
+        row.linkClicks,
+        row.topClickedLink || "",
+        row.leadsCaptured,
+        row.linkedQrCode || "",
+      ]),
+    ];
+
+    downloadCsv("clutch-analytics-summary.csv", rows);
   }
 
   if (isSettingsView) {
@@ -761,10 +812,15 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                 >{t}</button>
               ))}
             </div>
-            <button className="ca-ctrl-btn">
+            <button type="button" className="ca-ctrl-btn" onClick={exportAnalyticsCsv}>
               <Download size={13} /> Export <ChevronDown size={12} />
             </button>
-            <button className="ca-ctrl-btn">
+            <button
+              type="button"
+              className={`ca-ctrl-btn${showDashboardFilters ? " active" : ""}`}
+              onClick={() => setShowDashboardFilters((isOpen) => !isOpen)}
+              aria-expanded={showDashboardFilters}
+            >
               <SlidersHorizontal size={13} /> Filter
             </button>
           </div>
@@ -791,6 +847,73 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               </Link>
             ))}
           </div>
+
+          {showDashboardFilters ? (
+            <section className="ca-card ca-dashboard-filter-panel" aria-label="Analytics filters">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Dashboard Filters</h2>
+                  <p className="ca-title-sub">Adjust the visible analytics view and campaign list.</p>
+                </div>
+                <button
+                  type="button"
+                  className="ca-secondary-link-btn"
+                  onClick={() => {
+                    setViewBy("Scans");
+                    setTimeFilter("30D");
+                    setQrSearch("");
+                    setQrFilter("all");
+                    setGeoDateRange("30d");
+                    setGeoCountry("all");
+                    setGeoState("all");
+                    setGeoCity("all");
+                    setGeoCampaign("all");
+                    setGeoQrCode("all");
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="ca-dashboard-filter-grid">
+                <label>
+                  <span>Map View</span>
+                  <select className="ca-select" value={viewBy} onChange={(event) => setViewBy(event.target.value)}>
+                    <option>Scans</option>
+                    <option>Visitors</option>
+                    <option>Leads</option>
+                  </select>
+                </label>
+                <label>
+                  <span>QR Campaigns</span>
+                  <select className="ca-select" value={qrFilter} onChange={(event) => setQrFilter(event.target.value)}>
+                    <option value="all">All campaigns</option>
+                    <option value="connected">Connected profiles</option>
+                    <option value="standard">Standard QR codes</option>
+                    <option value="scanned">Scanned campaigns</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Search Campaigns</span>
+                  <input
+                    className="ca-filter-input"
+                    value={qrSearch}
+                    onChange={(event) => setQrSearch(event.target.value)}
+                    placeholder="Campaign name or URL"
+                  />
+                </label>
+                <label>
+                  <span>Geography Range</span>
+                  <select className="ca-select" value={geoDateRange} onChange={(event) => setGeoDateRange(event.target.value)}>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                    <option value="all">All time</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          ) : null}
 
           {/* KPI Row — always visible */}
           <div className="ca-kpi-row">

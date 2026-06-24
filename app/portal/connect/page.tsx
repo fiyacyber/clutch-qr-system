@@ -154,6 +154,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const profileProgress = Math.round((completedCount / completionChecks.length) * 100);
 
   const missingItems = completionChecks.filter((item) => !item.done);
+  const publicProfileHref = profile.slug ? `/u/${profile.slug}` : "/portal/connect/edit";
+  const publicProfileUrl = profile.slug
+    ? `qr.clutchprintshop.com/u/${profile.slug}`
+    : "Add a profile slug to publish your page";
 
   const builderImprovements = [
     { icon: <MessageSquare size={16} />, label: "Drag-and-drop blocks", status: "Ready" },
@@ -180,21 +184,41 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect"
-          subtitle="Unified digital business card management center. Build, publish, and track every profile touchpoint in one place."
+          subtitle="Manage your smart business card, public profile, links, leads, and wallet passes."
           actions={
             <div className="connect-center-header-actions">
+              <Link className="btn primary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+                <Globe size={15} />
+                View Public Profile
+              </Link>
               <Link className="btn primary" href="/portal/connect/build">
                 <Palette size={15} />
-                Open Profile Builder
+                Profile Builder
               </Link>
-              <Link className="btn secondary" href="/portal/connect/leads">
-                Leads CRM
+              <Link className="btn secondary" href="/portal/connect/edit">
+                <PencilLine size={15} />
+                Edit Profile
               </Link>
             </div>
           }
         />
 
         <ConnectTabs active="profile" />
+
+        <section className="connect-center-public-strip" aria-label="Public profile status">
+          <div>
+            <span className={profile.is_active ? "is-live" : "is-draft"}>
+              {profile.is_active ? "Live" : "Draft"}
+            </span>
+            <strong>{publicProfileUrl}</strong>
+          </div>
+          <div className="connect-center-public-strip-actions">
+            <Link className="btn ghost" href="/portal/connect/leads">Leads CRM</Link>
+            <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+              View Public Profile
+            </Link>
+          </div>
+        </section>
 
         {params.saved === "1" ? <div className="success-message">Profile saved.</div> : null}
 

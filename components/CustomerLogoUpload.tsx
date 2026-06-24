@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ImageIcon, UploadCloud } from "lucide-react";
 
 type CustomerLogoUploadProps = {
   customerLogoUrl?: string | null;
@@ -20,6 +21,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function CustomerLogoUpload({
   customerLogoUrl,
 }: CustomerLogoUploadProps) {
+  const logoInputId = useId();
   const [logoError, setLogoError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -120,19 +122,39 @@ export default function CustomerLogoUpload({
       )}
 
       <form className="form" onSubmit={handleSubmit}>
-        <label className="label">
+        <div className="label">
           Upload Your Company Logo
           <span className="helper-text">
             Used in your QR code center. PNG with transparency recommended. Max 1 MB.
           </span>
           <input
-            className="input"
+            id={logoInputId}
+            className="logo-file-input"
             type="file"
             name="logo"
             accept="image/png,image/jpeg,image/webp,image/svg+xml"
             onChange={handleLogoChange}
           />
-        </label>
+          <label className="logo-upload-control" htmlFor={logoInputId}>
+            <span className="logo-upload-icon" aria-hidden="true">
+              <UploadCloud size={22} />
+            </span>
+            <span className="logo-upload-copy">
+              <span className="logo-upload-title">
+                {selectedFile ? selectedFile.name : "Choose logo file"}
+              </span>
+              <span className="logo-upload-meta">
+                {selectedFile
+                  ? `${(selectedFile.size / 1024).toFixed(0)} KB selected`
+                  : "PNG, JPG, SVG, or WEBP"}
+              </span>
+            </span>
+            <span className="logo-upload-action">
+              <ImageIcon size={16} />
+              Browse
+            </span>
+          </label>
+        </div>
 
         {logoError && (
           <div className="error-message">
@@ -157,14 +179,17 @@ export default function CustomerLogoUpload({
         </div>
 
         <div className="actions">
-          <button className="btn primary" disabled={isUploading}>
+          <button
+            className="btn primary"
+            disabled={isUploading || !selectedFile || Boolean(logoError)}
+          >
             {isUploading ? "Uploading..." : "Upload Logo"}
           </button>
         </div>
       </form>
 
       {customerLogoUrl && (
-        <div className="actions" style={{ marginTop: "12px" }}>
+        <div className="actions logo-remove-actions">
           <button
             className="btn ghost"
             onClick={handleDelete}

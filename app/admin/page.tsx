@@ -189,9 +189,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <DashboardShell isAdmin>
-      <main className="container">
+      <main className="container admin-page">
         <DashboardHeader
-          title="Clutch QR Command Center"
+          title="Admin Dashboard"
           subtitle="Manage customers, plans, QR limits, onboarding, groups, and account analytics from one private dashboard."
           actions={(
             <div className="dashboard-badges">
@@ -354,7 +354,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </article>
         </section>
 
-        <section className="card">
+        <section className="card admin-table-card">
           <table className="table admin-table">
             <thead>
               <tr>
@@ -391,7 +391,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </table>
         </section>
 
-        <section className="card">
+        <section className="card admin-table-card">
           <p className="eyebrow">Recent Connect Leads</p>
           <table className="table admin-table">
             <thead>
@@ -435,7 +435,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </form>
         </section>
 
-        <section className="card">
+        <section className="card admin-table-card">
           <table className="table admin-table">
             <thead>
               <tr>

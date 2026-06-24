@@ -41,6 +41,15 @@ function heatColor(value: number, max: number): string {
   return "#C44D00";
 }
 
+function markerHeatColor(value: number, max: number): string {
+  if (!value || !max) return "#FFA665";
+  const t = Math.min(value / max, 1);
+  if (t < 0.25) return "#FFA665";
+  if (t < 0.5) return "#FF7A1A";
+  if (t < 0.75) return "#E55F00";
+  return "#B43A00";
+}
+
 const DEMO: Record<string, number> = {
   "840": 742, "826": 180, "124": 95, "36": 67, "276": 45,
   "250": 38, "380": 22, "392": 18, "356": 15, "76": 30,
@@ -109,7 +118,7 @@ function buildClusters(
     existing.scans += point.scans;
     existing.uniqueVisitors += point.uniqueVisitors;
     existing.count += 1;
-    if (point.scans > existing.scans) {
+    if (point.scans > existing.scans / existing.count) {
       existing.label = point.label;
       existing.city = point.city;
       existing.region = point.region;
@@ -136,9 +145,11 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
   const [center, setCenter] = useState<[number, number]>([10, 5]);
 
   const hasReal = countryData.length > 0;
+  const hasCityPoints = mapPoints.length > 0;
   const byName = new Map(countryData.map(d => [d.name.toLowerCase(), d.scans]));
   const realMax = hasReal ? Math.max(...countryData.map(d => d.scans), 1) : DEMO_MAX;
   const clusteredPoints = useMemo(() => buildClusters(mapPoints, zoom), [mapPoints, zoom]);
+  const pointMax = clusteredPoints.length ? Math.max(...clusteredPoints.map((point) => point.scans), 1) : realMax;
 
   function zoomIn() {
     setZoom((current) => Math.min(6, current + 0.6));
@@ -162,8 +173,10 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
 
   return (
     <div className="ca-world-map" onMouseLeave={() => setTooltip(null)}>
-      {!hasReal && (
-        <span className="ca-map-demo-badge">Demo data — scan events will populate this map</span>
+      {!hasCityPoints && (
+        <span className="ca-map-demo-badge">
+          City/town heat points appear after scans include location coordinates
+        </span>
       )}
 
       <ComposableMap
@@ -180,7 +193,7 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    fill={heatColor(val, realMax)}
+                    fill={hasCityPoints ? "#EEF3FA" : heatColor(val, realMax)}
                     stroke="#fff"
                     strokeWidth={0.4}
                     onMouseMove={(e) => {
@@ -191,7 +204,7 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
                     style={{
                       default: { outline: "none" },
                       hover: {
-                        fill: val > 0 ? "#8B3600" : "#CDD4E0",
+                        fill: hasCityPoints ? "#DDE5F0" : val > 0 ? "#8B3600" : "#CDD4E0",
                         outline: "none",
                         cursor: val > 0 ? "pointer" : "default",
                       },
@@ -204,15 +217,23 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
           </Geographies>
 
           {clusteredPoints.map((point, idx) => {
-            const size = Math.max(2, Math.min(10, 2 + point.scans / 10));
+            const intensity = pointMax ? Math.min(point.scans / pointMax, 1) : 0;
+            const size = Math.max(5, Math.min(18, 5 + intensity * 13));
+            const color = markerHeatColor(point.scans, pointMax);
             return (
               <Marker key={`${point.label}-${idx}`} coordinates={[point.lon, point.lat]}>
                 <circle
+                  r={size + 7}
+                  fill={color}
+                  fillOpacity={0.16}
+                  stroke="none"
+                />
+                <circle
                   r={size}
-                  fill="#FF7A1A"
-                  fillOpacity={0.45}
-                  stroke="#ff7a1a"
-                  strokeWidth={1}
+                  fill={color}
+                  fillOpacity={0.78}
+                  stroke="#fff"
+                  strokeWidth={1.5}
                   onMouseMove={(e) => {
                     setTooltip({
                       x: e.clientX,
@@ -286,11 +307,11 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
       )}
 
       <div className="ca-map-legend">
-        <span className="ca-map-leg-title">{viewBy}</span>
+        <span className="ca-map-leg-title">City/Town {viewBy}</span>
         <div className="ca-map-leg-bar" />
         <div className="ca-map-leg-nums">
           <span>1</span>
-          <span>{realMax}+</span>
+          <span>{pointMax}+</span>
         </div>
       </div>
     </div>
