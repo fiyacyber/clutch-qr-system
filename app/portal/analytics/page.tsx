@@ -143,6 +143,8 @@ export default async function AnalyticsPage({
   return (
     <AnalyticsDashboard
       activeTab={activeTab}
+      accountEmail={user.email || null}
+      accountType={customer.is_admin ? "Admin" : "Customer"}
       totalScans={totalScans}
       connectViews={connectViews}
       linkClicks={linkClicks}

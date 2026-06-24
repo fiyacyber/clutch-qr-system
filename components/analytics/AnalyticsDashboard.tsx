@@ -27,6 +27,8 @@ interface ConnectRow {
 }
 export interface DashboardProps {
   activeTab: string;
+  accountEmail?: string | null;
+  accountType?: string;
   totalScans: number;
   connectViews: number;
   linkClicks: number;
@@ -120,7 +122,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
         <nav className="ca-nav">
           {NAV.map(({ id, label, icon: Icon }) => {
-            const href = id === "leads" ? "/portal/connect/leads" : `/portal/analytics?tab=${id}`;
+            const href = `/portal/analytics?tab=${id}`;
             const active = activeTab === id || (id === "analytics" && isMainView && activeTab !== "overview");
             return (
               <Link key={id} href={href} className={`ca-nav-item${active ? " active" : ""}`}>
@@ -339,7 +341,13 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           {/* ── QR Codes tab ── */}
           {activeTab === "qr-codes" && (
             <div className="ca-card">
-              <div className="ca-card-head"><h2 className="ca-card-title">QR Codes</h2></div>
+              <div className="ca-card-head">
+                <h2 className="ca-card-title">QR Codes</h2>
+                <Link href="/portal/create" className="ca-primary-link-btn">
+                  <QrCode size={14} />
+                  Create QR Code
+                </Link>
+              </div>
               {props.qrRows.length ? (
                 <div className="ca-table-wrap">
                   <table className="ca-data-table">
@@ -512,6 +520,77 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               </div>
             </>
           )}
+
+          {/* ── Leads tab ── */}
+          {activeTab === "leads" && (
+            <div className="ca-card">
+              <div className="ca-card-head">
+                <h2 className="ca-card-title">Leads</h2>
+                <Link href="/portal/connect/leads" className="ca-secondary-link-btn">
+                  Open Detailed Leads
+                </Link>
+              </div>
+              {props.connectRows.some(r => r.leadsCaptured > 0) ? (
+                <div className="ca-table-wrap">
+                  <table className="ca-data-table">
+                    <thead>
+                      <tr>
+                        <th>Profile</th>
+                        <th>Leads Captured</th>
+                        <th>Profile Views</th>
+                        <th>Link Clicks</th>
+                        <th>Linked QR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {props.connectRows
+                        .filter(r => r.leadsCaptured > 0)
+                        .sort((a, b) => b.leadsCaptured - a.leadsCaptured)
+                        .map(r => (
+                          <tr key={r.id}>
+                            <td className="ca-td-bold">{r.profileName}</td>
+                            <td>{r.leadsCaptured}</td>
+                            <td>{r.profileViews}</td>
+                            <td>{r.linkClicks}</td>
+                            <td>{r.linkedQrCode || "—"}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="ca-empty">No leads captured yet. Leads from your Clutch Connect profile will appear here.</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Settings tab ── */}
+          {activeTab === "settings" && (
+            <div className="ca-card">
+              <div className="ca-card-head">
+                <h2 className="ca-card-title">Basic Account Settings</h2>
+              </div>
+
+              <div className="ca-settings-grid">
+                <article className="ca-settings-item">
+                  <p className="ca-settings-label">Email</p>
+                  <p className="ca-settings-value">{props.accountEmail || "—"}</p>
+                </article>
+
+                <article className="ca-settings-item">
+                  <p className="ca-settings-label">Account Type</p>
+                  <p className="ca-settings-value">{props.accountType || "Customer"}</p>
+                </article>
+              </div>
+
+              <div className="ca-settings-actions">
+                <Link href="/change-password" className="ca-primary-link-btn">Change Password</Link>
+                <Link href="/auth/signout" className="ca-secondary-link-btn">Sign Out</Link>
+              </div>
+            </div>
+          )}
+
+          <footer className="ca-footer">Powered by ClutchPrintShop</footer>
         </div>
       </div>
     </div>
