@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1500" role="img" aria-labelledby="title desc">
+  <title id="title">Clutch logo</title>
+  <desc id="desc">Navy and orange Clutch monoline C logo.</desc>
+  <rect width="1500" height="1500" fill="#384862"/>
+  <rect x="405.9" y="357.6" width="663.2" height="756.2" rx="180" fill="#ffa665"/>
+  <path fill="#384862" d="M677.78 639.37v331.47s46.93-81.1 81.54-138.75h156.95c40.71 0 73.71 33 73.71 73.71v119H590.57c-58.27 0-105.52-47.25-105.52-105.52V552.16c0-58.27 47.25-105.52 105.52-105.52h399.41v119c0 40.71-33 73.71-73.71 73.71H677.78Z"/>
+</svg>

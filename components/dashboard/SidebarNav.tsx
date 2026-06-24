@@ -81,8 +81,7 @@ function SidebarList({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: 
   return (
     <>
       <div className="ds-logo-wrap">
-        <div className="ds-logo-mark">C</div>
-        <span className="ds-logo-word">LUTCH</span>
+        <img src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" />
       </div>
 
       <nav className="ds-sidebar-nav" aria-label="Primary">
