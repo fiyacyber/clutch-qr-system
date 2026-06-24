@@ -20,6 +20,7 @@ type StyledQRPreviewProps = {
   dotStyle?: DotStyle;
   cornerStyle?: CornerStyle;
   logoUrl?: string | null;
+  showExportMenu?: boolean;
 };
 
 export default function StyledQRPreview({
@@ -29,6 +30,7 @@ export default function StyledQRPreview({
   dotStyle = "square",
   cornerStyle = "square",
   logoUrl,
+  showExportMenu = true,
 }: StyledQRPreviewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const exportSlug = url.split(/[?#]/)[0].split("/").filter(Boolean).pop();
@@ -94,7 +96,7 @@ export default function StyledQRPreview({
   return (
     <div className="styled-qr-wrap">
       <div className="qr-preview" ref={ref} />
-      {exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
+      {showExportMenu && exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
     </div>
   );
 }

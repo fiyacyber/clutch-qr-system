@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PASSWORD_POLICY_HELPER_TEXT, validatePasswordPolicy } from "@/lib/password-policy";
 
 export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
@@ -17,19 +18,9 @@ export default function ChangePasswordPage() {
     const password = String(form.get("password") || "").trim();
     const confirmPassword = String(form.get("confirm_password") || "").trim();
 
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[^A-Za-z0-9]/.test(password);
-
-    if (password.length < 12) {
-      setError("Password must be at least 12 characters.");
-      setIsSaving(false);
-      return;
-    }
-
-    if (!hasUppercase || !hasLowercase || !hasNumber || !hasSymbol) {
-      setError("Password must include uppercase, lowercase, a number, and a symbol.");
+    const policyError = validatePasswordPolicy(password);
+    if (policyError) {
+      setError(policyError);
       setIsSaving(false);
       return;
     }
@@ -59,7 +50,7 @@ export default function ChangePasswordPage() {
     <main className="login-wrap">
       <section className="login-card">
         <h1>Change Password</h1>
-        <p className="muted">Enter a new password to continue to your dashboard. Use at least 12 characters with uppercase, lowercase, a number, and a symbol.</p>
+        <p className="muted">Enter a new password to continue to your dashboard. {PASSWORD_POLICY_HELPER_TEXT}</p>
 
         {error ? <p className="alert">Error: {error}</p> : null}
 

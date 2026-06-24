@@ -3,18 +3,14 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
-  Activity,
   BarChart3,
-  Globe,
   LayoutDashboard,
   Link2,
   LogOut,
   Menu,
-  Monitor,
   QrCode,
   Settings,
   Shield,
-  Users,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -39,10 +35,10 @@ const navItems: NavItem[] = [
     match: (pathname, tab) => pathname === "/portal" || (pathname === "/portal/analytics" && (!tab || tab === "overview")),
   },
   {
-    label: "QR Codes",
-    href: "/portal/analytics?tab=qr-codes",
+    label: "Campaign Performance",
+    href: "/portal/analytics?tab=campaign-performance",
     icon: QrCode,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "qr-codes",
+    match: (pathname, tab) => pathname === "/portal/analytics" && (tab === "campaign-performance" || tab === "qr-codes"),
   },
   {
     label: "Clutch Connect",
@@ -60,31 +56,7 @@ const navItems: NavItem[] = [
     label: "Analytics",
     href: "/portal/analytics",
     icon: BarChart3,
-    match: (pathname, tab) => pathname === "/portal/analytics" && (!tab || tab === "analytics" || tab === "overview"),
-  },
-  {
-    label: "Geography",
-    href: "/portal/analytics?tab=geography",
-    icon: Globe,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "geography",
-  },
-  {
-    label: "Devices",
-    href: "/portal/analytics?tab=devices",
-    icon: Monitor,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "devices",
-  },
-  {
-    label: "Activity Heatmap",
-    href: "/portal/analytics?tab=activity-heatmap",
-    icon: Activity,
-    match: (pathname, tab) => pathname === "/portal/analytics" && (tab === "activity-heatmap" || tab === "activity"),
-  },
-  {
-    label: "Leads",
-    href: "/portal/analytics?tab=leads",
-    icon: Users,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "leads",
+    match: (pathname) => pathname === "/portal/analytics",
   },
   {
     label: "Admin",
@@ -95,9 +67,9 @@ const navItems: NavItem[] = [
   },
   {
     label: "Settings",
-    href: "/portal/analytics?tab=settings",
+    href: "/portal/settings",
     icon: Settings,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "settings",
+    match: (pathname) => pathname === "/portal/settings",
   },
 ];
 

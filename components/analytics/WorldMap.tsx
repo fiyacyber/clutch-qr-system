@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -50,11 +50,78 @@ const DEMO_MAX = 742;
 
 interface WorldMapProps {
   countryData: { name: string; scans: number }[];
-  mapPoints: { lat: number; lon: number; scans: number; uniqueVisitors: number; label: string }[];
+  mapPoints: {
+    lat: number;
+    lon: number;
+    scans: number;
+    uniqueVisitors: number;
+    label: string;
+    city?: string;
+    region?: string;
+    country?: string;
+    topCampaign?: string;
+  }[];
   viewBy?: string;
+  onDrillDown?: (location: { city?: string; region?: string; country?: string }) => void;
 }
 
-export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: WorldMapProps) {
+function buildClusters(
+  points: WorldMapProps["mapPoints"],
+  zoom: number
+) {
+  const precision = zoom < 1.7 ? 1 : zoom < 2.5 ? 2 : 3;
+  const grouped = new Map<
+    string,
+    {
+      lat: number;
+      lon: number;
+      scans: number;
+      uniqueVisitors: number;
+      label: string;
+      city?: string;
+      region?: string;
+      country?: string;
+      topCampaign?: string;
+      count: number;
+    }
+  >();
+
+  for (const point of points) {
+    const key = `${point.lat.toFixed(precision)}:${point.lon.toFixed(precision)}`;
+    const existing = grouped.get(key);
+
+    if (!existing) {
+      grouped.set(key, {
+        lat: point.lat,
+        lon: point.lon,
+        scans: point.scans,
+        uniqueVisitors: point.uniqueVisitors,
+        label: point.label,
+        city: point.city,
+        region: point.region,
+        country: point.country,
+        topCampaign: point.topCampaign,
+        count: 1,
+      });
+      continue;
+    }
+
+    existing.scans += point.scans;
+    existing.uniqueVisitors += point.uniqueVisitors;
+    existing.count += 1;
+    if (point.scans > existing.scans) {
+      existing.label = point.label;
+      existing.city = point.city;
+      existing.region = point.region;
+      existing.country = point.country;
+      existing.topCampaign = point.topCampaign;
+    }
+  }
+
+  return Array.from(grouped.values());
+}
+
+export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onDrillDown }: WorldMapProps) {
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -62,10 +129,29 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: W
     value: number;
     uniqueVisitors?: number;
     topCity?: string;
+    topCampaign?: string;
+    clustered?: number;
   } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [center, setCenter] = useState<[number, number]>([10, 5]);
+
   const hasReal = countryData.length > 0;
   const byName = new Map(countryData.map(d => [d.name.toLowerCase(), d.scans]));
   const realMax = hasReal ? Math.max(...countryData.map(d => d.scans), 1) : DEMO_MAX;
+  const clusteredPoints = useMemo(() => buildClusters(mapPoints, zoom), [mapPoints, zoom]);
+
+  function zoomIn() {
+    setZoom((current) => Math.min(6, current + 0.6));
+  }
+
+  function zoomOut() {
+    setZoom((current) => Math.max(1, current - 0.6));
+  }
+
+  function resetView() {
+    setZoom(1);
+    setCenter([10, 5]);
+  }
 
   function getVal(geoId: string | number): number {
     const stripped = String(geoId).replace(/^0+/, "");
@@ -84,7 +170,7 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: W
         projectionConfig={{ scale: 145, center: [10, 5] }}
         style={{ width: "100%", height: "320px" }}
       >
-        <ZoomableGroup>
+        <ZoomableGroup zoom={zoom} center={center}>
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map(geo => {
@@ -117,7 +203,7 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: W
             }
           </Geographies>
 
-          {mapPoints.map((point, idx) => {
+          {clusteredPoints.map((point, idx) => {
             const size = Math.max(2, Math.min(10, 2 + point.scans / 10));
             return (
               <Marker key={`${point.label}-${idx}`} coordinates={[point.lon, point.lat]}>
@@ -135,15 +221,32 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: W
                       value: point.scans,
                       uniqueVisitors: point.uniqueVisitors,
                       topCity: point.label.split(",")[0]?.trim() || point.label,
+                      topCampaign: point.topCampaign,
+                      clustered: point.count > 1 ? point.count : undefined,
                     });
                   }}
                   onMouseLeave={() => setTooltip(null)}
+                  onClick={() => {
+                    setCenter([point.lon, point.lat]);
+                    setZoom((current) => Math.min(6, current + 0.9));
+                    onDrillDown?.({
+                      city: point.city,
+                      region: point.region,
+                      country: point.country,
+                    });
+                  }}
                 />
               </Marker>
             );
           })}
         </ZoomableGroup>
       </ComposableMap>
+
+      <div className="ca-map-controls">
+        <button type="button" className="ca-map-control-btn" onClick={zoomIn}>+</button>
+        <button type="button" className="ca-map-control-btn" onClick={zoomOut}>-</button>
+        <button type="button" className="ca-map-control-btn reset" onClick={resetView}>Reset</button>
+      </div>
 
       {tooltip && (
         <div
@@ -165,6 +268,18 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans" }: W
             <div className="ca-map-tt-row">
               <span>Top City</span>
               <span className="ca-map-tt-val">{tooltip.topCity}</span>
+            </div>
+          ) : null}
+          {tooltip.topCampaign ? (
+            <div className="ca-map-tt-row">
+              <span>Campaign</span>
+              <span className="ca-map-tt-val">{tooltip.topCampaign}</span>
+            </div>
+          ) : null}
+          {tooltip.clustered ? (
+            <div className="ca-map-tt-row">
+              <span>Clustered markers</span>
+              <span className="ca-map-tt-val">{tooltip.clustered}</span>
             </div>
           ) : null}
         </div>

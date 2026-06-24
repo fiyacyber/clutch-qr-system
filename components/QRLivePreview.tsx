@@ -1,18 +1,27 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import StyledQRPreview from "@/components/StyledQRPreview";
-import { normalizeUrl, qrUrl } from "@/lib/qr";
+import { qrUrl } from "@/lib/qr";
 import styles from "./QRLivePreview.module.css";
 
 type DotStyle = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
 type CornerStyle = "square" | "dot" | "extra-rounded";
 type DownloadSize = "social" | "card" | "print";
+type PrintMockupType = "business_cards" | "flyers" | "brochures" | "door_hangers" | "postcards" | "yard_signs";
 
-const DOWNLOAD_SIZES = {
-  social: 512,
-  card: 600,
-  print: 2400,
+const DOWNLOAD_SIZE_LABELS: Record<DownloadSize, string> = {
+  social: "512 x 512",
+  card: "600 x 600",
+  print: "2400 x 2400",
+};
+
+const PRINT_MOCKUP_LABELS: Record<PrintMockupType, string> = {
+  business_cards: "Business Cards",
+  flyers: "Flyers",
+  brochures: "Brochures",
+  door_hangers: "Door Hangers",
+  postcards: "Postcards",
+  yard_signs: "Yard Signs",
 };
 
 type QRLivePreviewProps = {
@@ -24,16 +33,20 @@ type QRLivePreviewProps = {
   logoUrl?: string;
   used: number;
   limit: number;
-  isLocked?: boolean;
   name: string;
-  onNameChange: (name: string) => void;
-  destinationUrl: string;
-  onDestinationUrlChange: (url: string) => void;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  destinationTypeLabel?: string;
+  destinationPreview?: string;
+  printMockupType?: PrintMockupType;
+  trackingPreview?: string;
+  downloadSize: DownloadSize;
+  isLocked?: boolean;
+  onNameChange?: (name: string) => void;
+  destinationUrl?: string;
+  onDestinationUrlChange?: (url: string) => void;
+  onSubmit?: (event: any) => void;
   isSaving?: boolean;
   canCreate?: boolean;
   error?: string | null;
-  downloadSize: DownloadSize;
 };
 
 export default function QRLivePreview({
@@ -45,122 +58,78 @@ export default function QRLivePreview({
   logoUrl,
   used,
   limit,
-  isLocked = false,
   name,
-  onNameChange,
-  destinationUrl,
-  onDestinationUrlChange,
-  onSubmit,
-  isSaving = false,
-  canCreate = true,
-  error = null,
+  destinationTypeLabel = "Website",
+  destinationPreview = "",
+  printMockupType = "business_cards",
+  trackingPreview = "Campaign tags enabled",
   downloadSize,
+  error,
 }: QRLivePreviewProps) {
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-
-  const handleDownload = async (format: "png" | "svg" | "jpeg" | "pdf") => {
-    // For now, just log. The QRExportMenu component handles actual downloads.
-    console.log(`Download as ${format}`);
-    setShowDownloadMenu(false);
-  };
-
-  const getPreviewUrl = () => {
-    const baseUrl = qrUrl("preview");
-    const url = new URL(baseUrl);
-    url.searchParams.set("fg", foregroundColor.replace("#", ""));
-    url.searchParams.set("bg", backgroundColor.replace("#", ""));
-    url.searchParams.set("dotStyle", dotStyle);
-    url.searchParams.set("cornerStyle", cornerStyle);
-    return url.toString();
-  };
-
   return (
     <div className={styles.container}>
-      <form className={styles.form} onSubmit={onSubmit}>
-        {error && <div className={styles.errorMessage}>{error}</div>}
+      {error ? <div className={styles.errorMessage}>{error}</div> : null}
+      <h3 className={styles.sectionTitle}>Live QR Preview</h3>
+      <div className={styles.previewCard}>
+        <StyledQRPreview
+          url={finalUrl || qrUrl("preview")}
+          foregroundColor={foregroundColor}
+          backgroundColor={backgroundColor}
+          dotStyle={dotStyle}
+          cornerStyle={cornerStyle}
+          logoUrl={logoUrl}
+          showExportMenu={false}
+        />
 
-        {/* QR Preview Card */}
-        <h3 className={styles.sectionTitle}>QR Preview</h3>
-        <div className={styles.previewCard}>
-          <StyledQRPreview
-            url={finalUrl || qrUrl("preview")}
-            foregroundColor={foregroundColor}
-            backgroundColor={backgroundColor}
-            dotStyle={dotStyle}
-            cornerStyle={cornerStyle}
-            logoUrl={logoUrl}
-          />
+        <div className={styles.previewMeta}>
+          <p className={styles.metaLabel}>Usage</p>
+          <p className={styles.metaValue}>
+            {used}/{limit} QR codes
+          </p>
+        </div>
+      </div>
 
-          <div className={styles.previewMeta}>
-            <p className={styles.metaLabel}>Usage</p>
-            <p className={styles.metaValue}>
-              {used}/{limit} QR codes
-            </p>
+      <h3 className={styles.sectionTitle}>Destination Preview</h3>
+      <div className={styles.destinationPreviewCard}>
+        <p>
+          <span>Type</span>
+          <strong>{destinationTypeLabel}</strong>
+        </p>
+        <p>
+          <span>Preview</span>
+          <strong>{destinationPreview || "Add destination details in the left panel."}</strong>
+        </p>
+        <p>
+          <span>Tracking</span>
+          <strong>{trackingPreview}</strong>
+        </p>
+      </div>
+
+      <h3 className={styles.sectionTitle}>Print Mockup Preview</h3>
+      <div className={styles.mockupCard}>
+        <div className={`${styles.mockupVisual} ${styles[printMockupType]}`}>
+          <div className={styles.mockupQrBadge}>
+            <div className={styles.mockupQrMini} style={{ background: foregroundColor }} />
+            <div>
+              <strong>{name || "Untitled QR Campaign"}</strong>
+              <span>{PRINT_MOCKUP_LABELS[printMockupType]}</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Form Fields */}
-        <h3 className={styles.sectionTitle}>QR Details</h3>
-        <div className={styles.formSection}>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>QR Name</span>
-            <input
-              type="text"
-              className={styles.input}
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              placeholder="Yard Sign - Spring Promo"
-              maxLength={100}
-              required
-            />
-          </label>
-
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Destination URL</span>
-            <input
-              type="url"
-              className={styles.input}
-              value={destinationUrl}
-              onChange={(e) => onDestinationUrlChange(e.target.value)}
-              onBlur={(e) => onDestinationUrlChange(normalizeUrl(e.target.value))}
-              placeholder="https://your-link.com"
-              required
-            />
-            <span className={styles.hint}>Where scans will redirect</span>
-          </label>
-
-          {finalUrl && (
-            <div className={styles.finalUrl}>
-              <span className={styles.finalUrlLabel}>Final URL with tracking</span>
-              <span className={styles.finalUrlValue}>{finalUrl}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className={styles.actions}>
-          <button
-            type="submit"
-            className={styles.primaryBtn}
-            disabled={isSaving || !canCreate}
-          >
-            {isSaving ? "Creating..." : "Create QR Code"}
-          </button>
-
-          {!canCreate && isLocked && (
-            <div className={styles.lockCallout}>
-              <strong>Creation unavailable</strong>
-              <span>Your subscription is currently locked.</span>
-            </div>
-          )}
-          {!canCreate && used >= limit && (
-            <div className={styles.lockCallout}>
-              <strong>Account limit reached</strong>
-              <span>Upgrade your plan to create more QR codes.</span>
-            </div>
-          )}
-        </div>
-      </form>
+      <h3 className={styles.sectionTitle}>Export</h3>
+      <div className={styles.exportCard}>
+        <p>
+          <span>Recommended resolution</span>
+          <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
+        </p>
+        <p>
+          <span>Formats</span>
+          <strong>PNG, SVG, JPG, PDF</strong>
+        </p>
+        <small>Once this QR is created, export options are available from the QR manager and editor.</small>
+      </div>
     </div>
   );
 }

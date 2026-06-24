@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import ConnectLinksEditor from "@/components/ConnectLinksEditor";
+import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -54,6 +55,8 @@ export default async function PortalConnectLinksPage({ searchParams }: LinksPage
           <Link className="btn ghost" href="/portal/connect">Back to Profile</Link>
           <Link className="btn secondary" href="/portal/connect/leads">View Leads</Link>
         </section>
+
+        <ConnectTabs active="links" />
 
         {params.saved === "1" ? <div className="success-message">Links saved.</div> : null}
 

@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import Header from "@/components/Header";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import ConnectLeadsCRM from "@/components/connect/ConnectLeadsCRM";
+import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+function sourceFromQrType(qrType?: string | null) {
+  const value = (qrType || "").toLowerCase();
+  if (value === "business_cards") return "Business Card";
+  if (value === "flyers" || value === "flyer") return "Flyer";
+  if (value === "yard_signs" || value === "yard_sign") return "Yard Sign";
+  if (value === "door_hangers" || value === "door_hanger") return "Door Hanger";
+  if (value === "postcards" || value === "postcard") return "Postcard";
+  if (value === "brochures" || value === "brochure") return "Brochure";
+  if (value && value !== "connect_profile" && value !== "url") return "QR Code";
+  return "Clutch Connect Profile";
 }
 
 export default async function PortalConnectLeadsPage() {
@@ -25,13 +29,13 @@ export default async function PortalConnectLeadsPage() {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, slug, business_name, contact_name")
+    .select("id, slug, business_name, contact_name, is_active")
     .eq("customer_id", customer.id)
     .maybeSingle();
 
   if (!profile) redirect("/portal/connect");
 
-  const [{ data: leads }, { data: events }] = await Promise.all([
+  const [{ data: leads }, { data: events }, { data: unifiedEvents }, { data: qrCodes }, { data: qrScans }] = await Promise.all([
     admin
       .from("profile_leads")
       .select("*")
@@ -40,91 +44,179 @@ export default async function PortalConnectLeadsPage() {
       .limit(500),
     admin
       .from("profile_click_events")
-      .select("event_type")
-      .eq("profile_id", profile.id),
+      .select("id, event_type, created_at, metadata")
+      .eq("profile_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(1200),
+    admin
+      .from("connect_events")
+      .select("id, event_type, created_at, link_label")
+      .eq("profile_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(1200),
+    admin
+      .from("qr_codes")
+      .select("id, name, qr_type, profile_id, connect_profile_id")
+      .eq("customer_id", customer.id),
+    admin
+      .from("qr_scans")
+      .select("id, qr_code_id, ip_hash, created_at")
+      .order("created_at", { ascending: false })
+      .limit(4000),
   ]);
 
   const rows = leads || [];
   const clickEvents = events || [];
 
-  const leadSubmits = clickEvents.filter((event: any) => event.event_type === "lead_submit").length;
-  const views = clickEvents.filter((event: any) => event.event_type === "profile_view").length;
+  const unifiedRows = unifiedEvents || [];
+
+  const qrById = new Map((qrCodes || []).map((qr: any) => [qr.id, qr]));
+  const linkedQrIds = new Set(
+    (qrCodes || [])
+      .filter((qr: any) => qr.profile_id === profile.id || qr.connect_profile_id === profile.id)
+      .map((qr: any) => qr.id)
+  );
+
+  const leadRows = rows.map((lead: any) => {
+    const leadTs = new Date(lead.created_at).getTime();
+    const scanMatch = (qrScans || []).find((scan: any) => {
+      if (!scan.ip_hash || !lead.ip_hash || scan.ip_hash !== lead.ip_hash) return false;
+      const scanTs = new Date(scan.created_at).getTime();
+      if (!Number.isFinite(scanTs) || !Number.isFinite(leadTs)) return false;
+      return scanTs <= leadTs && leadTs - scanTs <= 7 * 24 * 60 * 60 * 1000;
+    });
+
+    const qr = scanMatch ? qrById.get(scanMatch.qr_code_id) : null;
+    const source = qr ? sourceFromQrType(qr.qr_type) : "Clutch Connect Profile";
+
+    return {
+      id: String(lead.id),
+      name: lead.name || "",
+      email: lead.email || "",
+      phone: lead.phone || "",
+      company: "",
+      message: lead.message || "",
+      source,
+      createdAt: lead.created_at,
+      ipHash: lead.ip_hash || "",
+    };
+  });
+
+  const scansForProfile = (qrScans || []).filter((scan: any) => linkedQrIds.has(scan.qr_code_id));
+  const profileViews = clickEvents.filter((event: any) => event.event_type === "profile_view").length;
   const linkClicks = clickEvents.filter((event: any) => event.event_type === "link_click").length;
+  const leadCaptures = leadRows.length;
+
+  const timelineRows = [
+    ...clickEvents
+      .filter((event: any) => ["profile_view", "link_click", "lead_submit"].includes(event.event_type))
+      .map((event: any) => ({
+        id: `click-${event.id}`,
+        eventType: event.event_type,
+        label:
+          event.event_type === "profile_view"
+            ? "Profile viewed"
+            : event.event_type === "link_click"
+              ? "Link clicked"
+              : "Lead submitted",
+        createdAt: event.created_at,
+        detail: event.metadata?.source ? `Source: ${event.metadata.source}` : "Clutch Connect profile",
+      })),
+    ...scansForProfile.slice(0, 300).map((scan: any) => ({
+      id: `scan-${scan.id}`,
+      eventType: "qr_scan",
+      label: "QR scanned",
+      createdAt: scan.created_at,
+      detail: scan.qr_code_id ? `QR ID: ${scan.qr_code_id}` : "QR campaign",
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const clicksByCampaign = new Map<string, number>();
+  for (const event of unifiedRows) {
+    if (event.event_type !== "link_click") continue;
+    const key = event.link_label || "Clutch Connect Profile";
+    clicksByCampaign.set(key, (clicksByCampaign.get(key) || 0) + 1);
+  }
+
+  const scansByQr = new Map<string, { scans: number; visitors: Set<string> }>();
+  for (const scan of scansForProfile) {
+    const key = scan.qr_code_id;
+    if (!key) continue;
+    const current = scansByQr.get(key) || { scans: 0, visitors: new Set<string>() };
+    current.scans += 1;
+    if (scan.ip_hash) current.visitors.add(scan.ip_hash);
+    scansByQr.set(key, current);
+  }
+
+  const conversionsByCampaign = new Map<string, number>();
+  for (const lead of leadRows) {
+    conversionsByCampaign.set(lead.source, (conversionsByCampaign.get(lead.source) || 0) + 1);
+  }
+
+  const campaignRows = Array.from(scansByQr.entries())
+    .map(([qrId, stats]) => {
+      const qr = qrById.get(qrId);
+      const campaign = qr?.name || "Unnamed QR";
+      return {
+        campaign,
+        scans: stats.scans,
+        visitors: stats.visitors.size,
+        clicks: clicksByCampaign.get(campaign) || 0,
+        conversions: conversionsByCampaign.get(sourceFromQrType(qr?.qr_type)) || 0,
+      };
+    })
+    .sort((a, b) => b.scans - a.scans)
+    .slice(0, 20);
+
+  const qrPerformanceRows = Array.from(scansByQr.entries())
+    .map(([qrId, stats]) => {
+      const qr = qrById.get(qrId);
+      const source = sourceFromQrType(qr?.qr_type);
+      const conversions = conversionsByCampaign.get(source) || 0;
+      return {
+        qrName: qr?.name || "Unnamed QR",
+        scans: stats.scans,
+        visitors: stats.visitors.size,
+        clicks: clicksByCampaign.get(qr?.name || "") || 0,
+        conversionRate: stats.scans ? (conversions / stats.scans) * 100 : 0,
+      };
+    })
+    .sort((a, b) => b.scans - a.scans)
+    .slice(0, 20);
+
+  const funnel = {
+    profileViews,
+    qrScans: scansForProfile.length,
+    linkClicks,
+    leadCaptures,
+    conversions: leadCaptures,
+  };
 
   return (
-    <div className="page-shell">
-      <Header isAdmin={Boolean(customer.is_admin)} />
+    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+      <main className="container connect-center-shell">
+        <DashboardHeader
+          title="Clutch Connect Leads"
+          subtitle="CRM-style inbox for digital business card leads, sources, and conversion analytics."
+          actions={
+            <div className="connect-center-header-actions">
+              <Link className="btn primary" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link>
+              <Link className="btn secondary" href="/portal/create">Generate QR Code</Link>
+            </div>
+          }
+        />
 
-      <main className="container">
-        <section className="portal-dashboard-header">
-          <div>
-            <p className="eyebrow">Clutch Connect</p>
-            <h1>Leads & Activity</h1>
-            <p>Review contact requests and profile engagement for your smart business card page.</p>
-          </div>
+        <ConnectTabs active="leads" />
 
-          <div className="dashboard-badges">
-            <span>{rows.length} leads</span>
-            <span>{views} profile views</span>
-            <span>{linkClicks} link clicks</span>
-            <span>{leadSubmits} lead submits</span>
-          </div>
-        </section>
-
-        <section className="create-page-nav">
-          <Link className="btn ghost" href="/portal/connect">Back to Profile</Link>
-          <Link className="btn secondary" href="/portal/connect/links">Manage Links</Link>
-          <Link className="btn primary" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link>
-        </section>
-
-        <section className="analytics-grid">
-          <article className="analytics-card">
-            <p className="eyebrow">Profile</p>
-            <h3>{profile.business_name || profile.contact_name || "Clutch Connect"}</h3>
-            <p className="muted">/{profile.slug}</p>
-          </article>
-          <article className="analytics-card">
-            <p className="eyebrow">Total Leads</p>
-            <h3>{rows.length}</h3>
-            <p className="muted">Captured from your public profile form.</p>
-          </article>
-          <article className="analytics-card">
-            <p className="eyebrow">Engagement</p>
-            <h3>{views + linkClicks}</h3>
-            <p className="muted">Profile views and link interactions.</p>
-          </article>
-        </section>
-
-        <section className="card" style={{ marginTop: "16px" }}>
-          <p className="eyebrow">Lead Inbox</p>
-          {rows.length ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Message</th>
-                  <th>Received</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((lead: any) => (
-                  <tr key={lead.id}>
-                    <td>{lead.name || "-"}</td>
-                    <td>{lead.email || "-"}</td>
-                    <td>{lead.phone || "-"}</td>
-                    <td>{lead.message || "-"}</td>
-                    <td>{formatDate(lead.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="analytics-empty">No leads yet. Share your Clutch Connect profile to start collecting requests.</div>
-          )}
-        </section>
+        <ConnectLeadsCRM
+          profileSlug={profile.slug}
+          leads={leadRows}
+          timeline={timelineRows}
+          campaignRows={campaignRows}
+          qrRows={qrPerformanceRows}
+          funnel={funnel}
+        />
       </main>
-    </div>
+    </DashboardShell>
   );
 }

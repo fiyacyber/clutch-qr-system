@@ -7,7 +7,8 @@ import {
   QrCode, BarChart2, Globe, Monitor,
   Activity, Users, Download, SlidersHorizontal,
   CalendarDays, ChevronDown, Eye, MousePointerClick, UserCheck,
-  ArrowUpRight, Search,
+  ArrowUpRight, Search, Building2, Mail, ShieldCheck, Bell,
+  Palette, HelpCircle, LogOut, Trash2, Sparkles, CreditCard,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
@@ -28,8 +29,21 @@ interface ConnectRow {
 }
 export interface DashboardProps {
   activeTab: string;
+  accountName?: string;
   accountEmail?: string | null;
   accountType?: string;
+  companyName?: string;
+  memberSince?: string;
+  lastLogin?: string;
+  authenticationStatus?: string;
+  planName?: string;
+  planCode?: string;
+  managePlanHref?: string;
+  qrUsageUsed?: number;
+  qrUsageLimit?: number | null;
+  latestQrName?: string | null;
+  latestQrForeground?: string;
+  latestQrBackground?: string;
   totalScans: number;
   connectViews: number;
   linkClicks: number;
@@ -46,6 +60,18 @@ export interface DashboardProps {
   browserRows: { label: string; value: number }[];
   osRows: { label: string; value: number }[];
   heatmap: { day: string; hour: number; count: number }[];
+  geographyRows: {
+    id: string;
+    qrId: string;
+    campaign: string;
+    city: string;
+    region: string;
+    country: string;
+    locationLabel: string;
+    createdAt: string;
+    latitude: number;
+    longitude: number;
+  }[];
 }
 
 const KPI = [
@@ -87,8 +113,38 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const [timeFilter, setTimeFilter] = useState("30D");
   const [qrSearch, setQrSearch] = useState("");
   const [qrFilter, setQrFilter] = useState("all");
+  const [geoDateRange, setGeoDateRange] = useState("30d");
+  const [geoCountry, setGeoCountry] = useState("all");
+  const [geoState, setGeoState] = useState("all");
+  const [geoCity, setGeoCity] = useState("all");
+  const [geoCampaign, setGeoCampaign] = useState("all");
+  const [geoQrCode, setGeoQrCode] = useState("all");
+  const [dangerModal, setDangerModal] = useState<"signout" | "delete" | null>(null);
 
-  const isMainView = activeTab === "analytics" || activeTab === "overview" || !activeTab;
+  const analyticsTab = useMemo(() => {
+    if (!activeTab || activeTab === "analytics" || activeTab === "overview") return "overview";
+    if (activeTab === "geography") return "geography";
+    if (activeTab === "devices" || activeTab === "technology") return "technology";
+    if (activeTab === "activity-heatmap" || activeTab === "activity") return "activity-heatmap";
+    if (activeTab === "campaign-performance" || activeTab === "qr-codes") return "campaign-performance";
+    return "overview";
+  }, [activeTab]);
+
+  const isSettingsView = activeTab === "settings";
+  const headerTitle = isSettingsView ? "Settings" : "Clutch Analytics";
+  const headerSubtitle = isSettingsView
+    ? "Manage your account, profile, security, notifications, and subscription settings."
+    : "Track QR scans, Clutch Connect profile views, link clicks, and lead activity.";
+  const isAdmin = props.planCode === "admin" || props.accountType === "Admin";
+  const qrUsageLimit = props.qrUsageLimit ?? 0;
+  const qrUsagePercent = props.qrUsageLimit ? Math.min((props.qrUsageUsed || 0) / props.qrUsageLimit, 1) * 100 : 100;
+  const qrUsageLabel = props.qrUsageLimit ? `${props.qrUsageUsed || 0} / ${props.qrUsageLimit} QR Codes Used` : "Unlimited QR Codes";
+  const planLabel = props.planName || props.accountType || "QR Pro";
+  const brandForeground = props.latestQrForeground || "#384862";
+  const brandBackground = props.latestQrBackground || "#ffffff";
+  const latestQrName = props.latestQrName || "Latest QR";
+
+  const isMainView = analyticsTab === "overview";
   const maxHeat = Math.max(...heatmap.map(c => c.count), 0);
 
   // Group heatmap by day
@@ -155,11 +211,540 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     { label: "Clutch Connect Profile", href: "/portal/create?template=clutch-connect-profile" },
   ];
 
+  const geoRows = useMemo(() => {
+    const now = Date.now();
+
+    function inRange(createdAt: string) {
+      const ts = new Date(createdAt).getTime();
+      if (!Number.isFinite(ts)) return true;
+      if (geoDateRange === "7d") return ts >= now - 7 * 24 * 60 * 60 * 1000;
+      if (geoDateRange === "30d") return ts >= now - 30 * 24 * 60 * 60 * 1000;
+      if (geoDateRange === "90d") return ts >= now - 90 * 24 * 60 * 60 * 1000;
+      return true;
+    }
+
+    return props.geographyRows.filter((row) => {
+      if (!inRange(row.createdAt)) return false;
+      if (geoCountry !== "all" && row.country !== geoCountry) return false;
+      if (geoState !== "all" && row.region !== geoState) return false;
+      if (geoCity !== "all" && row.city !== geoCity) return false;
+      if (geoCampaign !== "all" && row.campaign !== geoCampaign) return false;
+      if (geoQrCode !== "all" && row.qrId !== geoQrCode) return false;
+      return true;
+    });
+  }, [props.geographyRows, geoDateRange, geoCountry, geoState, geoCity, geoCampaign, geoQrCode]);
+
+  const geoCountries = useMemo(
+    () => Array.from(new Set(props.geographyRows.map((row) => row.country))).filter(Boolean).sort(),
+    [props.geographyRows]
+  );
+  const geoStates = useMemo(
+    () => Array.from(new Set(props.geographyRows.map((row) => row.region))).filter(Boolean).sort(),
+    [props.geographyRows]
+  );
+  const geoCities = useMemo(
+    () => Array.from(new Set(props.geographyRows.map((row) => row.city))).filter(Boolean).sort(),
+    [props.geographyRows]
+  );
+  const geoCampaigns = useMemo(
+    () => Array.from(new Set(props.geographyRows.map((row) => row.campaign))).filter(Boolean).sort(),
+    [props.geographyRows]
+  );
+
+  const filteredMapPoints = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        lat: number;
+        lon: number;
+        scans: number;
+        visitors: Set<string>;
+        label: string;
+        city: string;
+        region: string;
+        country: string;
+        campaignCounts: Map<string, number>;
+      }
+    >();
+
+    for (const row of geoRows) {
+      if (!Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)) continue;
+      const key = `${row.latitude.toFixed(2)}:${row.longitude.toFixed(2)}:${row.locationLabel}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.scans += 1;
+        existing.visitors.add(row.id);
+        existing.campaignCounts.set(row.campaign, (existing.campaignCounts.get(row.campaign) || 0) + 1);
+      } else {
+        grouped.set(key, {
+          lat: row.latitude,
+          lon: row.longitude,
+          scans: 1,
+          visitors: new Set([row.id]),
+          label: row.locationLabel,
+          city: row.city,
+          region: row.region,
+          country: row.country,
+          campaignCounts: new Map([[row.campaign, 1]]),
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).map((point) => ({
+      lat: point.lat,
+      lon: point.lon,
+      scans: point.scans,
+      uniqueVisitors: point.visitors.size,
+      label: point.label,
+      city: point.city,
+      region: point.region,
+      country: point.country,
+      topCampaign:
+        Array.from(point.campaignCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
+    }));
+  }, [geoRows]);
+
+  const geoCountryData = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of geoRows) {
+      counts.set(row.country, (counts.get(row.country) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([name, scans]) => ({ name, scans }))
+      .sort((a, b) => b.scans - a.scans);
+  }, [geoRows]);
+
+  const topCities = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of geoRows) {
+      counts.set(row.city, (counts.get(row.city) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [geoRows]);
+
+  const topStates = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of geoRows) {
+      counts.set(row.region, (counts.get(row.region) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [geoRows]);
+
+  const campaignGeography = useMemo(() => {
+    const counts = new Map<string, { campaign: string; location: string; scans: number }>();
+    for (const row of geoRows) {
+      const key = `${row.campaign}__${row.locationLabel}`;
+      const existing = counts.get(key);
+      if (existing) {
+        existing.scans += 1;
+      } else {
+        counts.set(key, {
+          campaign: row.campaign,
+          location: row.locationLabel,
+          scans: 1,
+        });
+      }
+    }
+    return Array.from(counts.values()).sort((a, b) => b.scans - a.scans).slice(0, 20);
+  }, [geoRows]);
+
+  const regionalPerformance = useMemo(() => {
+    const total = geoRows.length;
+    const bestCity = topCities[0];
+    const bestState = topStates[0];
+    return {
+      bestCity,
+      bestState,
+      cityPct: total && bestCity ? ((bestCity.value / total) * 100).toFixed(1) : "0.0",
+      statePct: total && bestState ? ((bestState.value / total) * 100).toFixed(1) : "0.0",
+    };
+  }, [geoRows.length, topCities, topStates]);
+
+  const growthInsights = useMemo(() => {
+    const now = Date.now();
+    const currentStart = now - 7 * 24 * 60 * 60 * 1000;
+    const previousStart = now - 14 * 24 * 60 * 60 * 1000;
+    const current = new Map<string, number>();
+    const previous = new Map<string, number>();
+
+    for (const row of geoRows) {
+      const ts = new Date(row.createdAt).getTime();
+      if (!Number.isFinite(ts)) continue;
+      if (ts >= currentStart) {
+        current.set(row.locationLabel, (current.get(row.locationLabel) || 0) + 1);
+      } else if (ts >= previousStart && ts < currentStart) {
+        previous.set(row.locationLabel, (previous.get(row.locationLabel) || 0) + 1);
+      }
+    }
+
+    let fastestLocation = "—";
+    let fastestDelta = Number.NEGATIVE_INFINITY;
+    for (const [location, count] of current.entries()) {
+      const delta = count - (previous.get(location) || 0);
+      if (delta > fastestDelta) {
+        fastestDelta = delta;
+        fastestLocation = location;
+      }
+    }
+
+    const mostActive = topCities[0]?.label || "—";
+    const mostRecent =
+      [...geoRows]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+        ?.locationLabel || "—";
+
+    return {
+      fastestLocation,
+      mostActive,
+      mostRecent,
+    };
+  }, [geoRows, topCities]);
+
+  const geoTopRegion = topStates[0]?.label || "—";
+  const geoTopCity = topCities[0]?.label || "—";
+
+  function exportGeographyCsv() {
+    const rows = [
+      ["Campaign", "Location", "City", "State", "Country", "Scan Timestamp"],
+      ...geoRows.map((row) => [
+        row.campaign,
+        row.locationLabel,
+        row.city,
+        row.region,
+        row.country,
+        row.createdAt,
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value || "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clutch-location-intelligence.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  if (isSettingsView) {
+    const supportEmail = "support@clutchprintshop.com";
+    const supportMailTo = `mailto:${supportEmail}`;
+    const requestFeatureMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Feature request for Clutch")}`;
+    const managePlanHref = props.managePlanHref || "/portal";
+
+    return (
+      <div className="ca-main">
+        <DashboardHeader title={headerTitle} subtitle={headerSubtitle} />
+
+        <div className="ca-content ca-settings-content">
+          <section className="ca-card ca-settings-hero-card">
+            <div className="ca-settings-hero-copy">
+              <p className="ca-settings-kicker"><Sparkles size={14} /> Account Center</p>
+              <h2>{props.accountName || "Your account"}</h2>
+              <p>
+                Manage your subscription, brand defaults, notifications, and security from one place.
+              </p>
+            </div>
+
+            <div className="ca-settings-hero-meta">
+              <article>
+                <span>Plan</span>
+                <strong>{planLabel}</strong>
+              </article>
+              <article>
+                <span>QR Usage</span>
+                <strong>{qrUsageLabel}</strong>
+              </article>
+              <article>
+                <span>Member Since</span>
+                <strong>{props.memberSince || "—"}</strong>
+              </article>
+            </div>
+          </section>
+
+          <div className="ca-settings-stack">
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Account Information</h2>
+                  <p className="ca-title-sub">Your contact and organization details.</p>
+                </div>
+                <Link href="/portal/connect/edit" className="ca-secondary-link-btn">Edit Profile</Link>
+              </div>
+
+              <div className="ca-settings-info-grid">
+                <article>
+                  <span><Building2 size={14} /> Name</span>
+                  <strong>{props.accountName || "—"}</strong>
+                </article>
+                <article>
+                  <span><Mail size={14} /> Email</span>
+                  <strong>{props.accountEmail || "—"}</strong>
+                </article>
+                <article>
+                  <span>Company Name</span>
+                  <strong>{props.companyName || "—"}</strong>
+                </article>
+                <article>
+                  <span>Account Type</span>
+                  <strong>{props.accountType || "QR Pro"}</strong>
+                </article>
+                <article className="ca-settings-info-wide">
+                  <span>Member Since</span>
+                  <strong>{props.memberSince || "—"}</strong>
+                </article>
+              </div>
+            </section>
+
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Subscription & Usage</h2>
+                  <p className="ca-title-sub">Current plan and QR code capacity.</p>
+                </div>
+                <div className="ca-settings-badge">{isAdmin ? "Unlimited" : planLabel}</div>
+              </div>
+
+              <div className="ca-settings-plan-summary">
+                <article>
+                  <span>Plan</span>
+                  <strong>{planLabel}</strong>
+                </article>
+                <article>
+                  <span>QR Codes Used</span>
+                  <strong>{props.qrUsageLimit ? `${props.qrUsageUsed || 0} of ${props.qrUsageLimit}` : "Unlimited"}</strong>
+                </article>
+              </div>
+
+              <div className="ca-progress-shell" aria-label="QR usage progress">
+                <div className={`ca-progress-track${props.qrUsageLimit ? "" : " ca-progress-unlimited"}`}>
+                  <div className="ca-progress-fill" style={{ width: `${qrUsagePercent}%` }} />
+                </div>
+                <p className="ca-progress-note">
+                  {props.qrUsageLimit
+                    ? `${props.qrUsageUsed || 0} / ${props.qrUsageLimit} QR codes used`
+                    : "Unlimited QR codes available for this account."}
+                </p>
+                {props.planCode === "qr_pro_plus" ? (
+                  <p className="ca-progress-note ca-progress-note-muted">
+                    Agency accounts use a custom limit based on your subscription.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="ca-settings-actions-row">
+                <Link href={managePlanHref} className="ca-primary-link-btn">Manage Plan</Link>
+                <a href={supportMailTo} className="ca-secondary-link-btn">Contact Support</a>
+              </div>
+            </section>
+
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Security</h2>
+                  <p className="ca-title-sub">Password and session controls.</p>
+                </div>
+              </div>
+
+              <div className="ca-settings-security-grid">
+                <article>
+                  <span>Password</span>
+                  <strong>Managed by Clutch login</strong>
+                </article>
+                <article>
+                  <span>Last Login</span>
+                  <strong>{props.lastLogin || "—"}</strong>
+                </article>
+                <article>
+                  <span>Authentication Status</span>
+                  <strong>{props.authenticationStatus || "Password login active"}</strong>
+                </article>
+              </div>
+
+              <div className="ca-settings-actions-row">
+                <Link href="/change-password" className="ca-primary-link-btn">Change Password</Link>
+                <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal("signout")}>Sign Out Everywhere</button>
+              </div>
+
+              <div className="ca-settings-soon">
+                <ShieldCheck size={15} />
+                <div>
+                  <strong>Two-Factor Authentication</strong>
+                  <p>Coming Soon</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Notifications</h2>
+                  <p className="ca-title-sub">Notification preferences are not connected to stored settings yet.</p>
+                </div>
+                <Bell size={15} className="ca-section-icon" />
+              </div>
+
+              <div className="ca-settings-toggle-list">
+                {[
+                  "Email Notifications",
+                  "Lead Alerts",
+                  "Weekly Analytics Summary",
+                  "Product Updates",
+                ].map((label) => (
+                  <article key={label} className="ca-settings-toggle-item">
+                    <div>
+                      <strong>{label}</strong>
+                      <p>Placeholder only</p>
+                    </div>
+                    <span className="ca-settings-toggle-shell" aria-hidden="true"><span /></span>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Brand Preferences</h2>
+                  <p className="ca-title-sub">Default QR styling and export defaults.</p>
+                </div>
+                <Palette size={15} className="ca-section-icon" />
+              </div>
+
+              <div className="ca-settings-brand-grid">
+                <article className="ca-settings-brand-preview">
+                  <div className="ca-settings-qr-preview" style={{ background: brandBackground }}>
+                    <div className="ca-settings-qr-mark" style={{ background: brandForeground }} />
+                    <div className="ca-settings-qr-bars">
+                      <span style={{ background: brandForeground }} />
+                      <span style={{ background: brandForeground }} />
+                      <span style={{ background: brandForeground }} />
+                    </div>
+                  </div>
+                  <strong>{latestQrName}</strong>
+                  <p>Live preview of the latest QR palette in your account.</p>
+                </article>
+
+                <article className="ca-settings-brand-option">
+                  <span>Default QR Color</span>
+                  <div className="ca-settings-color-row">
+                    <span className="ca-settings-color-swatch" style={{ background: brandForeground }} />
+                    <strong>{brandForeground}</strong>
+                  </div>
+                </article>
+
+                <article className="ca-settings-brand-option">
+                  <span>Default Background Color</span>
+                  <div className="ca-settings-color-row">
+                    <span className="ca-settings-color-swatch" style={{ background: brandBackground, border: "1px solid #d8dde8" }} />
+                    <strong>{brandBackground}</strong>
+                  </div>
+                </article>
+
+                <article className="ca-settings-brand-option">
+                  <span>Default Download Size</span>
+                  <strong>1024 × 1024</strong>
+                  <p>Optimized for high-resolution downloads and print workflows.</p>
+                </article>
+              </div>
+            </section>
+
+            <section className="ca-card ca-settings-panel">
+              <div className="ca-card-head">
+                <div>
+                  <h2 className="ca-card-title">Support</h2>
+                  <p className="ca-title-sub">Get help from the Clutch team.</p>
+                </div>
+                <HelpCircle size={15} className="ca-section-icon" />
+              </div>
+
+              <div className="ca-settings-support-grid">
+                <a href="https://clutchprintshop.com" className="ca-secondary-link-btn">Help Center</a>
+                <a href={supportMailTo} className="ca-primary-link-btn">Contact Support</a>
+                <a href={requestFeatureMailTo} className="ca-secondary-link-btn">Request Feature</a>
+              </div>
+
+              <div className="ca-settings-support-email">
+                <Mail size={15} />
+                <span>{supportEmail}</span>
+              </div>
+            </section>
+          </div>
+
+          <section className="ca-card ca-settings-danger-card">
+            <div className="ca-card-head">
+              <div>
+                <h2 className="ca-card-title">Danger Zone</h2>
+                <p className="ca-title-sub">These actions require confirmation before they run.</p>
+              </div>
+              <Trash2 size={15} className="ca-section-icon" />
+            </div>
+
+            <div className="ca-settings-danger-actions">
+              <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal("signout")}>Sign Out</button>
+              <button type="button" className="ca-danger-link-btn" onClick={() => setDangerModal("delete")}>Delete Account</button>
+            </div>
+          </section>
+
+          {dangerModal ? (
+            <div className="ca-modal-backdrop" role="presentation" onClick={() => setDangerModal(null)}>
+              <div
+                className="ca-modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="settings-danger-modal-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="ca-modal-head">
+                  <div>
+                    <p className="ca-settings-kicker">Confirmation Required</p>
+                    <h3 id="settings-danger-modal-title">
+                      {dangerModal === "delete" ? "Delete your account?" : "Sign out of your account?"}
+                    </h3>
+                  </div>
+                  <button type="button" className="ca-modal-close" onClick={() => setDangerModal(null)} aria-label="Close modal">×</button>
+                </div>
+
+                <p className="ca-modal-copy">
+                  {dangerModal === "delete"
+                    ? "Account deletion is handled by support so ownership can be verified before any records are removed."
+                    : "This will end your current authenticated session right away."}
+                </p>
+
+                <div className="ca-modal-actions">
+                  <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal(null)}>Cancel</button>
+                  {dangerModal === "delete" ? (
+                    <a href={supportMailTo} className="ca-danger-link-btn">Contact Support</a>
+                  ) : (
+                    <form action="/auth/signout" method="post">
+                      <button type="submit" className="ca-danger-link-btn">Confirm Sign Out</button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ca-main">
       <DashboardHeader
-        title="Clutch Analytics"
-        subtitle="Track QR scans, Clutch Connect profile views, link clicks, and lead activity."
+        title={headerTitle}
+        subtitle={headerSubtitle}
         actions={
           <div className="ca-topbar-controls">
             <button className="ca-date-btn">
@@ -187,6 +772,26 @@ export default function AnalyticsDashboard(props: DashboardProps) {
       />
 
       <div className="ca-content">
+          <div className="ca-analytics-tabs" role="tablist" aria-label="Analytics views">
+            {[
+              { key: "overview", label: "Overview" },
+              { key: "geography", label: "Geography" },
+              { key: "technology", label: "Technology" },
+              { key: "activity-heatmap", label: "Activity Heatmap" },
+              { key: "campaign-performance", label: "Campaign Performance" },
+            ].map((tab) => (
+              <Link
+                key={tab.key}
+                href={tab.key === "overview" ? "/portal/analytics" : `/portal/analytics?tab=${tab.key}`}
+                className={`ca-analytics-tab${analyticsTab === tab.key ? " active" : ""}`}
+                role="tab"
+                aria-selected={analyticsTab === tab.key}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+
           {/* KPI Row — always visible */}
           <div className="ca-kpi-row">
             {KPI.map(({ key, label, icon: Icon }) => {
@@ -300,7 +905,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                     <h2 className="ca-card-title">Device Breakdown</h2>
                   </div>
                   <DeviceDonut data={props.deviceRows} />
-                  <Link href="/portal/analytics?tab=devices" className="ca-card-link">
+                  <Link href="/portal/analytics?tab=technology" className="ca-card-link">
                     View full report <ArrowUpRight size={13} />
                   </Link>
                 </div>
@@ -353,7 +958,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           )}
 
           {/* ── QR Codes tab ── */}
-          {activeTab === "qr-codes" && (
+          {analyticsTab === "campaign-performance" && (
             <div className="ca-qr-center">
               <div className="ca-card ca-qr-header-card">
                 <h2 className="ca-card-title ca-qr-header-title">My QR Codes</h2>
@@ -534,8 +1139,64 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           )}
 
           {/* ── Geography tab ── */}
-          {activeTab === "geography" && (
+          {analyticsTab === "geography" && (
             <>
+              <div className="ca-geo-filters">
+                <div className="ca-select-wrap">
+                  <select className="ca-select" value={geoDateRange} onChange={(e) => setGeoDateRange(e.target.value)}>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                    <option value="all">All time</option>
+                  </select>
+                  <ChevronDown size={12} className="ca-select-caret" />
+                </div>
+
+                {[{ value: geoCountry, setter: setGeoCountry, options: geoCountries, label: "Country" },
+                  { value: geoState, setter: setGeoState, options: geoStates, label: "State" },
+                  { value: geoCity, setter: setGeoCity, options: geoCities, label: "City" },
+                  { value: geoCampaign, setter: setGeoCampaign, options: geoCampaigns, label: "Campaign" }].map((filter) => (
+                  <div className="ca-select-wrap" key={filter.label}>
+                    <select
+                      className="ca-select"
+                      value={filter.value}
+                      onChange={(e) => filter.setter(e.target.value)}
+                    >
+                      <option value="all">All {filter.label}</option>
+                      {filter.options.map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={12} className="ca-select-caret" />
+                  </div>
+                ))}
+
+                <div className="ca-select-wrap">
+                  <select className="ca-select" value={geoQrCode} onChange={(e) => setGeoQrCode(e.target.value)}>
+                    <option value="all">All QR Codes</option>
+                    {props.qrRows.map((row) => (
+                      <option key={row.id} value={row.id}>{row.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="ca-select-caret" />
+                </div>
+
+                <button className="ca-ctrl-btn" onClick={() => window.print()}>
+                  <Download size={13} /> PDF report
+                </button>
+                <button className="ca-ctrl-btn" onClick={exportGeographyCsv}>
+                  <Download size={13} /> CSV export
+                </button>
+              </div>
+
+              <div className="ca-geo-kpi-row">
+                <article className="ca-geo-kpi-card"><span>Countries Reached</span><strong>{new Set(geoRows.map((r) => r.country)).size}</strong></article>
+                <article className="ca-geo-kpi-card"><span>States Reached</span><strong>{new Set(geoRows.map((r) => r.region)).size}</strong></article>
+                <article className="ca-geo-kpi-card"><span>Cities Reached</span><strong>{new Set(geoRows.map((r) => r.city)).size}</strong></article>
+                <article className="ca-geo-kpi-card"><span>Top City</span><strong>{geoTopCity}</strong></article>
+                <article className="ca-geo-kpi-card"><span>Top Region</span><strong>{geoTopRegion}</strong></article>
+              </div>
+
               <div className="ca-card ca-geo-card">
                 <div className="ca-card-head">
                   <h2 className="ca-card-title">Geographic Heatmap</h2>
@@ -549,30 +1210,105 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                     </div>
                   </div>
                 </div>
-                <WorldMap countryData={props.countryData} mapPoints={props.mapPoints} viewBy={viewBy} />
+                <WorldMap
+                  countryData={geoCountryData}
+                  mapPoints={filteredMapPoints}
+                  viewBy={viewBy}
+                  onDrillDown={(location) => {
+                    if (location.country) setGeoCountry(location.country);
+                    if (location.region) setGeoState(location.region);
+                    if (location.city) setGeoCity(location.city);
+                  }}
+                />
               </div>
-              <div className="ca-card">
-                <div className="ca-card-head"><h2 className="ca-card-title">All Locations</h2></div>
-                {props.cityRows.length ? (
+
+              <div className="ca-three-col">
+                <div className="ca-card">
+                  <div className="ca-card-head"><h2 className="ca-card-title">Top Cities</h2></div>
                   <div className="ca-table-wrap">
                     <table className="ca-data-table">
-                      <thead><tr><th>Location</th><th>Events</th></tr></thead>
+                      <thead><tr><th>City</th><th>Scans</th></tr></thead>
                       <tbody>
-                        {props.cityRows.map(r => (
+                        {topCities.map(r => (
                           <tr key={r.label}><td>{r.label}</td><td>{r.value}</td></tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+
+                  {!topCities.length ? <div className="ca-empty">No city scan data for selected filters.</div> : null}
+                </div>
+
+                <div className="ca-card">
+                  <div className="ca-card-head"><h2 className="ca-card-title">Top States</h2></div>
+                  <div className="ca-table-wrap">
+                    <table className="ca-data-table">
+                      <thead><tr><th>State / Region</th><th>Scans</th></tr></thead>
+                      <tbody>
+                        {topStates.map(r => (
+                          <tr key={r.label}><td>{r.label}</td><td>{r.value}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {!topStates.length ? <div className="ca-empty">No state scan data for selected filters.</div> : null}
+                </div>
+
+                <div className="ca-card">
+                  <div className="ca-card-head"><h2 className="ca-card-title">Regional Performance</h2></div>
+                  <ul className="ca-stat-list">
+                    <li><span>Best Performing City</span><strong>{regionalPerformance.bestCity?.label || "—"}</strong></li>
+                    <li><span>City Share of Scans</span><strong>{regionalPerformance.cityPct}%</strong></li>
+                    <li><span>Best Performing State</span><strong>{regionalPerformance.bestState?.label || "—"}</strong></li>
+                    <li><span>State Share of Scans</span><strong>{regionalPerformance.statePct}%</strong></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="ca-card">
+                <div className="ca-card-head"><h2 className="ca-card-title">Campaign Geography</h2></div>
+                {campaignGeography.length ? (
+                  <div className="ca-table-wrap">
+                    <table className="ca-data-table">
+                      <thead><tr><th>Campaign</th><th>Location</th><th>Scan Count</th></tr></thead>
+                      <tbody>
+                        {campaignGeography.map((row) => (
+                          <tr key={`${row.campaign}:${row.location}`}>
+                            <td>{row.campaign}</td>
+                            <td>{row.location}</td>
+                            <td>{row.scans}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <div className="ca-empty">Location data will appear after scans with detectable location metadata.</div>
+                  <div className="ca-empty">No campaign geography rows for selected filters.</div>
                 )}
+              </div>
+
+              <div className="ca-card">
+                <div className="ca-card-head"><h2 className="ca-card-title">Growth Insights</h2></div>
+                <div className="ca-geo-insights-grid">
+                  <article>
+                    <p>Fastest Growing Location</p>
+                    <strong>{growthInsights.fastestLocation}</strong>
+                  </article>
+                  <article>
+                    <p>Most Active Location</p>
+                    <strong>{growthInsights.mostActive}</strong>
+                  </article>
+                  <article>
+                    <p>Most Recent Scan Location</p>
+                    <strong>{growthInsights.mostRecent}</strong>
+                  </article>
+                </div>
               </div>
             </>
           )}
 
           {/* ── Devices tab ── */}
-          {activeTab === "devices" && (
+          {analyticsTab === "technology" && (
             <div className="ca-three-col">
               {[
                 { title: "Device Types",      rows: props.deviceRows },
@@ -599,7 +1335,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           )}
 
           {/* ── Activity Heatmap tab ── */}
-          {activeTab === "activity-heatmap" && (
+          {analyticsTab === "activity-heatmap" && (
             <>
               <div className="ca-card">
                 <div className="ca-card-head">

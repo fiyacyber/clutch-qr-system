@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -187,11 +188,13 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
                 Open Profile Builder
               </Link>
               <Link className="btn secondary" href="/portal/connect/leads">
-                Lead Inbox
+                Leads CRM
               </Link>
             </div>
           }
         />
+
+        <ConnectTabs active="profile" />
 
         {params.saved === "1" ? <div className="success-message">Profile saved.</div> : null}
 

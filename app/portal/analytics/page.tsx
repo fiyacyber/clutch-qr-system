@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireCustomer } from "@/lib/auth";
+import { getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
   buildHourlyHeatmap,
@@ -12,9 +13,22 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import "./analytics.css";
 
 const VALID_TABS = [
-  "overview", "qr-codes", "clutch-connect", "analytics",
-  "geography", "devices", "activity-heatmap", "leads", "settings",
+  "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
+  "geography", "technology", "devices", "activity-heatmap", "settings",
 ];
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
 
 export default async function AnalyticsPage({
   searchParams,
@@ -26,10 +40,28 @@ export default async function AnalyticsPage({
 
   const params = (await searchParams) || {};
   const tab = String(params.tab || "analytics").toLowerCase();
-  const activeTab = VALID_TABS.includes(tab) ? tab : "analytics";
+  const normalizedTab = tab === "devices" || tab === "leads" ? "analytics" : tab;
+  const activeTab = VALID_TABS.includes(normalizedTab) ? normalizedTab : "analytics";
+
+  if (activeTab === "settings") {
+    redirect("/portal/settings");
+  }
 
   const admin = createSupabaseAdminClient();
   const data = await fetchUnifiedAnalyticsData(admin, customer as any);
+  const plan = getCustomerPlan(customer as any);
+  const qrUsageUsed = data.qrCodes.length;
+  const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
+  const managePlanHref = plan.checkoutUrl;
+  const latestQrCode = data.qrCodes[0] || null;
+  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
+  const planLabel = plan.code === "admin" ? "Admin" : plan.code === "qr_pro_plus" ? "Agency" : "QR Pro";
+  const authenticationStatus = customer.must_change_password ? "Password reset required" : "Password login active";
+  const memberSince = formatDate(customer.created_at);
+  const lastLogin = formatDate(user.last_sign_in_at);
+  const companyName = customer.company_name || "—";
+  const latestQrForeground = latestQrCode?.foreground_color || "#384862";
+  const latestQrBackground = latestQrCode?.background_color || "#ffffff";
 
   /* ── KPI metrics ── */
   const totalScans     = data.qrScans.length;
@@ -113,8 +145,41 @@ export default async function AnalyticsPage({
 
   const cityPointMap = new Map<
     string,
-    { lat: number; lon: number; scans: number; visitors: Set<string>; label: string }
+    {
+      lat: number;
+      lon: number;
+      scans: number;
+      visitors: Set<string>;
+      label: string;
+      city: string;
+      region: string;
+      country: string;
+      campaignCounts: Map<string, number>;
+    }
   >();
+
+  const qrNameById = new Map(data.qrCodes.map(q => [q.id, q.name]));
+
+  const geographyRows = data.qrScans
+    .map((scan: any) => {
+      const city = scan.city || "Unknown";
+      const region = scan.region || "Unknown";
+      const country = scan.country || "Unknown";
+      return {
+        id: scan.id,
+        qrId: scan.qr_code_id,
+        campaign: qrNameById.get(scan.qr_code_id) || "Unnamed Campaign",
+        city,
+        region,
+        country,
+        locationLabel: [city, region, country].filter(Boolean).join(", "),
+        createdAt: scan.created_at,
+        latitude: Number(scan.latitude),
+        longitude: Number(scan.longitude),
+      };
+    })
+    .filter((row) => row.qrId);
+
   for (const scan of data.qrScans as any[]) {
     const lat = Number(scan.latitude);
     const lon = Number(scan.longitude);
@@ -123,12 +188,14 @@ export default async function AnalyticsPage({
     const city = scan.city || "Unknown city";
     const region = scan.region || "";
     const country = scan.country || "";
+    const campaign = qrNameById.get(scan.qr_code_id) || "Unnamed Campaign";
     const label = [city, region, country].filter(Boolean).join(", ");
     const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${label}`;
     const existing = cityPointMap.get(key);
     if (existing) {
       existing.scans += 1;
       if (scan.ip_hash) existing.visitors.add(scan.ip_hash);
+      existing.campaignCounts.set(campaign, (existing.campaignCounts.get(campaign) || 0) + 1);
     } else {
       cityPointMap.set(key, {
         lat,
@@ -136,15 +203,25 @@ export default async function AnalyticsPage({
         scans: 1,
         visitors: new Set(scan.ip_hash ? [scan.ip_hash] : []),
         label,
+        city,
+        region,
+        country,
+        campaignCounts: new Map([[campaign, 1]]),
       });
     }
   }
+
   const mapPoints = Array.from(cityPointMap.values()).map((p) => ({
     lat: p.lat,
     lon: p.lon,
     scans: p.scans,
     uniqueVisitors: p.visitors.size,
     label: p.label,
+    city: p.city,
+    region: p.region,
+    country: p.country,
+    topCampaign:
+      Array.from(p.campaignCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
   }));
 
   /* ── Geo / device breakdown ── */
@@ -181,8 +258,21 @@ export default async function AnalyticsPage({
     <DashboardShell isAdmin={Boolean(customer.is_admin)}>
       <AnalyticsDashboard
         activeTab={activeTab}
+        accountName={fullName}
         accountEmail={user.email || null}
-        accountType={customer.is_admin ? "Admin" : "Customer"}
+        companyName={companyName}
+        accountType={planLabel}
+        memberSince={memberSince}
+        lastLogin={lastLogin}
+        authenticationStatus={authenticationStatus}
+        planName={plan.name}
+        planCode={plan.code}
+        managePlanHref={managePlanHref}
+        qrUsageUsed={qrUsageUsed}
+        qrUsageLimit={qrUsageLimit}
+        latestQrName={latestQrCode?.name || null}
+        latestQrForeground={latestQrForeground}
+        latestQrBackground={latestQrBackground}
         totalScans={totalScans}
         connectViews={connectViews}
         linkClicks={linkClicks}
@@ -199,6 +289,7 @@ export default async function AnalyticsPage({
         browserRows={browserRows}
         osRows={osRows}
         heatmap={heatmap}
+        geographyRows={geographyRows}
       />
     </DashboardShell>
   );

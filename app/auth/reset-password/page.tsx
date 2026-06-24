@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase-client';
+import { PASSWORD_POLICY_HELPER_TEXT, validatePasswordPolicy } from '@/lib/password-policy';
 import Link from 'next/link';
 import styles from '../../login/login.module.css';
 
@@ -18,13 +19,14 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+    const policyError = validatePasswordPolicy(password);
+    if (policyError) {
+      setError(policyError);
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
 
@@ -57,7 +59,7 @@ export default function ResetPasswordPage() {
           <div className={styles.formCard}>
             <div className={styles.formHeader}>
               <h2>Create New Password</h2>
-              <p>Enter your new password below</p>
+              <p>{PASSWORD_POLICY_HELPER_TEXT}</p>
             </div>
 
             {success ? (
@@ -82,7 +84,7 @@ export default function ResetPasswordPage() {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder="Minimum 12 characters"
                       required
                       autoComplete="new-password"
                     />

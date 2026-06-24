@@ -7039,6 +7039,37 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.connect-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.connect-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--clutch-border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: var(--clutch-navy);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.connect-tab:hover {
+  border-color: var(--clutch-orange);
+}
+
+.connect-tab.active {
+  border-color: var(--clutch-orange);
+  background: linear-gradient(180deg, #fff2e7, #fff8f3);
+  color: var(--clutch-dark);
+}
+
 .connect-center-grid {
   display: grid;
   gap: 12px;
@@ -7326,6 +7357,14 @@ button:disabled {
   .connect-center-inline-actions,
   .connect-center-builder-actions {
     width: 100%;
+  }
+
+  .connect-tabs {
+    width: 100%;
+  }
+
+  .connect-tab {
+    flex: 1;
   }
 
   .connect-center-header-actions .btn,
