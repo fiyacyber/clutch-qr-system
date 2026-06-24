@@ -2,12 +2,12 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   QrCode, BarChart2, Globe, Monitor,
   Activity, Users, Download, SlidersHorizontal,
   CalendarDays, ChevronDown, Eye, MousePointerClick, UserCheck,
-  ArrowUpRight,
+  ArrowUpRight, Search,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
@@ -85,6 +85,8 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const { activeTab, heatmap } = props;
   const [viewBy, setViewBy] = useState("Scans");
   const [timeFilter, setTimeFilter] = useState("30D");
+  const [qrSearch, setQrSearch] = useState("");
+  const [qrFilter, setQrFilter] = useState("all");
 
   const isMainView = activeTab === "analytics" || activeTab === "overview" || !activeTab;
   const maxHeat = Math.max(...heatmap.map(c => c.count), 0);
@@ -99,6 +101,59 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
   // Show X labels every 2 hours
   const xLabels = HOURS.filter(h => h % 2 === 0);
+
+  const qrRows = useMemo(() => {
+    return props.qrRows.map((row) => {
+      const type = row.linkedProfileName ? "Clutch Connect Profile" : "Website";
+      const status = row.totalScans > 0 ? "Active" : "Idle";
+      return { ...row, type, status };
+    });
+  }, [props.qrRows]);
+
+  const filteredQrRows = useMemo(() => {
+    const needle = qrSearch.trim().toLowerCase();
+    return qrRows.filter((row) => {
+      const searchMatch =
+        !needle ||
+        row.name.toLowerCase().includes(needle) ||
+        row.destination.toLowerCase().includes(needle) ||
+        row.type.toLowerCase().includes(needle);
+
+      if (!searchMatch) return false;
+      if (qrFilter === "all") return true;
+      if (qrFilter === "connected") return Boolean(row.linkedProfileName);
+      if (qrFilter === "standard") return !row.linkedProfileName;
+      if (qrFilter === "scanned") return row.totalScans > 0;
+      return true;
+    });
+  }, [qrRows, qrSearch, qrFilter]);
+
+  const qrTotalScans = useMemo(
+    () => qrRows.reduce((sum, row) => sum + row.totalScans, 0),
+    [qrRows]
+  );
+
+  const mostActiveQr = useMemo(() => {
+    if (!qrRows.length) return null;
+    return [...qrRows].sort((a, b) => b.totalScans - a.totalScans)[0];
+  }, [qrRows]);
+
+  const lastScan = useMemo(() => {
+    const timestamps = qrRows
+      .map((row) => (row.lastScan ? new Date(row.lastScan).getTime() : null))
+      .filter((value): value is number => Boolean(value));
+    if (!timestamps.length) return null;
+    return new Date(Math.max(...timestamps)).toISOString();
+  }, [qrRows]);
+
+  const templates = [
+    { label: "Business Card", href: "/portal/create?template=business-card" },
+    { label: "Google Review", href: "/portal/create?template=google-review" },
+    { label: "Flyer", href: "/portal/create?template=flyer" },
+    { label: "Yard Sign", href: "/portal/create?template=yard-sign" },
+    { label: "Website", href: "/portal/create?template=website" },
+    { label: "Clutch Connect Profile", href: "/portal/create?template=clutch-connect-profile" },
+  ];
 
   return (
     <div className="ca-main">
@@ -299,39 +354,148 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
           {/* ── QR Codes tab ── */}
           {activeTab === "qr-codes" && (
-            <div className="ca-card">
-              <div className="ca-card-head">
-                <h2 className="ca-card-title">QR Codes</h2>
-                <Link href="/portal/create" className="ca-primary-link-btn">
-                  <QrCode size={14} />
-                  Create QR Code
-                </Link>
+            <div className="ca-qr-center">
+              <div className="ca-card ca-qr-header-card">
+                <h2 className="ca-card-title ca-qr-header-title">My QR Codes</h2>
+                <p className="ca-qr-header-sub">Manage and track all QR campaigns.</p>
+
+                <div className="ca-qr-action-bar">
+                  <label className="ca-qr-search-wrap" aria-label="Search QR campaigns">
+                    <Search size={14} />
+                    <input
+                      value={qrSearch}
+                      onChange={(e) => setQrSearch(e.target.value)}
+                      placeholder="Search campaigns"
+                    />
+                  </label>
+
+                  <div className="ca-select-wrap">
+                    <select
+                      className="ca-select"
+                      value={qrFilter}
+                      onChange={(e) => setQrFilter(e.target.value)}
+                      aria-label="Filter QR campaigns"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="connected">Clutch Connect</option>
+                      <option value="standard">Standard</option>
+                      <option value="scanned">With Scans</option>
+                    </select>
+                    <ChevronDown size={12} className="ca-select-caret" />
+                  </div>
+
+                  <Link href="/portal/create" className="ca-primary-link-btn">
+                    <QrCode size={14} />
+                    Create QR
+                  </Link>
+                </div>
               </div>
-              {props.qrRows.length ? (
-                <div className="ca-table-wrap">
+
+              {!qrRows.length ? (
+                <div className="ca-card ca-qr-empty-card">
+                  <div className="ca-qr-empty-illustration" aria-hidden="true">
+                    <QrCode size={44} />
+                  </div>
+                  <h3>Create Your First QR Code</h3>
+                  <p>Generate dynamic QR codes and track scans, clicks, and conversions.</p>
+                  <Link href="/portal/create" className="ca-primary-link-btn">
+                    <QrCode size={14} />
+                    Create QR Code
+                  </Link>
+                </div>
+              ) : null}
+
+              <div className="ca-card">
+                <div className="ca-card-head">
+                  <h3 className="ca-card-title">Quick Start Templates</h3>
+                </div>
+                <div className="ca-qr-template-grid">
+                  {templates.map((template) => (
+                    <Link key={template.label} href={template.href} className="ca-qr-template-card">
+                      <strong>{template.label}</strong>
+                      <span>Use template</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ca-card">
+                <div className="ca-card-head">
+                  <h3 className="ca-card-title">Usage Summary</h3>
+                </div>
+                <div className="ca-qr-usage-grid">
+                  <article>
+                    <p>Active QR Codes</p>
+                    <strong>{qrRows.length}</strong>
+                  </article>
+                  <article>
+                    <p>Total Scans</p>
+                    <strong>{qrTotalScans}</strong>
+                  </article>
+                  <article>
+                    <p>Last Scan</p>
+                    <strong>{prettyDate(lastScan)}</strong>
+                  </article>
+                  <article>
+                    <p>Most Active QR</p>
+                    <strong>{mostActiveQr?.name || "—"}</strong>
+                  </article>
+                </div>
+              </div>
+
+              {qrRows.length ? (
+                <div className="ca-card">
+                  <div className="ca-card-head">
+                    <h3 className="ca-card-title">Campaign Table</h3>
+                  </div>
+                  {filteredQrRows.length ? (
+                    <div className="ca-table-wrap">
                   <table className="ca-data-table">
                     <thead>
                       <tr>
-                        <th>Name</th><th>Destination</th><th>Scans</th>
-                        <th>Unique Visitors</th><th>Last Scan</th><th>Linked Profile</th>
+                          <th>Name</th>
+                          <th>Type</th>
+                          <th>Destination</th>
+                          <th>Scans</th>
+                          <th>Last Scan</th>
+                          <th>Status</th>
+                          <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {props.qrRows.map(r => (
+                        {filteredQrRows.map(r => (
                         <tr key={r.id}>
                           <td className="ca-td-bold">{r.name}</td>
+                          <td>{r.type}</td>
                           <td className="ca-td-trunc">{r.destination}</td>
                           <td>{r.totalScans}</td>
-                          <td>{r.uniqueVisitors}</td>
                           <td>{prettyDate(r.lastScan)}</td>
-                          <td>{r.linkedProfileName || "—"}</td>
+                          <td>
+                            <span className={`ca-qr-status ${r.status === "Active" ? "active" : "idle"}`}>
+                              {r.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="ca-qr-row-actions">
+                              <Link href="/portal" className="ca-secondary-link-btn">Edit</Link>
+                              <Link href={`/portal/analytics/${r.id}`} className="ca-secondary-link-btn">Analytics</Link>
+                              <button type="button" className="ca-secondary-link-btn">Download</button>
+                              <button type="button" className="ca-secondary-link-btn">Archive</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                  ) : (
+                    <div className="ca-empty">No campaigns match your current search/filter.</div>
+                  )}
+                </div>
               ) : (
-                <div className="ca-empty">No QR code activity yet. Create and scan a QR code to start tracking.</div>
+                <div className="ca-card">
+                  <div className="ca-empty">No activity yet. Create and scan your first QR code to start tracking.</div>
+                </div>
               )}
             </div>
           )}

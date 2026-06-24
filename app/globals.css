@@ -7025,3 +7025,312 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* Connect Unified Management Center */
+.connect-center-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.connect-center-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connect-center-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.connect-center-overview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connect-center-status-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connect-center-builder-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connect-center-card {
+  background: #fff;
+  border: 1px solid var(--clutch-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(11, 31, 53, 0.06);
+  padding: 16px;
+}
+
+.connect-center-kicker {
+  margin: 0;
+  color: var(--clutch-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.connect-center-card h2,
+.connect-center-card h3 {
+  margin: 8px 0 6px;
+  color: var(--clutch-dark);
+}
+
+.connect-center-stats-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.connect-center-stats-grid.wallet {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.connect-center-stats-grid div {
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.connect-center-stats-grid span {
+  display: block;
+  color: var(--clutch-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.connect-center-stats-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--clutch-navy);
+  font-family: var(--font-exo2), Arial, sans-serif;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.connect-center-progress-track {
+  margin-top: 8px;
+  height: 9px;
+  border-radius: 999px;
+  background: #edf2f8;
+  overflow: hidden;
+}
+
+.connect-center-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--clutch-orange), #ff7a1a);
+}
+
+.connect-center-checklist,
+.connect-center-feature-list,
+.connect-center-metadata-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.connect-center-checklist li,
+.connect-center-feature-list li,
+.connect-center-metadata-list li {
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--clutch-navy);
+}
+
+.connect-center-checklist li svg,
+.connect-center-feature-list li svg,
+.connect-center-metadata-list li svg {
+  color: var(--clutch-orange);
+  flex-shrink: 0;
+}
+
+.connect-center-metadata-list strong {
+  margin-left: auto;
+  color: var(--clutch-dark);
+}
+
+.connect-center-inline-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connect-center-quick-actions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.connect-center-action {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.connect-center-action:hover {
+  border-color: var(--clutch-orange);
+}
+
+.connect-center-action svg {
+  color: var(--clutch-orange);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.connect-center-action strong {
+  display: block;
+  color: var(--clutch-dark);
+  font-size: 0.9rem;
+}
+
+.connect-center-action span {
+  color: var(--clutch-muted);
+  font-size: 0.8rem;
+}
+
+.connect-center-builder-strip {
+  background: linear-gradient(135deg, var(--clutch-navy) 0%, var(--clutch-navy-dark) 100%);
+  color: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 166, 101, 0.32);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.connect-center-builder-strip h2 {
+  margin: 8px 0 6px;
+  color: #fff;
+}
+
+.connect-center-builder-strip p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.connect-center-builder-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.connect-center-feature-list li {
+  justify-content: space-between;
+}
+
+.connect-center-feature-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--clutch-orange-soft);
+  color: var(--clutch-orange);
+}
+
+.connect-center-feature-list em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.connect-center-feature-list em.ready {
+  color: #17884d;
+}
+
+.connect-center-feature-list em.planned {
+  color: #8a96a8;
+}
+
+.connect-center-public-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.connect-center-public-grid article {
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  padding: 11px;
+}
+
+.connect-center-public-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connect-center-public-grid strong {
+  color: var(--clutch-dark);
+  font-size: 0.88rem;
+}
+
+.connect-center-public-grid p {
+  margin: 8px 0 0;
+  color: var(--clutch-muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .connect-center-overview-grid,
+  .connect-center-status-grid,
+  .connect-center-builder-grid,
+  .connect-center-quick-actions,
+  .connect-center-public-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .connect-center-builder-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .connect-center-overview-grid,
+  .connect-center-status-grid,
+  .connect-center-builder-grid,
+  .connect-center-quick-actions,
+  .connect-center-public-grid,
+  .connect-center-stats-grid,
+  .connect-center-stats-grid.wallet {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-center-header-actions,
+  .connect-center-inline-actions,
+  .connect-center-builder-actions {
+    width: 100%;
+  }
+
+  .connect-center-header-actions .btn,
+  .connect-center-inline-actions .btn,
+  .connect-center-builder-actions .btn {
+    width: 100%;
+  }
+}
