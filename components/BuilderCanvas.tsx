@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Eye, EyeOff, GripVertical, Trash2, User, Mail, Phone, Share2, Link2, MapPin, ClipboardList, CalendarDays, Video, Star, Images, QrCode } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Eye, EyeOff, GripVertical, MoreHorizontal, Trash2, User, Mail, Phone, Share2, Link2, MapPin, ClipboardList, CalendarDays, Video, Star, Images, QrCode, MessageCircleMore } from "lucide-react";
 import { BuilderBlock, BuilderConfig } from "@/lib/builder-types";
 import {
   removeBlockFromConfig,
@@ -30,6 +31,7 @@ interface BuilderCanvasProps {
   selectedBlockId: string | null;
   onSelectBlock: (id: string | null) => void;
   inlineEditing?: boolean;
+  compactActions?: boolean;
 }
 
 const BLOCK_LABELS: Record<string, string> = {
@@ -92,13 +94,25 @@ const BLOCK_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWid
   "qr-code-block": QrCode,
 };
 
+function resolveBlockIcon(block: BuilderBlock): React.ComponentType<{ size?: number; strokeWidth?: number }> {
+  if (block.type === "phone-button") {
+    const data = (block.data || block.settings || {}) as Record<string, any>;
+    const behavior = data.behavior === "text" ? "sms" : data.behavior;
+    return behavior === "sms" ? MessageCircleMore : Phone;
+  }
+
+  return BLOCK_ICONS[block.type] || Link2;
+}
+
 export default function BuilderCanvas({
   config,
   onConfigChange,
   selectedBlockId,
   onSelectBlock,
   inlineEditing = true,
+  compactActions = false,
 }: BuilderCanvasProps) {
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const handleDeleteBlock = (blockId: string) => {
     const newConfig = removeBlockFromConfig(config, blockId);
     onConfigChange(newConfig);
@@ -178,7 +192,7 @@ export default function BuilderCanvas({
                     </div>
                     <div className="saas-block-icon-pill">
                       {(() => {
-                        const Icon = BLOCK_ICONS[block.type] || Link2;
+                        const Icon = resolveBlockIcon(block);
                         return <Icon size={15} strokeWidth={2} />;
                       })()}
                     </div>
@@ -190,40 +204,83 @@ export default function BuilderCanvas({
 
                   {/* Action buttons */}
                   <div className="saas-block-actions" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="saas-icon-btn"
-                      onClick={() => handleMoveUp(idx)}
-                      title="Move up"
-                      disabled={idx === 0}
-                    ><ArrowUp size={14} strokeWidth={2} /></button>
-                    <button
-                      className="saas-icon-btn"
-                      onClick={() => handleMoveDown(idx)}
-                      title="Move down"
-                      disabled={idx === config.blocks.length - 1}
-                    ><ArrowDown size={14} strokeWidth={2} /></button>
-                    <button
-                      className="saas-icon-btn"
-                      onClick={() => handleDuplicate(block)}
-                      title="Duplicate"
-                    ><Copy size={14} strokeWidth={2} /></button>
-                    <button
-                      className="saas-icon-btn"
-                      onClick={() => handleToggleVisibility(block.id)}
-                      title={block.visible ? "Hide" : "Show"}
-                    >
-                      {block.visible ? <Eye size={14} strokeWidth={2} /> : <EyeOff size={14} strokeWidth={2} />}
-                    </button>
-                    <button
-                      className="saas-icon-btn danger"
-                      onClick={() => handleDeleteBlock(block.id)}
-                      title="Delete"
-                    >
-                      <Trash2 size={14} strokeWidth={2} />
-                    </button>
-                    <span className="saas-block-chevron" aria-hidden="true">
-                      {selectedBlockId === block.id ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
-                    </span>
+                    {compactActions ? (
+                      <div className="saas-block-menu-wrap">
+                        <button
+                          className="saas-icon-btn saas-kebab-btn"
+                          onClick={() => setOpenActionMenuId(openActionMenuId === block.id ? null : block.id)}
+                          title="More actions"
+                          aria-expanded={openActionMenuId === block.id}
+                          aria-haspopup="menu"
+                        >
+                          <MoreHorizontal size={16} strokeWidth={2} />
+                        </button>
+
+                        <span className="saas-block-chevron" aria-hidden="true">
+                          {selectedBlockId === block.id ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
+                        </span>
+
+                        <AnimatePresence>
+                          {openActionMenuId === block.id ? (
+                            <motion.div
+                              className="saas-action-menu"
+                              role="menu"
+                              initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                              transition={{ duration: 0.15 }}
+                            >
+                              <button role="menuitem" onClick={() => { handleMoveUp(idx); setOpenActionMenuId(null); }} disabled={idx === 0}>Move up</button>
+                              <button role="menuitem" onClick={() => { handleMoveDown(idx); setOpenActionMenuId(null); }} disabled={idx === config.blocks.length - 1}>Move down</button>
+                              <button role="menuitem" onClick={() => { handleDuplicate(block); setOpenActionMenuId(null); }}>Duplicate</button>
+                              <button role="menuitem" onClick={() => { handleToggleVisibility(block.id); setOpenActionMenuId(null); }}>
+                                {block.visible ? "Hide" : "Show"}
+                              </button>
+                              <button role="menuitem" className="danger" onClick={() => { handleDeleteBlock(block.id); setOpenActionMenuId(null); }}>
+                                Delete
+                              </button>
+                            </motion.div>
+                          ) : null}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          className="saas-icon-btn"
+                          onClick={() => handleMoveUp(idx)}
+                          title="Move up"
+                          disabled={idx === 0}
+                        ><ArrowUp size={14} strokeWidth={2} /></button>
+                        <button
+                          className="saas-icon-btn"
+                          onClick={() => handleMoveDown(idx)}
+                          title="Move down"
+                          disabled={idx === config.blocks.length - 1}
+                        ><ArrowDown size={14} strokeWidth={2} /></button>
+                        <button
+                          className="saas-icon-btn"
+                          onClick={() => handleDuplicate(block)}
+                          title="Duplicate"
+                        ><Copy size={14} strokeWidth={2} /></button>
+                        <button
+                          className="saas-icon-btn"
+                          onClick={() => handleToggleVisibility(block.id)}
+                          title={block.visible ? "Hide" : "Show"}
+                        >
+                          {block.visible ? <Eye size={14} strokeWidth={2} /> : <EyeOff size={14} strokeWidth={2} />}
+                        </button>
+                        <button
+                          className="saas-icon-btn danger"
+                          onClick={() => handleDeleteBlock(block.id)}
+                          title="Delete"
+                        >
+                          <Trash2 size={14} strokeWidth={2} />
+                        </button>
+                        <span className="saas-block-chevron" aria-hidden="true">
+                          {selectedBlockId === block.id ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 

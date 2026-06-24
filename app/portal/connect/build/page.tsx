@@ -24,7 +24,7 @@ export default async function BuilderPage() {
   }
 
   return (
-    <div className="page-shell">
+    <div className="page-shell page-shell-builder">
       <Header isAdmin={Boolean(customer.is_admin)} />
       <main className="builder-editor-main">
         <BuilderEditor profile={profile} />

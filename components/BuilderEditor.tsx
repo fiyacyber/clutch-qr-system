@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Palette, PlusCircle } from "lucide-react";
+import { Layers, Palette, PlusCircle, SlidersHorizontal, X } from "lucide-react";
 import { BuilderConfig, BlockType } from "@/lib/builder-types";
 import { createDefaultBuilderConfig, addBlockToConfig, updateBlockSettings, toggleBlockVisibility } from "@/lib/builder-config";
 import BlockLibrary from "./BlockLibrary";
@@ -31,6 +31,8 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("content");
   const [useInspector, setUseInspector] = useState(false);
+  const [isMobileBuilder, setIsMobileBuilder] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const savedConfigRef = useRef<string | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
@@ -38,6 +40,18 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
     if (typeof window === "undefined") return;
     const media = window.matchMedia("(min-width: 1200px)");
     const apply = () => setUseInspector(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 860px)");
+    const apply = () => {
+      setIsMobileBuilder(media.matches);
+      if (!media.matches) setMobileSheetOpen(false);
+    };
     apply();
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
@@ -117,6 +131,85 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
 
   const selectedBlock = config && selectedBlockId ? config.blocks.find((block) => block.id === selectedBlockId) || null : null;
 
+  const renderEditorTabPanel = ({ compactActions, mobileMode }: { compactActions: boolean; mobileMode: boolean }) => {
+    if (!config) return null;
+
+    if (activeSidebarTab === "content") {
+      return (
+        <BuilderCanvas
+          config={config}
+          onConfigChange={handleConfigChange}
+          selectedBlockId={selectedBlockId}
+          onSelectBlock={setSelectedBlockId}
+          inlineEditing={!useInspector || mobileMode}
+          compactActions={compactActions}
+        />
+      );
+    }
+
+    if (activeSidebarTab === "design") {
+      return (
+        <div className="saas-design-shell">
+          <div className="saas-design-card">
+            <p className="saas-design-kicker">Global styling</p>
+            <h3 className="saas-design-title">Design controls</h3>
+            <p className="saas-design-copy">Use this space for page-wide styling without leaving the builder.</p>
+          </div>
+
+          {mobileMode ? (
+            <div className="saas-design-card">
+              <p className="saas-design-kicker">Builder tools</p>
+              <div className="saas-mobile-design-actions">
+                <button type="button" className="saas-sidebar-btn ghost" onClick={() => setShowTemplates(true)}>
+                  Templates
+                </button>
+                <button
+                  type="button"
+                  className="saas-sidebar-btn ghost"
+                  onClick={handleToggleDarkMode}
+                  title={config.theme.darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {config.theme.darkMode ? "☀️ Light Theme" : "🌙 Dark Theme"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="saas-design-card">
+            <label className="saas-field">
+              <span className="saas-field-label">Theme preset</span>
+              <select disabled>
+                <option>Coming soon</option>
+              </select>
+            </label>
+            <label className="saas-field">
+              <span className="saas-field-label">Page background</span>
+              <input type="text" value="Coming soon" disabled readOnly />
+            </label>
+            <label className="saas-field">
+              <span className="saas-field-label">Card background</span>
+              <input type="text" value="Coming soon" disabled readOnly />
+            </label>
+            <label className="saas-field">
+              <span className="saas-field-label">Accent color</span>
+              <input type="text" value={config.theme.accentColor || profile.theme_color || "#FFA665"} disabled readOnly />
+            </label>
+            <label className="saas-field">
+              <span className="saas-field-label">Button radius</span>
+              <input type="range" min="0" max="32" value="16" disabled readOnly />
+            </label>
+            <label className="saas-field">
+              <span className="saas-field-label">Glow strength</span>
+              <input type="range" min="0" max="100" value="35" disabled readOnly />
+            </label>
+          </div>
+        </div>
+      );
+    }
+
+    return <BlockLibrary onAddBlock={handleAddBlock} />;
+  };
+
   if (!config) {
     return (
       <div className="saas-builder-loading">
@@ -142,10 +235,92 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
           </div>
         </header>
 
-        {/* 3-column layout */}
-        <div className={`saas-workspace${useInspector && selectedBlock ? " has-inspector" : ""}`}>
-          {/* Left panel */}
-          <div className="saas-left-panel">
+        {isMobileBuilder ? (
+          <div className="saas-mobile-builder">
+            <div className="saas-preview-center saas-preview-center-mobile" ref={previewRef}>
+              <BuilderPreview config={config} profile={profile} />
+            </div>
+
+            <button type="button" className="saas-mobile-edit-trigger" onClick={() => setMobileSheetOpen(true)}>
+              <SlidersHorizontal size={16} />
+              Edit Profile
+            </button>
+
+            <div className="saas-mobile-savebar">
+              <div className="saas-mobile-savebar-state">
+                {isDirty && !saveSuccess ? <span className="saas-unsaved-badge">Unsaved changes</span> : null}
+                {saveSuccess ? <span className="saas-saved-badge">✓ Saved</span> : null}
+              </div>
+              <button
+                type="button"
+                className={`saas-sidebar-btn primary${isSaving ? " loading" : ""}`}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {mobileSheetOpen ? (
+                <>
+                  <motion.button
+                    type="button"
+                    className="saas-mobile-sheet-backdrop"
+                    onClick={() => setMobileSheetOpen(false)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+
+                  <motion.section
+                    className="saas-mobile-sheet"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+                  >
+                    <div className="saas-mobile-sheet-header">
+                      <div>
+                        <p className="saas-sidebar-kicker">Editor</p>
+                        <h3 className="saas-sidebar-title">Profile settings</h3>
+                      </div>
+                      <button
+                        type="button"
+                        className="saas-icon-btn"
+                        onClick={() => setMobileSheetOpen(false)}
+                        title="Close editor"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <div className="saas-mobile-tabs">
+                      {sidebarTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={`sidebar-tab ${activeSidebarTab === tab.id ? "active" : ""}`}
+                          onClick={() => setActiveSidebarTab(tab.id)}
+                        >
+                          {tab.icon}
+                          <span>{tab.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="saas-mobile-sheet-content">
+                      {renderEditorTabPanel({ compactActions: true, mobileMode: true })}
+                    </div>
+                  </motion.section>
+                </>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className={`saas-workspace${useInspector && selectedBlock ? " has-inspector" : ""}`}>
+            {/* Left panel */}
+            <div className="saas-left-panel">
             <div className="saas-sidebar-header">
               <div className="saas-sidebar-header-copy">
                 <p className="saas-sidebar-kicker">Clutch Connect Builder</p>
@@ -230,13 +405,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.18 }}
                 >
-                  <BuilderCanvas
-                    config={config}
-                    onConfigChange={handleConfigChange}
-                    selectedBlockId={selectedBlockId}
-                    onSelectBlock={setSelectedBlockId}
-                    inlineEditing={!useInspector}
-                  />
+                  {renderEditorTabPanel({ compactActions: false, mobileMode: false })}
                 </motion.div>
               ) : activeSidebarTab === "design" ? (
                 <motion.div
@@ -247,42 +416,7 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.18 }}
                 >
-                  <div className="saas-design-shell">
-                    <div className="saas-design-card">
-                      <p className="saas-design-kicker">Global styling</p>
-                      <h3 className="saas-design-title">Design controls</h3>
-                      <p className="saas-design-copy">Use this space for page-wide styling without leaving the builder.</p>
-                    </div>
-
-                    <div className="saas-design-card">
-                      <label className="saas-field">
-                        <span className="saas-field-label">Theme preset</span>
-                        <select disabled>
-                          <option>Coming soon</option>
-                        </select>
-                      </label>
-                      <label className="saas-field">
-                        <span className="saas-field-label">Page background</span>
-                        <input type="text" value="Coming soon" disabled readOnly />
-                      </label>
-                      <label className="saas-field">
-                        <span className="saas-field-label">Card background</span>
-                        <input type="text" value="Coming soon" disabled readOnly />
-                      </label>
-                      <label className="saas-field">
-                        <span className="saas-field-label">Accent color</span>
-                        <input type="text" value={config.theme.accentColor || profile.theme_color || "#FFA665"} disabled readOnly />
-                      </label>
-                      <label className="saas-field">
-                        <span className="saas-field-label">Button radius</span>
-                        <input type="range" min="0" max="32" value="16" disabled readOnly />
-                      </label>
-                      <label className="saas-field">
-                        <span className="saas-field-label">Glow strength</span>
-                        <input type="range" min="0" max="100" value="35" disabled readOnly />
-                      </label>
-                    </div>
-                  </div>
+                  {renderEditorTabPanel({ compactActions: false, mobileMode: false })}
                 </motion.div>
               ) : (
                 <motion.div
@@ -293,41 +427,42 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
                   exit={{ opacity: 0, x: 8 }}
                   transition={{ duration: 0.18 }}
                 >
-                  <BlockLibrary onAddBlock={handleAddBlock} />
+                  {renderEditorTabPanel({ compactActions: false, mobileMode: false })}
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+            </div>
 
-          {/* Center preview */}
-          <div className="saas-preview-center" ref={previewRef}>
-            <BuilderPreview config={config} profile={profile} />
-          </div>
+            {/* Center preview */}
+            <div className="saas-preview-center" ref={previewRef}>
+              <BuilderPreview config={config} profile={profile} />
+            </div>
 
-          {useInspector && selectedBlock ? (
-            <aside className="saas-right-inspector">
-              <div className="saas-right-inspector-header">
-                <p className="saas-right-inspector-kicker">Inspector</p>
-                <h3 className="saas-right-inspector-title">{selectedBlock.type.replace(/-/g, " ")}</h3>
-              </div>
-              <div className="saas-right-inspector-body">
-                <BlockSettingsPanel
-                  block={selectedBlock}
-                  onUpdate={(settings) => {
-                    if (Object.prototype.hasOwnProperty.call(settings, "__toggleVisibility")) {
-                      const show = Boolean(settings.__toggleVisibility);
-                      if (show !== selectedBlock.visible) {
-                        handleConfigChange(toggleBlockVisibility(config, selectedBlock.id));
+            {useInspector && selectedBlock ? (
+              <aside className="saas-right-inspector">
+                <div className="saas-right-inspector-header">
+                  <p className="saas-right-inspector-kicker">Inspector</p>
+                  <h3 className="saas-right-inspector-title">{selectedBlock.type.replace(/-/g, " ")}</h3>
+                </div>
+                <div className="saas-right-inspector-body">
+                  <BlockSettingsPanel
+                    block={selectedBlock}
+                    onUpdate={(settings) => {
+                      if (Object.prototype.hasOwnProperty.call(settings, "__toggleVisibility")) {
+                        const show = Boolean(settings.__toggleVisibility);
+                        if (show !== selectedBlock.visible) {
+                          handleConfigChange(toggleBlockVisibility(config, selectedBlock.id));
+                        }
+                        return;
                       }
-                      return;
-                    }
-                    handleConfigChange(updateBlockSettings(config, selectedBlock.id, settings));
-                  }}
-                />
-              </div>
-            </aside>
-          ) : null}
-        </div>
+                      handleConfigChange(updateBlockSettings(config, selectedBlock.id, settings));
+                    }}
+                  />
+                </div>
+              </aside>
+            ) : null}
+          </div>
+        )}
       </div>
 
       <TemplateSelector

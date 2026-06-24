@@ -91,6 +91,8 @@ export default function QRStylePanel({
 }: QRStylePanelProps) {
   return (
     <div className={styles.container}>
+      <h3 className={styles.panelTitle}>Customize QR</h3>
+
       <div className={styles.section}>
         <h3 className={styles.heading}>Theme</h3>
         <div className={styles.themeGrid}>
@@ -115,7 +117,7 @@ export default function QRStylePanel({
 
       <div className={styles.section}>
         <h3 className={styles.heading}>Colors</h3>
-        <div className={styles.colorRow}>
+        <div className={styles.colorGrid}>
           <label className={styles.colorPicker}>
             <span className={styles.colorLabel}>QR Code</span>
             <PremiumColorPicker
@@ -143,35 +145,37 @@ export default function QRStylePanel({
 
       <div className={styles.section}>
         <h3 className={styles.heading}>Pattern</h3>
-        <label className={styles.selectLabel}>
-          <span>Dot Style</span>
-          <select
-            value={dotStyle}
-            onChange={(e) => onDotStyleChange(e.target.value as DotStyle)}
-            className={styles.select}
-          >
-            {DOT_STYLES.map((style) => (
-              <option key={style.value} value={style.value}>
-                {style.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.patternGroup}>
+          <label className={styles.selectLabel}>
+            <span>Dot Style</span>
+            <select
+              value={dotStyle}
+              onChange={(e) => onDotStyleChange(e.target.value as DotStyle)}
+              className={styles.select}
+            >
+              {DOT_STYLES.map((style) => (
+                <option key={style.value} value={style.value}>
+                  {style.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className={styles.selectLabel}>
-          <span>Corner Style</span>
-          <select
-            value={cornerStyle}
-            onChange={(e) => onCornerStyleChange(e.target.value as CornerStyle)}
-            className={styles.select}
-          >
-            {CORNER_STYLES.map((style) => (
-              <option key={style.value} value={style.value}>
-                {style.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className={styles.selectLabel}>
+            <span>Corner Style</span>
+            <select
+              value={cornerStyle}
+              onChange={(e) => onCornerStyleChange(e.target.value as CornerStyle)}
+              className={styles.select}
+            >
+              {CORNER_STYLES.map((style) => (
+                <option key={style.value} value={style.value}>
+                  {style.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className={styles.divider} />

@@ -1,20 +1,25 @@
 .container {
   display: grid;
   gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
 }
 
 .heading {
   margin: 0;
   color: var(--clutch-navy);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
@@ -23,29 +28,29 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 16px 12px;
+  gap: 7px;
+  padding: 13px 10px;
   background: #fff;
-  border: 2px solid var(--clutch-border);
-  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   position: relative;
 }
 
 .card:hover:not(.disabled) {
-  border-color: var(--clutch-orange);
-  background: var(--clutch-orange-soft);
+  border-color: rgba(255, 166, 101, 0.6);
+  background: linear-gradient(180deg, #fffaf6, #fff);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 166, 101, 0.12);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
 }
 
 .card.active {
-  border-color: var(--clutch-orange);
-  background: linear-gradient(135deg, var(--clutch-orange-soft), #fff);
-  box-shadow: 0 8px 24px rgba(255, 166, 101, 0.16);
+  border-color: var(--clutch-orange-strong, #ff6b2c);
+  background: linear-gradient(180deg, #fff6ee, #ffffff);
+  box-shadow: 0 12px 24px rgba(255, 107, 44, 0.14);
 }
 
 .card.disabled {
@@ -55,12 +60,13 @@
 }
 
 .icon {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
 }
 
 .label {
   color: var(--clutch-navy);
   text-align: center;
+  line-height: 1.2;
 }
 
 .badge {
@@ -79,11 +85,16 @@
 
 @media (max-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
   .grid {
     grid-template-columns: repeat(3, 1fr);
   }

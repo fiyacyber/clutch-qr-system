@@ -1,6 +1,29 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import {
+  BadgeCheck,
+  ArrowUpRight,
+  Globe,
+  Link2,
+  Mail,
+  MapPin,
+  Medal,
+  AtSign,
+  MessageCircleMore,
+  PhoneCall,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaTiktok,
+  FaXTwitter,
+  FaYoutube,
+} from "react-icons/fa6";
 import { BuilderBlock } from "@/lib/builder-types";
 import { trackBlockEvent } from "@/lib/builder-analytics";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
@@ -23,8 +46,58 @@ function ActionChevron() {
   );
 }
 
+function ActionGlyph({ name }: { name: string }) {
+  const iconName = name.toLowerCase();
+  const commonProps = { size: 16, strokeWidth: 2.15, "aria-hidden": true as const };
+
+  switch (iconName) {
+    case "phone":
+    case "call":
+      return <PhoneCall {...commonProps} />;
+    case "mail":
+    case "email":
+      return <Mail {...commonProps} />;
+    case "globe":
+    case "website":
+      return <Globe {...commonProps} />;
+    case "map-pin":
+    case "directions":
+    case "address":
+      return <MapPin {...commonProps} />;
+    case "message":
+    case "sms":
+    case "text":
+      return <MessageCircleMore {...commonProps} />;
+    default:
+      return <ArrowUpRight {...commonProps} />;
+  }
+}
+
+function SocialGlyph({ platform }: { platform?: string | null }) {
+  const value = String(platform || "").toLowerCase();
+  const commonProps = { size: 16, "aria-hidden": true as const };
+
+  switch (value) {
+    case "instagram":
+      return <FaInstagram {...commonProps} />;
+    case "facebook":
+      return <FaFacebookF {...commonProps} />;
+    case "youtube":
+      return <FaYoutube {...commonProps} />;
+    case "linkedin":
+      return <FaLinkedinIn {...commonProps} />;
+    case "x":
+    case "twitter":
+      return <FaXTwitter {...commonProps} />;
+    case "tiktok":
+      return <FaTiktok {...commonProps} />;
+    default:
+      return <AtSign {...commonProps} />;
+  }
+}
+
 type ActionCardProps = {
-  icon: string;
+  icon: ReactNode;
   title: string;
   subtitle?: string;
   href?: string;
@@ -111,46 +184,23 @@ function HeroAvatar({ data, profile }: { data: any; profile: any }) {
 }
 
 function BadgeIcon({ icon }: { icon: string }) {
-  if (icon === "none") return null;
+  const commonProps = { size: 16, strokeWidth: 2.2, className: "builder-badge-icon", "aria-hidden": true as const, focusable: false };
 
-  if (icon === "star") {
-    return (
-      <svg viewBox="0 0 24 24" className="builder-badge-icon" aria-hidden="true" focusable="false">
-        <path
-          d="M12 3.2l2.4 4.86 5.36.78-3.88 3.78.92 5.34L12 15.44l-4.8 2.52.92-5.34L4.24 8.84l5.36-.78L12 3.2z"
-          fill="currentColor"
-        />
-      </svg>
-    );
+  switch (icon) {
+    case "none":
+      return null;
+    case "sparkles":
+      return <Sparkles {...commonProps} />;
+    case "medal":
+      return <Medal {...commonProps} />;
+    case "shield":
+    case "shield-check":
+      return <ShieldCheck {...commonProps} />;
+    case "badge-check":
+    case "checkmark":
+    default:
+      return <BadgeCheck {...commonProps} />;
   }
-
-  if (icon === "shield") {
-    return (
-      <svg viewBox="0 0 24 24" className="builder-badge-icon" aria-hidden="true" focusable="false">
-        <path
-          d="M12 2.5l7 3v6.1c0 4.3-2.58 8.18-7 9.9-4.42-1.72-7-5.6-7-9.9V5.5l7-3z"
-          fill="currentColor"
-        />
-        <path
-          d="M9.05 12.05l1.95 1.95 3.95-3.95"
-          fill="none"
-          stroke="rgba(255,255,255,0.92)"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" className="builder-badge-icon" aria-hidden="true" focusable="false">
-      <path
-        d="M20.3 6.7a1 1 0 010 1.42l-9.18 9.18a1 1 0 01-1.42 0L3.7 11.3a1 1 0 111.42-1.42l5.29 5.3 8.47-8.48a1 1 0 011.42 0z"
-        fill="currentColor"
-      />
-    </svg>
-  );
 }
 
 export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
@@ -227,7 +277,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
       <div className="builder-contact-primary-pills">
         {data.showPhone !== false ? (
           <ActionCard
-            icon="📞"
+            icon={<ActionGlyph name="phone" /> as any}
             title="Call"
             subtitle={phone || undefined}
             href={phone ? `tel:${phone}` : undefined}
@@ -238,7 +288,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
         ) : null}
         {data.showEmail !== false ? (
           <ActionCard
-            icon="✉️"
+            icon={<ActionGlyph name="email" /> as any}
             title="Email"
             subtitle={email || undefined}
             href={email ? `mailto:${email}` : undefined}
@@ -249,7 +299,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
         ) : null}
         {data.showWebsite !== false ? (
           <ActionCard
-            icon="🌐"
+            icon={<ActionGlyph name="website" /> as any}
             title="Website"
             subtitle={website || undefined}
             href={website || undefined}
@@ -265,7 +315,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
         <div className="builder-contact-secondary-list">
           {data.showAddress ? (
             <ActionCard
-              icon="📍"
+              icon={<ActionGlyph name="directions" /> as any}
               title="Directions"
               subtitle={address || "Add an address"}
               href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
@@ -275,7 +325,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
           ) : null}
           {data.showSms ? (
             <ActionCard
-              icon="💬"
+              icon={<ActionGlyph name="sms" /> as any}
               title="Text"
               subtitle={sms || undefined}
               href={sms ? `sms:${sms}` : undefined}
@@ -284,7 +334,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
           ) : null}
           {data.showCustom ? (
             <ActionCard
-              icon="🔗"
+              icon={<ActionGlyph name="link" /> as any}
               title={data.customLabel || "Custom"}
               subtitle={data.customUrl || "Add a custom URL"}
               href={data.customUrl || undefined}
@@ -303,11 +353,11 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   const type = normalizeBlockType(String((block as any).type));
 
   if (type === "email-button") {
-    const email = data.email || profile.email;
+    const email = data.email || data.value || profile.email;
     return (
       <div className="builder-block">
         <ActionCard
-          icon="✉️"
+          icon={<ActionGlyph name="email" /> as any}
           title={data.label || "Email"}
           subtitle={email || undefined}
           href={email ? `mailto:${email}` : undefined}
@@ -318,11 +368,11 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   }
 
   if (type === "website-button") {
-    const website = data.website || profile.website;
+    const website = data.website || data.url || profile.website;
     return (
       <div className="builder-block">
         <ActionCard
-          icon="🌐"
+          icon={<ActionGlyph name="website" /> as any}
           title={data.label || "Website"}
           subtitle={website || undefined}
           href={website || undefined}
@@ -333,14 +383,31 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
     );
   }
 
-  const phone = data.phone || profile.phone;
-  const behavior = data.behavior || "call";
+  if (type === "directions-button") {
+    const address = data.address || profile.address;
+    const mapsHref = data.url || (address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined);
+    return (
+      <div className="builder-block">
+        <ActionCard
+          icon={<ActionGlyph name="directions" /> as any}
+          title={data.label || "Directions"}
+          subtitle={address || data.url || undefined}
+          href={mapsHref}
+          external={Boolean(mapsHref)}
+          placeholder={!mapsHref}
+        />
+      </div>
+    );
+  }
+
+  const phone = data.phone || data.value || profile.phone;
+  const behavior = data.behavior === "text" ? "sms" : data.behavior || "call";
   const href = behavior === "sms" ? `sms:${phone || ""}` : `tel:${phone || ""}`;
 
   return (
     <div className="builder-block">
       <ActionCard
-        icon={behavior === "sms" ? "💬" : "📞"}
+        icon={<ActionGlyph name={behavior === "sms" ? "sms" : "phone"} /> as any}
         title={data.label || (behavior === "sms" ? "Text" : "Call")}
         subtitle={phone || undefined}
         href={phone ? href : undefined}
@@ -355,9 +422,9 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
   const type = normalizeBlockType(String((block as any).type));
 
   const icon =
-    type === "directions-button" ? "📍" :
-    type === "custom-link-button" ? "🔗" :
-    "📅";
+    type === "directions-button" ? <ActionGlyph name="directions" /> :
+    type === "custom-link-button" ? <ActionGlyph name="link" /> :
+    <ActionGlyph name="phone" />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
     type === "custom-link-button" ? "Custom Link" :
@@ -367,7 +434,7 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
   return (
     <div className="builder-block">
       <ActionCard
-        icon={icon}
+        icon={icon as any}
         title={data.label || defaultTitle}
         subtitle={subtitle}
         href={data.url || undefined}
@@ -403,7 +470,9 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
           }}
           title={link.platform || "Social"}
         >
-          <span className="builder-action-icon" aria-hidden="true">{(link.platform || "S").slice(0, 1)}</span>
+          <span className="builder-action-icon" aria-hidden="true">
+            <SocialGlyph platform={link.platform} />
+          </span>
           <span className="builder-action-content">
             <span className="builder-action-title">{link.platform || "Social"}</span>
             {link.value ? <span className="builder-action-subtitle">{link.value}</span> : null}

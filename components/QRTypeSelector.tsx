@@ -29,7 +29,7 @@ type QRTypeSelectorProps = {
 export default function QRTypeSelector({ value, onChange }: QRTypeSelectorProps) {
   return (
     <div className={styles.container}>
-      <p className={styles.heading}>Select Mailing Piece</p>
+      <p className={styles.heading}>Select Print Piece</p>
       <div className={styles.grid}>
         {QR_TYPES.map((type) => (
           <button

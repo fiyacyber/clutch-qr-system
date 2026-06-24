@@ -1,6 +1,10 @@
 .wrap {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  background: #fafcff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
 }
 
 .label {
@@ -15,16 +19,20 @@
 .buttonGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 166, 101, 0.52);
+  border-radius: 12px;
 }
 
 .buttonGrid button {
   min-height: 42px;
-  padding: 9px 10px;
+  padding: 9px 8px;
   color: #384862;
-  background: #fff1e7;
-  border: 1px solid rgba(255, 166, 101, 0.62);
-  border-radius: 12px;
+  background: #fff;
+  border: 0;
+  border-right: 1px solid rgba(255, 166, 101, 0.42);
+  border-radius: 0;
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 950;
@@ -33,10 +41,14 @@
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
+.buttonGrid button:last-child {
+  border-right: 0;
+}
+
 .buttonGrid button:hover:not(:disabled),
 .buttonGrid button:focus-visible {
-  background: #ffa665;
-  transform: translateY(-1px);
+  background: #fff1e7;
+  transform: none;
   outline: none;
 }
 
@@ -55,5 +67,13 @@
 @media (max-width: 520px) {
   .buttonGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    border: 0;
+    background: rgba(255, 166, 101, 0.42);
+  }
+
+  .buttonGrid button {
+    border-right: 0;
+    border-radius: 0;
   }
 }

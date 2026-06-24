@@ -275,7 +275,7 @@ export default function QRCodeCreateStudioForm({
   return (
     <div className={styles.container}>
       {/* Left Column: QR Type Selector */}
-      <div className={styles.leftColumn}>
+      <section className={styles.leftColumn}>
         <QRTypeSelector
           value={qrType as QRType}
           onChange={(type) => {
@@ -288,10 +288,10 @@ export default function QRCodeCreateStudioForm({
             }
           }}
         />
-      </div>
+      </section>
 
       {/* Center Column: Live Preview + Form */}
-      <div className={styles.centerColumn}>
+      <section className={styles.centerColumn}>
         <QRLivePreview
           finalUrl={finalUrl}
           foregroundColor={foregroundColor}
@@ -316,6 +316,7 @@ export default function QRCodeCreateStudioForm({
         {/* Additional Fields Below Preview */}
         {qrType === "connect_profile" && (
           <div className={styles.additionalFields}>
+            <h3 className={styles.sectionHeader}>QR Details</h3>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>Clutch Connect Profile</span>
               <select
@@ -335,8 +336,30 @@ export default function QRCodeCreateStudioForm({
             </label>
           </div>
         )}
+      </section>
 
-        {/* Print Tracking Section */}
+      {/* Right Column: Style Panel */}
+      <section className={styles.rightColumn}>
+        <QRStylePanel
+          theme={theme}
+          onThemeChange={setTheme}
+          foregroundColor={foregroundColor}
+          onForegroundColorChange={setForegroundColor}
+          backgroundColor={backgroundColor}
+          onBackgroundColorChange={setBackgroundColor}
+          dotStyle={dotStyle}
+          onDotStyleChange={setDotStyle}
+          cornerStyle={cornerStyle}
+          onCornerStyleChange={setCornerStyle}
+          downloadSize={downloadSize}
+          onDownloadSizeChange={setDownloadSize}
+          logoFile={logoFile}
+          onLogoFileChange={setLogoFile}
+        />
+      </section>
+
+      {/* Tracking panel stays in the center rail on desktop, moves last on mobile. */}
+      <section className={styles.trackingPanel}>
         <details className={styles.expandableSection} open>
           <summary className={styles.summary}>Print Campaign Tracking</summary>
           <div className={styles.sectionBody}>
@@ -416,27 +439,7 @@ export default function QRCodeCreateStudioForm({
             )}
           </div>
         </details>
-      </div>
-
-      {/* Right Column: Style Panel */}
-      <div className={styles.rightColumn}>
-        <QRStylePanel
-          theme={theme}
-          onThemeChange={setTheme}
-          foregroundColor={foregroundColor}
-          onForegroundColorChange={setForegroundColor}
-          backgroundColor={backgroundColor}
-          onBackgroundColorChange={setBackgroundColor}
-          dotStyle={dotStyle}
-          onDotStyleChange={setDotStyle}
-          cornerStyle={cornerStyle}
-          onCornerStyleChange={setCornerStyle}
-          downloadSize={downloadSize}
-          onDownloadSizeChange={setDownloadSize}
-          logoFile={logoFile}
-          onLogoFileChange={setLogoFile}
-        />
-      </div>
+      </section>
     </div>
   );
 }

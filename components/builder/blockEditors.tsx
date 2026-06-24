@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { BuilderBlock } from "@/lib/builder-types";
-import { createInitials, getBlockData } from "./blockUtils";
+import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 import PremiumColorPicker from "../PremiumColorPicker";
 
 export interface BlockEditorProps {
@@ -370,9 +370,12 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
             </Field>
             <Field label="Badge icon">
               <select value={data.verifiedBadgeIcon || "checkmark"} onChange={(e) => onUpdate({ verifiedBadgeIcon: e.target.value })}>
-                <option value="checkmark">Checkmark</option>
-                <option value="star">Star</option>
+                <option value="checkmark">Check badge</option>
+                <option value="badge-check">Badge check</option>
                 <option value="shield">Shield</option>
+                <option value="shield-check">Shield check</option>
+                <option value="sparkles">Sparkles</option>
+                <option value="medal">Medal</option>
                 <option value="none">None</option>
               </select>
             </Field>
@@ -436,21 +439,68 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
 
 export function PhoneBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
+  const type = normalizeBlockType(String((block as any).type));
+  const isPhone = type === "phone-button";
+  const isEmail = type === "email-button";
+  const isWebsite = type === "website-button";
+  const isDirections = type === "directions-button";
+
+  const defaultLabel = isEmail ? "Email" : isWebsite ? "Website" : isDirections ? "Directions" : "Call";
+
+  const handleBehaviorChange = (nextBehavior: string) => {
+    const currentLabel = String(data.label || "").trim();
+    const shouldAutoLabel = !currentLabel || currentLabel === "Call" || currentLabel === "Text";
+    onUpdate({
+      behavior: nextBehavior,
+      ...(shouldAutoLabel ? { label: nextBehavior === "sms" ? "Text" : "Call" } : {}),
+    });
+  };
+
   return (
     <div className="saas-fields">
       <EditorSection title="Content">
-        <Field label="Label"><input type="text" value={data.label || "Call"} onChange={(e) => onUpdate({ label: e.target.value })} /></Field>
-        <Field label="Value / phone"><input type="text" value={data.phone || ""} onChange={(e) => onUpdate({ phone: e.target.value })} placeholder="(555) 123-4567" /></Field>
+        <Field label="Label"><input type="text" value={data.label || defaultLabel} onChange={(e) => onUpdate({ label: e.target.value })} /></Field>
+
+        {isPhone ? (
+          <Field label="Value / phone"><input type="text" value={data.phone || ""} onChange={(e) => onUpdate({ phone: e.target.value })} placeholder="(555) 123-4567" /></Field>
+        ) : null}
+
+        {isEmail ? (
+          <Field label="Value / email"><input type="email" value={data.email || ""} onChange={(e) => onUpdate({ email: e.target.value })} placeholder="you@company.com" /></Field>
+        ) : null}
+
+        {isWebsite ? (
+          <Field label="Value / URL"><input type="text" value={data.website || data.url || ""} onChange={(e) => onUpdate({ website: e.target.value, url: e.target.value })} placeholder="https://example.com" /></Field>
+        ) : null}
+
+        {isDirections ? (
+          <>
+            <Field label="Address">
+              <input type="text" value={data.address || ""} onChange={(e) => onUpdate({ address: e.target.value })} placeholder="123 Main St, City" />
+            </Field>
+            <Field label="Custom maps URL (optional)">
+              <input type="text" value={data.url || ""} onChange={(e) => onUpdate({ url: e.target.value })} placeholder="https://maps.google.com/..." />
+            </Field>
+          </>
+        ) : null}
       </EditorSection>
-      <EditorSection title="Appearance">
-        <Field label="Button style">
-          <select value={data.behavior || "call"} onChange={(e) => onUpdate({ behavior: e.target.value })}>
-            <option value="call">Call</option>
-            <option value="sms">Text</option>
-          </select>
-        </Field>
-        <p className="saas-field-hint">Icon and color controls are preserved where available and will expand here later.</p>
-      </EditorSection>
+
+      {isPhone ? (
+        <EditorSection title="Appearance">
+          <Field label="Button action">
+            <select value={data.behavior || "call"} onChange={(e) => handleBehaviorChange(e.target.value)}>
+              <option value="call">Call</option>
+              <option value="sms">Text</option>
+            </select>
+          </Field>
+          <p className="saas-field-hint">Icon and label update with the selected action type.</p>
+        </EditorSection>
+      ) : (
+        <EditorSection title="Appearance">
+          <p className="saas-field-hint">This block uses an action-specific icon and destination based on its type.</p>
+        </EditorSection>
+      )}
+
       <AdvancedAccordion><Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} /></AdvancedAccordion>
     </div>
   );

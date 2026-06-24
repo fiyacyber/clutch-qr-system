@@ -80,6 +80,7 @@ export default function QRLivePreview({
         {error && <div className={styles.errorMessage}>{error}</div>}
 
         {/* QR Preview Card */}
+        <h3 className={styles.sectionTitle}>QR Preview</h3>
         <div className={styles.previewCard}>
           <StyledQRPreview
             url={finalUrl || qrUrl("preview")}
@@ -99,6 +100,7 @@ export default function QRLivePreview({
         </div>
 
         {/* Form Fields */}
+        <h3 className={styles.sectionTitle}>QR Details</h3>
         <div className={styles.formSection}>
           <label className={styles.field}>
             <span className={styles.fieldLabel}>QR Name</span>

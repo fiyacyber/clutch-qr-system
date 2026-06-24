@@ -49,8 +49,8 @@ export default function StyledQRPreview({
       container.innerHTML = "";
 
       const qrCode = new QRCodeStyling({
-        width: 220,
-        height: 220,
+        width: 280,
+        height: 280,
         type: "svg",
         data: url,
         image: logoUrl || undefined,
