@@ -526,9 +526,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
             <div className="ca-card">
               <div className="ca-card-head">
                 <h2 className="ca-card-title">Leads</h2>
-                <Link href="/portal/connect/leads" className="ca-secondary-link-btn">
-                  Open Detailed Leads
-                </Link>
               </div>
               {props.connectRows.some(r => r.leadsCaptured > 0) ? (
                 <div className="ca-table-wrap">
