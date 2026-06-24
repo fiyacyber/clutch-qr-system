@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BarChart3, LayoutGrid, ShieldCheck, Sparkles } from "lucide-react";
-import Header from "@/components/Header";
 import QRCodeCreateStudioForm from "@/components/QRCodeCreateStudioForm";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
@@ -40,34 +41,28 @@ export default async function CreatePortalPage() {
   const lockMessage = getSubscriptionLockMessage(customer);
 
   return (
-    <div className="page-shell">
-      <Header isAdmin={Boolean(customer.is_admin)} />
-
+    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
       <main className="container create-studio-shell">
-        <section className="portal-dashboard-header create-page-header qr-studio-hero">
-          <div className="qr-studio-hero-copy">
-            <p className="eyebrow">Create QR</p>
-            <h1>QR Design Studio</h1>
-            <p>
-              Create branded, trackable QR codes for print campaigns, business cards, yard signs, and more.
-            </p>
-          </div>
-
-          <div className="qr-studio-status-cards">
-            <article className="qr-studio-status-card">
-              <span><ShieldCheck size={14} /> Account type</span>
-              <strong>{plan.name}</strong>
-            </article>
-            <article className="qr-studio-status-card">
-              <span><LayoutGrid size={14} /> QR usage</span>
-              <strong>{used}/{plan.code === "admin" ? "Unlimited" : limit}</strong>
-            </article>
-            <article className="qr-studio-status-card">
-              <span><Sparkles size={14} /> Builder</span>
-              <strong>Mobile-ready</strong>
-            </article>
-          </div>
-        </section>
+        <DashboardHeader
+          title="QR Design Studio"
+          subtitle="Create branded, trackable QR codes for print campaigns, business cards, yard signs, and more."
+          actions={(
+            <div className="qr-studio-status-cards">
+              <article className="qr-studio-status-card">
+                <span><ShieldCheck size={14} /> Account type</span>
+                <strong>{plan.name}</strong>
+              </article>
+              <article className="qr-studio-status-card">
+                <span><LayoutGrid size={14} /> QR usage</span>
+                <strong>{used}/{plan.code === "admin" ? "Unlimited" : limit}</strong>
+              </article>
+              <article className="qr-studio-status-card">
+                <span><Sparkles size={14} /> Builder</span>
+                <strong>Mobile-ready</strong>
+              </article>
+            </div>
+          )}
+        />
 
         <section className="create-page-nav qr-studio-top-actions">
           <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
@@ -82,6 +77,6 @@ export default async function CreatePortalPage() {
           connectProfiles={(profiles || []) as any}
         />
       </main>
-    </div>
+    </DashboardShell>
   );
 }

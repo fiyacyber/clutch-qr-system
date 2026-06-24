@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Activity, Eye, Link2, Palette, PenSquare, Users } from "lucide-react";
-import Header from "@/components/Header";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -49,22 +50,12 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const profileViews = clicks.filter((event: any) => event.event_type === "profile_view").length;
 
   return (
-    <div className="page-shell">
-      <Header isAdmin={Boolean(customer.is_admin)} />
-
+    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
       <main className="container connect-dashboard-shell">
-        <section className="connect-dashboard-hero">
-          <div className="connect-dashboard-hero-main">
-            <p className="eyebrow">Clutch Connect</p>
-            <h1>
-              Smart Business Card
-              <br />
-              Profile
-            </h1>
-            <p>
-              Build your customer-facing profile with branded links, lead capture, and contact download.
-            </p>
-
+        <DashboardHeader
+          title="Clutch Connect"
+          subtitle="Build your customer-facing profile with branded links, lead capture, and contact download."
+          actions={(
             <div className="connect-dashboard-hero-actions">
               <Link className="btn primary" href="/portal/connect/build">
                 <Palette size={16} />
@@ -77,6 +68,14 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
                 </Link>
               ) : null}
             </div>
+          )}
+        />
+
+        <section className="connect-dashboard-hero">
+          <div className="connect-dashboard-hero-main">
+            <p className="eyebrow">Smart Business Card Profile</p>
+            <h1>Build. Share. Convert.</h1>
+            <p>Your profile performance and action center in one place.</p>
           </div>
 
           <div className="connect-dashboard-hero-metrics" aria-label="Connect performance metrics">
@@ -177,6 +176,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           </Link>
         </section>
       </main>
-    </div>
+    </DashboardShell>
   );
 }

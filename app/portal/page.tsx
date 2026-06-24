@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/Header";
 import QRCodeEditForm from "@/components/QRCodeEditForm";
 import CustomerLogoUpload from "@/components/CustomerLogoUpload";
 import PlanCards from "@/components/PlanCards";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
@@ -150,9 +151,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const reportHref = `/analytics/report${exportQuery ? `?${exportQuery}` : ""}`;
 
   return (
-    <div className="page-shell">
-      <Header isAdmin={Boolean(customer.is_admin)} />
-
+    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
       <main className="container">
         {errorMessage && (
           <div className="alert">
@@ -160,23 +159,18 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           </div>
         )}
 
-        <section className="portal-dashboard-header">
-          <div>
-            <p className="eyebrow">Clutch QR Portal</p>
-            <h1>Print Smarter. Track Everything.</h1>
-            <p>
-              Create dynamic QR codes, update destinations anytime, and measure
-              how your printed marketing performs.
-            </p>
-          </div>
-
-          <div className="dashboard-badges">
-            <span>{plan.name}</span>
-            <span>{subscriptionStatus}</span>
-            <span>{used}/{limitLabel} QR codes</span>
-            <span>{totalScans} scans</span>
-          </div>
-        </section>
+        <DashboardHeader
+          title="Clutch QR Portal"
+          subtitle="Print smarter, track everything, and optimize every campaign from one dashboard."
+          actions={(
+            <div className="dashboard-badges">
+              <span>{plan.name}</span>
+              <span>{subscriptionStatus}</span>
+              <span>{used}/{limitLabel} QR codes</span>
+              <span>{totalScans} scans</span>
+            </div>
+          )}
+        />
 
         {subscriptionLocked ? (
           <section className="locked-upgrade-card">
@@ -523,6 +517,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           </section>
         ) : null}
       </main>
-    </div>
+    </DashboardShell>
   );
 }

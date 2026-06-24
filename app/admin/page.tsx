@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import Header from "@/components/Header";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { getCustomerPlan, PLAN_DEFINITIONS, type PlanCode } from "@/lib/plans";
@@ -187,24 +188,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   );
 
   return (
-    <div className="page-shell">
-      <Header isAdmin />
-
+    <DashboardShell isAdmin>
       <main className="container">
-        <section className="portal-dashboard-header">
-          <div>
-            <p className="eyebrow">Private Admin</p>
-            <h1>Clutch QR Command Center</h1>
-            <p>
-              Manage customers, plans, QR limits, onboarding, groups, and account analytics from one private dashboard.
-            </p>
-          </div>
-          <div className="dashboard-badges">
-            <span>{customerRows.length} customers</span>
-            <span>{activeQrCodes} active QRs</span>
-            <span>{totalScans} scans</span>
-          </div>
-        </section>
+        <DashboardHeader
+          title="Clutch QR Command Center"
+          subtitle="Manage customers, plans, QR limits, onboarding, groups, and account analytics from one private dashboard."
+          actions={(
+            <div className="dashboard-badges">
+              <span>{customerRows.length} customers</span>
+              <span>{activeQrCodes} active QRs</span>
+              <span>{totalScans} scans</span>
+            </div>
+          )}
+        />
 
         <section className="dashboard-grid">
           <div className="metric-card">
@@ -536,6 +532,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </table>
         </section>
       </main>
-    </div>
+    </DashboardShell>
   );
 }

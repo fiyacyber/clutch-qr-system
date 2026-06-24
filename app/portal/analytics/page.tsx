@@ -8,6 +8,7 @@ import {
   fetchUnifiedAnalyticsData,
 } from "@/lib/clutch-analytics";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 import "./analytics.css";
 
 const VALID_TABS = [
@@ -177,26 +178,28 @@ export default async function AnalyticsPage({
   ]).filter(r => r.label !== "Unknown");
 
   return (
-    <AnalyticsDashboard
-      activeTab={activeTab}
-      accountEmail={user.email || null}
-      accountType={customer.is_admin ? "Admin" : "Customer"}
-      totalScans={totalScans}
-      connectViews={connectViews}
-      linkClicks={linkClicks}
-      uniqueVisitors={uniqueVisitors}
-      leadsCaptured={leadsCaptured}
-      activeQrCodes={activeQrCodes}
-      qrRows={qrRows}
-      connectRows={connectRows}
-      scansOverTime={scansOverTime}
-      countryData={countryData}
-      mapPoints={mapPoints}
-      cityRows={cityRows}
-      deviceRows={deviceRows}
-      browserRows={browserRows}
-      osRows={osRows}
-      heatmap={heatmap}
-    />
+    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+      <AnalyticsDashboard
+        activeTab={activeTab}
+        accountEmail={user.email || null}
+        accountType={customer.is_admin ? "Admin" : "Customer"}
+        totalScans={totalScans}
+        connectViews={connectViews}
+        linkClicks={linkClicks}
+        uniqueVisitors={uniqueVisitors}
+        leadsCaptured={leadsCaptured}
+        activeQrCodes={activeQrCodes}
+        qrRows={qrRows}
+        connectRows={connectRows}
+        scansOverTime={scansOverTime}
+        countryData={countryData}
+        mapPoints={mapPoints}
+        cityRows={cityRows}
+        deviceRows={deviceRows}
+        browserRows={browserRows}
+        osRows={osRows}
+        heatmap={heatmap}
+      />
+    </DashboardShell>
   );
 }

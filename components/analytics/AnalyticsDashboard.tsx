@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  LayoutDashboard, QrCode, Link2, BarChart2, Globe, Monitor,
-  Activity, Users, Settings, Download, SlidersHorizontal,
+  QrCode, BarChart2, Globe, Monitor,
+  Activity, Users, Download, SlidersHorizontal,
   CalendarDays, ChevronDown, Eye, MousePointerClick, UserCheck,
-  TrendingUp, ArrowUpRight,
+  ArrowUpRight,
 } from "lucide-react";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 const WorldMap      = dynamic(() => import("./WorldMap"),       { ssr: false, loading: () => <div className="ca-map-skeleton" /> });
 const ScansLineChart = dynamic(() => import("./ScansLineChart"), { ssr: false, loading: () => <div className="ca-chart-skeleton" /> });
@@ -46,19 +47,6 @@ export interface DashboardProps {
   osRows: { label: string; value: number }[];
   heatmap: { day: string; hour: number; count: number }[];
 }
-
-/* ─────────────── Nav ─────────────── */
-const NAV = [
-  { id: "overview",        label: "Overview",        icon: LayoutDashboard },
-  { id: "qr-codes",        label: "QR Codes",        icon: QrCode },
-  { id: "clutch-connect",  label: "Clutch Connect",  icon: Link2 },
-  { id: "analytics",       label: "Analytics",       icon: BarChart2 },
-  { id: "geography",       label: "Geography",       icon: Globe },
-  { id: "devices",         label: "Devices",         icon: Monitor },
-  { id: "activity-heatmap",label: "Activity Heatmap",icon: Activity },
-  { id: "leads",           label: "Leads",           icon: Users },
-  { id: "settings",        label: "Settings",        icon: Settings },
-];
 
 const KPI = [
   { key: "totalScans",     label: "Total Scans",          icon: BarChart2 },
@@ -113,42 +101,11 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const xLabels = HOURS.filter(h => h % 2 === 0);
 
   return (
-    <div className="ca-shell">
-      {/* ── Sidebar ── */}
-      <aside className="ca-sidebar">
-        <div className="ca-sidebar-logo">
-          <div className="ca-logo-icon">C</div>
-          <span className="ca-logo-word">LUTCH</span>
-        </div>
-
-        <nav className="ca-nav">
-          {NAV.map(({ id, label, icon: Icon }) => {
-            const href = `/portal/analytics?tab=${id}`;
-            const active = activeTab === id || (id === "analytics" && isMainView && activeTab !== "overview");
-            return (
-              <Link key={id} href={href} className={`ca-nav-item${active ? " active" : ""}`}>
-                <Icon size={16} strokeWidth={1.8} />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="ca-upgrade-card">
-          <p className="ca-upgrade-title">Upgrade to QR Pro+</p>
-          <p className="ca-upgrade-desc">Unlock advanced analytics, custom domains, and more.</p>
-          <Link href="/pricing" className="ca-upgrade-btn">Upgrade Now</Link>
-        </div>
-      </aside>
-
-      {/* ── Main ── */}
-      <div className="ca-main">
-        {/* Top bar */}
-        <div className="ca-topbar">
-          <div>
-            <h1 className="ca-page-title">Clutch Analytics</h1>
-            <p className="ca-page-sub">Track QR scans, Clutch Connect profile views, link clicks, and lead activity.</p>
-          </div>
+    <div className="ca-main">
+      <DashboardHeader
+        title="Clutch Analytics"
+        subtitle="Track QR scans, Clutch Connect profile views, link clicks, and lead activity."
+        actions={
           <div className="ca-topbar-controls">
             <button className="ca-date-btn">
               <CalendarDays size={13} />
@@ -171,9 +128,10 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               <SlidersHorizontal size={13} /> Filter
             </button>
           </div>
-        </div>
+        }
+      />
 
-        <div className="ca-content">
+      <div className="ca-content">
           {/* KPI Row — always visible */}
           <div className="ca-kpi-row">
             {KPI.map(({ key, label, icon: Icon }) => {
@@ -589,7 +547,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           )}
 
           <footer className="ca-footer">Powered by ClutchPrintShop</footer>
-        </div>
       </div>
     </div>
   );
