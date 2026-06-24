@@ -268,6 +268,25 @@ export function countBy(values: Array<string | null | undefined>) {
     .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
 }
 
+export function buildScansOverTime(
+  timestamps: Array<string | null | undefined>,
+  days = 30
+): { date: string; scans: number }[] {
+  const now = new Date();
+  const buckets: Record<string, number> = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    buckets[d.toISOString().slice(0, 10)] = 0;
+  }
+  for (const ts of timestamps) {
+    if (!ts) continue;
+    const key = new Date(ts).toISOString().slice(0, 10);
+    if (key in buckets) buckets[key]++;
+  }
+  return Object.entries(buckets).map(([date, scans]) => ({ date, scans }));
+}
+
 export function buildHourlyHeatmap(timestamps: Array<string | null | undefined>) {
   const rows: Array<{ day: string; hour: number; count: number }> = [];
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
