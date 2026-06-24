@@ -68,7 +68,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <div className="connect-dashboard-hero-actions">
               <Link className="btn primary" href="/portal/connect/build">
                 <Palette size={16} />
-                Profile Builder
+                Card Builder
               </Link>
               {profile?.slug ? (
                 <Link className="btn secondary" href={`/u/${profile.slug}`} target="_blank">
@@ -102,7 +102,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         <section className="connect-dashboard-action-grid" aria-label="Primary actions">
           <Link className="connect-dashboard-action-card active" href="/portal/connect/build">
             <span className="connect-dashboard-action-icon"><Palette size={20} /></span>
-            <span className="connect-dashboard-action-label">Profile Builder</span>
+            <span className="connect-dashboard-action-label">Card Builder</span>
           </Link>
 
           <Link className="connect-dashboard-action-card" href="/portal/connect/edit">
