@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
+import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -72,6 +73,25 @@ export async function POST(req: NextRequest) {
     ip_hash,
     user_agent,
     metadata: { source: "public_form" },
+  });
+
+  await admin.from("connect_events").insert({
+    profile_id,
+    qr_code_id: null,
+    event_type: "lead_submit",
+    link_id: null,
+    link_label: null,
+    link_url: null,
+    visitor_id: ip_hash,
+    ip_hash,
+    user_agent,
+    device_type: getDeviceType(user_agent),
+    browser: getBrowser(user_agent),
+    os: getOperatingSystem(user_agent),
+    country: req.headers.get("x-vercel-ip-country"),
+    region: req.headers.get("x-vercel-ip-country-region"),
+    city: req.headers.get("x-vercel-ip-city"),
+    referrer: getReferrerSource(req.headers.get("referer")),
   });
 
   return NextResponse.redirect(new URL(`/u/${slug}?sent=1`, req.url));

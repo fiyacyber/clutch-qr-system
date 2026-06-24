@@ -40,6 +40,7 @@ export async function GET(
     return NextResponse.json({
       code,
       scans: scans || [],
+      linkedProfileId: code.connect_profile_id || code.profile_id || null,
       customer: { id: customer.id, email: customer.email },
     });
   } catch (error) {

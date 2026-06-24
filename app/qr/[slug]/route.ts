@@ -54,17 +54,37 @@ export async function GET(
   }
 
   let redirectTarget = qrCode.destination_url;
+  let connectProfileId: string | null = qrCode.connect_profile_id || qrCode.profile_id || null;
 
-  if (qrCode.qr_type === "connect_profile" && qrCode.profile_id) {
+  if (qrCode.qr_type === "connect_profile" && (qrCode.connect_profile_id || qrCode.profile_id)) {
     const { data: profile } = await admin
       .from("profiles")
       .select("slug, is_active")
-      .eq("id", qrCode.profile_id)
+      .eq("id", qrCode.connect_profile_id || qrCode.profile_id)
       .maybeSingle();
 
     if (profile?.slug && profile.is_active) {
       const base = (process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com").replace(/\/$/, "");
       redirectTarget = `${base}/u/${profile.slug}`;
+    }
+  }
+
+  if (!connectProfileId) {
+    try {
+      const redirectUrl = new URL(redirectTarget);
+      const slugMatch = redirectUrl.pathname.match(/^\/u\/([a-z0-9-]+)/i);
+      if (slugMatch?.[1]) {
+        const { data: profileBySlug } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("slug", slugMatch[1])
+          .eq("is_active", true)
+          .maybeSingle();
+
+        connectProfileId = profileBySlug?.id || null;
+      }
+    } catch {
+      // Ignore URL parsing issues and continue redirect flow.
     }
   }
 
@@ -107,6 +127,22 @@ export async function GET(
     utm_campaign,
     utm_content,
     utm_term,
+  });
+
+  await admin.from("qr_scan_events").insert({
+    qr_code_id: qrCode.id,
+    connect_profile_id: connectProfileId,
+    event_type: "scan",
+    visitor_id: ipHash,
+    ip_hash: ipHash,
+    user_agent: userAgent,
+    device_type: getDeviceType(userAgent),
+    browser: getBrowser(userAgent),
+    os: getOperatingSystem(userAgent),
+    country: req.headers.get("x-vercel-ip-country"),
+    region: req.headers.get("x-vercel-ip-country-region"),
+    city: req.headers.get("x-vercel-ip-city"),
+    referrer,
   });
 
   await admin

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { fetchUnifiedAnalyticsData } from "@/lib/clutch-analytics";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,33 +12,30 @@ export async function GET(req: NextRequest) {
     }
 
     const admin = createSupabaseAdminClient();
+    const data = await fetchUnifiedAnalyticsData(admin, customer as any);
 
-    // Get all QR codes for this customer
-    const { data: codes, error: codesError } = await admin
-      .from("qr_codes")
-      .select("id, name, slug, scan_count, created_at, updated_at")
-      .eq("customer_id", customer.id)
-      .order("created_at", { ascending: false });
-
-    if (codesError) throw codesError;
-
-    const qrIds = (codes || []).map((code) => code.id);
-
-    let scans: any[] = [];
-    if (qrIds.length > 0) {
-      const { data: scansData, error: scansError } = await admin
-        .from("qr_scans")
-        .select("*")
-        .in("qr_code_id", qrIds)
-        .order("created_at", { ascending: false });
-
-      if (scansError) throw scansError;
-      scans = scansData || [];
-    }
+    const totalScans = data.qrScans.length;
+    const connectViews = data.connectEvents.filter((row) => row.event_type === "profile_view").length;
+    const linkClicks = data.connectEvents.filter((row) => row.event_type === "link_click").length;
+    const leadsCaptured = data.connectEvents.filter((row) => row.event_type === "lead_submit").length;
+    const activeQrCodes = data.qrCodes.filter((row) => row.is_active !== false).length;
+    const uniqueVisitors = new Set(
+      [...data.qrScans.map((row) => row.ip_hash), ...data.connectEvents.map((row) => row.ip_hash || row.visitor_id)].filter(Boolean)
+    ).size;
 
     return NextResponse.json({
-      codes: codes || [],
-      scans,
+      codes: data.qrCodes,
+      scans: data.qrScans,
+      profiles: data.profiles,
+      connectEvents: data.connectEvents,
+      summary: {
+        totalScans,
+        connectViews,
+        linkClicks,
+        uniqueVisitors,
+        leadsCaptured,
+        activeQrCodes,
+      },
       customer: { id: customer.id, email: customer.email },
     });
   } catch (error) {

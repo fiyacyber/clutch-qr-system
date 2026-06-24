@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prof
       appUrl
     );
 
-    await trackWalletEvent(profile.id, "google");
+    await trackWalletEvent(profile.id, "google", req.headers);
 
     return NextResponse.redirect(walletUrl, { status: 302 });
   } catch (error) {

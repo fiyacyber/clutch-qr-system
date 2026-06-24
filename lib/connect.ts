@@ -6,7 +6,13 @@ export const CONNECT_EVENT_TYPES = new Set([
   "text_click",
   "email_click",
   "website_click",
+  "directions_click",
+  "quote_cta_click",
   "vcard_download",
+  "save_contact",
+  "wallet_click",
+  "apple_wallet_download",
+  "google_wallet_add",
   "link_click",
   "lead_submit",
 ]);

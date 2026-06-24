@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
+import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 
 function escapeVCard(value?: string | null) {
   return String(value || "")
@@ -57,6 +58,25 @@ export async function GET(
     ip_hash,
     user_agent,
     metadata: { slug: profile.slug },
+  });
+
+  await admin.from("connect_events").insert({
+    profile_id: profile.id,
+    qr_code_id: null,
+    event_type: "save_contact",
+    link_id: null,
+    link_label: "Save Contact",
+    link_url: null,
+    visitor_id: ip_hash,
+    ip_hash,
+    user_agent,
+    device_type: getDeviceType(user_agent),
+    browser: getBrowser(user_agent),
+    os: getOperatingSystem(user_agent),
+    country: req.headers.get("x-vercel-ip-country"),
+    region: req.headers.get("x-vercel-ip-country-region"),
+    city: req.headers.get("x-vercel-ip-city"),
+    referrer: getReferrerSource(req.headers.get("referer")),
   });
 
   const filename = `${(profile.slug || "clutch-connect").replace(/[^a-z0-9-]/gi, "-")}.vcf`;

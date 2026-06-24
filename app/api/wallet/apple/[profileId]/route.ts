@@ -136,7 +136,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
       altText: profileUrl,
     });
 
-    await trackWalletEvent(profile.id, "apple");
+    await trackWalletEvent(profile.id, "apple", _req.headers);
 
     const buffer = pass.getAsBuffer();
     return new NextResponse(buffer, {

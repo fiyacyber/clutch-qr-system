@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
+import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 import { validateBuilderConfig } from "@/lib/builder-config";
 import ConnectPublicProfile from "@/components/ConnectPublicProfile";
 import BuilderPublicProfile from "@/components/BuilderPublicProfile";
@@ -36,13 +37,31 @@ export default async function PublicConnectProfilePage({
 
   const requestHeaders = await headers();
   const ip_hash = extractIpHash(requestHeaders);
+  const user_agent = requestHeaders.get("user-agent") || null;
+  const referrer = requestHeaders.get("referer") || null;
 
   await admin.from("profile_click_events").insert({
     profile_id: profile.id,
     event_type: "profile_view",
     ip_hash,
-    user_agent: null,
+    user_agent,
     metadata: { slug },
+  });
+
+  await admin.from("connect_events").insert({
+    profile_id: profile.id,
+    qr_code_id: null,
+    event_type: "profile_view",
+    visitor_id: ip_hash,
+    ip_hash,
+    user_agent,
+    device_type: getDeviceType(user_agent),
+    browser: getBrowser(user_agent),
+    os: getOperatingSystem(user_agent),
+    country: requestHeaders.get("x-vercel-ip-country"),
+    region: requestHeaders.get("x-vercel-ip-country-region"),
+    city: requestHeaders.get("x-vercel-ip-city"),
+    referrer: getReferrerSource(referrer),
   });
 
   // Check if profile has builder_config and it's valid
