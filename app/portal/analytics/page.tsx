@@ -9,6 +9,7 @@ import {
   fetchUnifiedAnalyticsData,
   type UnifiedAnalyticsData,
 } from "@/lib/clutch-analytics";
+import { parseCoordinate } from "@/lib/analytics";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import RetryNotice from "@/components/dashboard/RetryNotice";
@@ -181,6 +182,8 @@ export default async function AnalyticsPage({
       const city = scan.city || "Unknown";
       const region = scan.region || "Unknown";
       const country = scan.country || "Unknown";
+      const latitude = parseCoordinate(scan.latitude);
+      const longitude = parseCoordinate(scan.longitude);
       return {
         id: scan.id,
         qrId: scan.qr_code_id,
@@ -190,16 +193,17 @@ export default async function AnalyticsPage({
         country,
         locationLabel: [city, region, country].filter(Boolean).join(", "),
         createdAt: scan.created_at,
-        latitude: Number(scan.latitude),
-        longitude: Number(scan.longitude),
+        latitude,
+        longitude,
+        location_source: scan.location_source || null,
       };
     })
     .filter((row) => row.qrId);
 
   for (const scan of data.qrScans as any[]) {
-    const lat = Number(scan.latitude);
-    const lon = Number(scan.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const lat = parseCoordinate(scan.latitude);
+    const lon = parseCoordinate(scan.longitude);
+    if (lat === null || lon === null) continue;
 
     const city = scan.city || "Unknown city";
     const region = scan.region || "";

@@ -73,8 +73,9 @@ export interface DashboardProps {
     country: string;
     locationLabel: string;
     createdAt: string;
-    latitude: number;
-    longitude: number;
+    latitude: number | null;
+    longitude: number | null;
+    location_source?: string | null;
   }[];
 }
 
@@ -299,8 +300,10 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     >();
 
     for (const row of geoRows) {
-      if (!Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)) continue;
-      const key = `${row.latitude.toFixed(2)}:${row.longitude.toFixed(2)}:${row.locationLabel}`;
+      const latitude = row.latitude;
+      const longitude = row.longitude;
+      if (latitude === null || longitude === null) continue;
+      const key = `${latitude.toFixed(2)}:${longitude.toFixed(2)}:${row.locationLabel}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.scans += 1;
@@ -308,8 +311,8 @@ export default function AnalyticsDashboard(props: DashboardProps) {
         existing.campaignCounts.set(row.campaign, (existing.campaignCounts.get(row.campaign) || 0) + 1);
       } else {
         grouped.set(key, {
-          lat: row.latitude,
-          lon: row.longitude,
+          lat: latitude,
+          lon: longitude,
           scans: 1,
           visitors: new Set([row.id]),
           label: row.locationLabel,

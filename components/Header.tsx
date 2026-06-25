@@ -11,7 +11,7 @@ export default async function Header({ isAdmin = false }: { isAdmin?: boolean })
       <nav className="header-nav">
         <Link href="/portal">Portal</Link>
         <Link href="/portal/connect">Clutch Connect</Link>
-        <Link href="/portal/create">Create QR</Link>
+        <Link href="/portal/create">QR Codes</Link>
         <Link href="/portal/analytics">Analytics</Link>
         {isAdmin ? <Link href="/admin">Admin</Link> : null}
         {data.user ? (

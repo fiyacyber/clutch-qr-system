@@ -6,6 +6,7 @@ import {
   getDeviceType,
   getOperatingSystem,
   getReferrerSource,
+  parseCoordinate,
 } from "@/lib/analytics";
 
 // Reserved paths that should not be treated as QR slugs
@@ -96,8 +97,8 @@ export async function GET(
   const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
   const userAgent = req.headers.get("user-agent");
   const referrer = req.headers.get("referer");
-  const latitude = Number(req.headers.get("x-vercel-ip-latitude"));
-  const longitude = Number(req.headers.get("x-vercel-ip-longitude"));
+  const latitude = parseCoordinate(req.headers.get("x-vercel-ip-latitude"));
+  const longitude = parseCoordinate(req.headers.get("x-vercel-ip-longitude"));
 
   // Extract UTM parameters from destination URL if present
   const urlObj = new URL(redirectTarget);
@@ -120,8 +121,9 @@ export async function GET(
     country: req.headers.get("x-vercel-ip-country"),
     region: req.headers.get("x-vercel-ip-country-region"),
     city: req.headers.get("x-vercel-ip-city"),
-    latitude: Number.isFinite(latitude) ? latitude : null,
-    longitude: Number.isFinite(longitude) ? longitude : null,
+    latitude,
+    longitude,
+    location_source: latitude !== null && longitude !== null ? "geoip" : null,
     utm_source,
     utm_medium,
     utm_campaign,

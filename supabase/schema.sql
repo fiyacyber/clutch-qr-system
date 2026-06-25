@@ -78,6 +78,7 @@ create table public.qr_scans (
   city text,
   latitude double precision,
   longitude double precision,
+  location_source text default 'geoip',
   utm_source text,
   utm_medium text,
   utm_campaign text,

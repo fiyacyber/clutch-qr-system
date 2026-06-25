@@ -7,7 +7,7 @@ import { CircleMarker, MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { LatLngBoundsExpression, Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import styles from "./LocationHeatmap.module.css";
-import { getBrowser, getDeviceType } from "@/lib/analytics";
+import { getBrowser, getDeviceType, parseCoordinate } from "@/lib/analytics";
 
 type HeatmapScan = {
   id: string | number;
@@ -106,9 +106,9 @@ function buildHotspots(scans: HeatmapScan[]) {
   const groups = new Map<string, HeatmapScan[]>();
 
   for (const scan of scans) {
-    const lat = Number(scan.latitude);
-    const lon = Number(scan.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const lat = parseCoordinate(scan.latitude);
+    const lon = parseCoordinate(scan.longitude);
+    if (lat === null || lon === null) continue;
 
     const key = `${lat.toFixed(3)}:${lon.toFixed(3)}:${getLocationLabel(scan)}`;
     const list = groups.get(key) || [];

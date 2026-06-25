@@ -142,6 +142,13 @@ export function getScanLocation(scan: QRAnalyticsScan) {
   return parts.length ? parts.join(", ") : "Unknown location";
 }
 
+export function parseCoordinate(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const numericValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
 export function getPrintPieceTypeLabel(utm_source?: string | null) {
   if (!utm_source) return "Not specified";
   

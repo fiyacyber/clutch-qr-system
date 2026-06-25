@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import LocationHeatmap from "@/components/dashboard/LocationHeatmap";
 import { requireCustomer } from "@/lib/auth";
+import { parseCoordinate } from "@/lib/analytics";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function HeatmapCommandCenterPage() {
@@ -23,14 +24,14 @@ export default async function HeatmapCommandCenterPage() {
   const { data: scanRows } = qrIds.length
     ? await admin
         .from("qr_scans")
-        .select("id, qr_code_id, created_at, city, region, country")
+        .select("id, qr_code_id, created_at, city, region, country, latitude, longitude, location_source")
         .in("qr_code_id", qrIds)
         .order("created_at", { ascending: false })
         .limit(5000)
     : { data: [] };
 
   const scans = scanRows || [];
-  const hasCoordinateData = scans.some((scan: any) => Number.isFinite(Number(scan.latitude)) && Number.isFinite(Number(scan.longitude)));
+  const hasCoordinateData = scans.some((scan: any) => parseCoordinate(scan.latitude) !== null && parseCoordinate(scan.longitude) !== null);
 
   return (
     <DashboardShell isAdmin={Boolean(customer.is_admin)}>

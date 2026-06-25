@@ -48,6 +48,7 @@ export type UnifiedQrScan = {
   city?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location_source?: string | null;
   referrer?: string | null;
   created_at?: string | null;
 };
@@ -143,7 +144,7 @@ export async function fetchUnifiedAnalyticsData(admin: SupabaseAdmin, customer: 
   if (qrIds.length) {
     const { data: qrScanRows, error: qrScansError } = await admin
       .from("qr_scans")
-      .select("id, qr_code_id, ip_hash, user_agent, device_type, browser, operating_system, country, region, city, latitude, longitude, referrer, created_at")
+      .select("id, qr_code_id, ip_hash, user_agent, device_type, browser, operating_system, country, region, city, latitude, longitude, location_source, referrer, created_at")
       .in("qr_code_id", qrIds)
       .order("created_at", { ascending: false })
       .limit(20000);
