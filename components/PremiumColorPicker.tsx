@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./PremiumColorPicker.module.css";
 
 type HSV = { h: number; s: number; v: number };
@@ -195,9 +196,14 @@ export default function PremiumColorPicker({
   const [hexText, setHexText] = useState("");
   const [rgbText, setRgbText] = useState({ r: "", g: "", b: "" });
   const [hsv, setHsv] = useState<HSV>({ h: 0, s: 0, v: 1 });
+  const [isMounted, setIsMounted] = useState(false);
 
   const { normalized, rgb } = useColorModel(value);
   const textColor = useMemo(() => getReadableTextColor(normalized), [normalized]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     setHexText(normalized);
@@ -286,12 +292,14 @@ export default function PremiumColorPicker({
     const wheel = wheelRef.current;
     if (!canvas || !wheel) return;
 
-    const size = Math.max(180, Math.floor(wheel.clientWidth));
+    const rect = wheel.getBoundingClientRect();
+    const measuredSize = Math.min(rect.width || wheel.clientWidth, rect.height || wheel.clientHeight);
+    const size = Math.max(180, Math.floor(measuredSize || wheel.clientWidth || 240));
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -345,9 +353,25 @@ export default function PremiumColorPicker({
   useEffect(() => {
     if (!open) return;
 
-    const onResize = () => drawWheel();
+    const onResize = () => requestAnimationFrame(drawWheel);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, [open, hsv.v]);
+
+  useEffect(() => {
+    if (!open || !wheelRef.current || typeof ResizeObserver === "undefined") return;
+
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(drawWheel);
+    });
+
+    observer.observe(wheelRef.current);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [open, hsv.v]);
 
   const handleWheelPointer = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -391,124 +415,127 @@ export default function PremiumColorPicker({
         {normalized}
       </span>
 
-      {open && (
-        <div className={styles.overlay} role="presentation" onMouseDown={() => setOpen(false)}>
-          <div className={styles.modal} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.header}>
-              <div>
-                <p className={styles.kicker}>Color Studio</p>
-                <h3 className={styles.title}>{ariaLabel}</h3>
-              </div>
-              <button type="button" className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close color picker">
-                ✕
-              </button>
-            </div>
-
-            <div className={styles.body}>
-              <div className={styles.wheelColumn}>
-                <div className={styles.wheelWrap} ref={wheelRef} onPointerDown={handleWheelPointer} onPointerMove={(event) => event.buttons === 1 && handleWheelPointer(event)}>
-                  <canvas ref={canvasRef} className={styles.canvas} />
-                  <div className={styles.marker} style={{ left: `${markerX}%`, top: `${markerY}%`, background: normalized }} />
+      {open && isMounted
+        ? createPortal(
+            <div className={styles.overlay} role="presentation" onMouseDown={() => setOpen(false)}>
+              <div className={styles.modal} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
+                <div className={styles.header}>
+                  <div>
+                    <p className={styles.kicker}>Color Studio</p>
+                    <h3 className={styles.title}>{ariaLabel}</h3>
+                  </div>
+                  <button type="button" className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close color picker">
+                    ✕
+                  </button>
                 </div>
 
-                <label className={styles.sliderRow}>
-                  <span>Brightness</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={hsv.v}
-                    onChange={(event) => updateFromHsv({ ...hsv, v: Number(event.target.value) })}
-                  />
-                </label>
-              </div>
+                <div className={styles.body}>
+                  <div className={styles.wheelColumn}>
+                    <div className={styles.wheelWrap} ref={wheelRef} onPointerDown={handleWheelPointer} onPointerMove={(event) => event.buttons === 1 && handleWheelPointer(event)}>
+                      <canvas ref={canvasRef} className={styles.canvas} />
+                      <div className={styles.marker} style={{ left: `${markerX}%`, top: `${markerY}%`, background: normalized }} />
+                    </div>
 
-              <div className={styles.controlsColumn}>
-                <div className={styles.previewCard} style={{ background: normalized }}>
-                  <span className={styles.previewLabel} style={{ color: textColor }}>
-                    {normalized}
-                  </span>
-                </div>
-
-                <div className={styles.grid}>
-                  <label className={styles.inputGroup}>
-                    <span>HEX</span>
-                    <input
-                      type="text"
-                      value={hexText}
-                      onChange={(event) => setHexText(event.target.value)}
-                      onBlur={(event) => {
-                        const nextHex = normalizeHex(event.target.value) || normalized;
-                        updateFromHex(nextHex);
-                      }}
-                      placeholder="#FFA665"
-                    />
-                  </label>
-
-                  <div className={styles.rgbGrid}>
-                    <label className={styles.inputGroup}>
-                      <span>R</span>
-                      <input type="number" min="0" max="255" value={rgbText.r} onChange={(event) => updateFromRgb("r", event.target.value)} />
-                    </label>
-                    <label className={styles.inputGroup}>
-                      <span>G</span>
-                      <input type="number" min="0" max="255" value={rgbText.g} onChange={(event) => updateFromRgb("g", event.target.value)} />
-                    </label>
-                    <label className={styles.inputGroup}>
-                      <span>B</span>
-                      <input type="number" min="0" max="255" value={rgbText.b} onChange={(event) => updateFromRgb("b", event.target.value)} />
+                    <label className={styles.sliderRow}>
+                      <span>Brightness</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={hsv.v}
+                        onChange={(event) => updateFromHsv({ ...hsv, v: Number(event.target.value) })}
+                      />
                     </label>
                   </div>
-                </div>
 
-                <div className={styles.section}>
-                  <div className={styles.sectionHeader}>
-                    <span>Brand presets</span>
-                  </div>
-                  <div className={styles.swatchRow}>
-                    {presets.map((preset) => (
-                      <button key={preset} type="button" className={styles.swatchButton} onClick={() => commitColor(preset)} aria-label={`Use preset ${preset}`}>
-                        <span className={styles.swatch} style={{ background: preset }} />
-                        <span>{preset}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                  <div className={styles.controlsColumn}>
+                    <div className={styles.previewCard} style={{ background: normalized }}>
+                      <span className={styles.previewLabel} style={{ color: textColor }}>
+                        {normalized}
+                      </span>
+                    </div>
 
-                <div className={styles.section}>
-                  <div className={styles.sectionHeader}>
-                    <span>Recent colors</span>
-                  </div>
-                  <div className={styles.swatchRow}>
-                    {recents.length > 0 ? recents.map((color) => (
-                      <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use recent color ${color}`}>
-                        <span className={styles.swatch} style={{ background: color }} />
-                        <span>{color}</span>
-                      </button>
-                    )) : <p className={styles.emptyState}>Recent colors will appear here as you pick them.</p>}
-                  </div>
-                </div>
+                    <div className={styles.grid}>
+                      <label className={styles.inputGroup}>
+                        <span>HEX</span>
+                        <input
+                          type="text"
+                          value={hexText}
+                          onChange={(event) => setHexText(event.target.value)}
+                          onBlur={(event) => {
+                            const nextHex = normalizeHex(event.target.value) || normalized;
+                            updateFromHex(nextHex);
+                          }}
+                          placeholder="#FFA665"
+                        />
+                      </label>
 
-                <div className={styles.section}>
-                  <div className={styles.sectionHeader}>
-                    <span>Saved custom colors</span>
-                    <button type="button" className={styles.secondaryBtn} onClick={saveCustomColor}>Save current</button>
-                  </div>
-                  <div className={styles.swatchRow}>
-                    {savedColors.length > 0 ? savedColors.map((color) => (
-                      <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use saved color ${color}`}>
-                        <span className={styles.swatch} style={{ background: color }} />
-                        <span>{color}</span>
-                      </button>
-                    )) : <p className={styles.emptyState}>Save a custom color to keep it handy for this browser.</p>}
+                      <div className={styles.rgbGrid}>
+                        <label className={styles.inputGroup}>
+                          <span>R</span>
+                          <input type="number" min="0" max="255" value={rgbText.r} onChange={(event) => updateFromRgb("r", event.target.value)} />
+                        </label>
+                        <label className={styles.inputGroup}>
+                          <span>G</span>
+                          <input type="number" min="0" max="255" value={rgbText.g} onChange={(event) => updateFromRgb("g", event.target.value)} />
+                        </label>
+                        <label className={styles.inputGroup}>
+                          <span>B</span>
+                          <input type="number" min="0" max="255" value={rgbText.b} onChange={(event) => updateFromRgb("b", event.target.value)} />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <span>Brand presets</span>
+                      </div>
+                      <div className={styles.swatchRow}>
+                        {presets.map((preset) => (
+                          <button key={preset} type="button" className={styles.swatchButton} onClick={() => commitColor(preset)} aria-label={`Use preset ${preset}`}>
+                            <span className={styles.swatch} style={{ background: preset }} />
+                            <span>{preset}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <span>Recent colors</span>
+                      </div>
+                      <div className={styles.swatchRow}>
+                        {recents.length > 0 ? recents.map((color) => (
+                          <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use recent color ${color}`}>
+                            <span className={styles.swatch} style={{ background: color }} />
+                            <span>{color}</span>
+                          </button>
+                        )) : <p className={styles.emptyState}>Recent colors will appear here as you pick them.</p>}
+                      </div>
+                    </div>
+
+                    <div className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <span>Saved custom colors</span>
+                        <button type="button" className={styles.secondaryBtn} onClick={saveCustomColor}>Save current</button>
+                      </div>
+                      <div className={styles.swatchRow}>
+                        {savedColors.length > 0 ? savedColors.map((color) => (
+                          <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use saved color ${color}`}>
+                            <span className={styles.swatch} style={{ background: color }} />
+                            <span>{color}</span>
+                          </button>
+                        )) : <p className={styles.emptyState}>Save a custom color to keep it handy for this browser.</p>}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

@@ -24,13 +24,22 @@ function redirectToPortal(req: NextRequest, error?: string) {
   return NextResponse.redirect(url);
 }
 
+function wantsJson(req: NextRequest) {
+  return req.headers.get("accept")?.includes("application/json") || req.headers.get("x-clutch-fetch") === "true";
+}
+
+function logoErrorResponse(req: NextRequest, error: string, status = 400) {
+  if (wantsJson(req)) return NextResponse.json({ error }, { status });
+  return redirectToPortal(req, error);
+}
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const logoFile = form.get("logo");
 
   // Validate file is present
   if (!logoFile || typeof logoFile === "string" || logoFile.size === 0) {
-    return redirectToPortal(req, "no_logo_selected");
+    return logoErrorResponse(req, "no_logo_selected");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -40,6 +49,7 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (wantsJson(req)) return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -52,6 +62,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!customer) {
+    if (wantsJson(req)) return NextResponse.json({ error: "no_customer" }, { status: 404 });
     return NextResponse.redirect(
       new URL("/portal?error=no_customer", req.url)
     );
@@ -61,12 +72,12 @@ export async function POST(req: NextRequest) {
   const extension = ALLOWED_LOGO_TYPES.get(logoFile.type);
 
   if (!extension) {
-    return redirectToPortal(req, "logo_type_not_supported");
+    return logoErrorResponse(req, "logo_type_not_supported");
   }
 
   // Validate file size
   if (logoFile.size > MAX_LOGO_SIZE) {
-    return redirectToPortal(req, "logo_too_large");
+    return logoErrorResponse(req, "logo_too_large");
   }
 
   // Generate safe filename
@@ -83,7 +94,7 @@ export async function POST(req: NextRequest) {
 
   if (uploadError) {
     console.error("CUSTOMER LOGO UPLOAD ERROR:", uploadError);
-    return redirectToPortal(req, "logo_upload_failed");
+    return logoErrorResponse(req, "logo_upload_failed", 500);
   }
 
   // Get public URL
@@ -113,7 +124,11 @@ export async function POST(req: NextRequest) {
       await admin.storage.from(CUSTOMER_LOGO_BUCKET).remove([nextLogoPath]);
     }
 
-    return redirectToPortal(req, "logo_update_failed");
+    return logoErrorResponse(req, "logo_update_failed", 500);
+  }
+
+  if (wantsJson(req)) {
+    return NextResponse.json({ ok: true, logo_url, logo_path: nextLogoPath });
   }
 
   return redirectToPortal(req);
@@ -127,6 +142,7 @@ export async function DELETE(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (wantsJson(req)) return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -139,6 +155,7 @@ export async function DELETE(req: NextRequest) {
     .single();
 
   if (!customer) {
+    if (wantsJson(req)) return NextResponse.json({ error: "no_customer" }, { status: 404 });
     return NextResponse.redirect(
       new URL("/portal?error=no_customer", req.url)
     );
@@ -160,8 +177,10 @@ export async function DELETE(req: NextRequest) {
 
   if (updateError) {
     console.error("CUSTOMER LOGO DELETE ERROR:", updateError);
-    return redirectToPortal(req, "logo_delete_failed");
+    return logoErrorResponse(req, "logo_delete_failed", 500);
   }
+
+  if (wantsJson(req)) return NextResponse.json({ ok: true, logo_url: null, logo_path: null });
 
   return redirectToPortal(req);
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
+  Map,
   LayoutDashboard,
   Link2,
   LogOut,
@@ -57,6 +58,12 @@ const navItems: NavItem[] = [
     href: "/portal/analytics",
     icon: BarChart3,
     match: (pathname) => pathname === "/portal/analytics",
+  },
+  {
+    label: "Heatmap",
+    href: "/portal/heatmap",
+    icon: Map,
+    match: (pathname) => pathname === "/portal/heatmap",
   },
   {
     label: "Admin",

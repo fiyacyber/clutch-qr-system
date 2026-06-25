@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { BuilderConfig } from "@/lib/builder-types";
 import { normalizeBlockType } from "./builder/blockUtils";
 import {
   ProfileHeroPreview,
+  AvatarBlockPreview,
+  BusinessNameBlockPreview,
+  SubheaderBlockPreview,
   ContactButtonsPreview,
   PhoneBlockPreview,
   BookingBlockPreview,
@@ -21,6 +25,10 @@ import {
 interface BuilderPublicProfileProps {
   config: BuilderConfig;
   profile: any;
+  mode?: "public" | "preview" | "editor";
+  editablePreview?: boolean;
+  selectedBlockId?: string | null;
+  onSelectBlock?: (blockId: string) => void;
 }
 
 type GroupKey =
@@ -32,12 +40,44 @@ type GroupKey =
   | "content";
 
 const GROUP_LABELS: Record<Exclude<GroupKey, "content">, string> = {
-  "contact-actions": "Contact Actions",
-  links: "Links",
-  "social-links": "Social Links",
-  "business-actions": "Business Actions",
-  "custom-links": "Custom Links",
+  "contact-actions": "Contact",
+  links: "Quick Links",
+  "social-links": "Social",
+  "business-actions": "Services",
+  "custom-links": "More",
 };
+
+function normalizeHex(value: unknown) {
+  const raw = typeof value === "string" ? value.trim().replace(/^#/, "") : "";
+  if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+    return `#${raw
+      .split("")
+      .map((char) => char + char)
+      .join("")
+      .toUpperCase()}`;
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(raw)) {
+    return `#${raw.toUpperCase()}`;
+  }
+  return null;
+}
+
+function getReadableTextColor(hex: string) {
+  const normalized = normalizeHex(hex) || "#FFA665";
+  const raw = normalized.slice(1);
+  const red = parseInt(raw.slice(0, 2), 16);
+  const green = parseInt(raw.slice(2, 4), 16);
+  const blue = parseInt(raw.slice(4, 6), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+  return luminance > 0.62 ? "#0F172A" : "#F8FAFC";
+}
+
+function resolveFontFamily(fontFamily?: string) {
+  if (fontFamily === "display") return '"Archivo Black", "Anton", "Avenir Next", sans-serif';
+  if (fontFamily === "sans") return '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
+  if (fontFamily === "serif") return '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+  return 'var(--font-exo2), "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
+}
 
 function getGroupForType(type: string): GroupKey {
   if (["contact-buttons", "phone-button", "email-button", "website-button"].includes(type)) {
@@ -60,6 +100,9 @@ function getGroupForType(type: string): GroupKey {
 
 const PREVIEW_COMPONENTS: Record<string, React.ComponentType<any>> = {
   "profile-hero": ProfileHeroPreview,
+  "avatar-block": AvatarBlockPreview,
+  "business-name-block": BusinessNameBlockPreview,
+  "subheader-block": SubheaderBlockPreview,
   "contact-buttons": ContactButtonsPreview,
   "phone-button": PhoneBlockPreview,
   "email-button": PhoneBlockPreview,
@@ -84,7 +127,17 @@ const PREVIEW_COMPONENTS: Record<string, React.ComponentType<any>> = {
 export default function BuilderPublicProfile({
   config,
   profile,
+  mode = "public",
+  editablePreview = false,
+  selectedBlockId,
+  onSelectBlock,
 }: BuilderPublicProfileProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonColor = normalizeHex(config.theme.buttonColor) || normalizeHex(config.theme.accentColor) || "#FFA665";
+  const buttonTextColor = getReadableTextColor(buttonColor);
+  const textColor = normalizeHex(config.theme.textColor) || (config.theme.darkMode ? "#F8FAFC" : "#0F172A");
+  const fontFamily = resolveFontFamily(config.theme.fontFamily);
+  const fontScale = config.theme.fontScale === "large" ? 1.12 : 1;
   const blocks = [...(config.blocks || [])]
     .sort((a, b) => a.order - b.order)
     .filter((block) => block.visible)
@@ -93,7 +146,8 @@ export default function BuilderPublicProfile({
       return { ...block, type } as any;
     });
 
-  const heroBlocks = blocks.filter((block) => block.type === "profile-hero");
+  const headerTypes = new Set(["profile-hero", "avatar-block", "business-name-block", "subheader-block"]);
+  const heroBlocks = blocks.filter((block) => headerTypes.has(block.type));
   const groupedBlocks: Record<GroupKey, any[]> = {
     "contact-actions": [],
     links: [],
@@ -104,7 +158,7 @@ export default function BuilderPublicProfile({
   };
 
   blocks.forEach((block) => {
-    if (block.type === "profile-hero") return;
+    if (headerTypes.has(block.type)) return;
     const group = getGroupForType(block.type);
     groupedBlocks[group].push(block);
   });
@@ -118,23 +172,135 @@ export default function BuilderPublicProfile({
     "content",
   ];
 
+  useEffect(() => {
+    if (mode !== "public") return;
+
+    const source = new URLSearchParams(window.location.search).get("source") || undefined;
+    const profileId = String(profile?.id || "").trim();
+
+    const sendEvent = (eventType: string, metadata?: Record<string, unknown>) => {
+      if (!profileId) return;
+
+      const payload = {
+        profile_id: profileId,
+        event_type: eventType,
+        metadata: {
+          slug: profile?.slug || undefined,
+          source,
+          ...(metadata || {}),
+        },
+      };
+
+      const body = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon("/api/connect/events", blob);
+        return;
+      }
+
+      void fetch("/api/connect/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      });
+    };
+
+    // Distinguish client-rendered page view from server profile view logging.
+    sendEvent("profile_view", { view_kind: "page_view" });
+
+    const root = rootRef.current;
+    if (!root) return;
+
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = (anchor.getAttribute("href") || "").trim();
+      const label = anchor.textContent?.trim() || undefined;
+      const lower = href.toLowerCase();
+
+      let eventType = "link_click";
+      if (lower.startsWith("tel:")) eventType = "call_click";
+      else if (lower.startsWith("mailto:")) eventType = "email_click";
+      else if (lower.startsWith("sms:")) eventType = "text_click";
+      else if (lower.includes("google.com/maps") || lower.includes("maps.apple.com")) eventType = "directions_click";
+      else if (lower.includes("/api/vcard/")) eventType = "save_contact";
+      else if ((label || "").toLowerCase().includes("website")) eventType = "website_click";
+
+      sendEvent(eventType, {
+        href,
+        label,
+      });
+    };
+
+    root.addEventListener("click", onClick);
+    return () => root.removeEventListener("click", onClick);
+  }, [mode, profile?.id, profile?.slug]);
+
+  const renderPreviewBlock = (block: any) => {
+    const Preview = PREVIEW_COMPONENTS[block.type] || UnknownBlockPreview;
+    const renderedBlock = (
+      <Preview
+        key={block.id}
+        block={block}
+        profile={profile}
+        profileId={profile?.id || "unknown"}
+      />
+    );
+
+    if (!editablePreview || block.type === "profile-hero") return renderedBlock;
+
+    return (
+      <div
+        key={block.id}
+        className={`builder-preview-selectable${selectedBlockId === block.id ? " selected" : ""}`}
+        role="button"
+        tabIndex={0}
+        aria-label={`Edit ${String(block.type).replace(/-/g, " ")} block`}
+        onClickCapture={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelectBlock?.(block.id);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelectBlock?.(block.id);
+          }
+        }}
+      >
+        <span className="builder-preview-edit-chip">Tap to edit</span>
+        {renderedBlock}
+      </div>
+    );
+  };
+
   return (
     <div
+      ref={rootRef}
       className="builder-public-profile"
+      data-mode={mode}
       data-theme={config.theme.darkMode ? "dark" : "light"}
-      style={{ "--builder-accent": config.theme.accentColor } as React.CSSProperties}
+      data-layout={config.theme.layout || "default"}
+      style={{
+        "--builder-accent": config.theme.accentColor,
+        "--builder-button-color": buttonColor,
+        "--builder-button-text": buttonTextColor,
+        "--builder-text-color": textColor,
+        "--builder-font-family": fontFamily,
+        "--builder-font-scale": String(fontScale),
+      } as React.CSSProperties}
     >
-      {heroBlocks.map((block) => {
-        const Preview = PREVIEW_COMPONENTS[block.type] || UnknownBlockPreview;
-        return (
-          <Preview
-            key={block.id}
-            block={block}
-            profile={profile}
-            profileId={profile?.id || "unknown"}
-          />
-        );
-      })}
+      {heroBlocks.length ? (
+        <section className="builder-profile-header-stack">
+          <div className="builder-hero-cover" aria-hidden="true" />
+          {heroBlocks.map((block) => {
+            return renderPreviewBlock(block);
+          })}
+        </section>
+      ) : null}
 
       <div className="builder-public-sections">
         {sectionOrder.map((groupKey) => {
@@ -149,15 +315,7 @@ export default function BuilderPublicProfile({
 
               <div className="builder-public-section-stack">
                 {sectionBlocks.map((block) => {
-                  const Preview = PREVIEW_COMPONENTS[block.type] || UnknownBlockPreview;
-                  return (
-                    <Preview
-                      key={block.id}
-                      block={block}
-                      profile={profile}
-                      profileId={profile?.id || "unknown"}
-                    />
-                  );
+                  return renderPreviewBlock(block);
                 })}
               </div>
             </section>

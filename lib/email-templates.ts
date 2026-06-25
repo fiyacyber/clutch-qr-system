@@ -45,7 +45,7 @@ function renderEmailLayout({
             <tr>
               <td style="background:linear-gradient(135deg,#384862 0%,#1f2a3b 100%);padding:28px 28px 24px 28px;">
                 <p style="margin:0 0 10px 0;color:#ffa665;font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">${escapeHtml(eyebrow)}</p>
-                <p style="margin:0;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:30px;line-height:1.15;font-weight:700;">Clutch QR</p>
+                <p style="margin:0;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:30px;line-height:1.15;font-weight:700;">Clutch Connect</p>
               </td>
             </tr>
             <tr>
@@ -69,7 +69,7 @@ function renderEmailLayout({
             </tr>
             <tr>
               <td style="padding:18px 28px;background:#f2f6fb;border-top:1px solid #e0e8f1;">
-                <p style="margin:0;color:#6b7c93;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;">Clutch QR from Clutch Print Shop</p>
+                <p style="margin:0;color:#6b7c93;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;">Clutch Connect from Clutch Print Shop</p>
               </td>
             </tr>
           </table>
@@ -87,43 +87,55 @@ export function buildOnboardingEmailTemplate({
   planName,
   intro,
   loginUrl,
+  trialEndsAt,
 }: {
   email: string;
   temporaryPassword: string;
   planName: string;
   intro: string;
   loginUrl: string;
+  trialEndsAt?: string | null;
 }) {
   const safeEmail = escapeHtml(email);
   const safePassword = escapeHtml(temporaryPassword);
+  const brandedPlanName = planName.toLowerCase().includes("clutch") ? planName : `Clutch ${planName}`;
+  const trialEndLabel = trialEndsAt
+    ? new Intl.DateTimeFormat("en", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(trialEndsAt))
+    : null;
 
   const html = renderEmailLayout({
-    preheader: `Your Clutch ${planName} access is ready.`,
+    preheader: `Your ${brandedPlanName} access is ready.`,
     eyebrow: "Account ready",
-    title: `Welcome to Clutch ${planName}`,
+    title: `Welcome to ${brandedPlanName}`,
     intro,
     detailsHtml: `
       <p style="margin:0 0 10px 0;"><strong>Portal login:</strong> <a href="${escapeHtml(loginUrl)}" style="color:#2b5c93;text-decoration:underline;">${escapeHtml(loginUrl)}</a></p>
       <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${safeEmail}</p>
+      ${trialEndLabel ? `<p style="margin:0 0 6px 0;"><strong>Trial ends:</strong> ${escapeHtml(trialEndLabel)}</p>` : ""}
       <p style="margin:0;"><strong>Temporary password:</strong> ${safePassword}</p>
     `,
-    ctaLabel: "Open Clutch Portal",
+    ctaLabel: "Open Clutch Connect",
     ctaUrl: loginUrl,
     helperText: "You will be prompted to create a new password after your first sign in.",
   });
 
   const text = [
-    `Welcome to Clutch ${planName}!`,
+    `Welcome to ${brandedPlanName}!`,
     "",
     intro,
     "",
     `Portal login: ${loginUrl}`,
     `Email: ${email}`,
+    ...(trialEndLabel ? [`Trial ends: ${trialEndLabel}`] : []),
     `Temporary password: ${temporaryPassword}`,
     "",
     "You will be prompted to create a new password after your first sign in.",
     "",
-    "Clutch QR from Clutch Print Shop",
+    "Clutch Connect from Clutch Print Shop",
   ].join("\n");
 
   return { html, text };

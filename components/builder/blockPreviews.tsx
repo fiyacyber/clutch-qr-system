@@ -159,7 +159,12 @@ function ActionCard({
 
 function HeroAvatar({ data, profile }: { data: any; profile: any }) {
   const [failed, setFailed] = useState(false);
-  const avatarUrl = data.avatarUrl || profile.avatar_url;
+  const normalizeAvatarUrl = (value: unknown) => {
+    const url = typeof value === "string" ? value.trim() : "";
+    if (!url || url === "null" || url === "undefined" || url.startsWith("blob:")) return "";
+    return url;
+  };
+  const avatarUrl = normalizeAvatarUrl(data.avatarUrl) || normalizeAvatarUrl(profile.avatar_url);
   const initials = useMemo(
     () => createInitials(data.businessName, profile.business_name, profile.email),
     [data.businessName, profile.business_name, profile.email]
@@ -201,6 +206,106 @@ function BadgeIcon({ icon }: { icon: string }) {
     default:
       return <BadgeCheck {...commonProps} />;
   }
+}
+
+function resolveTextBlockFont(fontFamily?: string) {
+  if (fontFamily === "display") return '"Archivo Black", "Anton", "Avenir Next", sans-serif';
+  if (fontFamily === "sans") return '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
+  if (fontFamily === "serif") return '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+  return "var(--builder-font-family)";
+}
+
+export function AvatarBlockPreview({ block, profile }: BlockPreviewProps) {
+  const data = getBlockData(block);
+  const glowEnabled = data.avatarGlowEnabled !== false;
+  const glowColor = data.avatarGlowColor || "#FF6B2C";
+  const glowOpacity = data.avatarGlowOpacity ?? 0.35;
+  const glowBlur = data.avatarGlowBlur ?? 18;
+  const glowSpread = data.avatarGlowSpread ?? 10;
+
+  const badgeEnabled = Boolean(data.verifiedBadgeEnabled ?? data.verified);
+  const badgeColor = data.verifiedBadgeColor || "#f59e0b";
+  const badgeIconColor = data.verifiedBadgeIconColor || "#0f172a";
+  const badgeIcon = data.verifiedBadgeIcon || "checkmark";
+  const badgePosition = data.verifiedBadgePosition || "bottom-right";
+  const badgeSize = data.verifiedBadgeSize ?? 24;
+
+  return (
+    <div className="builder-block builder-block-avatar">
+      <div className="builder-hero-avatar-wrap">
+        {glowEnabled && (
+          <span
+            className="builder-avatar-glow-layer"
+            style={{
+              backgroundColor: glowColor,
+              opacity: glowOpacity,
+              filter: `blur(${glowBlur}px)`,
+              inset: `-${glowSpread}px`,
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <HeroAvatar data={data} profile={profile} />
+
+        {badgeEnabled && (
+          <span
+            className={`builder-verified-badge builder-verified-badge-${badgePosition}`}
+            style={{
+              backgroundColor: badgeColor,
+              color: badgeIconColor,
+              width: `${badgeSize}px`,
+              height: `${badgeSize}px`,
+              fontSize: `${Math.max(10, Math.round(badgeSize * 0.55))}px`,
+            }}
+            aria-label="Verified badge"
+          >
+            <BadgeIcon icon={badgeIcon} />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function BusinessNameBlockPreview({ block, profile }: BlockPreviewProps) {
+  const data = getBlockData(block);
+  const text = data.text || profile.business_name || "Your Business Name";
+  return (
+    <div className="builder-block builder-block-business-name">
+      <h1
+        className="builder-hero-name"
+        style={{
+          color: data.color || undefined,
+          fontSize: `${Number(data.fontSize) || 40}px`,
+          fontWeight: Number(data.fontWeight) || 800,
+          fontFamily: resolveTextBlockFont(data.fontFamily),
+        }}
+      >
+        {text}
+      </h1>
+    </div>
+  );
+}
+
+export function SubheaderBlockPreview({ block, profile }: BlockPreviewProps) {
+  const data = getBlockData(block);
+  const text = data.text || profile.title || "Your title or subheader";
+  return (
+    <div className="builder-block builder-block-subheader">
+      <p
+        className="builder-hero-title"
+        style={{
+          color: data.color || undefined,
+          fontSize: `${Number(data.fontSize) || 22}px`,
+          fontWeight: Number(data.fontWeight) || 600,
+          fontFamily: resolveTextBlockFont(data.fontFamily),
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
 }
 
 export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {

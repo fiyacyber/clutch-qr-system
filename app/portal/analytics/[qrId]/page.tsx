@@ -165,7 +165,7 @@ export default async function QRAnalyticsPage({
 
       {/* Heatmap */}
       <div className="chart-container">
-        <div className="chart-title">Activity Heatmap (By Day & Hour)</div>
+        <div className="chart-title">Activity</div>
         <div className="heatmap-grid">
           {Array.from(heatmapData.entries()).map(([day]) =>
             Array.from({ length: 24 }).map((_, hour) => {

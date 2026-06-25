@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImageIcon, UploadCloud } from "lucide-react";
 
@@ -22,11 +22,16 @@ export default function CustomerLogoUpload({
   customerLogoUrl,
 }: CustomerLogoUploadProps) {
   const logoInputId = useId();
+  const [currentLogoUrl, setCurrentLogoUrl] = useState(customerLogoUrl || null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setCurrentLogoUrl(customerLogoUrl || null);
+  }, [customerLogoUrl]);
 
   function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
@@ -74,13 +79,25 @@ export default function CustomerLogoUpload({
         method: "POST",
         body: new FormData(form),
         credentials: "same-origin",
+        headers: {
+          accept: "application/json",
+          "x-clutch-fetch": "true",
+        },
       });
 
-      if (response.redirected) {
-        router.push(response.url);
-      } else {
-        router.refresh();
+      const body = await response.json();
+
+      if (!response.ok) {
+        setLogoError(ERROR_MESSAGES[body.error] || "Failed to upload logo. Please try again.");
+        setIsUploading(false);
+        return;
       }
+
+      setCurrentLogoUrl(body.logo_url || null);
+      setSelectedFile(null);
+      form.reset();
+      setIsUploading(false);
+      router.refresh();
     } catch (error) {
       console.error("LOGO UPLOAD ERROR:", error);
       setLogoError("Failed to upload logo. Please try again.");
@@ -97,13 +114,24 @@ export default function CustomerLogoUpload({
       const response = await fetch("/api/customer/logo", {
         method: "DELETE",
         credentials: "same-origin",
+        headers: {
+          accept: "application/json",
+          "x-clutch-fetch": "true",
+        },
       });
 
-      if (response.redirected) {
-        router.push(response.url);
-      } else {
-        router.refresh();
+      const body = await response.json();
+
+      if (!response.ok) {
+        setLogoError(ERROR_MESSAGES[body.error] || "Failed to delete logo. Please try again.");
+        setIsDeleting(false);
+        return;
       }
+
+      setCurrentLogoUrl(null);
+      setSelectedFile(null);
+      setIsDeleting(false);
+      router.refresh();
     } catch (error) {
       console.error("LOGO DELETE ERROR:", error);
       setLogoError("Failed to delete logo. Please try again.");
@@ -115,9 +143,9 @@ export default function CustomerLogoUpload({
     <div className="card">
       <h3>Company Logo</h3>
 
-      {customerLogoUrl && (
+      {currentLogoUrl && (
         <div className="logo-display">
-          <img src={customerLogoUrl} alt="Company Logo" className="logo-preview" />
+          <img src={currentLogoUrl} alt="Company Logo" className="logo-preview" />
         </div>
       )}
 
@@ -188,7 +216,7 @@ export default function CustomerLogoUpload({
         </div>
       </form>
 
-      {customerLogoUrl && (
+      {currentLogoUrl && (
         <div className="actions logo-remove-actions">
           <button
             className="btn ghost"

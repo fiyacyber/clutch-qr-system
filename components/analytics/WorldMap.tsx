@@ -173,12 +173,6 @@ export default function WorldMap({ countryData, mapPoints, viewBy = "Scans", onD
 
   return (
     <div className="ca-world-map" onMouseLeave={() => setTooltip(null)}>
-      {!hasCityPoints && (
-        <span className="ca-map-demo-badge">
-          City/town heat points appear after scans include location coordinates
-        </span>
-      )}
-
       <ComposableMap
         projectionConfig={{ scale: 145, center: [10, 5] }}
         style={{ width: "100%", height: "320px" }}

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
 import {
   QrCode, BarChart2, Globe, Monitor,
   Activity, Users, Download, SlidersHorizontal,
@@ -10,7 +11,10 @@ import {
   ArrowUpRight, Search, Building2, Mail, ShieldCheck, Bell,
   Palette, HelpCircle, LogOut, Trash2, Sparkles, CreditCard,
 } from "lucide-react";
+import CampaignMetricGrid from "@/components/dashboard/CampaignMetricGrid";
+import DashboardPreviewCard from "@/components/dashboard/DashboardPreviewCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import HeatmapPreview from "@/components/dashboard/HeatmapPreview";
 
 const WorldMap      = dynamic(() => import("./WorldMap"),       { ssr: false, loading: () => <div className="ca-map-skeleton" /> });
 const ScansLineChart = dynamic(() => import("./ScansLineChart"), { ssr: false, loading: () => <div className="ca-chart-skeleton" /> });
@@ -78,9 +82,9 @@ const KPI = [
   { key: "totalScans",     label: "Total Scans",          icon: BarChart2 },
   { key: "uniqueVisitors", label: "Unique Visitors",      icon: Users },
   { key: "linkClicks",     label: "Link Clicks",          icon: MousePointerClick },
-  { key: "connectViews",   label: "Clutch Connect Views", icon: Eye },
+  { key: "connectViews",   label: "Profile Views", icon: Eye },
   { key: "leadsCaptured",  label: "Leads Captured",       icon: UserCheck },
-  { key: "activeQrCodes",  label: "Active QR Codes",      icon: QrCode },
+  { key: "activeQrCodes",  label: "Active Campaigns",      icon: QrCode },
 ];
 
 function prettyDate(v?: string | null) {
@@ -110,6 +114,7 @@ function heatLevel(count: number, max: number) {
 export default function AnalyticsDashboard(props: DashboardProps) {
   const { activeTab, heatmap } = props;
   const [viewBy, setViewBy] = useState("Scans");
+  const [topLocationView, setTopLocationView] = useState<"cities" | "countries">("countries");
   const [timeFilter, setTimeFilter] = useState("30D");
   const [qrSearch, setQrSearch] = useState("");
   const [qrFilter, setQrFilter] = useState("all");
@@ -120,6 +125,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const [geoCampaign, setGeoCampaign] = useState("all");
   const [geoQrCode, setGeoQrCode] = useState("all");
   const [showDashboardFilters, setShowDashboardFilters] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [dangerModal, setDangerModal] = useState<"signout" | "delete" | null>(null);
 
   const analyticsTab = useMemo(() => {
@@ -132,10 +138,10 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   }, [activeTab]);
 
   const isSettingsView = activeTab === "settings";
-  const headerTitle = isSettingsView ? "Settings" : "Clutch Analytics";
+  const headerTitle = isSettingsView ? "Settings" : "Insights";
   const headerSubtitle = isSettingsView
     ? "Manage your account, profile, security, notifications, and subscription settings."
-    : "Track QR scans, Clutch Connect profile views, link clicks, and lead activity.";
+    : "Measure scans, profile views, link clicks, leads, and location performance across campaigns.";
   const isAdmin = props.planCode === "admin" || props.accountType === "Admin";
   const qrUsageLimit = props.qrUsageLimit ?? 0;
   const qrUsagePercent = props.qrUsageLimit ? Math.min((props.qrUsageUsed || 0) / props.qrUsageLimit, 1) * 100 : 100;
@@ -195,6 +201,20 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     return [...qrRows].sort((a, b) => b.totalScans - a.totalScans)[0];
   }, [qrRows]);
 
+  const topCity = useMemo(() => {
+    return props.cityRows[0] || null;
+  }, [props.cityRows]);
+
+  const overviewTopLocations = useMemo(() => {
+    if (topLocationView === "countries") {
+      return props.countryData
+        .slice()
+        .sort((a, b) => b.scans - a.scans)
+        .map((row) => ({ label: row.name, value: row.scans }));
+    }
+    return props.cityRows;
+  }, [props.countryData, props.cityRows, topLocationView]);
+
   const lastScan = useMemo(() => {
     const timestamps = qrRows
       .map((row) => (row.lastScan ? new Date(row.lastScan).getTime() : null))
@@ -202,6 +222,16 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     if (!timestamps.length) return null;
     return new Date(Math.max(...timestamps)).toISOString();
   }, [qrRows]);
+
+  const performanceMetrics = [
+    { label: "Total Scans", value: props.totalScans.toLocaleString(), description: props.totalScans ? "All campaign scan events." : "No scans yet." },
+    { label: "Unique Visitors", value: props.uniqueVisitors.toLocaleString(), description: "Estimated unique campaign visitors." },
+    { label: "Profile Views", value: props.connectViews.toLocaleString(), description: "Clutch Connect profile views." },
+    { label: "Link Clicks", value: props.linkClicks.toLocaleString(), description: "Tracked profile link engagement." },
+    { label: "Leads Captured", value: props.leadsCaptured.toLocaleString(), description: "Lead form submissions." },
+    { label: "Contact Saves", value: "—", description: "Contact save tracking appears when available." },
+    { label: "NFC Taps", value: "—", description: "NFC tap attribution placeholder for Phase 1." },
+  ];
 
   const templates = [
     { label: "Business Card", href: "/portal/create?template=business-card" },
@@ -443,7 +473,11 @@ export default function AnalyticsDashboard(props: DashboardProps) {
       .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    downloadBlob(filename, csv, "text/csv;charset=utf-8;");
+  }
+
+  function downloadBlob(filename: string, content: BlobPart, type: string) {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -452,6 +486,101 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function getCampaignExportRows(): Array<Array<string | number | null | undefined>> {
+    return [
+      ["Campaign", "Destination", "Type", "Status", "Total Scans", "Unique Visitors", "Last Scan", "Linked Profile"],
+      ...filteredQrRows.map((row) => [
+        row.name,
+        row.destination,
+        row.type,
+        row.status,
+        row.totalScans,
+        row.uniqueVisitors,
+        row.lastScan ? prettyDate(row.lastScan) : "No scans yet",
+        row.linkedProfileName || "",
+      ]),
+    ];
+  }
+
+  function exportCampaignCsv() {
+    downloadCsv("clutch-campaign-performance.csv", getCampaignExportRows());
+    setShowExportMenu(false);
+  }
+
+  function exportCampaignXls() {
+    const rows = getCampaignExportRows();
+    const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${rows
+      .map((row, rowIndex) => `<tr>${row
+        .map((value) => {
+          const tag = rowIndex === 0 ? "th" : "td";
+          return `<${tag}>${String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")}</${tag}>`;
+        })
+        .join("")}</tr>`)
+      .join("")}</table></body></html>`;
+
+    downloadBlob("clutch-campaign-performance.xls", html, "application/vnd.ms-excel;charset=utf-8;");
+    setShowExportMenu(false);
+  }
+
+  function exportCampaignPdf() {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
+    const rows = filteredQrRows;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 36;
+    let y = 48;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("Clutch Campaign Performance", margin, y);
+    y += 20;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(88, 101, 125);
+    doc.text(`Exported ${new Date().toLocaleString()} • ${rows.length} campaigns`, margin, y);
+    y += 28;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(11, 31, 53);
+    doc.text("Campaign", margin, y);
+    doc.text("Scans", pageWidth - 220, y);
+    doc.text("Visitors", pageWidth - 160, y);
+    doc.text("Last Scan", pageWidth - 92, y);
+    y += 8;
+    doc.setDrawColor(216, 221, 232);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 18;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(56, 72, 98);
+
+    for (const row of rows) {
+      if (y > 560) {
+        doc.addPage();
+        y = 48;
+      }
+
+      const campaign = doc.splitTextToSize(row.name, pageWidth - 320).slice(0, 2);
+      const destination = doc.splitTextToSize(row.destination || "", pageWidth - 320).slice(0, 1);
+      doc.setFont("helvetica", "bold");
+      doc.text(campaign, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(destination, margin, y + campaign.length * 10 + 2);
+      doc.text(String(row.totalScans), pageWidth - 220, y);
+      doc.text(String(row.uniqueVisitors), pageWidth - 160, y);
+      doc.text(row.lastScan ? prettyDate(row.lastScan) : "No scans", pageWidth - 92, y);
+      y += Math.max(34, campaign.length * 10 + 18);
+    }
+
+    doc.save("clutch-campaign-performance.pdf");
+    setShowExportMenu(false);
   }
 
   function exportAnalyticsCsv() {
@@ -812,9 +941,23 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                 >{t}</button>
               ))}
             </div>
-            <button type="button" className="ca-ctrl-btn" onClick={exportAnalyticsCsv}>
-              <Download size={13} /> Export <ChevronDown size={12} />
-            </button>
+            <div className="ca-export-menu-wrap">
+              <button
+                type="button"
+                className={`ca-ctrl-btn${showExportMenu ? " active" : ""}`}
+                onClick={() => setShowExportMenu((isOpen) => !isOpen)}
+                aria-expanded={showExportMenu}
+              >
+                <Download size={13} /> Export <ChevronDown size={12} />
+              </button>
+              {showExportMenu ? (
+                <div className="ca-export-menu" role="menu" aria-label="Export campaign performance">
+                  <button type="button" onClick={exportCampaignCsv} role="menuitem">CSV</button>
+                  <button type="button" onClick={exportCampaignXls} role="menuitem">XLS</button>
+                  <button type="button" onClick={exportCampaignPdf} role="menuitem">PDF</button>
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               className={`ca-ctrl-btn${showDashboardFilters ? " active" : ""}`}
@@ -833,7 +976,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               { key: "overview", label: "Overview" },
               { key: "geography", label: "Geography" },
               { key: "technology", label: "Technology" },
-              { key: "activity-heatmap", label: "Activity Heatmap" },
+              { key: "activity-heatmap", label: "Activity" },
               { key: "campaign-performance", label: "Campaign Performance" },
             ].map((tab) => (
               <Link
@@ -971,15 +1114,28 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                 <div className="ca-card">
                   <div className="ca-card-head">
                     <h2 className="ca-card-title">Top Locations</h2>
-                    <div className="ca-select-wrap ca-select-sm">
-                      <select className="ca-select">
-                        <option>Top Cities</option>
-                        <option>Top Countries</option>
-                      </select>
-                      <ChevronDown size={11} className="ca-select-caret" />
+                    <div className="ca-inline-toggle" role="tablist" aria-label="Top location view">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={topLocationView === "cities"}
+                        className={`ca-inline-toggle-btn${topLocationView === "cities" ? " active" : ""}`}
+                        onClick={() => setTopLocationView("cities")}
+                      >
+                        Top Cities
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={topLocationView === "countries"}
+                        className={`ca-inline-toggle-btn${topLocationView === "countries" ? " active" : ""}`}
+                        onClick={() => setTopLocationView("countries")}
+                      >
+                        Top Countries
+                      </button>
                     </div>
                   </div>
-                  {props.cityRows.length ? (
+                  {overviewTopLocations.length ? (
                     <table className="ca-loc-table">
                       <thead>
                         <tr>
@@ -988,7 +1144,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {props.cityRows.slice(0, 5).map(row => (
+                        {overviewTopLocations.slice(0, 5).map(row => (
                           <tr key={row.label}>
                             <td>{row.label}</td>
                             <td>{row.value}</td>
@@ -997,7 +1153,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                       </tbody>
                     </table>
                   ) : (
-                    <div className="ca-empty">No location data yet.</div>
+                    <div className="ca-empty">No {topLocationView === "countries" ? "country" : "city"} data yet.</div>
                   )}
                   <Link href="/portal/analytics?tab=geography" className="ca-card-link">
                     View full report <ArrowUpRight size={13} />
@@ -1037,7 +1193,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               {/* Activity Heatmap */}
               <div className="ca-card ca-heatmap-card">
                 <div className="ca-card-head">
-                  <h2 className="ca-card-title">Activity Heatmap <span className="ca-title-sub">by Day &amp; Hour</span></h2>
+                  <h2 className="ca-card-title">Activity <span className="ca-title-sub">by Day &amp; Hour</span></h2>
                   <div className="ca-heat-legend">
                     <span>Less Activity</span>
                     <div className="ca-heat-swatches">
@@ -1468,7 +1624,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               </div>
               <div className="ca-card ca-heatmap-card">
                 <div className="ca-card-head">
-                  <h2 className="ca-card-title">Activity Heatmap <span className="ca-title-sub">by Day &amp; Hour</span></h2>
+                  <h2 className="ca-card-title">Activity <span className="ca-title-sub">by Day &amp; Hour</span></h2>
                   <div className="ca-heat-legend">
                     <span>Less Activity</span>
                     <div className="ca-heat-swatches">

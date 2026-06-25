@@ -1,14 +1,17 @@
 "use client";
 
 import { BuilderConfig } from "@/lib/builder-types";
-import BuilderPublicProfile from "./BuilderPublicProfile";
+import ConnectProfileView from "./connect/ConnectProfileView";
 
 interface BuilderPreviewProps {
   config: BuilderConfig;
   profile: any;
+  editablePreview?: boolean;
+  selectedBlockId?: string | null;
+  onSelectBlock?: (blockId: string) => void;
 }
 
-export default function BuilderPreview({ config, profile }: BuilderPreviewProps) {
+export default function BuilderPreview({ config, profile, editablePreview = false, selectedBlockId, onSelectBlock }: BuilderPreviewProps) {
   return (
     <div className="saas-preview-wrap">
       {/* Label row */}
@@ -32,7 +35,14 @@ export default function BuilderPreview({ config, profile }: BuilderPreviewProps)
           </div>
           {/* Screen scroll area */}
           <div className="saas-device-screen">
-            <BuilderPublicProfile config={config} profile={profile} />
+            <ConnectProfileView
+              profile={profile}
+              blocks={config.blocks}
+              theme={config.theme}
+              mode={editablePreview ? "editor" : "preview"}
+              selectedBlockId={selectedBlockId}
+              onSelectBlock={onSelectBlock}
+            />
           </div>
           {/* Home bar */}
           <div className="saas-device-bar" />

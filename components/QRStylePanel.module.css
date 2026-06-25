@@ -116,6 +116,24 @@
   width: 100%;
 }
 
+.inlineColorPicker {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.inlineColorTrigger {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.inlineColorValue {
+  min-width: 116px;
+}
+
 .input[type="color"] {
   width: 60px;
   height: 60px;
@@ -291,11 +309,26 @@
     grid-template-columns: 1fr;
   }
 
+  .inlineColorValue {
+    min-width: 110px;
+  }
+
   .sizeGrid {
     grid-template-columns: 1fr;
   }
 
   .themeGrid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .inlineColorPicker {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineColorValue {
+    width: 100%;
+    min-width: 0;
   }
 }

@@ -31,10 +31,51 @@ export type ShopifyProvisioningResult = {
   skippedReason?: string;
 };
 
-const QR_PRO_PRODUCT_KEYWORDS = ["qr pro", "qrpro", "qr-pro"];
-const QR_PRO_PLUS_PRODUCT_KEYWORDS = ["qr pro+", "qr pro plus", "qrproplus", "qr-pro-plus"];
+const QR_PRO_PRODUCT_KEYWORDS = [
+  "qr pro",
+  "qrpro",
+  "qr-pro",
+  "clutch connect",
+  "connect hosting",
+  "smart business card",
+  "clutch smart business card",
+  "clutch connect card",
+  "nfc business card",
+  "business kit",
+  "starter kit",
+  "startup kit",
+  "growth kit",
+];
+const QR_PRO_PLUS_PRODUCT_KEYWORDS = [
+  "qr pro+",
+  "qr pro plus",
+  "qrproplus",
+  "qr-pro-plus",
+  "clutch connect plus",
+  "agency kit",
+  "custom kit",
+];
 const FREE_QR_MINIMUM_CENTS = 4500;
 const MIN_TEMP_PASSWORD_LENGTH = 16;
+const CLUTCH_CONNECT_TRIAL_DAYS = 30;
+
+function isTrialPurchaseTopic(topic: ShopifyWebhookTopic) {
+  return topic === "orders/paid";
+}
+
+function isCheckoutTopic(topic: ShopifyWebhookTopic) {
+  return topic.startsWith("checkouts/");
+}
+
+function isSubscriptionTopic(topic: ShopifyWebhookTopic) {
+  return topic.includes("subscription");
+}
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
 
 function normalizeMoneyToCents(value: unknown) {
   if (typeof value === "number") return Math.round(value * 100);
@@ -144,7 +185,7 @@ export function detectPlanFromShopifyPayload(payload: any): ProvisioningPlan | n
   if (includesKeyword(lineText, QR_PRO_PLUS_PRODUCT_KEYWORDS)) return "qr_pro_plus";
   if (includesKeyword(lineText, QR_PRO_PRODUCT_KEYWORDS)) return "qr_pro";
 
-  if (getOrderTotalCents(payload) >= FREE_QR_MINIMUM_CENTS) return "free_qr";
+  if (getOrderTotalCents(payload) >= FREE_QR_MINIMUM_CENTS) return "qr_pro";
   return null;
 }
 
@@ -218,18 +259,21 @@ export async function sendCustomerOnboardingEmail({
   temporaryPassword,
   planCode,
   idempotencyKey,
+  trialEndsAt,
 }: {
   email: string;
   temporaryPassword: string;
   planCode: ProvisioningPlan;
   idempotencyKey: string;
+  trialEndsAt?: string | null;
 }) {
   const portalUrl = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
   const loginUrl = `${portalUrl}/login?email=${encodeURIComponent(email)}`;
   const plan = PLAN_DEFINITIONS[planCode];
-  const intro =
-    planCode === "free_qr"
-      ? "Your print order includes one free dynamic Clutch QR Code."
+  const intro = trialEndsAt
+    ? `Your print order includes a 30-day free trial of ${plan.name}. When the trial ends, paid Clutch Connect features will pause until you choose a monthly plan.`
+    : planCode === "free_qr"
+      ? "Your print order includes starter Clutch Connect access for one dynamic campaign."
       : `Your account has been created for ${plan.name} access.`;
   const message = buildOnboardingEmailTemplate({
     email,
@@ -237,12 +281,13 @@ export async function sendCustomerOnboardingEmail({
     planName: plan.name,
     intro,
     loginUrl,
+    trialEndsAt,
   });
 
   if (isEmailConfigured()) {
     await sendTransactionalEmail({
       to: email,
-      subject: `Welcome to Clutch ${plan.name}`,
+      subject: `Welcome to ${plan.name}`,
       text: message.text,
       html: message.html,
       idempotencyKey,
@@ -282,7 +327,12 @@ export async function provisionCustomerFromShopify({
   topic: ShopifyWebhookTopic;
   payload: any;
 }): Promise<ShopifyProvisioningResult> {
-  const detectedPlan = detectPlanFromShopifyPayload(payload);
+  if (isCheckoutTopic(topic)) {
+    return { qualified: false, skippedReason: "Checkout is not paid yet; waiting for orders/paid." };
+  }
+
+  const purchaseQualifiesForTrial = isTrialPurchaseTopic(topic) && getOrderTotalCents(payload) > 0;
+  const detectedPlan = detectPlanFromShopifyPayload(payload) || (purchaseQualifiesForTrial ? "qr_pro" : null);
   if (!detectedPlan) return { qualified: false, skippedReason: "No qualifying QR product or free QR order." };
 
   const email = String(payload?.email || payload?.customer?.email || payload?.billing_address?.email || "")
@@ -313,6 +363,7 @@ export async function provisionCustomerFromShopify({
   const shopifyOrderId = getShopifyOrderId(payload);
   const shopifySubscriptionId = getShopifySubscriptionId(payload);
   const subscriptionStatus = normalizeSubscriptionStatus(topic, payload);
+  const subscriptionConverted = isSubscriptionTopic(topic) && subscriptionStatus === "active";
   const firstName = String(payload?.customer?.first_name || payload?.billing_address?.first_name || "").trim() || null;
   const lastName = String(payload?.customer?.last_name || payload?.billing_address?.last_name || "").trim() || null;
   const companyName =
@@ -321,6 +372,19 @@ export async function provisionCustomerFromShopify({
     null;
   const shouldSetPassword = !existingCustomer;
   const now = new Date().toISOString();
+  const hasExistingTrial = Boolean(existingCustomer?.trial_started_at || existingCustomer?.trial_ends_at);
+  const shouldStartTrial = purchaseQualifiesForTrial && !hasExistingTrial && existingCustomer?.trial_status !== "converted";
+  const trialStartedAt = shouldStartTrial
+    ? now
+    : existingCustomer?.trial_started_at || null;
+  const trialEndsAt = shouldStartTrial
+    ? addDays(new Date(now), CLUTCH_CONNECT_TRIAL_DAYS).toISOString()
+    : existingCustomer?.trial_ends_at || null;
+  const trialStatus = subscriptionConverted
+    ? "converted"
+    : shouldStartTrial
+      ? "active"
+      : existingCustomer?.trial_status || "none";
 
   const customerPayload = {
     auth_user_id: authUserId,
@@ -340,6 +404,9 @@ export async function provisionCustomerFromShopify({
     temp_password_created_at: shouldSetPassword ? now : existingCustomer?.temp_password_created_at || null,
     onboarding_status: shouldSetPassword ? "invited" : existingCustomer?.onboarding_status || "active",
     onboarding_email_sent_at: shouldSetPassword ? now : existingCustomer?.onboarding_email_sent_at || null,
+    trial_started_at: trialStartedAt,
+    trial_ends_at: trialEndsAt,
+    trial_status: trialStatus,
     updated_at: now,
   };
 
@@ -370,6 +437,7 @@ export async function provisionCustomerFromShopify({
         temporaryPassword,
         planCode,
         idempotencyKey: `shopify-onboarding-${shopifyOrderId || shopifySubscriptionId || email}`,
+        trialEndsAt: shouldStartTrial ? trialEndsAt : null,
       });
       emailSent = true;
     } catch (error) {

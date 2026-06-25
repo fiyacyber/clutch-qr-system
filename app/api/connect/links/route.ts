@@ -136,5 +136,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL("/portal/connect/links?saved=1", req.url));
+  return NextResponse.redirect(new URL("/portal/connect?saved=1", req.url));
 }

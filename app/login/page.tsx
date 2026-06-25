@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import styles from "./login.module.css";
 
@@ -26,6 +26,23 @@ async function handlePasswordSignIn(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
+  if (data.user) {
+    const admin = createSupabaseAdminClient();
+    const { data: customer, error: customerError } = await admin
+      .from("customers")
+      .select("must_change_password")
+      .eq("auth_user_id", data.user.id)
+      .maybeSingle();
+
+    if (customerError) {
+      console.error("CUSTOMER LOOKUP ERROR:", customerError);
+    }
+
+    if (customer?.must_change_password) {
+      redirect("/change-password");
+    }
+  }
+
   redirect("/portal");
 }
 
@@ -34,9 +51,11 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{
     error?: string;
+    email?: string;
   }>;
 }) {
   const params = await searchParams;
+  const email = params.email ? decodeURIComponent(params.email) : "";
 
   return (
     <div className={styles.container}>
@@ -66,6 +85,7 @@ export default async function LoginPage({
                   required
                   placeholder="you@company.com"
                   autoComplete="email"
+                  defaultValue={email}
                 />
               </div>
 

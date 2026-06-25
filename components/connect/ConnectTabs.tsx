@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type ConnectTabKey = "builder" | "profile" | "links" | "leads" | "analytics";
+type ConnectTabKey = "builder" | "profile" | "leads" | "analytics";
 
 interface ConnectTabsProps {
   active: ConnectTabKey;
@@ -8,8 +8,7 @@ interface ConnectTabsProps {
 
 const TABS: Array<{ key: ConnectTabKey; label: string; href: string }> = [
   { key: "builder", label: "Builder", href: "/portal/connect/build" },
-  { key: "profile", label: "Profile", href: "/portal/connect" },
-  { key: "links", label: "Links", href: "/portal/connect/links" },
+  { key: "profile", label: "Overview", href: "/portal/connect" },
   { key: "leads", label: "Leads", href: "/portal/connect/leads" },
   { key: "analytics", label: "Analytics", href: "/portal/analytics?tab=clutch-connect" },
 ];

@@ -5,6 +5,9 @@
 
 export type BlockType =
   | "profile-hero"
+  | "avatar-block"
+  | "business-name-block"
+  | "subheader-block"
   | "contact-buttons"
   | "phone-button"
   | "email-button"
@@ -53,6 +56,10 @@ export interface FormConfig {
 
 export interface BuilderTheme {
   accentColor: string;
+  buttonColor: string;
+  textColor: string;
+  fontFamily: "exo2" | "sans" | "serif" | "display";
+  fontScale: "normal" | "large";
   layout: "default" | "minimal" | "compact";
   showProfilePicture: boolean;
   showBio: boolean;
@@ -87,6 +94,34 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
     verifiedBadgeIcon: "checkmark",
     verifiedBadgePosition: "bottom-right",
     verifiedBadgeSize: 24,
+  },
+  "avatar-block": {
+    avatarUrl: "",
+    avatarGlowEnabled: true,
+    avatarGlowColor: "#FF6B2C",
+    avatarGlowOpacity: 0.35,
+    avatarGlowBlur: 18,
+    avatarGlowSpread: 10,
+    verifiedBadgeEnabled: false,
+    verifiedBadgeColor: "#f59e0b",
+    verifiedBadgeIconColor: "#0f172a",
+    verifiedBadgeIcon: "checkmark",
+    verifiedBadgePosition: "bottom-right",
+    verifiedBadgeSize: 24,
+  },
+  "business-name-block": {
+    text: "",
+    color: "",
+    fontSize: 40,
+    fontWeight: 800,
+    fontFamily: "inherit",
+  },
+  "subheader-block": {
+    text: "",
+    color: "",
+    fontSize: 22,
+    fontWeight: 600,
+    fontFamily: "inherit",
   },
   "contact-buttons": {
     style: "grid", // grid | row
@@ -161,8 +196,12 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
  * Block order for default profile layout
  */
 export const defaultBlockOrder: BlockType[] = [
-  "profile-hero",
-  "contact-buttons",
+  "avatar-block",
+  "business-name-block",
+  "subheader-block",
+  "phone-button",
+  "email-button",
+  "website-button",
   "social-media-links",
   "text-section",
   "services-list",

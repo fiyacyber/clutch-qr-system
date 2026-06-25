@@ -1,0 +1,417 @@
+.shell {
+  display: grid;
+  gap: 14px;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kpiCard,
+.mapCard,
+.rankCard,
+.customRangePanel {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 166, 101, 0.18);
+  background: linear-gradient(180deg, rgba(14, 23, 42, 0.92), rgba(18, 28, 50, 0.86));
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.kpiCard {
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.kpiCard span,
+.rangeLabel,
+.rankCount,
+.mapPill,
+.mapEyebrow,
+.rankCopy span,
+.sheetHead p,
+.sheetMetrics span,
+.sheetStats span,
+.customRangePanel span,
+.emptyOverlay span,
+.rankEmpty {
+  color: rgba(226, 232, 240, 0.74);
+}
+
+.kpiCard span,
+.rankCount,
+.mapPill,
+.mapEyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.kpiCard strong {
+  color: #fff;
+  font-size: clamp(1.15rem, 4vw, 1.7rem);
+  line-height: 1;
+}
+
+.filterBar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.filterBar::-webkit-scrollbar {
+  display: none;
+}
+
+.filterChip {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 166, 101, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  color: rgba(241, 245, 249, 0.78);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.filterChipActive {
+  background: linear-gradient(135deg, rgba(255, 166, 101, 0.96), rgba(255, 122, 26, 0.92));
+  color: #0f172a;
+}
+
+.rangeLabel {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  min-height: 38px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.customRangePanel {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.customRangePanel label {
+  display: grid;
+  gap: 8px;
+}
+
+.customRangePanel input {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 166, 101, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.mapCard,
+.rankCard {
+  overflow: hidden;
+}
+
+.mapHeader,
+.rankHeader {
+  padding: 14px 14px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mapHeader h2,
+.rankHeader h3,
+.sheetHead h4 {
+  margin: 6px 0 0;
+  color: #fff;
+  font-family: var(--font-exo2), Arial, sans-serif;
+  line-height: 1.05;
+}
+
+.mapHeader h2 {
+  font-size: clamp(1.4rem, 5vw, 2rem);
+}
+
+.rankHeader h3 {
+  font-size: 1.1rem;
+}
+
+.mapFrame {
+  position: relative;
+  height: clamp(350px, 58vh, 640px);
+  background:
+    radial-gradient(circle at top left, rgba(255, 166, 101, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(8, 15, 29, 0.92), rgba(8, 13, 24, 0.98));
+}
+
+.leafletMap {
+  height: 100%;
+  width: 100%;
+}
+
+.leafletMap :global(.leaflet-control-container) {
+  display: none;
+}
+
+.leafletMap :global(.leaflet-pane),
+.leafletMap :global(.leaflet-tile-pane),
+.leafletMap :global(.leaflet-overlay-pane),
+.leafletMap :global(.leaflet-marker-pane),
+.leafletMap :global(.leaflet-shadow-pane),
+.leafletMap :global(.leaflet-popup-pane) {
+  filter: saturate(1.05) contrast(0.98);
+}
+
+.mapControls {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 500;
+  display: grid;
+  gap: 8px;
+}
+
+.mapControls button {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 166, 101, 0.18);
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.24);
+}
+
+.mapControls button:last-child {
+  width: auto;
+  padding: 0 12px;
+  gap: 6px;
+}
+
+.hotspotGlow,
+.hotspotCore {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.hotspotGlow {
+  animation: pulseGlow 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hotspotCore {
+  animation: pulseCore 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hotspotGlowActive,
+.hotspotCoreActive {
+  animation-duration: 1.8s;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; transform: scale(0.98); }
+  50% { opacity: 0.92; transform: scale(1.02); }
+}
+
+@keyframes pulseCore {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.emptyOverlay {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  z-index: 400;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 166, 101, 0.18);
+  background: rgba(15, 23, 42, 0.84);
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.24);
+  display: grid;
+  gap: 6px;
+}
+
+.emptyOverlay strong,
+.rankEmpty,
+.sheetMetrics strong,
+.sheetStats strong,
+.rankValue,
+.rankCopy strong {
+  color: #fff;
+}
+
+.rankCard {
+  padding-bottom: 10px;
+}
+
+.rankList {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.rankRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 0;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-align: left;
+  overflow: hidden;
+}
+
+.rankRow i {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 166, 101, 0.2), rgba(255, 166, 101, 0.95));
+  border-radius: 999px;
+}
+
+.rankIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: 12px;
+  border-radius: 14px;
+  background: rgba(255, 166, 101, 0.14);
+  color: #ffa665;
+  font-weight: 800;
+}
+
+.rankCopy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rankCopy strong {
+  font-size: 0.96rem;
+  line-height: 1.1;
+}
+
+.rankCopy span {
+  font-size: 0.78rem;
+}
+
+.rankValue {
+  margin-right: 12px;
+  font-weight: 800;
+}
+
+.rankEmpty {
+  padding: 18px 12px 4px;
+}
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.52);
+  padding: 14px;
+}
+
+.sheet {
+  width: min(100%, 640px);
+  border-radius: 26px;
+  border: 1px solid rgba(255, 166, 101, 0.2);
+  background: rgba(8, 13, 24, 0.96);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+  max-height: min(78vh, 760px);
+  overflow: auto;
+}
+
+.sheetClose {
+  align-self: end;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sheetHead p,
+.sheetMetrics span,
+.sheetStats span,
+.sheetHead h4 {
+  margin: 0;
+}
+
+.sheetHead p {
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.sheetMetrics,
+.sheetStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sheetMetrics div,
+.sheetStats div {
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  gap: 4px;
+}
+
+.sheetMetrics strong,
+.sheetStats strong {
+  font-size: 1.02rem;
+}
+
+@media (min-width: 700px) {
+  .kpiRow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sheetBackdrop {
+    align-items: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .customRangePanel,
+  .sheetMetrics,
+  .sheetStats {
+    grid-template-columns: 1fr;
+  }
+
+  .mapFrame {
+    height: 62vh;
+    min-height: 420px;
+  }
+}

@@ -7,9 +7,12 @@ import {
   buildScansOverTime,
   countBy,
   fetchUnifiedAnalyticsData,
+  type UnifiedAnalyticsData,
 } from "@/lib/clutch-analytics";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import RetryNotice from "@/components/dashboard/RetryNotice";
+import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
 
 const VALID_TABS = [
@@ -48,7 +51,20 @@ export default async function AnalyticsPage({
   }
 
   const admin = createSupabaseAdminClient();
-  const data = await fetchUnifiedAnalyticsData(admin, customer as any);
+  const analyticsDataResult = await runGuardedDashboardTask({
+    route: "/portal/analytics",
+    endpoint: "analytics:fetchUnifiedAnalyticsData",
+    customerId: customer.id,
+    fallback: {
+      isAdmin: Boolean(customer.is_admin),
+      qrCodes: [],
+      profiles: [],
+      qrScans: [],
+      connectEvents: [],
+    } as UnifiedAnalyticsData,
+    task: () => fetchUnifiedAnalyticsData(admin, customer as any),
+  });
+  const data = analyticsDataResult.data;
   const plan = getCustomerPlan(customer as any);
   const qrUsageUsed = data.qrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
@@ -256,6 +272,14 @@ export default async function AnalyticsPage({
 
   return (
     <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+      {analyticsDataResult.failed ? (
+        <main className="container" style={{ marginBottom: 16 }}>
+          <RetryNotice
+            title="Analytics data is temporarily unavailable"
+            description="We could not load full analytics right now. You can retry safely."
+          />
+        </main>
+      ) : null}
       <AnalyticsDashboard
         activeTab={activeTab}
         accountName={fullName}

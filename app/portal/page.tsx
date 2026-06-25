@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Circle,
   Link2,
+  Map as MapIcon,
   QrCode,
   Sparkles,
   Users,
@@ -14,8 +15,11 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
+import HeatmapPreview from "@/components/dashboard/HeatmapPreview";
+import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
 import { requireCustomer } from "@/lib/auth";
+import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import {
   getCustomerPlan,
   getCustomerSubscriptionStatus,
@@ -66,31 +70,57 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
   const admin = createSupabaseAdminClient();
 
-  const [{ data: qrCodes }, { data: connectProfiles }] = await Promise.all([
-    admin
-      .from("qr_codes")
-      .select("id, name, slug, scan_count, created_at, is_active")
-      .eq("customer_id", customer.id)
-      .order("created_at", { ascending: false }),
-    admin
-      .from("profiles")
-      .select("id, slug, business_name, contact_name")
-      .eq("customer_id", customer.id)
-      .order("created_at", { ascending: false }),
+  const [qrCodesResult, connectProfilesResult] = await Promise.all([
+    runGuardedDashboardTask({
+      route: "/portal",
+      endpoint: "supabase:qr_codes.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; is_active: boolean | null }>,
+      task: () =>
+        admin
+          .from("qr_codes")
+          .select("id, name, slug, scan_count, created_at, is_active")
+          .eq("customer_id", customer.id)
+          .order("created_at", { ascending: false }),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal",
+      endpoint: "supabase:profiles.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ id: string; slug: string | null; business_name: string | null; contact_name: string | null }>,
+      task: () =>
+        admin
+          .from("profiles")
+          .select("id, slug, business_name, contact_name")
+          .eq("customer_id", customer.id)
+          .order("created_at", { ascending: false }),
+    }),
   ]);
 
-  const codes = qrCodes || [];
-  const qrIds = codes.map((code) => code.id);
-  const { data: scanRows } = qrIds.length
-    ? await admin
-        .from("qr_scans")
-        .select("id, qr_code_id, created_at, city, country")
-        .in("qr_code_id", qrIds)
-        .order("created_at", { ascending: false })
-        .limit(12)
-    : { data: [] };
+  const panelIssues: string[] = [];
+  if (qrCodesResult.failed) panelIssues.push("Campaign statistics are temporarily unavailable.");
+  if (connectProfilesResult.failed) panelIssues.push("Clutch Connect profile status is temporarily unavailable.");
 
-  const scans = scanRows || [];
+  const codes = qrCodesResult.data || [];
+  const qrIds = codes.map((code) => code.id);
+  const scanRowsResult = qrIds.length
+    ? await runGuardedDashboardTask({
+        route: "/portal",
+        endpoint: "supabase:qr_scans.select",
+        customerId: customer.id,
+        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null }>,
+        task: () =>
+          admin
+            .from("qr_scans")
+            .select("id, qr_code_id, created_at, city, region, country")
+            .in("qr_code_id", qrIds)
+            .order("created_at", { ascending: false })
+            .limit(250),
+      })
+    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null }>, failed: false };
+  if (scanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
+
+  const scans = scanRowsResult.data || [];
   const used = codes.length;
   const activeQrCodes = codes.filter((code) => code.is_active !== false).length;
   const limit = getEffectiveQrLimit(customer);
@@ -103,8 +133,17 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const remainingLabel = plan.code === "admin" ? "Unlimited" : String(remaining);
 
   const qrNameMap = new Map(codes.map((code) => [code.id, code.name]));
+  const topLocationRows = Object.entries(
+    scans.reduce<Record<string, number>>((acc, scan: any) => {
+      const label = [scan.city, scan.region].filter(Boolean).join(", ") || scan.country || "Unknown";
+      if (label !== "Unknown") acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {})
+  )
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
   const recentActivity = scans.map((scan) => {
-    const location = [scan.city, scan.country].filter(Boolean).join(", ");
+    const location = [scan.city, scan.region, scan.country].filter(Boolean).join(", ");
     return {
       id: scan.id,
       title: qrNameMap.get(scan.qr_code_id) || "QR Campaign",
@@ -113,12 +152,12 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     };
   });
 
-  const profiles = connectProfiles || [];
+  const profiles = connectProfilesResult.data || [];
   const checklistItems = [
-    { label: "Create your first QR code", done: used > 0 },
+    { label: "Create your first campaign", done: used > 0 },
     { label: "Add your company logo", done: Boolean(customer.logo_url) },
     { label: "Set up your Clutch Connect profile", done: profiles.length > 0 },
-    { label: "View analytics after your first scan", done: totalScans > 0 },
+    { label: "View insights after your first scan", done: totalScans > 0 },
   ];
 
   return (
@@ -130,13 +169,21 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           </div>
         ) : null}
 
+        {panelIssues.length ? (
+          <RetryNotice
+            title="Some dashboard data is temporarily unavailable"
+            description={panelIssues[0]}
+            details={panelIssues.slice(1)}
+          />
+        ) : null}
+
         <DashboardHeader
-          title="Clutch QR Portal"
-          subtitle="Create, manage, and track every QR campaign from one dashboard."
+          title="Clutch Connect Platform"
+          subtitle="Launch campaigns, track scans, capture leads, and see where your marketing works."
           actions={(
             <div className="portal-overview-header-actions">
-              <Link className="btn primary" href="/portal/create">Create QR</Link>
-              <Link className="btn secondary" href="/portal/analytics">View Analytics</Link>
+              <Link className="btn primary" href="/portal/create">Create Campaign</Link>
+              <Link className="btn secondary" href="/portal/analytics">View Insights</Link>
               <Link className="btn ghost" href="/portal/connect/edit">Edit Clutch Connect</Link>
             </div>
           )}
@@ -157,9 +204,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
         <section className="ds-stat-grid">
           <StatCard
-            label="Active QR Codes"
+            label="Active Campaigns"
             value={activeQrCodes}
-            description="Live campaigns currently active in your account."
+            description="Live trackable campaigns currently active in your account."
           />
           <StatCard
             label="Total Scans"
@@ -167,18 +214,27 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             description="Lifetime scans across all QR campaigns."
           />
           <StatCard
-            label="Remaining QR Limit"
+            label="Remaining Campaign Limit"
             value={<span className="portal-overview-limit-value">{remainingLabel}</span>}
             description={
               plan.code === "admin"
-                ? "Admin includes unlimited active QR codes."
-                : `${remaining} of ${limit} QR codes remaining.`
+                ? "Admin includes unlimited active campaigns."
+                : `${remaining} of ${limit} campaigns remaining.`
             }
           />
           <StatCard
             label="Account Plan"
             value={plan.shortName}
             description={`${plan.name} • ${subscriptionStatus}`}
+          />
+        </section>
+
+        <section className="portal-overview-heatmap-snapshot">
+          <HeatmapPreview
+            demo={!topLocationRows.length}
+            locations={topLocationRows}
+            title="Marketing Heatmap Snapshot"
+            subtitle="See where scans, taps, and campaign interactions are happening."
           />
         </section>
 
@@ -190,7 +246,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           <div className="portal-overview-actions-grid">
             <article className="portal-overview-action-item">
               <div className="portal-overview-action-icon"><QrCode size={17} /></div>
-              <h3>Create QR Code</h3>
+              <h3>Create Campaign</h3>
               <p>Start a new dynamic QR campaign with full tracking.</p>
               <Link className="btn primary" href="/portal/create">Open Studio</Link>
             </article>
@@ -199,14 +255,21 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               <div className="portal-overview-action-icon"><Link2 size={17} /></div>
               <h3>Build Clutch Connect Profile</h3>
               <p>Update your smart profile, links, and public details.</p>
-              <Link className="btn secondary" href="/portal/connect/build">Open Builder</Link>
+              <Link className="btn secondary" href="/portal/connect/build">Open Profile Builder</Link>
             </article>
 
             <article className="portal-overview-action-item">
               <div className="portal-overview-action-icon"><BarChart3 size={17} /></div>
-              <h3>View Scan Analytics</h3>
-              <p>Track scan performance, geography, and engagement trends.</p>
-              <Link className="btn secondary" href="/portal/analytics">Open Dashboard</Link>
+              <h3>View Insights</h3>
+              <p>Track marketing performance, geography, and engagement trends.</p>
+              <Link className="btn secondary" href="/portal/analytics">Open Insights</Link>
+            </article>
+
+            <article className="portal-overview-action-item">
+              <div className="portal-overview-action-icon"><MapIcon size={17} /></div>
+              <h3>Open Heatmap</h3>
+              <p>Review where your print campaigns are generating engagement.</p>
+              <Link className="btn secondary" href="/portal/heatmap">Open Heatmap</Link>
             </article>
 
             <article className="portal-overview-action-item">
@@ -233,7 +296,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                 ))}
               </ul>
             ) : (
-              <EmptyState description="No activity yet. Create and scan your first QR code to start tracking." />
+              <EmptyState description="No activity yet. Create and scan your first campaign to start tracking." />
             )}
           </AnalyticsCard>
 

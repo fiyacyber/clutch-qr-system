@@ -11,7 +11,8 @@ function getResendApiKey() {
 }
 
 function getEmailFromAddress() {
-  return process.env.EMAIL_FROM || "Clutch QR <onboarding@resend.dev>";
+  const configuredFrom = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || "welcome@clutchprintshop.com";
+  return configuredFrom.includes("<") ? configuredFrom : `Clutch Connect <${configuredFrom}>`;
 }
 
 export function isEmailConfigured() {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QRTypeSelector, { QRType } from "@/components/QRTypeSelector";
 import QRLivePreview from "@/components/QRLivePreview";
 import QRStylePanel, { DownloadSize, ThemePreset } from "@/components/QRStylePanel";
-import { normalizeUrl, qrUrl } from "@/lib/qr";
+import { normalizeUrl } from "@/lib/qr";
 import styles from "./QRCodeCreateStudioForm.module.css";
 
 type DotStyle =
@@ -97,6 +97,7 @@ export default function QRCodeCreateStudioForm({
   connectProfiles = [],
 }: QRCodeCreateStudioFormProps) {
   const router = useRouter();
+  const previewId = "qr-studio-preview";
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +181,43 @@ export default function QRCodeCreateStudioForm({
     pieceDetail,
     placementNote,
   ]);
+
+  const selectedProfile = useMemo(() => {
+    if (!selectedProfileId) return null;
+    return connectProfiles.find((item) => item.id === selectedProfileId) || null;
+  }, [connectProfiles, selectedProfileId]);
+
+  const destinationSummary = qrType === "connect_profile"
+    ? selectedProfile
+      ? `${selectedProfile.business_name || selectedProfile.contact_name || selectedProfile.slug} • ${selectedProfile.slug}`
+      : "Select a Clutch Connect profile"
+    : destinationUrl.trim()
+      ? destinationUrl.trim()
+      : "Add a destination URL";
+
+  const printPieceLabel = useMemo(() => {
+    const selected = PRINT_ASSET_OPTIONS.find((option) => option.value === printAssetType);
+    return selected?.label || "Print piece";
+  }, [printAssetType]);
+
+  const trackingSummary = useMemo(() => {
+    if (!usePrintTracking) return "Tracking disabled";
+    const parts = [campaignName || name || "Campaign name pending", campaignOwner, placementNote]
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return parts.length ? parts.join(" • ") : "Auto-attach print campaign UTM tracking";
+  }, [campaignName, campaignOwner, placementNote, name, usePrintTracking]);
+
+  const scanSafetyLabel = useMemo(() => {
+    if (!finalUrl) return "Scan safe preview";
+    if (downloadSize === "print") return "Print-ready scan safe";
+    return "Preview ready";
+  }, [downloadSize, finalUrl]);
+
+  function scrollToPreview() {
+    const element = document.getElementById(previewId);
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   useEffect(() => {
     if (!logoFile) {
@@ -273,25 +311,33 @@ export default function QRCodeCreateStudioForm({
   }
 
   return (
-    <div className={styles.container}>
-      {/* Left Column: QR Type Selector */}
-      <section className={styles.leftColumn}>
-        <QRTypeSelector
-          value={qrType as QRType}
-          onChange={(type) => {
-            setQrType(type as QRType | "connect_profile");
-            const validTypes = ["flyers", "business_cards", "brochures", "postcards", "door_hangers", "yard_signs", "connect_profile"];
-            if (!validTypes.includes(type)) {
-              setError("This QR type is coming soon!");
-            } else {
-              setError(null);
-            }
-          }}
-        />
+    <form className={styles.container} onSubmit={handleSubmit}>
+      <section className={styles.hero}>
+        <div>
+          <span className={styles.heroKicker}>Create QR</span>
+          <h1 className={styles.heroTitle}>Build a trackable QR code in minutes.</h1>
+          <p className={styles.heroSubtitle}>
+            A mobile-first studio for destinations, print pieces, appearance, and campaign tracking.
+          </p>
+        </div>
+
+        <div className={styles.heroMeta}>
+          <article>
+            <span>Usage</span>
+            <strong>{used}/{limit}</strong>
+          </article>
+          <article>
+            <span>Mode</span>
+            <strong>{isLocked ? "Locked" : canCreate ? "Ready" : "Limited"}</strong>
+          </article>
+          <article>
+            <span>Safe area</span>
+            <strong>320px+</strong>
+          </article>
+        </div>
       </section>
 
-      {/* Center Column: Live Preview + Form */}
-      <section className={styles.centerColumn}>
+      <section className={styles.previewRail} id={previewId}>
         <QRLivePreview
           finalUrl={finalUrl}
           foregroundColor={foregroundColor}
@@ -303,143 +349,270 @@ export default function QRCodeCreateStudioForm({
           limit={limit}
           isLocked={isLocked}
           name={name}
-          onNameChange={setName}
-          destinationUrl={destinationUrl}
-          onDestinationUrlChange={setDestinationUrl}
-          onSubmit={handleSubmit}
-          isSaving={isSaving}
+          destinationTypeLabel={qrType === "connect_profile" ? "Clutch Connect" : "Website"}
+          destinationPreview={destinationSummary}
+          printMockupType={printAssetType === "standard_business_card" ? "business_cards" : printAssetType === "flyer" ? "flyers" : printAssetType === "brochure" ? "brochures" : printAssetType === "door_hanger" ? "door_hangers" : printAssetType === "yard_sign" ? "yard_signs" : printAssetType === "poster" ? "postcards" : "business_cards"}
+          trackingPreview={trackingSummary}
+          downloadSize={downloadSize}
           canCreate={canCreate}
           error={error}
-          downloadSize={downloadSize}
         />
+      </section>
 
-        {/* Additional Fields Below Preview */}
-        {qrType === "connect_profile" && (
-          <div className={styles.additionalFields}>
-            <h3 className={styles.sectionHeader}>QR Details</h3>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Clutch Connect Profile</span>
-              <select
-                className={styles.select}
-                value={selectedProfileId}
-                onChange={(e) => setSelectedProfileId(e.target.value)}
-                required
-              >
-                <option value="">Select profile</option>
-                {connectProfiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.business_name || profile.contact_name || profile.slug} ({profile.slug})
-                  </option>
-                ))}
-              </select>
-              <span className={styles.hint}>This QR will open your Clutch Connect profile</span>
-            </label>
+      <section className={styles.workspace}>
+        <section className={styles.stepCard}>
+          <div className={styles.stepHeader}>
+            <div>
+              <span className={styles.stepNumber}>Step 1</span>
+              <h2>Destination</h2>
+            </div>
+            <span className={styles.stepPill}>{qrType === "connect_profile" ? "Clutch Connect" : "Website"}</span>
           </div>
-        )}
-      </section>
 
-      {/* Right Column: Style Panel */}
-      <section className={styles.rightColumn}>
-        <QRStylePanel
-          theme={theme}
-          onThemeChange={setTheme}
-          foregroundColor={foregroundColor}
-          onForegroundColorChange={setForegroundColor}
-          backgroundColor={backgroundColor}
-          onBackgroundColorChange={setBackgroundColor}
-          dotStyle={dotStyle}
-          onDotStyleChange={setDotStyle}
-          cornerStyle={cornerStyle}
-          onCornerStyleChange={setCornerStyle}
-          downloadSize={downloadSize}
-          onDownloadSizeChange={setDownloadSize}
-          logoFile={logoFile}
-          onLogoFileChange={setLogoFile}
-        />
-      </section>
+          <div className={styles.fieldGrid}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>QR Name</span>
+              <input
+                type="text"
+                className={styles.input}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Summer campaign 2026"
+                maxLength={100}
+                disabled={isSaving}
+              />
+            </label>
 
-      {/* Tracking panel stays in the center rail on desktop, moves last on mobile. */}
-      <section className={styles.trackingPanel}>
-        <details className={styles.expandableSection} open>
-          <summary className={styles.summary}>Print Campaign Tracking</summary>
-          <div className={styles.sectionBody}>
-            <label className={styles.checkboxField}>
+            {qrType === "connect_profile" ? (
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Clutch Connect Profile</span>
+                <select
+                  className={styles.select}
+                  value={selectedProfileId}
+                  onChange={(e) => setSelectedProfileId(e.target.value)}
+                  disabled={isSaving}
+                  required
+                >
+                  <option value="">Select profile</option>
+                  {connectProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.business_name || profile.contact_name || profile.slug} ({profile.slug})
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.hint}>This QR will open your Clutch Connect profile.</span>
+              </label>
+            ) : (
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Destination URL</span>
+                <input
+                  type="url"
+                  className={styles.input}
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  disabled={isSaving}
+                />
+                <span className={styles.hint}>Website, landing page, or tracked destination link.</span>
+              </label>
+            )}
+          </div>
+
+          <div className={styles.destinationMeta}>
+            <article>
+              <span>Preview</span>
+              <strong>{destinationSummary}</strong>
+            </article>
+            <article>
+              <span>Validation</span>
+              <strong>{finalUrl ? "Ready" : "Incomplete"}</strong>
+            </article>
+            <article>
+              <span>Redirect</span>
+              <strong>{finalUrl ? finalUrl.replace(/^https?:\/\//, "") : "Waiting for input"}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className={styles.stepCard}>
+          <div className={styles.stepHeader}>
+            <div>
+              <span className={styles.stepNumber}>Step 2</span>
+              <h2>Print Piece</h2>
+            </div>
+          </div>
+          <QRTypeSelector
+            value={qrType as QRType}
+            onChange={(type) => {
+              setQrType(type as QRType | "connect_profile");
+              const validTypes = ["flyers", "business_cards", "brochures", "postcards", "door_hangers", "yard_signs", "connect_profile"];
+              if (!validTypes.includes(type)) {
+                setError("This QR type is coming soon!");
+              } else {
+                setError(null);
+              }
+            }}
+          />
+        </section>
+
+        <section className={styles.stepCard}>
+          <div className={styles.stepHeader}>
+            <div>
+              <span className={styles.stepNumber}>Step 3</span>
+              <h2>Appearance</h2>
+            </div>
+            <span className={styles.stepPill}>{scanSafetyLabel}</span>
+          </div>
+          <QRStylePanel
+            theme={theme}
+            onThemeChange={setTheme}
+            foregroundColor={foregroundColor}
+            onForegroundColorChange={setForegroundColor}
+            backgroundColor={backgroundColor}
+            onBackgroundColorChange={setBackgroundColor}
+            dotStyle={dotStyle}
+            onDotStyleChange={setDotStyle}
+            cornerStyle={cornerStyle}
+            onCornerStyleChange={setCornerStyle}
+            downloadSize={downloadSize}
+            onDownloadSizeChange={setDownloadSize}
+            logoFile={logoFile}
+            onLogoFileChange={setLogoFile}
+          />
+        </section>
+
+        <section className={styles.stepCard}>
+          <div className={styles.stepHeader}>
+            <div>
+              <span className={styles.stepNumber}>Step 4</span>
+              <h2>Campaign Tracking</h2>
+            </div>
+            <label className={styles.toggle}>
               <input
                 type="checkbox"
                 checked={usePrintTracking}
                 onChange={(e) => setUsePrintTracking(e.target.checked)}
+                disabled={isSaving}
               />
-              Auto-attach print campaign UTM tracking
+              <span>Enabled</span>
             </label>
-
-            {usePrintTracking && (
-              <div className={styles.trackingFields}>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Print Piece Type</span>
-                  <select
-                    className={styles.select}
-                    value={printAssetType}
-                    onChange={(e) => setPrintAssetType(e.target.value as PrintAssetType)}
-                  >
-                    {PRINT_ASSET_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Campaign Name</span>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    placeholder="summer-campaign-2026"
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Team Member / Owner (optional)</span>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={campaignOwner}
-                    onChange={(e) => setCampaignOwner(e.target.value)}
-                    placeholder="Jane - Sales"
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Piece Detail (optional)</span>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={pieceDetail}
-                    onChange={(e) => setPieceDetail(e.target.value)}
-                    placeholder="Front side, version B"
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Placement Note (optional)</span>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={placementNote}
-                    onChange={(e) => setPlacementNote(e.target.value)}
-                    placeholder="Downtown route or lobby"
-                  />
-                </label>
-
-                <p className={styles.hint}>
-                  UTM mapping: source = piece type, medium = print, campaign = campaign name,
-                  content = owner + detail, term = placement.
-                </p>
-              </div>
-            )}
           </div>
-        </details>
+
+          {usePrintTracking ? (
+            <div className={styles.trackingFields}>
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Print Piece Type</span>
+                <select
+                  className={styles.select}
+                  value={printAssetType}
+                  onChange={(e) => setPrintAssetType(e.target.value as PrintAssetType)}
+                  disabled={isSaving}
+                >
+                  {PRINT_ASSET_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Campaign Name</span>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="summer-campaign-2026"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Team Member / Owner</span>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={campaignOwner}
+                  onChange={(e) => setCampaignOwner(e.target.value)}
+                  placeholder="Jane - Sales"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Placement</span>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={placementNote}
+                  onChange={(e) => setPlacementNote(e.target.value)}
+                  placeholder="Downtown route or lobby"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Notes</span>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={pieceDetail}
+                  onChange={(e) => setPieceDetail(e.target.value)}
+                  placeholder="Front side, version B"
+                  disabled={isSaving}
+                />
+              </label>
+            </div>
+          ) : (
+            <div className={styles.emptyTracking}>Tracking is off for this QR. Turn it on to add UTM parameters.</div>
+          )}
+        </section>
+
+        <section className={styles.stepCard}>
+          <div className={styles.stepHeader}>
+            <div>
+              <span className={styles.stepNumber}>Step 5</span>
+              <h2>Review</h2>
+            </div>
+            <span className={styles.stepPill}>{canCreate ? "Ready to create" : "Needs attention"}</span>
+          </div>
+
+          <div className={styles.reviewGrid}>
+            <article>
+              <span>Destination</span>
+              <strong>{destinationSummary}</strong>
+            </article>
+            <article>
+              <span>Campaign</span>
+              <strong>{campaignName || name || "Untitled campaign"}</strong>
+            </article>
+            <article>
+              <span>Print Piece</span>
+              <strong>{printPieceLabel}</strong>
+            </article>
+            <article>
+              <span>Theme</span>
+              <strong>{theme}</strong>
+            </article>
+            <article>
+              <span>Tracking</span>
+              <strong>{usePrintTracking ? "Enabled" : "Disabled"}</strong>
+            </article>
+            <article>
+              <span>Scanability</span>
+              <strong>{scanSafetyLabel}</strong>
+            </article>
+          </div>
+        </section>
       </section>
-    </div>
+
+      <div className={styles.bottomBar}>
+        <button type="button" className={styles.bottomSecondary} onClick={scrollToPreview}>
+          Preview
+        </button>
+        <button type="submit" className={styles.bottomPrimary} disabled={!canCreate || isSaving}>
+          {isSaving ? "Creating..." : "Create QR"}
+        </button>
+      </div>
+    </form>
   );
 }

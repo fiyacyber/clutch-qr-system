@@ -594,6 +594,52 @@
   color: #0b1f35;
 }
 
+.ca-performance-overview {
+  display: grid;
+  gap: 14px;
+}
+
+.ca-performance-summary-grid {
+  align-items: stretch;
+}
+
+.ca-export-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ca-export-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 132px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #d8dde8;
+  border-radius: 10px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.ca-export-menu button {
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #384862;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.ca-export-menu button:hover {
+  background: #fff7f0;
+  color: #0b1f35;
+}
+
 .ca-time-filters {
   display: flex;
   border: 1px solid #d8dde8;
@@ -843,6 +889,34 @@
   right: 8px;
   color: #6b7a8d;
   pointer-events: none;
+}
+
+.ca-inline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #d8dde8;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.ca-inline-toggle-btn {
+  border: 0;
+  background: transparent;
+  color: #6b7a8d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 5px 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ca-inline-toggle-btn.active {
+  background: #ffffff;
+  color: #0b1f35;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
 }
 
 /* Three column layout */
@@ -1116,6 +1190,15 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
+}
+
+.ca-geo-filters .ca-select-wrap {
+  display: inline-flex;
+  width: 100%;
+}
+
+.ca-geo-filters .ca-select {
+  width: 100%;
 }
 
 .ca-geo-kpi-row {
@@ -1550,9 +1633,165 @@
   .ca-kpi-row { grid-template-columns: 1fr 1fr; }
   .ca-topbar-controls { flex-wrap: wrap; gap: 6px; }
   .ca-page-title { font-size: 1.3rem; }
+  .ca-content {
+    padding: 12px 12px 24px;
+    gap: 14px;
+  }
+  .ca-analytics-tabs {
+    gap: 6px;
+  }
+  .ca-analytics-tab {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+  }
+  .ca-performance-overview {
+    gap: 10px;
+  }
+  .ca-date-btn,
+  .ca-ctrl-btn {
+    min-height: 40px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+  .ca-time-btn {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
   .ca-qr-template-grid,
   .ca-qr-usage-grid { grid-template-columns: 1fr; }
   .ca-geo-kpi-row,
   .ca-geo-filters,
   .ca-dashboard-filter-grid { grid-template-columns: 1fr; }
+
+  .ca-geo-filters {
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e8edf4;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  }
+
+  .ca-geo-filters .ca-select {
+    min-height: 46px;
+    padding: 9px 34px 9px 12px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .ca-geo-filters .ca-select-caret {
+    right: 12px;
+  }
+
+  .ca-geo-filters .ca-ctrl-btn {
+    width: 100%;
+    min-height: 46px;
+    justify-content: flex-start;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 800;
+  }
+
+  .ca-inline-toggle {
+    width: 100%;
+  }
+
+  .ca-inline-toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .ca-settings-content {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .ca-settings-hero-card,
+  .ca-card.ca-settings-panel,
+  .ca-card.ca-settings-danger-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .ca-settings-hero-card {
+    min-height: auto;
+    gap: 14px;
+  }
+
+  .ca-settings-hero-copy h2 {
+    font-size: 1.55rem;
+    line-height: 1.12;
+  }
+
+  .ca-settings-hero-copy p,
+  .ca-title-sub {
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .ca-settings-hero-meta,
+  .ca-settings-info-grid,
+  .ca-settings-plan-summary,
+  .ca-settings-security-grid,
+  .ca-settings-brand-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ca-settings-info-wide {
+    grid-column: span 1;
+  }
+
+  .ca-settings-hero-meta article,
+  .ca-settings-info-grid article,
+  .ca-settings-plan-summary article,
+  .ca-settings-security-grid article,
+  .ca-settings-brand-option,
+  .ca-settings-brand-preview,
+  .ca-settings-toggle-item,
+  .ca-settings-support-email {
+    padding: 14px;
+  }
+
+  .ca-settings-hero-meta span,
+  .ca-settings-plan-summary span,
+  .ca-settings-info-grid span,
+  .ca-settings-security-grid span,
+  .ca-settings-brand-option span {
+    display: flex;
+    width: 100%;
+    margin-bottom: 5px;
+  }
+
+  .ca-settings-hero-meta strong,
+  .ca-settings-plan-summary strong,
+  .ca-settings-info-grid strong,
+  .ca-settings-security-grid strong,
+  .ca-settings-brand-option strong {
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+  }
+
+  .ca-card-head,
+  .ca-settings-actions-row,
+  .ca-settings-support-grid,
+  .ca-settings-danger-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ca-primary-link-btn,
+  .ca-secondary-link-btn,
+  .ca-danger-link-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
+  }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { requireCustomer } from "@/lib/auth";
-import { createDefaultBuilderConfig } from "@/lib/builder-config";
+import { createDefaultBuilderConfig, sanitizeBuilderConfig, validateBuilderConfig } from "@/lib/builder-config";
 
 /**
  * GET /api/connect/builder-config
@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
 
   // If profile already has builder_config, return it
   if (profile.builder_config) {
+    const cleanConfig = sanitizeBuilderConfig(profile.builder_config);
     return NextResponse.json({
-      config: profile.builder_config,
+      config: cleanConfig,
       profile,
     });
   }
@@ -72,6 +73,10 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Config is required" }, { status: 400 });
   }
 
+  if (!validateBuilderConfig(config)) {
+    return NextResponse.json({ error: "Builder config is invalid. Please refresh and try again." }, { status: 400 });
+  }
+
   const admin = createSupabaseAdminClient();
 
   const { data: profile, error: profileError } = await admin
@@ -84,9 +89,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
+  const cleanConfig = sanitizeBuilderConfig(config);
+
   const { error: updateError } = await admin
     .from("profiles")
-    .update({ builder_config: config })
+    .update({ builder_config: cleanConfig })
     .eq("id", profile.id);
 
   if (updateError) {
@@ -96,6 +103,6 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    config,
+    config: cleanConfig,
   });
 }

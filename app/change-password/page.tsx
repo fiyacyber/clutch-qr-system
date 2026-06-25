@@ -37,10 +37,11 @@ export default function ChangePasswordPage() {
       credentials: "same-origin",
     });
 
+    const body = await response.json();
+
     if (response.ok) {
-      router.push("/portal");
+      router.push(body.redirectTo || "/portal");
     } else {
-      const body = await response.json();
       setError(body.error || "Unable to change password.");
       setIsSaving(false);
     }

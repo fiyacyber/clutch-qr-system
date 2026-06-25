@@ -34,6 +34,7 @@ export default function QRTypeSelector({ value, onChange }: QRTypeSelectorProps)
         {QR_TYPES.map((type) => (
           <button
             key={type.value}
+            type="button"
             className={`${styles.card} ${value === type.value ? styles.active : ""} ${
               type.disabled ? styles.disabled : ""
             }`}

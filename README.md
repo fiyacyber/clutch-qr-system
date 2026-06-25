@@ -1,14 +1,15 @@
-# Clutch QR Portal v2
+# Clutch Connect Portal
 
-Next.js + Supabase + Vercel portal for Clutch QR.
+Next.js + Supabase + Vercel portal for Clutch Connect QR, NFC, profile, lead, and campaign analytics.
 
 ## Customer flow
 
-1. Customer buys QR Pro on Shopify.
-2. Shopify webhook creates a Supabase Auth user and customer record.
-3. Customer logs in with magic link at `/login`.
-4. Customer can create QR codes up to their `qr_limit`, default `10`.
-5. QR codes redirect through `/qr/[slug]`, log scans, and then forward to the destination URL.
+1. Customer buys Clutch Connect, a Smart Business Card, or a qualifying Business Kit on Shopify.
+2. Shopify sends an `orders/paid` webhook to `/api/shopify/webhook`.
+3. The webhook verifies the Shopify HMAC, creates or updates the Supabase Auth user and customer record, and assigns the matching portal plan.
+4. New customers receive a branded Clutch Connect onboarding email with a temporary password.
+5. On first login, customers are forced to change the temporary password before entering `/portal`.
+6. QR codes redirect through `/qr/[slug]`, log scans, and then forward to the destination URL.
 
 ## Admin flow
 
@@ -25,7 +26,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 CLUTCH_QR_BASE_URL=https://qr.clutchprintshop.com
 SHOPIFY_WEBHOOK_SECRET=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=welcome@clutchprintshop.com
 ```
+
+## Shopify webhook setup
+
+In Shopify Admin, create a webhook for `Order payment` / `orders/paid`:
+
+```
+https://qr.clutchprintshop.com/api/shopify/webhook
+```
+
+Use the webhook signing secret as `SHOPIFY_WEBHOOK_SECRET` in Vercel. The same handler also accepts Shopify subscription topics when those are configured.
 
 ## Important
 

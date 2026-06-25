@@ -13,7 +13,6 @@ import {
   MapPin,
   MessageSquare,
   Palette,
-  PencilLine,
   QrCode,
   Smartphone,
   Sparkles,
@@ -21,9 +20,12 @@ import {
   Wallet,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import RetryNotice from "@/components/dashboard/RetryNotice";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
+import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
 import { requireCustomer } from "@/lib/auth";
+import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface ConnectPageProps {
@@ -50,11 +52,23 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const admin = createSupabaseAdminClient();
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("*")
-    .eq("customer_id", customer.id)
-    .maybeSingle();
+  const panelIssues: string[] = [];
+
+  const profileResult = await runGuardedDashboardTask({
+    route: "/portal/connect",
+    endpoint: "supabase:profiles.maybeSingle",
+    customerId: customer.id,
+    fallback: null as any,
+    task: () =>
+      admin
+        .from("profiles")
+        .select("*")
+        .eq("customer_id", customer.id)
+        .maybeSingle(),
+  });
+  if (profileResult.failed) panelIssues.push("Profile details are temporarily unavailable.");
+
+  const profile = profileResult.data;
 
   if (!profile) {
     return (
@@ -62,46 +76,116 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         <main className="container connect-center-shell">
           <DashboardHeader
             title="Clutch Connect"
-            subtitle="Create your digital business card profile and start collecting leads."
-            actions={<Link className="btn primary" href="/portal/connect/edit">Create Profile</Link>}
+            subtitle="Build your Clutch Connect profile and share it from your smart card, QR campaigns, and customer touchpoints."
+            actions={(
+              <div className="connect-center-header-actions">
+                <Link className="btn primary" href="/portal/connect/build">
+                  <Palette size={15} />
+                  Profile Builder
+                </Link>
+              </div>
+            )}
           />
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Start Here</p>
+            <h2>Create your Profile Builder page</h2>
+            <p className="muted">Open the new builder to create your public Clutch Connect profile. Once saved, your profile button will appear here.</p>
+            <div className="connect-center-inline-actions">
+              <Link className="btn primary" href="/portal/connect/build">Profile Builder</Link>
+            </div>
+          </section>
         </main>
       </DashboardShell>
     );
   }
 
-  const [{ count: leadCount }, { data: links }, { data: legacyEvents }, { data: unifiedEvents }, { data: qrRows }, walletRes] = await Promise.all([
-    admin
-      .from("profile_leads")
-      .select("id", { count: "exact", head: true })
-      .eq("profile_id", profile.id),
-    admin
-      .from("profile_links")
-      .select("id, is_active")
-      .eq("profile_id", profile.id),
-    admin
-      .from("profile_click_events")
-      .select("event_type, created_at")
-      .eq("profile_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(1200),
-    admin
-      .from("connect_events")
-      .select("event_type, created_at")
-      .eq("profile_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(1200),
-    admin
-      .from("qr_codes")
-      .select("id, name, slug, scan_count, profile_id, connect_profile_id")
-      .eq("customer_id", customer.id),
-    admin
-      .from("wallet_events")
-      .select("wallet_type, created_at")
-      .eq("profile_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(1200),
+  const [leadCountResult, linksResult, legacyEventsResult, unifiedEventsResult, qrRowsResult, walletRowsResult] = await Promise.all([
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:profile_leads.count",
+      customerId: customer.id,
+      fallback: 0,
+      task: () =>
+        admin
+          .from("profile_leads")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", profile.id),
+      mapResult: (result: any) => ({ data: result?.count || 0, error: result?.error }),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:profile_links.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ id: string; is_active: boolean | null }>,
+      task: () =>
+        admin
+          .from("profile_links")
+          .select("id, is_active")
+          .eq("profile_id", profile.id),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:profile_click_events.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ event_type: string; created_at: string }>,
+      task: () =>
+        admin
+          .from("profile_click_events")
+          .select("event_type, created_at")
+          .eq("profile_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(1200),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:connect_events.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ event_type: string; created_at: string }>,
+      task: () =>
+        admin
+          .from("connect_events")
+          .select("event_type, created_at")
+          .eq("profile_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(1200),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:qr_codes.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; profile_id: string | null; connect_profile_id: string | null }>,
+      task: () =>
+        admin
+          .from("qr_codes")
+          .select("id, name, slug, scan_count, profile_id, connect_profile_id")
+          .eq("customer_id", customer.id),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/connect",
+      endpoint: "supabase:wallet_events.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ wallet_type: string; created_at: string }>,
+      task: () =>
+        admin
+          .from("wallet_events")
+          .select("wallet_type, created_at")
+          .eq("profile_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(1200),
+    }),
   ]);
+
+  if (leadCountResult.failed) panelIssues.push("Lead counts are temporarily unavailable.");
+  if (linksResult.failed) panelIssues.push("Profile links are temporarily unavailable.");
+  if (legacyEventsResult.failed || unifiedEventsResult.failed) panelIssues.push("Recent engagement events are temporarily unavailable.");
+  if (walletRowsResult.failed) panelIssues.push("Wallet activity is temporarily unavailable.");
+
+  const leadCount = leadCountResult.data;
+  const links = linksResult.data;
+  const legacyEvents = legacyEventsResult.data;
+  const unifiedEvents = unifiedEventsResult.data;
+  const qrRows = qrRowsResult.data;
+  const walletRows = walletRowsResult.data;
 
   const connectRows = (unifiedEvents || []).length
     ? (unifiedEvents || [])
@@ -117,7 +201,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const contactSaves = connectRows.filter((event: any) => event.event_type === "save_contact").length;
   const totalLeads = leadCount || 0;
 
-  const walletRows = walletRes?.data || [];
   const appleWalletSaves = walletRows.filter((row: any) => row.wallet_type === "apple").length;
   const googleWalletSaves = walletRows.filter((row: any) => row.wallet_type === "google").length;
   const totalWalletSaves = appleWalletSaves + googleWalletSaves;
@@ -129,16 +212,24 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     (row: any) => row.connect_profile_id === profile.id || row.profile_id === profile.id
   );
 
-  const { data: lastScanRows } = linkedQr
-    ? await admin
-        .from("qr_scans")
-        .select("created_at")
-        .eq("qr_code_id", linkedQr.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-    : { data: [] };
+  const lastScanRowsResult = linkedQr
+    ? await runGuardedDashboardTask({
+        route: "/portal/connect",
+        endpoint: "supabase:qr_scans.last_scan",
+        customerId: customer.id,
+        fallback: [] as Array<{ created_at: string | null }>,
+        task: () =>
+          admin
+            .from("qr_scans")
+            .select("created_at")
+            .eq("qr_code_id", linkedQr.id)
+            .order("created_at", { ascending: false })
+            .limit(1),
+      })
+    : { data: [] as Array<{ created_at: string | null }>, failed: false };
+  if (lastScanRowsResult.failed) panelIssues.push("Latest scan timestamp is temporarily unavailable.");
 
-  const lastScan = lastScanRows?.[0]?.created_at || null;
+  const lastScan = lastScanRowsResult.data?.[0]?.created_at || null;
   const totalTaps = linkedQr?.scan_count || 0;
 
   const completionChecks = [
@@ -147,17 +238,18 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     { label: "Avatar uploaded", done: Boolean(profile.avatar_url) },
     { label: "Cover photo added", done: Boolean((profile as any).cover_url) },
     { label: "At least one active link", done: activeLinks > 0 },
-    { label: "Public profile published", done: Boolean(profile.is_active && profile.slug) },
+    { label: "Public page published", done: Boolean(profile.is_active && profile.slug) },
   ];
 
   const completedCount = completionChecks.filter((item) => item.done).length;
   const profileProgress = Math.round((completedCount / completionChecks.length) * 100);
 
   const missingItems = completionChecks.filter((item) => !item.done);
-  const publicProfileHref = profile.slug ? `/u/${profile.slug}` : "/portal/connect/edit";
+  const publicProfileHref = profile.slug ? `/u/${profile.slug}` : "/portal/connect/build";
   const publicProfileUrl = profile.slug
     ? `qr.clutchprintshop.com/u/${profile.slug}`
-    : "Add a profile slug to publish your page";
+    : "Open Profile Builder to publish your page";
+  const publicProfileFullUrl = profile.slug ? `https://qr.clutchprintshop.com/u/${profile.slug}` : null;
 
   const builderImprovements = [
     { icon: <MessageSquare size={16} />, label: "Drag-and-drop blocks", status: "Ready" },
@@ -184,28 +276,35 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect"
-          subtitle="Manage your smart business card, public profile, links, leads, and wallet passes."
+          subtitle="Open your Profile Builder workspace or view the profile your customers see."
           actions={
             <div className="connect-center-header-actions">
-              <Link className="btn primary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
-                <Globe size={15} />
-                View Public Profile
-              </Link>
               <Link className="btn primary" href="/portal/connect/build">
                 <Palette size={15} />
                 Profile Builder
               </Link>
-              <Link className="btn secondary" href="/portal/connect/edit">
-                <PencilLine size={15} />
-                Edit Profile
-              </Link>
+              <div className="connect-profile-view-row">
+                <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+                  <Globe size={15} />
+                  View Profile
+                </Link>
+                {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
+              </div>
             </div>
           }
         />
 
         <ConnectTabs active="profile" />
 
-        <section className="connect-center-public-strip" aria-label="Public profile status">
+        {panelIssues.length ? (
+          <RetryNotice
+            title="Some Clutch Connect data is temporarily unavailable"
+            description={panelIssues[0]}
+            details={panelIssues.slice(1)}
+          />
+        ) : null}
+
+        <section className="connect-center-public-strip" aria-label="Public page status">
           <div>
             <span className={profile.is_active ? "is-live" : "is-draft"}>
               {profile.is_active ? "Live" : "Draft"}
@@ -214,9 +313,12 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           </div>
           <div className="connect-center-public-strip-actions">
             <Link className="btn ghost" href="/portal/connect/leads">Leads CRM</Link>
-            <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
-              View Public Profile
-            </Link>
+            <div className="connect-profile-view-row">
+              <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+                View Profile
+              </Link>
+              {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
+            </div>
           </div>
         </section>
 
@@ -295,24 +397,36 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               <Link className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank">Google Wallet</Link>
             </div>
           </article>
+
+          <article className="connect-center-card">
+            <p className="connect-center-kicker">Card Hardware</p>
+            <h2>NTAG213 Metal Card</h2>
+            <ul className="connect-center-metadata-list">
+              <li><span>NFC chip</span><strong>NTAG213 • 13.56 MHz</strong></li>
+              <li><span>Memory</span><strong>144 bytes • 7-byte UID</strong></li>
+              <li><span>Card size</span><strong>CR80 • 85.5 x 54 x 1.2 mm</strong></li>
+              <li><span>Finish options</span><strong>Matte black, brushed silver, brushed gold</strong></li>
+              <li><span>Build</span><strong>Rigid, water resistant, laser engravable</strong></li>
+            </ul>
+          </article>
         </section>
 
         <section className="connect-center-card">
           <p className="connect-center-kicker">Quick Actions</p>
-          <h2>Manage Profile Fast</h2>
+          <h2>Open Clutch Connect</h2>
           <div className="connect-center-quick-actions">
-            <Link className="connect-center-action" href="/portal/connect/edit">
-              <PencilLine size={18} />
+            <Link className="connect-center-action" href="/portal/connect/build">
+              <Palette size={18} />
               <div>
-                <strong>Edit Profile</strong>
-                <span>Update profile details and branding.</span>
+                <strong>Profile Builder</strong>
+                <span>Edit your new public page, blocks, links, and design.</span>
               </div>
             </Link>
             <Link className="connect-center-action" href={`/u/${profile.slug}`} target="_blank">
               <Globe size={18} />
               <div>
-                <strong>Public Profile</strong>
-                <span>Preview your live public page.</span>
+                <strong>View Profile</strong>
+                <span>Open the profile customers see from your card and QR links.</span>
               </div>
             </Link>
             <Link className="connect-center-action" href="/portal/analytics?tab=clutch-connect">
@@ -334,13 +448,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
         <section className="connect-center-grid connect-center-builder-grid">
           <article className="connect-center-card">
-            <p className="connect-center-kicker">Unified Profile Builder</p>
+            <p className="connect-center-kicker">Profile Builder</p>
             <h2>One experience for card + links + profile page</h2>
             <p className="muted">Card Builder, Manage Links, and Edit Public Page now work as one guided profile workflow.</p>
             <div className="connect-center-inline-actions">
-              <Link className="btn primary" href="/portal/connect/build">Builder Workspace</Link>
-              <Link className="btn secondary" href="/portal/connect/links">Link Library</Link>
-              <Link className="btn ghost" href="/portal/connect/edit">Profile Editor</Link>
+              <Link className="btn primary" href="/portal/connect/build">Profile Builder</Link>
+              <div className="connect-profile-view-row">
+                <Link className="btn ghost" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>View Profile</Link>
+                {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
+              </div>
             </div>
           </article>
 
@@ -360,7 +476,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         </section>
 
         <section className="connect-center-card">
-          <p className="connect-center-kicker">Public Profile Improvements</p>
+          <p className="connect-center-kicker">Public Page Improvements</p>
           <h2>Digital Business Card Enhancements</h2>
           <div className="connect-center-public-grid">
             {publicProfileImprovements.map((item) => (

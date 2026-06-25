@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, ClipboardList, GalleryVerticalEnd, ImageIcon, Link2, Mail, MapPin, MessageSquarePlus, Phone, PlusCircle, Share2, Star, User, Video } from "lucide-react";
+import { CalendarDays, ClipboardList, GalleryVerticalEnd, ImageIcon, Link2, Mail, MapPin, Phone, PlusCircle, Share2, Star, Type, UserCircle2, Video } from "lucide-react";
 import { BlockType } from "@/lib/builder-types";
 
 interface BlockLibraryItem {
@@ -16,7 +16,9 @@ interface BlockLibraryItem {
 }
 
 const BLOCK_LIBRARY: BlockLibraryItem[] = [
-  { id: "profile", type: "profile-hero", label: "Profile", description: "Photo, name, role, and bio", icon: User, category: "core", available: true },
+  { id: "avatar", type: "avatar-block", label: "Avatar", description: "Upload and style profile image", icon: UserCircle2, category: "core", available: true },
+  { id: "business-name", type: "business-name-block", label: "Business Name", description: "Primary name headline", icon: Type, category: "core", available: true },
+  { id: "subheader", type: "subheader-block", label: "Subheader", description: "Role, tagline, or short subtitle", icon: Type, category: "core", available: true },
   { id: "email", type: "email-button", label: "Email", description: "Single email call-to-action", icon: Mail, category: "contact", available: true },
   { id: "phone", type: "phone-button", label: "Phone", description: "Single phone or text action", icon: Phone, category: "contact", available: true },
   { id: "social", type: "social-media-links", label: "Social links", description: "Display your social network grid", icon: Share2, category: "contact", available: true },
@@ -27,7 +29,6 @@ const BLOCK_LIBRARY: BlockLibraryItem[] = [
   { id: "video", label: "Video", description: "Feature a product or intro video", icon: Video, category: "growth", available: false },
   { id: "reviews", label: "Reviews", description: "Showcase testimonials and ratings", icon: Star, category: "growth", available: false },
   { id: "gallery", label: "Gallery", description: "Create an image gallery section", icon: GalleryVerticalEnd, category: "growth", available: false },
-  { id: "contact-buttons", type: "contact-buttons", label: "Contact group", description: "Call, email, website, and more", icon: MessageSquarePlus, category: "core", available: true },
   { id: "image", type: "image-banner", label: "Image", description: "Banner or promo image block", icon: ImageIcon, category: "core", available: true },
 ];
 
@@ -40,10 +41,17 @@ const CATEGORY_LABELS: Record<typeof CATEGORIES[number], string> = {
 
 interface BlockLibraryProps {
   onAddBlock: (type: BlockType) => void;
+  existingBlockTypes?: string[];
 }
 
-export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
+export default function BlockLibrary({ onAddBlock, existingBlockTypes = [] }: BlockLibraryProps) {
   const [search, setSearch] = useState("");
+  const existingTypes = new Set(existingBlockTypes);
+
+  const isBlockedByConflict = (type?: BlockType) => {
+    if (!type) return false;
+    return existingTypes.has(type);
+  };
 
   const filtered = search
     ? BLOCK_LIBRARY.filter(
@@ -79,7 +87,7 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
           ) : (
             <div className="saas-lib-group">
               {filtered.map((block, idx) => (
-                <LibraryItem key={`${block.id}-${idx}`} block={block} onAdd={onAddBlock} />
+                <LibraryItem key={`${block.id}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} />
               ))}
             </div>
           )
@@ -91,7 +99,7 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
                 <span className="saas-lib-section-label">{CATEGORY_LABELS[cat]}</span>
                 <div className="saas-lib-group">
                   {items.map((block, idx) => (
-                    <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} />
+                    <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} />
                   ))}
                 </div>
               </div>
@@ -103,8 +111,9 @@ export default function BlockLibrary({ onAddBlock }: BlockLibraryProps) {
   );
 }
 
-function LibraryItem({ block, onAdd }: { block: BlockLibraryItem; onAdd: (t: BlockType) => void }) {
+function LibraryItem({ block, onAdd, disabledByConflict }: { block: BlockLibraryItem; onAdd: (t: BlockType) => void; disabledByConflict?: boolean }) {
   const Icon = block.icon;
+  const disabled = !block.available || Boolean(disabledByConflict);
   return (
     <motion.div className={`saas-lib-item${block.available ? "" : " coming-soon"}`} whileHover={block.available ? { y: -2 } : undefined} transition={{ duration: 0.15 }}>
       <div className="saas-lib-icon"><Icon size={18} strokeWidth={2} /></div>
@@ -114,17 +123,17 @@ function LibraryItem({ block, onAdd }: { block: BlockLibraryItem; onAdd: (t: Blo
       </div>
       <button
         type="button"
-        className={`saas-lib-add-btn${block.available ? "" : " disabled"}`}
-        onClick={() => block.available && block.type && onAdd(block.type)}
-        disabled={!block.available}
+        className={`saas-lib-add-btn${disabled ? " disabled" : ""}`}
+        onClick={() => !disabled && block.type && onAdd(block.type)}
+        disabled={disabled}
       >
-        {block.available ? (
+        {!disabled ? (
           <>
             <PlusCircle size={14} strokeWidth={2} />
             <span>Add</span>
           </>
         ) : (
-          <span>Coming soon</span>
+          <span>{block.available ? "Added" : "Coming soon"}</span>
         )}
       </button>
     </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef, useState } from "react";
 import { BuilderBlock } from "@/lib/builder-types";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 import PremiumColorPicker from "../PremiumColorPicker";
@@ -103,20 +103,14 @@ function ColorPresetRow({ value, onChange }: { value?: string; onChange: (color:
   );
 }
 
-export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
+export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
+  const avatarUrl = typeof data.avatarUrl === "string" && data.avatarUrl !== "null" && data.avatarUrl !== "undefined" && !data.avatarUrl.startsWith("blob:") ? data.avatarUrl : "";
   const badgeEnabled = Boolean(data.verifiedBadgeEnabled ?? data.verified);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const localObjectUrlRef = useRef<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const initials = createInitials(data.businessName, undefined, undefined);
-
-  useEffect(() => {
-    return () => {
-      if (localObjectUrlRef.current) {
-        URL.revokeObjectURL(localObjectUrlRef.current);
-      }
-    };
-  }, []);
 
   const isClose = (a: number, b: number, epsilon = 0.01) => Math.abs(a - b) <= epsilon;
   const sameColor = (a: string | undefined, b: string) => (a || "").toLowerCase() === b.toLowerCase();
@@ -229,18 +223,38 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
     });
   };
 
-  const handleAvatarFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (localObjectUrlRef.current) {
-      URL.revokeObjectURL(localObjectUrlRef.current);
-    }
+    setIsUploadingAvatar(true);
+    setAvatarUploadError(null);
 
-    // TODO: connect this to Supabase Storage avatar upload.
-    const objectUrl = URL.createObjectURL(file);
-    localObjectUrlRef.current = objectUrl;
-    onUpdate({ avatarUrl: objectUrl });
+    try {
+      const form = new FormData();
+      form.append("avatar", file);
+      const response = await fetch("/api/connect/avatar", {
+        method: "POST",
+        body: form,
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || "Avatar upload failed.");
+      }
+
+      const avatarUrl = result.avatar_url;
+      if (!avatarUrl) {
+        throw new Error("Avatar upload did not return a public image URL.");
+      }
+
+      onUpdate({ avatarUrl });
+    } catch (error) {
+      setAvatarUploadError(error instanceof Error ? error.message : "Avatar upload failed.");
+    } finally {
+      setIsUploadingAvatar(false);
+      event.target.value = "";
+    }
   };
 
   return (
@@ -248,31 +262,20 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
       <EditorSection title="Avatar" description="Profile imagery and presence.">
         <div className="saas-avatar-panel">
           <div className="saas-avatar-preview-circle">
-            {data.avatarUrl ? <img src={data.avatarUrl} alt="Avatar preview" /> : <span>{initials}</span>}
+            {avatarUrl ? <img src={avatarUrl} alt="Avatar preview" /> : <span>{initials}</span>}
           </div>
           <div className="saas-avatar-actions">
-            <button type="button" className="saas-mini-btn" onClick={() => fileInputRef.current?.click()}>
-              Upload avatar
+            <button type="button" className="saas-mini-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploadingAvatar}>
+              {isUploadingAvatar ? "Uploading..." : "Upload avatar"}
             </button>
             <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ avatarUrl: "" })}>
               Remove avatar
             </button>
           </div>
-          <p className="saas-field-hint">Recommended: square image, 500x500px or larger.</p>
+          {avatarUploadError ? <p className="saas-field-error">{avatarUploadError}</p> : null}
+          <p className="saas-field-hint">Recommended: square image, at least 1000x1000px, 300 DPI source, PNG/JPG/WebP/SVG, max 1MB.</p>
           <input ref={fileInputRef} type="file" accept="image/*" className="saas-hidden-input" onChange={handleAvatarFile} />
         </div>
-      </EditorSection>
-
-      <EditorSection title="Content" description="What visitors see first.">
-        <Field label="Business / name">
-          <input type="text" value={data.businessName || ""} onChange={(e) => onUpdate({ businessName: e.target.value })} placeholder="Business Name" />
-        </Field>
-        <Field label="Title / role">
-          <input type="text" value={data.title || ""} onChange={(e) => onUpdate({ title: e.target.value })} placeholder="Founder" />
-        </Field>
-        <Field label="Bio / description">
-          <textarea value={data.bio || ""} onChange={(e) => onUpdate({ bio: e.target.value })} rows={4} placeholder="Tell visitors about your business" />
-        </Field>
       </EditorSection>
 
       <EditorSection title="Appearance" description="Glow, badge, and brand emphasis.">
@@ -346,7 +349,7 @@ export function ProfileHeroEditor({ block, onUpdate }: BlockEditorProps) {
 
       <AdvancedAccordion>
         <Field label="Avatar image URL">
-          <input type="text" value={data.avatarUrl || ""} onChange={(e) => onUpdate({ avatarUrl: e.target.value })} placeholder="https://..." />
+          <input type="text" value={avatarUrl} onChange={(e) => onUpdate({ avatarUrl: e.target.value })} placeholder="https://..." />
         </Field>
         <Field label="Glow hex">
           <input type="text" value={data.avatarGlowColor || "#FF6B2C"} onChange={(e) => onUpdate({ avatarGlowColor: e.target.value })} placeholder="#FFA665" />
@@ -434,6 +437,111 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
         <Toggle label="Show custom" checked={Boolean(data.showCustom)} onChange={(v) => onUpdate({ showCustom: v })} />
       </AdvancedAccordion>
     </div>
+  );
+}
+
+function TextBlockStyleEditor({
+  block,
+  onUpdate,
+  label,
+  placeholder,
+  defaultSize,
+  defaultWeight,
+}: {
+  block: BuilderBlock;
+  onUpdate: (patch: Record<string, any>) => void;
+  label: string;
+  placeholder: string;
+  defaultSize: number;
+  defaultWeight: number;
+}) {
+  const data = getBlockData(block);
+  const size = Number(data.fontSize) || defaultSize;
+  const weight = Number(data.fontWeight) || defaultWeight;
+
+  return (
+    <div className="saas-fields">
+      <EditorSection title="Content" description="Text shown in your profile header.">
+        <Field label={label}>
+          <input
+            type="text"
+            value={data.text || ""}
+            onChange={(e) => onUpdate({ text: e.target.value })}
+            placeholder={placeholder}
+          />
+        </Field>
+      </EditorSection>
+
+      <EditorSection title="Appearance" description="Typography and color controls.">
+        <Field label={`Font size (${size}px)`}>
+          <input
+            type="range"
+            min="16"
+            max="72"
+            step="1"
+            value={size}
+            onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
+          />
+        </Field>
+        <Field label="Weight">
+          <select value={String(weight)} onChange={(e) => onUpdate({ fontWeight: Number(e.target.value) })}>
+            <option value="500">Medium</option>
+            <option value="600">Semibold</option>
+            <option value="700">Bold</option>
+            <option value="800">Extra Bold</option>
+            <option value="900">Black</option>
+          </select>
+        </Field>
+        <Field label="Font family">
+          <select value={data.fontFamily || "inherit"} onChange={(e) => onUpdate({ fontFamily: e.target.value })}>
+            <option value="inherit">Theme default</option>
+            <option value="display">Display</option>
+            <option value="sans">Sans</option>
+            <option value="serif">Serif</option>
+          </select>
+        </Field>
+        <Field label="Text color">
+          <ColorPresetRow value={data.color || ""} onChange={(color) => onUpdate({ color })} />
+          <PremiumColorPicker
+            value={data.color || "#0F172A"}
+            onChange={(color) => onUpdate({ color })}
+            ariaLabel={`${label} text color`}
+            buttonText="Custom"
+            presets={["#FFA665", "#384862", "#FFFFFF", "#111827", "#6B7280"]}
+          />
+        </Field>
+      </EditorSection>
+
+      <AdvancedAccordion>
+        <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+      </AdvancedAccordion>
+    </div>
+  );
+}
+
+export function BusinessNameBlockEditor({ block, onUpdate }: BlockEditorProps) {
+  return (
+    <TextBlockStyleEditor
+      block={block}
+      onUpdate={onUpdate}
+      label="Business name"
+      placeholder="Zach Test Business"
+      defaultSize={40}
+      defaultWeight={800}
+    />
+  );
+}
+
+export function SubheaderBlockEditor({ block, onUpdate }: BlockEditorProps) {
+  return (
+    <TextBlockStyleEditor
+      block={block}
+      onUpdate={onUpdate}
+      label="Subheader"
+      placeholder="Owner / Designer"
+      defaultSize={22}
+      defaultWeight={600}
+    />
   );
 }
 

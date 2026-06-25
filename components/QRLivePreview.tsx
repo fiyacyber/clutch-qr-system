@@ -64,32 +64,67 @@ export default function QRLivePreview({
   printMockupType = "business_cards",
   trackingPreview = "Campaign tags enabled",
   downloadSize,
+  isLocked,
+  canCreate,
   error,
 }: QRLivePreviewProps) {
+  const previewLabel = finalUrl ? "Live preview" : "Draft preview";
+  const statusLabel = isLocked ? "Locked" : canCreate ? "Scan safe" : "Needs input";
+
   return (
     <div className={styles.container}>
       {error ? <div className={styles.errorMessage}>{error}</div> : null}
-      <h3 className={styles.sectionTitle}>Live QR Preview</h3>
-      <div className={styles.previewCard}>
-        <StyledQRPreview
-          url={finalUrl || qrUrl("preview")}
-          foregroundColor={foregroundColor}
-          backgroundColor={backgroundColor}
-          dotStyle={dotStyle}
-          cornerStyle={cornerStyle}
-          logoUrl={logoUrl}
-          showExportMenu={false}
-        />
-
-        <div className={styles.previewMeta}>
-          <p className={styles.metaLabel}>Usage</p>
-          <p className={styles.metaValue}>
-            {used}/{limit} QR codes
-          </p>
+      <section className={styles.heroPreviewCard}>
+        <div className={styles.previewHeader}>
+          <div>
+            <span className={styles.previewKicker}>{previewLabel}</span>
+            <h3 className={styles.sectionTitle}>Live QR Preview</h3>
+          </div>
+          <span className={styles.statusBadge}>{statusLabel}</span>
         </div>
-      </div>
 
-      <h3 className={styles.sectionTitle}>Destination Preview</h3>
+        <div className={styles.previewVisual}>
+          <div className={styles.previewGlow} aria-hidden="true" />
+          <div className={styles.previewCanvas}>
+            <StyledQRPreview
+              url={finalUrl || qrUrl("preview")}
+              foregroundColor={foregroundColor}
+              backgroundColor={backgroundColor}
+              dotStyle={dotStyle}
+              cornerStyle={cornerStyle}
+              logoUrl={logoUrl}
+              showExportMenu={false}
+            />
+          </div>
+        </div>
+
+        <div className={styles.previewTitleRow}>
+          <div>
+            <p className={styles.metaLabel}>Campaign Name</p>
+            <p className={styles.campaignName}>{name || "Untitled QR Campaign"}</p>
+          </div>
+          <div>
+            <p className={styles.metaLabel}>Print Piece</p>
+            <p className={styles.metaValue}>{PRINT_MOCKUP_LABELS[printMockupType]}</p>
+          </div>
+        </div>
+
+        <div className={styles.previewStrip}>
+          <article>
+            <span>Scan Safe</span>
+            <strong>{statusLabel}</strong>
+          </article>
+          <article>
+            <span>Resolution</span>
+            <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
+          </article>
+          <article>
+            <span>Usage</span>
+            <strong>{used}/{limit}</strong>
+          </article>
+        </div>
+      </section>
+
       <div className={styles.destinationPreviewCard}>
         <p>
           <span>Type</span>
@@ -97,28 +132,18 @@ export default function QRLivePreview({
         </p>
         <p>
           <span>Preview</span>
-          <strong>{destinationPreview || "Add destination details in the left panel."}</strong>
+          <strong>{destinationPreview || "Add destination details in the destination section."}</strong>
         </p>
         <p>
           <span>Tracking</span>
           <strong>{trackingPreview}</strong>
         </p>
+        <p>
+          <span>Destination</span>
+          <strong>{finalUrl || "No destination yet"}</strong>
+        </p>
       </div>
 
-      <h3 className={styles.sectionTitle}>Print Mockup Preview</h3>
-      <div className={styles.mockupCard}>
-        <div className={`${styles.mockupVisual} ${styles[printMockupType]}`}>
-          <div className={styles.mockupQrBadge}>
-            <div className={styles.mockupQrMini} style={{ background: foregroundColor }} />
-            <div>
-              <strong>{name || "Untitled QR Campaign"}</strong>
-              <span>{PRINT_MOCKUP_LABELS[printMockupType]}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h3 className={styles.sectionTitle}>Export</h3>
       <div className={styles.exportCard}>
         <p>
           <span>Recommended resolution</span>

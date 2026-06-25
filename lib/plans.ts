@@ -21,24 +21,26 @@ type CustomerPlanShape = {
   plan_code?: string | null;
   plan_status?: string | null;
   subscription_status?: string | null;
+  trial_ends_at?: string | null;
+  trial_status?: string | null;
   qr_limit?: number | null;
 };
 
 export const PLAN_DEFINITIONS: Record<PlanCode, PlanDefinition> = {
   free_qr: {
     code: "free_qr",
-    name: "Free Clutch QR",
-    shortName: "Free QR",
+    name: "Clutch Connect Starter",
+    shortName: "Starter",
     price: "Included",
     qrLimit: 1,
-    description: "One free dynamic Clutch QR Code included with qualifying print orders.",
+    description: "Starter Clutch Connect access included with qualifying print orders.",
     checkoutUrl: "https://www.clutchprintshop.com",
     features: [
-      "1 dynamic QR code",
+      "1 dynamic QR campaign",
       "Destination editing",
       "PNG, SVG, JPEG, and PDF exports",
       "Basic scan tracking",
-      "Upgrade anytime for more QR codes",
+      "Upgrade anytime for more campaigns",
     ],
     advancedAnalytics: false,
     csvReports: false,
@@ -46,21 +48,21 @@ export const PLAN_DEFINITIONS: Record<PlanCode, PlanDefinition> = {
   },
   qr_pro: {
     code: "qr_pro",
-    name: "QR Pro",
-    shortName: "Pro",
-    price: "$12/month",
+    name: "Clutch Connect",
+    shortName: "Connect",
+    price: "$14.99/month",
     qrLimit: 10,
-    description: "Trackable QR codes for print campaigns and small business marketing.",
+    description: "Trackable QR and NFC campaign tools for print marketing and smart business cards.",
     checkoutUrl:
       process.env.NEXT_PUBLIC_QR_PRO_CHECKOUT_URL ||
       "https://www.clutchprintshop.com/products/qr-pro",
     features: [
-      "Up to 10 dynamic QR codes",
+      "Up to 10 dynamic QR campaigns",
       "Destination editing",
       "QR color customization",
       "Logo upload",
       "PNG, SVG, JPEG, and PDF exports",
-      "Total scans and scans by QR code",
+      "Total scans and scans by campaign",
       "Basic source and device insights",
     ],
     advancedAnalytics: false,
@@ -69,20 +71,20 @@ export const PLAN_DEFINITIONS: Record<PlanCode, PlanDefinition> = {
   },
   qr_pro_plus: {
     code: "qr_pro_plus",
-    name: "QR Pro+",
-    shortName: "Pro+",
+    name: "Clutch Connect Plus",
+    shortName: "Connect Plus",
     price: "$30/month",
     qrLimit: 60,
-    description: "Advanced reporting and higher QR limits for growing teams and agencies.",
+    description: "Advanced reporting and higher campaign limits for growing teams and agencies.",
     checkoutUrl:
       process.env.NEXT_PUBLIC_QR_PRO_PLUS_CHECKOUT_URL ||
       "https://www.clutchprintshop.com/products/qr-pro-plus",
     features: [
-      "Up to 60 dynamic QR codes",
-      "Everything in QR Pro",
+      "Up to 60 dynamic QR campaigns",
+      "Everything in Clutch Connect",
       "Advanced analytics placeholders",
       "Campaign comparison",
-      "Best performing QR codes",
+      "Best performing campaigns",
       "Custom date range filters",
       "CSV and PDF report exports",
       "Agency and multi-location reporting placeholders",
@@ -99,7 +101,7 @@ export const PLAN_DEFINITIONS: Record<PlanCode, PlanDefinition> = {
     qrLimit: Number.MAX_SAFE_INTEGER,
     description: "Internal Clutch account with unrestricted plan feature access.",
     checkoutUrl: "/admin",
-    features: ["All QR Pro features", "All QR Pro+ features", "Internal customer management"],
+    features: ["All Clutch Connect features", "All Clutch Connect Plus features", "Internal customer management"],
     advancedAnalytics: true,
     csvReports: true,
     pdfReports: true,
@@ -142,8 +144,26 @@ export function getCustomerSubscriptionStatus(customer?: CustomerPlanShape | nul
   return String(customer?.subscription_status || customer?.plan_status || "active").toLowerCase();
 }
 
+export function getCustomerTrialStatus(customer?: CustomerPlanShape | null) {
+  return String(customer?.trial_status || "none").toLowerCase();
+}
+
+export function isCustomerTrialExpired(customer?: CustomerPlanShape | null) {
+  if (!customer || customer.is_admin) return false;
+
+  const trialStatus = getCustomerTrialStatus(customer);
+  if (trialStatus === "converted" || trialStatus === "cancelled" || trialStatus === "none") return false;
+  if (trialStatus === "expired") return true;
+  if (!customer.trial_ends_at) return false;
+
+  const trialEndsAt = new Date(customer.trial_ends_at).getTime();
+  return Number.isFinite(trialEndsAt) && trialEndsAt <= Date.now();
+}
+
 export function isCustomerSubscriptionLocked(customer?: CustomerPlanShape | null) {
   if (!customer || customer.is_admin) return false;
+
+  if (isCustomerTrialExpired(customer)) return true;
 
   const plan = getCustomerPlan(customer);
   if (plan.code === "free_qr") return false;
@@ -154,6 +174,10 @@ export function isCustomerSubscriptionLocked(customer?: CustomerPlanShape | null
 }
 
 export function getSubscriptionLockMessage(customer?: CustomerPlanShape | null) {
+  if (isCustomerTrialExpired(customer)) {
+    return "Your 30-day Clutch Connect trial has ended. Choose a monthly plan to continue creating and managing paid campaigns.";
+  }
+
   const status = getCustomerSubscriptionStatus(customer);
 
   if (status === "past_due" || status === "unpaid") {

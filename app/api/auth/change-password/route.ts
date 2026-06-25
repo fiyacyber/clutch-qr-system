@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.json({ error: "Please sign in again to change your password." }, { status: 401 });
   }
 
   const { error: updateError } = await supabase.auth.updateUser({ password });
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unable to complete password change." }, { status: 500 });
   }
 
-  const response = NextResponse.redirect(new URL("/portal", req.url));
+  const response = NextResponse.json({ ok: true, redirectTo: "/portal" });
   response.cookies.delete("clutch-must-change-password");
   return response;
 }

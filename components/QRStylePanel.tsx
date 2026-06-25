@@ -99,6 +99,7 @@ export default function QRStylePanel({
           {THEME_PRESETS.map((preset) => (
             <button
               key={preset.value}
+              type="button"
               className={`${styles.themeCard} ${theme === preset.value ? styles.active : ""}`}
               onClick={() => onThemeChange(preset.value)}
               title={preset.label}
@@ -125,8 +126,10 @@ export default function QRStylePanel({
               onChange={onForegroundColorChange}
               ariaLabel="QR code color"
               buttonText="Choose QR color"
+              className={styles.inlineColorPicker}
+              triggerClassName={styles.inlineColorTrigger}
+              valueClassName={styles.inlineColorValue}
             />
-            <span className={styles.colorValue}>{foregroundColor}</span>
           </label>
           <label className={styles.colorPicker}>
             <span className={styles.colorLabel}>Background</span>
@@ -135,8 +138,10 @@ export default function QRStylePanel({
               onChange={onBackgroundColorChange}
               ariaLabel="QR background color"
               buttonText="Choose background"
+              className={styles.inlineColorPicker}
+              triggerClassName={styles.inlineColorTrigger}
+              valueClassName={styles.inlineColorValue}
             />
-            <span className={styles.colorValue}>{backgroundColor}</span>
           </label>
         </div>
       </div>
@@ -186,6 +191,7 @@ export default function QRStylePanel({
           {DOWNLOAD_SIZES.map((size) => (
             <button
               key={size.value}
+              type="button"
               className={`${styles.sizeCard} ${downloadSize === size.value ? styles.active : ""}`}
               onClick={() => onDownloadSizeChange(size.value)}
             >

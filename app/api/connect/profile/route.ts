@@ -107,25 +107,33 @@ export async function POST(req: NextRequest) {
     show_lead_form,
   };
 
+  let savedProfile;
+
   if (profileId) {
-    const { error } = await admin
+    const { data, error } = await admin
       .from("profiles")
       .update(payload)
       .eq("id", profileId)
-      .eq("customer_id", customer.id);
+      .eq("customer_id", customer.id)
+      .select("*")
+      .single();
 
     if (error) {
       console.error("CONNECT PROFILE UPDATE ERROR", error);
       return NextResponse.json({ error: "Failed to update profile." }, { status: 500 });
     }
+
+    savedProfile = data;
   } else {
-    const { error } = await admin.from("profiles").insert(payload);
+    const { data, error } = await admin.from("profiles").insert(payload).select("*").single();
 
     if (error) {
       console.error("CONNECT PROFILE CREATE ERROR", error);
       return NextResponse.json({ error: "Failed to create profile." }, { status: 500 });
     }
+
+    savedProfile = data;
   }
 
-  return NextResponse.redirect(new URL("/portal/connect?saved=1", req.url));
+  return NextResponse.json({ ok: true, profile: savedProfile });
 }

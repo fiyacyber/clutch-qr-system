@@ -1,11 +1,10 @@
-import { notFound } from "next/navigation";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
 import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 import { validateBuilderConfig } from "@/lib/builder-config";
-import ConnectPublicProfile from "@/components/ConnectPublicProfile";
-import BuilderPublicProfile from "@/components/BuilderPublicProfile";
+import ConnectProfileView from "@/components/connect/ConnectProfileView";
 
 export default async function PublicConnectProfilePage({
   params,
@@ -16,6 +15,7 @@ export default async function PublicConnectProfilePage({
 }) {
   const { slug } = await params;
   const query = (await searchParams) || {};
+  const source = typeof query.source === "string" ? query.source.trim() : "";
 
   const admin = createSupabaseAdminClient();
 
@@ -26,7 +26,48 @@ export default async function PublicConnectProfilePage({
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!profile) notFound();
+  if (!profile) {
+    const { data: draftProfile } = await admin
+      .from("profiles")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (!draftProfile) {
+      return (
+        <main className="connect-public-shell connect-public-shell-fallback">
+          <section className="connect-public-fallback-card">
+            <p className="connect-eyebrow">Clutch Connect</p>
+            <h1>That profile is not live yet.</h1>
+            <p>
+              The card is pointing at <strong>/u/{slug}</strong>, but there is no published public profile at that address yet.
+              Open the builder, publish the profile, or update the card destination to the correct slug.
+            </p>
+            <div className="connect-public-fallback-actions">
+              <Link className="btn primary" href="/portal/connect/build">Open Profile Builder</Link>
+              <Link className="btn secondary" href="/portal/connect">Go to Connect Dashboard</Link>
+            </div>
+          </section>
+        </main>
+      );
+    }
+
+    return (
+      <main className="connect-public-shell connect-public-shell-fallback">
+        <section className="connect-public-fallback-card">
+          <p className="connect-eyebrow">Clutch Connect</p>
+          <h1>This profile is saved, but not published.</h1>
+          <p>
+            The page exists in the dashboard, but it is currently marked inactive. Turn it on in the builder to make this scan link live.
+          </p>
+          <div className="connect-public-fallback-actions">
+            <Link className="btn primary" href="/portal/connect/build">Open Profile Builder</Link>
+            <Link className="btn secondary" href="/portal/connect">Go to Connect Dashboard</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   const { data: linkRows } = await admin
     .from("profile_links")
@@ -45,7 +86,11 @@ export default async function PublicConnectProfilePage({
     event_type: "profile_view",
     ip_hash,
     user_agent,
-    metadata: { slug },
+    metadata: {
+      slug,
+      source: source || null,
+      view_kind: "profile_view",
+    },
   });
 
   await admin.from("connect_events").insert({
@@ -64,32 +109,16 @@ export default async function PublicConnectProfilePage({
     referrer: getReferrerSource(referrer),
   });
 
-  // Check if profile has builder_config and it's valid
-  if (profile.builder_config && validateBuilderConfig(profile.builder_config)) {
-    return <BuilderPublicProfile config={profile.builder_config} profile={profile} />;
-  }
+  const builderBlocks = profile.builder_config && validateBuilderConfig(profile.builder_config)
+    ? profile.builder_config.blocks
+    : [];
 
-  // Fall back to legacy ConnectPublicProfile renderer
   return (
-    <ConnectPublicProfile
-      profileId={profile.id}
-      slug={profile.slug}
-      businessName={profile.business_name}
-      contactName={profile.contact_name}
-      title={profile.title}
-      phone={profile.phone}
-      email={profile.email}
-      website={profile.website}
-      bio={profile.bio}
-      avatarUrl={profile.avatar_url}
-      coverUrl={profile.cover_url}
-      themeColor={profile.theme_color}
-      links={(linkRows || []) as any}
-      layout={(profile.layout || "grid") as any}
-      showLeadForm={profile.show_lead_form !== false}
-      sent={query.sent === "1"}
-      rateLimited={query.rate_limited === "1"}
-      error={query.error === "1"}
+    <ConnectProfileView
+      profile={profile}
+      blocks={builderBlocks as any}
+      socialLinks={(linkRows || []) as any}
+      mode="public"
     />
   );
 }
