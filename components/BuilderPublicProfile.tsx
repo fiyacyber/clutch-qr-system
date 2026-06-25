@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FaAddressCard, FaApple, FaGooglePay, FaShareNodes } from "react-icons/fa6";
 import { BuilderConfig } from "@/lib/builder-types";
 import { normalizeBlockType } from "./builder/blockUtils";
 import {
@@ -136,11 +137,19 @@ export default function BuilderPublicProfile({
   onSelectBlock,
 }: BuilderPublicProfileProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const [quickActionNotice, setQuickActionNotice] = useState<string | null>(null);
   const buttonColor = normalizeHex(config.theme.buttonColor) || normalizeHex(config.theme.accentColor) || "#FFA665";
   const buttonTextColor = getReadableTextColor(buttonColor);
   const textColor = normalizeHex(config.theme.textColor) || (config.theme.darkMode ? "#F8FAFC" : "#0F172A");
   const fontFamily = resolveFontFamily(config.theme.fontFamily);
   const fontScale = config.theme.fontScale === "large" ? 1.12 : 1;
+  const profileId = String(profile?.id || "").trim();
+  const slug = profile?.slug || undefined;
+  const hasProfileId = Boolean(profileId);
+  const saveContactHref = hasProfileId ? `/api/vcard/${profileId}` : "";
+  const appleWalletHref = hasProfileId ? `/api/wallet/apple/${profileId}` : "";
+  const googleWalletHref = hasProfileId ? `/api/wallet/google/${profileId}` : "";
+  const profileName = String(profile?.contact_name || profile?.business_name || "Clutch Connect").trim();
   const blocks = [...(config.blocks || [])]
     .sort((a, b) => a.order - b.order)
     .filter((block) => block.visible)
@@ -175,39 +184,93 @@ export default function BuilderPublicProfile({
     "content",
   ];
 
+  const sendEvent = useCallback((eventType: string, metadata?: Record<string, unknown>) => {
+    if (mode !== "public") return;
+    if (!profileId) return;
+
+    const source = typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("source") || undefined
+      : undefined;
+
+    const payload = {
+      profile_id: profileId,
+      event_type: eventType,
+      metadata: {
+        slug,
+        source,
+        ...(metadata || {}),
+      },
+    };
+
+    const body = JSON.stringify(payload);
+    if (navigator.sendBeacon) {
+      const blob = new Blob([body], { type: "application/json" });
+      navigator.sendBeacon("/api/connect/events", blob);
+      return;
+    }
+
+    void fetch("/api/connect/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+    });
+  }, [mode, profileId, slug]);
+
+  const copyShareUrl = async (value: string) => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+
+    const input = document.createElement("textarea");
+    input.value = value;
+    input.setAttribute("readonly", "true");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    document.execCommand("copy");
+    document.body.removeChild(input);
+  };
+
+  const handleShareQuickAction = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: profileName,
+          text: `View ${profileName}`,
+          url: shareUrl,
+        });
+        sendEvent("quick_action_share", { method: "native", href: shareUrl });
+        return;
+      } catch (error) {
+        const err = error as Error & { name?: string };
+        if (err?.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await copyShareUrl(shareUrl);
+      setQuickActionNotice("Profile link copied.");
+      sendEvent("quick_action_share", { method: "copy", href: shareUrl });
+    } catch {
+      setQuickActionNotice("Could not copy link.");
+    }
+  }, [profileName, sendEvent]);
+
+  useEffect(() => {
+    if (!quickActionNotice) return;
+    const timer = window.setTimeout(() => setQuickActionNotice(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [quickActionNotice]);
+
   useEffect(() => {
     if (mode !== "public") return;
-
-    const source = new URLSearchParams(window.location.search).get("source") || undefined;
-    const profileId = String(profile?.id || "").trim();
-
-    const sendEvent = (eventType: string, metadata?: Record<string, unknown>) => {
-      if (!profileId) return;
-
-      const payload = {
-        profile_id: profileId,
-        event_type: eventType,
-        metadata: {
-          slug: profile?.slug || undefined,
-          source,
-          ...(metadata || {}),
-        },
-      };
-
-      const body = JSON.stringify(payload);
-      if (navigator.sendBeacon) {
-        const blob = new Blob([body], { type: "application/json" });
-        navigator.sendBeacon("/api/connect/events", blob);
-        return;
-      }
-
-      void fetch("/api/connect/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        keepalive: true,
-      });
-    };
 
     // Distinguish client-rendered page view from server profile view logging.
     sendEvent("profile_view", { view_kind: "page_view" });
@@ -240,7 +303,7 @@ export default function BuilderPublicProfile({
 
     root.addEventListener("click", onClick);
     return () => root.removeEventListener("click", onClick);
-  }, [mode, profile?.id, profile?.slug]);
+  }, [mode, sendEvent]);
 
   const renderPreviewBlock = (block: any) => {
     const Preview = PREVIEW_COMPONENTS[block.type] || UnknownBlockPreview;
@@ -304,6 +367,92 @@ export default function BuilderPublicProfile({
           })}
         </section>
       ) : null}
+
+      <section className="builder-quick-actions-shell" aria-label="Quick actions">
+        <div className="builder-quick-actions-grid">
+          {saveContactHref ? (
+            <a
+              className="builder-quick-action-btn"
+              href={saveContactHref}
+              onClick={() => sendEvent("quick_action_save_contact", { href: saveContactHref })}
+            >
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaAddressCard /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Save Contact</strong>
+                <small>vCard</small>
+              </span>
+            </a>
+          ) : (
+            <button type="button" className="builder-quick-action-btn is-disabled" disabled>
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaAddressCard /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Save Contact</strong>
+                <small>Coming soon</small>
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="builder-quick-action-btn"
+            onClick={handleShareQuickAction}
+          >
+            <span className="builder-quick-action-icon" aria-hidden="true"><FaShareNodes /></span>
+            <span className="builder-quick-action-copy">
+              <strong>Share</strong>
+              <small>Send profile</small>
+            </span>
+          </button>
+
+          {appleWalletHref ? (
+            <a
+              className="builder-quick-action-btn"
+              href={appleWalletHref}
+              onClick={() => sendEvent("quick_action_apple_wallet", { href: appleWalletHref })}
+            >
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaApple /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Apple Wallet</strong>
+                <small>Add pass</small>
+              </span>
+            </a>
+          ) : (
+            <button type="button" className="builder-quick-action-btn is-disabled" disabled>
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaApple /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Apple Wallet</strong>
+                <small>Coming soon</small>
+              </span>
+            </button>
+          )}
+
+          {googleWalletHref ? (
+            <a
+              className="builder-quick-action-btn"
+              href={googleWalletHref}
+              onClick={() => sendEvent("quick_action_google_wallet", { href: googleWalletHref })}
+            >
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaGooglePay /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Google Wallet</strong>
+                <small>Add pass</small>
+              </span>
+            </a>
+          ) : (
+            <button type="button" className="builder-quick-action-btn is-disabled" disabled>
+              <span className="builder-quick-action-icon" aria-hidden="true"><FaGooglePay /></span>
+              <span className="builder-quick-action-copy">
+                <strong>Google Wallet</strong>
+                <small>Coming soon</small>
+              </span>
+            </button>
+          )}
+        </div>
+
+        {quickActionNotice ? (
+          <p className="builder-quick-actions-toast" role="status" aria-live="polite">{quickActionNotice}</p>
+        ) : null}
+      </section>
 
       <div className="builder-public-sections">
         {sectionOrder.map((groupKey) => {

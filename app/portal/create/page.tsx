@@ -86,6 +86,7 @@ export default async function CreatePortalPage() {
 
         <section className="create-page-nav qr-studio-top-actions">
           <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
+          <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
           <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link>
         </section>
 

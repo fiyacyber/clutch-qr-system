@@ -183,6 +183,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           actions={(
             <div className="portal-overview-header-actions">
               <Link className="btn primary" href="/portal/create">Create Campaign</Link>
+              <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
               <Link className="btn secondary" href="/portal/analytics">View Insights</Link>
               <Link className="btn ghost" href="/portal/connect/edit">Edit Clutch Connect</Link>
             </div>
@@ -249,6 +250,13 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               <h3>Create Campaign</h3>
               <p>Start a new dynamic QR campaign with full tracking.</p>
               <Link className="btn primary" href="/portal/create">Open Studio</Link>
+            </article>
+
+            <article className="portal-overview-action-item">
+              <div className="portal-overview-action-icon"><QrCode size={17} /></div>
+              <h3>Stored QR Library</h3>
+              <p>Search, filter, and manage all saved QR campaigns.</p>
+              <Link className="btn secondary" href="/portal/qr">Open Library</Link>
             </article>
 
             <article className="portal-overview-action-item">

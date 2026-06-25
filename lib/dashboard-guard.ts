@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 
-type DashboardRoute = "/portal" | "/portal/connect" | "/portal/create" | "/portal/analytics";
+type DashboardRoute = "/portal" | "/portal/connect" | "/portal/create" | "/portal/analytics" | "/portal/qr";
 
 interface GuardedTaskOptions<T, R> {
   route: DashboardRoute;

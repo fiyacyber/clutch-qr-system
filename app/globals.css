@@ -6549,6 +6549,132 @@ button:disabled {
   padding: calc(env(safe-area-inset-top, 0px) + 16px) max(12px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
 }
 
+.builder-quick-actions-shell {
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
+}
+
+.builder-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.builder-quick-action-btn {
+  min-height: 48px;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--builder-accent, #FF6B2C) 32%, rgba(15, 23, 42, 0.36));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--builder-accent, #FF6B2C) 22%, #F8FAFC), color-mix(in srgb, var(--builder-accent, #FF6B2C) 48%, #F97316));
+  color: #0B1F35;
+  text-decoration: none;
+  padding: 8px 10px;
+  box-shadow: 0 12px 22px rgba(11, 31, 53, 0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  cursor: pointer;
+}
+
+.builder-quick-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(11, 31, 53, 0.18);
+}
+
+.builder-quick-action-btn:active {
+  transform: translateY(0);
+  filter: saturate(1.08);
+}
+
+.builder-quick-action-btn.is-disabled {
+  background: color-mix(in srgb, var(--builder-accent, #FF6B2C) 8%, #E2E8F0);
+  border-color: color-mix(in srgb, var(--builder-accent, #FF6B2C) 16%, #CBD5E1);
+  color: #64748B;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.builder-quick-action-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 31, 53, 0.12);
+  font-size: 0.95rem;
+}
+
+.builder-quick-action-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+  text-align: left;
+}
+
+.builder-quick-action-copy strong {
+  font-size: 0.75rem;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.builder-quick-action-copy small {
+  font-size: 0.62rem;
+  line-height: 1.05;
+  color: color-mix(in srgb, #0B1F35 62%, #475569);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.builder-quick-actions-toast {
+  margin: 7px 2px 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--builder-text-color, #0F172A) 72%, #475569);
+}
+
+.builder-public-profile[data-theme="dark"] .builder-quick-action-btn {
+  border-color: color-mix(in srgb, var(--builder-accent, #FF6B2C) 36%, rgba(148, 163, 184, 0.42));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--builder-accent, #FF6B2C) 32%, #0B1F35), color-mix(in srgb, var(--builder-accent, #FF6B2C) 62%, #111827));
+  color: #F8FAFC;
+}
+
+.builder-public-profile[data-theme="dark"] .builder-quick-action-icon {
+  background: rgba(248, 250, 252, 0.16);
+}
+
+.builder-public-profile[data-theme="dark"] .builder-quick-action-copy small {
+  color: color-mix(in srgb, #F8FAFC 70%, #94A3B8);
+}
+
+.builder-public-profile[data-theme="dark"] .builder-quick-action-btn.is-disabled {
+  background: rgba(15, 23, 42, 0.42);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #94A3B8;
+}
+
+.builder-public-profile[data-theme="dark"] .builder-quick-actions-toast {
+  color: color-mix(in srgb, var(--builder-text-color, #F8FAFC) 72%, #94A3B8);
+}
+
+@media (min-width: 760px) {
+  .builder-quick-actions-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .builder-quick-action-btn {
+    min-height: 52px;
+  }
+}
+
 .builder-public-section {
   display: flex;
   flex-direction: column;
@@ -7212,6 +7338,18 @@ button:disabled {
 }
 
 @media (max-width: 540px) {
+  .builder-public-profile[data-mode="public"] .builder-quick-actions-shell {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+    z-index: 14;
+    background: linear-gradient(to bottom, rgba(241, 245, 249, 0.9), rgba(241, 245, 249, 0.55) 72%, transparent);
+    backdrop-filter: blur(5px);
+  }
+
+  .builder-public-profile[data-mode="public"][data-theme="dark"] .builder-quick-actions-shell {
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.52) 72%, transparent);
+  }
+
   .builder-public-profile[data-mode="public"] {
     width: 100%;
     border-radius: 0;

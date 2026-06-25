@@ -448,19 +448,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
         <section className="connect-center-grid connect-center-builder-grid">
           <article className="connect-center-card">
-            <p className="connect-center-kicker">Profile Builder</p>
-            <h2>One experience for card + links + profile page</h2>
-            <p className="muted">Card Builder, Manage Links, and Edit Public Page now work as one guided profile workflow.</p>
-            <div className="connect-center-inline-actions">
-              <Link className="btn primary" href="/portal/connect/build">Profile Builder</Link>
-              <div className="connect-profile-view-row">
-                <Link className="btn ghost" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>View Profile</Link>
-                {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
-              </div>
-            </div>
-          </article>
-
-          <article className="connect-center-card">
             <p className="connect-center-kicker">Builder Improvements</p>
             <h2>Block Library + Templates</h2>
             <ul className="connect-center-feature-list">
