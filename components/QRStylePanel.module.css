@@ -197,21 +197,35 @@
   background: #fafcff;
 }
 
-.select {
+.optionGroup {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+  gap: 8px;
+}
+
+.optionButton {
   padding: 10px 12px;
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.14);
   border-radius: 10px;
   color: var(--clutch-navy);
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.select:hover,
-.select:focus {
+.optionButton:hover,
+.optionButton:focus {
   border-color: var(--clutch-orange);
+  box-shadow: 0 4px 12px rgba(255, 166, 101, 0.14);
   outline: none;
+}
+
+.optionButton.active {
+  border-color: var(--clutch-orange-strong, #ff6b2c);
+  background: #fff6ee;
+  box-shadow: 0 8px 18px rgba(255, 107, 44, 0.15);
 }
 
 /* Size Grid */

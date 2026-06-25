@@ -4481,7 +4481,7 @@ button:disabled {
   font-size: 1.4rem;
   transition: all 0.2s ease;
   cursor: pointer;
-  color: white;
+  color: var(--clutch-navy);
   font-weight: 800;
   line-height: 1;
 }
@@ -5076,13 +5076,13 @@ button:disabled {
 .saas-swatch-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .saas-swatch-btn {
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-width: 74px;
+  max-width: 54px;
   border-radius: 999px;
   border: 2px solid rgba(255, 255, 255, 0.18);
   background: var(--swatch);
@@ -5155,7 +5155,7 @@ button:disabled {
   }
 
   .saas-swatch-btn {
-    max-width: 58px;
+    max-width: 42px;
   }
 
   .saas-theme-mode-grid {
@@ -6552,7 +6552,6 @@ button:disabled {
 .builder-public-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--builder-accent, #FF6B2C) 12%, rgba(148, 163, 184, 0.22));
   border-radius: 22px;
@@ -6563,9 +6562,9 @@ button:disabled {
 
 .builder-public-section-label {
   margin: 0;
-  width: fit-content;
-  padding: 6px 10px;
-  border-radius: 999px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 16px;
   border: 1px solid color-mix(in srgb, var(--builder-accent, #FF6B2C) 18%, rgba(148, 163, 184, 0.2));
   background: color-mix(in srgb, var(--builder-accent, #FF6B2C) 10%, rgba(255, 255, 255, 0.82));
   color: color-mix(in srgb, var(--builder-text-color, #0F172A) 64%, #475569);
@@ -6594,6 +6593,11 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.builder-public-section-block {
+  width: 100%;
+  padding: 0 0 2px;
 }
 
 /* Shared block wrapper */
@@ -6885,6 +6889,11 @@ button:disabled {
   background: color-mix(in srgb, var(--builder-button-text, #F8FAFC) 16%, transparent);
 }
 
+.builder-public-profile .builder-button-social .builder-action-icon {
+  background: rgba(56, 72, 98, 0.08);
+  color: var(--clutch-navy);
+}
+
 .builder-public-profile .builder-action-title,
 .builder-public-profile .builder-action-subtitle,
 .builder-public-profile .builder-action-chevron {
@@ -6905,6 +6914,11 @@ button:disabled {
 
 .builder-public-profile[data-theme="dark"] .builder-action-icon {
   background: color-mix(in srgb, var(--builder-button-text, #F8FAFC) 14%, transparent);
+}
+
+.builder-public-profile[data-theme="dark"] .builder-button-social .builder-action-icon {
+  color: #F8FAFC;
+  background: rgba(248, 250, 252, 0.12);
 }
 
 .builder-public-profile[data-theme="dark"] .builder-action-title {

@@ -20,6 +20,8 @@ import {
   FaFacebookF,
   FaInstagram,
   FaLinkedinIn,
+  FaApple,
+  FaGooglePay,
   FaTiktok,
   FaXTwitter,
   FaYoutube,
@@ -94,6 +96,27 @@ function SocialGlyph({ platform }: { platform?: string | null }) {
     default:
       return <AtSign {...commonProps} />;
   }
+}
+
+function WalletGlyph({ type }: { type?: string | null }) {
+  const value = String(type || "").toLowerCase();
+  const commonProps = { size: 18, "aria-hidden": true as const };
+
+  if (value.includes("google")) return <FaGooglePay {...commonProps} />;
+  return <FaApple {...commonProps} />;
+}
+
+function getSocialIconColor(platform?: string | null, iconColorMode?: string | null) {
+  if (iconColorMode !== "brand") return "currentColor";
+
+  const value = String(platform || "").toLowerCase();
+  if (value === "instagram") return "#E1306C";
+  if (value === "facebook") return "#1877F2";
+  if (value === "youtube") return "#FF0000";
+  if (value === "linkedin") return "#0A66C2";
+  if (value === "x" || value === "twitter") return "#111827";
+  if (value === "tiktok") return "#000000";
+  return "#384862";
 }
 
 type ActionCardProps = {
@@ -212,6 +235,9 @@ function resolveTextBlockFont(fontFamily?: string) {
   if (fontFamily === "display") return '"Archivo Black", "Anton", "Avenir Next", sans-serif';
   if (fontFamily === "sans") return '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
   if (fontFamily === "serif") return '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+  if (fontFamily === "mono") return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+  if (fontFamily === "rounded") return '"Trebuchet MS", "Avenir Next Rounded", "Nunito", sans-serif';
+  if (fontFamily === "editorial") return 'Georgia, "Times New Roman", Times, serif';
   return "var(--builder-font-family)";
 }
 
@@ -553,6 +579,7 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
 export function SocialLinksPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
   const links = Array.isArray(data.links) ? data.links : [];
+  const iconColorMode = data.iconColorMode || "mono";
   if (links.length === 0) {
     return (
       <div className="builder-block builder-block-social">
@@ -576,7 +603,9 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
           title={link.platform || "Social"}
         >
           <span className="builder-action-icon" aria-hidden="true">
-            <SocialGlyph platform={link.platform} />
+            <span style={{ color: getSocialIconColor(link.platform, iconColorMode) }}>
+              <SocialGlyph platform={link.platform} />
+            </span>
           </span>
           <span className="builder-action-content">
             <span className="builder-action-title">{link.platform || "Social"}</span>
@@ -695,12 +724,12 @@ export function FormBlockPreview({ block }: BlockPreviewProps) {
 
 export function WalletButtonPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
-  const icon = String((block as any).type).includes("apple") ? "🍎" : "🔵";
-  const label = data.label || "Add to Wallet";
+  const type = String((block as any).type);
+  const label = data.label || (type.includes("apple") ? "Add to Apple Wallet" : "Add to Google Wallet");
   return (
     <div className="builder-block">
       <ActionCard
-        icon={data.showIcon !== false ? icon : "💳"}
+        icon={data.showIcon !== false ? <WalletGlyph type={type} /> : "💳"}
         title={label}
         subtitle={data.url || undefined}
         href={data.url || undefined}

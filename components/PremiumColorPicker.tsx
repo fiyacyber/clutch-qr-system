@@ -6,7 +6,7 @@ import styles from "./PremiumColorPicker.module.css";
 
 type HSV = { h: number; s: number; v: number };
 
-const BRAND_PRESETS = ["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"];
+const BRAND_PRESETS = ["#FF7A1A", "#384862", "#0B1F35", "#F5F7FB", "#FFF1E7"];
 const RECENT_STORAGE_KEY = "clutch-color-picker-recents";
 const SAVED_STORAGE_KEY = "clutch-color-picker-saved";
 

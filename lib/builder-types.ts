@@ -58,7 +58,7 @@ export interface BuilderTheme {
   accentColor: string;
   buttonColor: string;
   textColor: string;
-  fontFamily: "exo2" | "sans" | "serif" | "display";
+  fontFamily: "exo2" | "sans" | "serif" | "display" | "mono" | "rounded" | "editorial";
   fontScale: "normal" | "large";
   layout: "default" | "minimal" | "compact";
   showProfilePicture: boolean;

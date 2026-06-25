@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Palette, PlusCircle, SlidersHorizontal, X } from "lucide-react";
 import { BuilderConfig, BlockType } from "@/lib/builder-types";
-import { createDefaultBuilderConfig, addBlockToConfig, updateBlockSettings, toggleBlockVisibility, updateTheme, sanitizeBuilderConfig } from "@/lib/builder-config";
+import { MAX_BUILDER_BLOCKS, createDefaultBuilderConfig, addBlockToConfig, updateBlockSettings, toggleBlockVisibility, updateTheme, sanitizeBuilderConfig } from "@/lib/builder-config";
 import BlockLibrary from "./BlockLibrary";
 import BuilderCanvas, { BlockSettingsPanel } from "./BuilderCanvas";
 import BuilderPreview from "./BuilderPreview";
@@ -28,6 +28,9 @@ const FONT_FAMILY_OPTIONS = [
   { value: "display", label: "Display (Large)" },
   { value: "sans", label: "Sans" },
   { value: "serif", label: "Serif" },
+  { value: "mono", label: "Mono" },
+  { value: "rounded", label: "Rounded" },
+  { value: "editorial", label: "Editorial" },
 ] as const;
 const FONT_SCALE_OPTIONS = [
   { value: "normal", label: "Normal" },
@@ -463,7 +466,13 @@ export default function BuilderEditor({ profile }: BuilderEditorProps) {
       );
     }
 
-    return <BlockLibrary onAddBlock={handleAddBlock} existingBlockTypes={config.blocks.map((block) => String(block.type))} />;
+    return (
+      <BlockLibrary
+        onAddBlock={handleAddBlock}
+        existingBlockTypes={config.blocks.map((block) => String(block.type))}
+        isAtBlockLimit={config.blocks.length >= MAX_BUILDER_BLOCKS}
+      />
+    );
   };
 
   if (!config) {

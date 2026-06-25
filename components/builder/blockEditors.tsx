@@ -649,6 +649,7 @@ const PLATFORMS = [
 export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   const links = Array.isArray(data.links) ? data.links : [];
+  const iconColorMode = data.iconColorMode || "mono";
 
   const updateLink = (idx: number, patch: Record<string, any>) => {
     const next = links.map((link: any, i: number) => (i === idx ? { ...link, ...patch } : link));
@@ -666,6 +667,31 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
   return (
     <div className="saas-fields">
       <EditorSection title="Content" description="Manage every social destination in one place.">
+        <div className="saas-field">
+          <span className="saas-field-label-row">
+            <span className="saas-field-label">Icon color style</span>
+            <span className="saas-help-tip" title="Keep icons monochrome by default, or switch to brand colors per platform." aria-label="Keep icons monochrome by default, or switch to brand colors per platform.">?</span>
+          </span>
+          <div className="saas-chip-row">
+            <button
+              type="button"
+              className={`saas-chip-btn${iconColorMode === "mono" ? " active" : ""}`}
+              aria-pressed={iconColorMode === "mono"}
+              onClick={() => onUpdate({ iconColorMode: "mono" })}
+            >
+              Monochrome
+            </button>
+            <button
+              type="button"
+              className={`saas-chip-btn${iconColorMode === "brand" ? " active" : ""}`}
+              aria-pressed={iconColorMode === "brand"}
+              onClick={() => onUpdate({ iconColorMode: "brand" })}
+            >
+              Brand colors
+            </button>
+          </div>
+          <p className="saas-field-hint">Monochrome keeps the icons clean and consistent with the rest of the page.</p>
+        </div>
         {links.map((link: any, idx: number) => (
           <div key={`${link.id || idx}`} className="saas-inline-group">
             <Field label={`Link ${idx + 1} platform`}>
@@ -685,7 +711,7 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
         <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ links: [...links, { id: `${Date.now()}`, platform: "Instagram", value: "" }] })}>+ Add link</button>
       </EditorSection>
       <EditorSection title="Appearance">
-        <p className="saas-field-hint">Icon style and color controls remain compatible and will be elevated here next.</p>
+        <p className="saas-field-hint">Icons inherit the selected color style automatically in the live preview.</p>
       </EditorSection>
       <AdvancedAccordion><Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} /></AdvancedAccordion>
     </div>

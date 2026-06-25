@@ -11,6 +11,8 @@ import {
   BlockType,
 } from "./builder-types";
 
+export const MAX_BUILDER_BLOCKS = 12;
+
 const BLOCK_TYPE_ALIASES: Record<string, BlockType> = {
   contact: "contact-buttons",
   "social-links": "social-media-links",
@@ -126,7 +128,7 @@ export function sanitizeBuilderConfig(config: BuilderConfig): BuilderConfig {
   const safeAccent = config.theme?.accentColor || "#FFA665";
   const safeButtonColor = config.theme?.buttonColor || safeAccent;
   const safeTextColor = config.theme?.textColor || "#0F172A";
-  const safeFontFamily = ["exo2", "sans", "serif", "display"].includes(String(config.theme?.fontFamily))
+  const safeFontFamily = ["exo2", "sans", "serif", "display", "mono", "rounded", "editorial"].includes(String(config.theme?.fontFamily))
     ? (config.theme.fontFamily as BuilderTheme["fontFamily"])
     : "exo2";
   const safeFontScale = config.theme?.fontScale === "large" ? "large" : "normal";
@@ -301,6 +303,10 @@ export function addBlockToConfig(
   type: BlockType,
   customSettings?: Record<string, any>
 ): BuilderConfig {
+  if (config.blocks.length >= MAX_BUILDER_BLOCKS) {
+    return config;
+  }
+
   const existingTypes = new Set(config.blocks.map((block) => String(block.type)));
   if (existingTypes.has(type)) {
     return config;

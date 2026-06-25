@@ -33,7 +33,7 @@ const THEME_PRESETS: Array<{
   {
     value: "default",
     label: "Default",
-    gradient: "linear-gradient(135deg, #FFA665, #384862)",
+    gradient: "linear-gradient(135deg, #FF7A1A, #384862)",
   },
   {
     value: "paper",
@@ -72,6 +72,34 @@ const DOWNLOAD_SIZES: Array<{ value: DownloadSize; label: string; size: string }
   { value: "card", label: "Card", size: "600×600" },
   { value: "print", label: "Print", size: "2400×2400" },
 ];
+
+function OptionButtonGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div className={styles.optionGroup} role="radiogroup" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={`${styles.optionButton} ${value === option.value ? styles.active : ""}`}
+          onClick={() => onChange(option.value)}
+          aria-pressed={value === option.value}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function QRStylePanel({
   theme,
@@ -153,32 +181,22 @@ export default function QRStylePanel({
         <div className={styles.patternGroup}>
           <label className={styles.selectLabel}>
             <span>Dot Style</span>
-            <select
+            <OptionButtonGroup
+              label="Dot Style"
               value={dotStyle}
-              onChange={(e) => onDotStyleChange(e.target.value as DotStyle)}
-              className={styles.select}
-            >
-              {DOT_STYLES.map((style) => (
-                <option key={style.value} value={style.value}>
-                  {style.label}
-                </option>
-              ))}
-            </select>
+              options={DOT_STYLES}
+              onChange={onDotStyleChange}
+            />
           </label>
 
           <label className={styles.selectLabel}>
             <span>Corner Style</span>
-            <select
+            <OptionButtonGroup
+              label="Corner Style"
               value={cornerStyle}
-              onChange={(e) => onCornerStyleChange(e.target.value as CornerStyle)}
-              className={styles.select}
-            >
-              {CORNER_STYLES.map((style) => (
-                <option key={style.value} value={style.value}>
-                  {style.label}
-                </option>
-              ))}
-            </select>
+              options={CORNER_STYLES}
+              onChange={onCornerStyleChange}
+            />
           </label>
         </div>
       </div>

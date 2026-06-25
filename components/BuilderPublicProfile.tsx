@@ -76,6 +76,9 @@ function resolveFontFamily(fontFamily?: string) {
   if (fontFamily === "display") return '"Archivo Black", "Anton", "Avenir Next", sans-serif';
   if (fontFamily === "sans") return '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
   if (fontFamily === "serif") return '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+  if (fontFamily === "mono") return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+  if (fontFamily === "rounded") return '"Trebuchet MS", "Avenir Next Rounded", "Nunito", sans-serif';
+  if (fontFamily === "editorial") return 'Georgia, "Times New Roman", Times, serif';
   return 'var(--font-exo2), "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
 }
 
@@ -309,11 +312,13 @@ export default function BuilderPublicProfile({
 
           return (
             <section key={groupKey} className="builder-public-section">
-              {groupKey !== "content" ? (
-                <h2 className="builder-public-section-label">{GROUP_LABELS[groupKey]}</h2>
-              ) : null}
-
               <div className="builder-public-section-stack">
+                {groupKey !== "content" ? (
+                  <div className="builder-public-section-block" aria-label={GROUP_LABELS[groupKey]}>
+                    <span className="builder-public-section-label">{GROUP_LABELS[groupKey]}</span>
+                  </div>
+                ) : null}
+
                 {sectionBlocks.map((block) => {
                   return renderPreviewBlock(block);
                 })}

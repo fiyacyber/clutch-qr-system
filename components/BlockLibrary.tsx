@@ -42,9 +42,10 @@ const CATEGORY_LABELS: Record<typeof CATEGORIES[number], string> = {
 interface BlockLibraryProps {
   onAddBlock: (type: BlockType) => void;
   existingBlockTypes?: string[];
+  isAtBlockLimit?: boolean;
 }
 
-export default function BlockLibrary({ onAddBlock, existingBlockTypes = [] }: BlockLibraryProps) {
+export default function BlockLibrary({ onAddBlock, existingBlockTypes = [], isAtBlockLimit = false }: BlockLibraryProps) {
   const [search, setSearch] = useState("");
   const existingTypes = new Set(existingBlockTypes);
 
@@ -81,13 +82,14 @@ export default function BlockLibrary({ onAddBlock, existingBlockTypes = [] }: Bl
       </div>
 
       <div className="saas-library-list">
+        {isAtBlockLimit ? <p className="saas-library-empty">Maximum of 12 blocks reached.</p> : null}
         {filtered ? (
           filtered.length === 0 ? (
             <p className="saas-library-empty">No blocks match "{search}"</p>
           ) : (
             <div className="saas-lib-group">
               {filtered.map((block, idx) => (
-                <LibraryItem key={`${block.id}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} />
+                <LibraryItem key={`${block.id}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} isAtBlockLimit={isAtBlockLimit} />
               ))}
             </div>
           )
@@ -99,7 +101,7 @@ export default function BlockLibrary({ onAddBlock, existingBlockTypes = [] }: Bl
                 <span className="saas-lib-section-label">{CATEGORY_LABELS[cat]}</span>
                 <div className="saas-lib-group">
                   {items.map((block, idx) => (
-                    <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} />
+                    <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} isAtBlockLimit={isAtBlockLimit} />
                   ))}
                 </div>
               </div>
@@ -111,9 +113,9 @@ export default function BlockLibrary({ onAddBlock, existingBlockTypes = [] }: Bl
   );
 }
 
-function LibraryItem({ block, onAdd, disabledByConflict }: { block: BlockLibraryItem; onAdd: (t: BlockType) => void; disabledByConflict?: boolean }) {
+function LibraryItem({ block, onAdd, disabledByConflict, isAtBlockLimit }: { block: BlockLibraryItem; onAdd: (t: BlockType) => void; disabledByConflict?: boolean; isAtBlockLimit?: boolean }) {
   const Icon = block.icon;
-  const disabled = !block.available || Boolean(disabledByConflict);
+  const disabled = !block.available || Boolean(disabledByConflict) || Boolean(isAtBlockLimit);
   return (
     <motion.div className={`saas-lib-item${block.available ? "" : " coming-soon"}`} whileHover={block.available ? { y: -2 } : undefined} transition={{ duration: 0.15 }}>
       <div className="saas-lib-icon"><Icon size={18} strokeWidth={2} /></div>
@@ -133,7 +135,7 @@ function LibraryItem({ block, onAdd, disabledByConflict }: { block: BlockLibrary
             <span>Add</span>
           </>
         ) : (
-          <span>{block.available ? "Added" : "Coming soon"}</span>
+          <span>{isAtBlockLimit ? "Limit reached" : block.available ? "Added" : "Coming soon"}</span>
         )}
       </button>
     </motion.div>

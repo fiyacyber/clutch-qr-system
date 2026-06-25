@@ -294,7 +294,7 @@ export default function ConnectPublicProfile({
                   <FaApple />
                 </span>
                 <span className="connect-action-copy">
-                  <span className="connect-action-title">Save to Apple Wallet</span>
+                  <span className="connect-action-title">Add to Apple Wallet</span>
                   <span className="connect-action-subtitle">Optional premium save</span>
                 </span>
               </a>
@@ -307,7 +307,7 @@ export default function ConnectPublicProfile({
                   <FaGooglePay />
                 </span>
                 <span className="connect-action-copy">
-                  <span className="connect-action-title">Save to Google Wallet</span>
+                  <span className="connect-action-title">Add to Google Wallet</span>
                   <span className="connect-action-subtitle">Optional premium save</span>
                 </span>
               </a>
