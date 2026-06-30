@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import rail from "./AdminRail.module.css";
 import styles from "./AdminLayout.module.css";
 
 type AdminLayoutProps = {
@@ -6,5 +7,5 @@ type AdminLayoutProps = {
 };
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  return <div className={styles.adminRoute}>{children}</div>;
+  return <div className={`${styles.adminRoute} ${rail.railBackground}`}>{children}</div>;
 }
