@@ -1,0 +1,180 @@
+.adminRoute {
+  min-width: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.adminRoute :global(.ds-app-shell) {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.adminRoute :global(.ds-main-shell) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.adminRoute :global(.admin-page.container) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 clamp(36px, 4vw, 56px);
+  display: grid;
+  gap: 22px;
+  overflow: hidden;
+}
+
+.adminRoute :global(.admin-page .ds-page-header) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.adminRoute :global(.admin-page .ds-page-header h1),
+.adminRoute :global(.admin-page .ds-page-header p),
+.adminRoute :global(.admin-page .dashboard-badges span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adminRoute :global(.admin-page .dashboard-grid) {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.adminRoute :global(.admin-page .metric-card) {
+  min-width: 0;
+  min-height: 152px;
+}
+
+.adminRoute :global(.admin-page .admin-dashboard-grid) {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+}
+
+.adminRoute :global(.admin-page .analytics-grid) {
+  width: 100%;
+  min-width: 0;
+}
+
+.adminRoute :global(.admin-page .card),
+.adminRoute :global(.admin-page .analytics-card),
+.adminRoute :global(.admin-page .metric-card) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminRoute :global(.admin-page .form),
+.adminRoute :global(.admin-page .admin-form-grid),
+.adminRoute :global(.admin-page .admin-search-form),
+.adminRoute :global(.admin-page .admin-account-form),
+.adminRoute :global(.admin-page .admin-qr-form) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminRoute :global(.admin-page .admin-form-grid) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.adminRoute :global(.admin-page .admin-search-form) {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.adminRoute :global(.admin-page .input),
+.adminRoute :global(.admin-page input),
+.adminRoute :global(.admin-page select),
+.adminRoute :global(.admin-page textarea),
+.adminRoute :global(.admin-page .btn) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminRoute :global(.admin-page .admin-table-card) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.adminRoute :global(.admin-page .admin-table) {
+  width: max-content;
+  min-width: min(980px, 100%);
+}
+
+.adminRoute :global(.admin-page .admin-table th),
+.adminRoute :global(.admin-page .admin-table td) {
+  min-width: 132px;
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+
+.adminRoute :global(.admin-page .admin-table td:nth-child(7)) {
+  min-width: 360px;
+  max-width: 440px;
+}
+
+.adminRoute :global(.admin-page .admin-table td:nth-child(8)) {
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.adminRoute :global(.admin-page .admin-account-form) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adminRoute :global(.admin-page .admin-account-form .checkbox-row),
+.adminRoute :global(.admin-page .admin-account-form .btn),
+.adminRoute :global(.admin-page .admin-qr-form .btn),
+.adminRoute :global(.admin-page .admin-form-grid + .btn) {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .adminRoute :global(.admin-page .admin-dashboard-grid) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .adminRoute :global(.admin-page.container) {
+    padding-top: 0;
+  }
+
+  .adminRoute :global(.admin-page .admin-search-form),
+  .adminRoute :global(.admin-page .admin-account-form) {
+    grid-template-columns: 1fr;
+  }
+
+  .adminRoute :global(.admin-page .admin-table) {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 560px) {
+  .adminRoute :global(.admin-page.container) {
+    gap: 16px;
+  }
+
+  .adminRoute :global(.admin-page .card),
+  .adminRoute :global(.admin-page .metric-card),
+  .adminRoute :global(.admin-page .analytics-card) {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .adminRoute :global(.admin-page .dashboard-badges) {
+    width: 100%;
+  }
+}
