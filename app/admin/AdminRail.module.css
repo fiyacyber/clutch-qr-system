@@ -1,0 +1,10 @@
+.railBackground {
+  background-color: var(--clutch-bg);
+  background-image: linear-gradient(to right, #0b1f35, #0b1f35 220px, var(--clutch-bg) 220px);
+}
+
+@media (max-width: 900px) {
+  .railBackground {
+    background-image: none;
+  }
+}
