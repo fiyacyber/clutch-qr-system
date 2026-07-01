@@ -32,6 +32,23 @@ function safeSanitizeConfig(rawConfig: unknown, themeColor?: string) {
   }
 }
 
+function sanitizeConfigForSave(rawConfig: unknown) {
+  try {
+    if (!rawConfig || typeof rawConfig !== "object" || Array.isArray(rawConfig)) {
+      return { ok: false as const, error: "Builder config must be an object." };
+    }
+
+    const cleanConfig = keepClearedSections(rawConfig, sanitizeBuilderConfig(rawConfig));
+    if (!validateBuilderConfig(cleanConfig)) {
+      return { ok: false as const, error: "Builder config is invalid. Please refresh and try again." };
+    }
+
+    return { ok: true as const, config: cleanConfig };
+  } catch {
+    return { ok: false as const, error: "Builder config could not be sanitized. Please refresh and try again." };
+  }
+}
+
 /**
  * GET /api/connect/builder-config
  * Retrieve or initialize the builder configuration for a profile
@@ -124,6 +141,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Config is required" }, { status: 400 });
     }
 
+    const sanitized = sanitizeConfigForSave(config);
+    if (!sanitized.ok) {
+      return NextResponse.json({ error: sanitized.error }, { status: 400 });
+    }
+
+    const cleanConfig = sanitized.config;
     const admin = createSupabaseAdminClient();
 
     const { data: profile, error: profileError } = await admin
@@ -134,11 +157,6 @@ export async function PUT(req: NextRequest) {
 
     if (profileError || !profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
-
-    const cleanConfig = safeSanitizeConfig(config);
-    if (!validateBuilderConfig(cleanConfig)) {
-      return NextResponse.json({ error: "Builder config is invalid. Please refresh and try again." }, { status: 400 });
     }
 
     const { error: updateError } = await admin
