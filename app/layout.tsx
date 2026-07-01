@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Exo_2, Montserrat } from "next/font/google";
+import BuilderPreviewLinkBridge from "./BuilderPreviewLinkBridge";
 import "./globals.css";
 import "./builder-stabilization.css";
 import "./builder-background-theme.css";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
+        <BuilderPreviewLinkBridge />
         {children}
       </body>
     </html>
