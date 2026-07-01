@@ -3,12 +3,30 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { requireCustomer } from "@/lib/auth";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig, validateBuilderConfig } from "@/lib/builder-config";
 
+function keepClearedSections(rawConfig: unknown, cleanConfig: ReturnType<typeof sanitizeBuilderConfig>) {
+  const rawSections = (rawConfig as { sections?: unknown } | null)?.sections;
+
+  if (!Array.isArray(rawSections) || rawSections.length !== 0) {
+    return cleanConfig;
+  }
+
+  return {
+    ...cleanConfig,
+    sections: [],
+    blocks: cleanConfig.blocks.map((block) => ({
+      ...block,
+      sectionId: undefined,
+    })),
+  };
+}
+
 function safeSanitizeConfig(rawConfig: unknown, themeColor?: string) {
   try {
     if (!rawConfig || typeof rawConfig !== "object" || Array.isArray(rawConfig)) {
       return createDefaultBuilderConfig(themeColor);
     }
-    return sanitizeBuilderConfig(rawConfig);
+
+    return keepClearedSections(rawConfig, sanitizeBuilderConfig(rawConfig));
   } catch {
     return createDefaultBuilderConfig(themeColor);
   }
