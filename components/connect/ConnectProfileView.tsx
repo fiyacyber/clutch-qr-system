@@ -146,16 +146,25 @@ function createLegacyFallbackBlocks(profile: any, socialLinks?: SocialLink[]): B
 function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
   const customBlocks = cloneBuilderBlocks(blocks);
 
-  // Critical builder rule:
-  // If a builder config exists, use it as the source of truth. Do not inject
-  // profile fallback buttons such as phone/email/website/save-contact into the
-  // live editor/preview, because those generated blocks cannot be removed from
-  // the saved config and make section counts disagree with the preview.
   if (Array.isArray(blocks)) {
     return customBlocks;
   }
 
   return createLegacyFallbackBlocks(profile, socialLinks);
+}
+
+function sanitizeForRender(config: BuilderConfig, sections?: BuilderConfig["sections"]): BuilderConfig {
+  const hydrated = sanitizeBuilderConfig(config);
+
+  if (Array.isArray(sections) && sections.length === 0) {
+    return {
+      ...hydrated,
+      sections: [],
+      blocks: hydrated.blocks.map((block) => ({ ...block, sectionId: undefined })),
+    };
+  }
+
+  return hydrated;
 }
 
 export default function ConnectProfileView({
@@ -197,7 +206,7 @@ export default function ConnectProfileView({
       : (Array.isArray(profile?.builder_config?.forms) ? profile.builder_config.forms : []),
   };
 
-  const hydratedConfig = sanitizeBuilderConfig(config);
+  const hydratedConfig = sanitizeForRender(config, config.sections);
 
   return (
     <BuilderPublicProfile
