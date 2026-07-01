@@ -1,0 +1,250 @@
+/* Builder stabilization overrides
+   Focus: editor preview controls, color picker modal stability, overflow hardening.
+   Keep this file small and targeted so it can be audited independently from globals.css. */
+
+/* ── Builder shell overflow hardening ───────────────────────── */
+.saas-builder-shell,
+.saas-builder-layout,
+.saas-builder-mobile-shell,
+.saas-preview-center,
+.saas-preview-center-mobile,
+.saas-panel-inner,
+.saas-canvas,
+.saas-canvas-list,
+.saas-design-shell,
+.saas-mobile-panel-content,
+.connect-center-shell,
+.admin-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.saas-preview-center,
+.saas-preview-center-mobile {
+  overflow-x: hidden;
+}
+
+/* ── Preview edit controls ────────────────────────────────────
+   Previous chips floated above blocks and looked like random labels on top of
+   the profile. This turns them into a compact block toolbar. */
+.builder-preview-selectable {
+  border-radius: 18px;
+  outline: 0 !important;
+  box-shadow: none;
+}
+
+.builder-preview-selectable::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid rgba(255, 166, 101, 0);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.builder-preview-selectable:hover::after,
+.builder-preview-selectable:focus-visible::after {
+  border-color: rgba(255, 166, 101, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.08);
+}
+
+.builder-preview-selectable.selected::after {
+  border-color: rgba(255, 166, 101, 0.72);
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.13);
+}
+
+.builder-preview-selectable:active {
+  transform: none;
+}
+
+.builder-preview-chip-row {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  left: auto !important;
+  width: auto !important;
+  display: inline-flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.builder-preview-chip,
+.builder-preview-remove-chip {
+  min-height: 26px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  color: #23324a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(12px) saturate(130%);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  pointer-events: auto;
+}
+
+.builder-preview-edit-chip {
+  font-size: 0;
+}
+
+.builder-preview-edit-chip::before {
+  content: "Edit";
+  font-size: 0.65rem;
+}
+
+.builder-preview-hidden-chip {
+  color: #475569;
+  background: rgba(248, 250, 252, 0.94);
+}
+
+.builder-preview-remove-chip {
+  color: #991b1b;
+  border-color: rgba(248, 113, 113, 0.36);
+  background: rgba(255, 247, 247, 0.96);
+  cursor: pointer;
+}
+
+.builder-preview-remove-chip:hover,
+.builder-preview-remove-chip:focus-visible {
+  color: #7f1d1d;
+  border-color: rgba(239, 68, 68, 0.72);
+  background: #fff1f1;
+  outline: none;
+}
+
+.builder-preview-selectable:hover .builder-preview-chip,
+.builder-preview-selectable:focus-within .builder-preview-chip,
+.builder-preview-selectable.selected .builder-preview-chip,
+.builder-preview-selectable.is-hidden .builder-preview-chip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.builder-preview-selectable .builder-preview-flow-item {
+  position: relative;
+  z-index: 1;
+}
+
+.builder-preview-selectable a,
+.builder-preview-selectable button {
+  pointer-events: none;
+}
+
+.builder-preview-selectable .builder-preview-chip,
+.builder-preview-selectable [data-preview-action="remove"] {
+  pointer-events: auto;
+}
+
+.builder-preview-selectable .builder-preview-flow-item .builder-button,
+.builder-preview-selectable .builder-preview-flow-item .builder-button-social {
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.builder-preview-selectable.selected .builder-preview-flow-item .builder-button,
+.builder-preview-selectable.selected .builder-preview-flow-item .builder-button-social {
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14), 0 0 0 2px rgba(255, 166, 101, 0.18);
+}
+
+/* Keep the compact toolbar off tiny phone previews so it does not cover buttons. */
+@media (max-width: 520px) {
+  .builder-preview-chip-row {
+    top: 6px !important;
+    right: 6px !important;
+    gap: 4px;
+  }
+
+  .builder-preview-chip,
+  .builder-preview-remove-chip {
+    min-height: 24px;
+    padding: 5px 7px;
+    font-size: 0.58rem;
+  }
+
+  .builder-preview-edit-chip::before {
+    font-size: 0.58rem;
+  }
+}
+
+/* ── Color picker modal hardening ─────────────────────────────
+   Uses structural selectors because PremiumColorPicker is a CSS module. */
+body > div[role="presentation"],
+body [role="presentation"] {
+  box-sizing: border-box;
+}
+
+body [role="dialog"][aria-modal="true"] {
+  box-sizing: border-box;
+  max-width: min(960px, calc(100vw - 24px));
+  max-height: min(90dvh, 820px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+body [role="dialog"][aria-modal="true"] *,
+body [role="dialog"][aria-modal="true"] *::before,
+body [role="dialog"][aria-modal="true"] *::after {
+  box-sizing: border-box;
+}
+
+body [role="dialog"][aria-modal="true"] div:has(> canvas) {
+  min-width: 220px;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+body [role="dialog"][aria-modal="true"] canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+body [role="dialog"][aria-modal="true"] input[type="color"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 48px;
+  height: 36px;
+  min-width: 48px;
+  padding: 2px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+body [role="dialog"][aria-modal="true"] input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+body [role="dialog"][aria-modal="true"] input[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: 8px;
+}
+
+body [role="dialog"][aria-modal="true"] input[type="number"],
+body [role="dialog"][aria-modal="true"] input[type="text"] {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  body [role="dialog"][aria-modal="true"] {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  body [role="dialog"][aria-modal="true"] div:has(> canvas) {
+    min-width: 200px;
+    min-height: 200px;
+  }
+}
