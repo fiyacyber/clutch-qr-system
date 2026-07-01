@@ -24,6 +24,49 @@
   overflow-x: hidden;
 }
 
+/* ── Desktop builder sizing ───────────────────────────────────
+   The default builder sidebar was too narrow for nested section cards,
+   inspector controls, color pickers, and block actions. Keep mobile untouched. */
+@media (min-width: 1200px) {
+  .saas-builder-layout {
+    grid-template-columns: minmax(410px, 440px) minmax(520px, 1fr) minmax(330px, 380px) !important;
+  }
+
+  .saas-builder-sidebar,
+  .saas-builder-side,
+  .saas-builder-left,
+  .saas-panel-left,
+  .saas-sidebar-panel {
+    width: auto;
+    min-width: 410px;
+  }
+
+  .saas-builder-inspector,
+  .saas-builder-right,
+  .saas-panel-right,
+  .saas-inspector-panel {
+    min-width: 330px;
+  }
+
+  .saas-preview-center {
+    padding-inline: clamp(24px, 3vw, 56px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .saas-builder-layout {
+    grid-template-columns: minmax(440px, 480px) minmax(560px, 1fr) minmax(360px, 400px) !important;
+  }
+
+  .saas-builder-sidebar,
+  .saas-builder-side,
+  .saas-builder-left,
+  .saas-panel-left,
+  .saas-sidebar-panel {
+    min-width: 440px;
+  }
+}
+
 /* ── Preview edit controls ────────────────────────────────────
    Previous chips floated above blocks and looked like random labels on top of
    the profile. This turns them into a compact block toolbar. */
