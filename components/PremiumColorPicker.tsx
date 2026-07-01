@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./PremiumColorPicker.module.css";
 
@@ -19,7 +19,7 @@ function toHexByte(value: number) {
 }
 
 function normalizeHex(input: string) {
-  const value = input.trim().replace(/^#/, "");
+  const value = String(input || "").trim().replace(/^#/, "");
   if (/^[0-9a-fA-F]{3}$/.test(value)) {
     return `#${value
       .split("")
@@ -160,7 +160,7 @@ function writeStorageList(key: string, values: string[]) {
   }
 }
 
-function useColorModel(value: string) {
+function modelFromHex(value: string) {
   const normalized = normalizeHex(value) || "#FFA665";
   const rgb = hexToRgb(normalized);
   const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
@@ -194,17 +194,15 @@ export default function PremiumColorPicker({
   storageKey = RECENT_STORAGE_KEY,
   name,
 }: PremiumColorPickerProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wheelRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
   const [savedColors, setSavedColors] = useState<string[]>([]);
   const [hexText, setHexText] = useState("");
   const [rgbText, setRgbText] = useState({ r: "", g: "", b: "" });
-  const [hsv, setHsv] = useState<HSV>({ h: 0, s: 0, v: 1 });
+  const [hsv, setHsv] = useState<HSV>({ h: 24, s: 0.6, v: 1 });
   const [isMounted, setIsMounted] = useState(false);
 
-  const { normalized, rgb } = useColorModel(value);
+  const { normalized, rgb } = modelFromHex(value);
   const textColor = useMemo(() => getReadableTextColor(normalized), [normalized]);
 
   useEffect(() => {
@@ -212,10 +210,11 @@ export default function PremiumColorPicker({
   }, []);
 
   useEffect(() => {
-    setHexText(normalized);
-    setRgbText({ r: String(rgb.r), g: String(rgb.g), b: String(rgb.b) });
-    setHsv(rgbToHsv(rgb.r, rgb.g, rgb.b));
-  }, [normalized, rgb.r, rgb.g, rgb.b]);
+    const nextModel = modelFromHex(value);
+    setHexText(nextModel.normalized);
+    setRgbText({ r: String(nextModel.rgb.r), g: String(nextModel.rgb.g), b: String(nextModel.rgb.b) });
+    setHsv(nextModel.hsv);
+  }, [value]);
 
   useEffect(() => {
     if (!open) return;
@@ -234,26 +233,39 @@ export default function PremiumColorPicker({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const syncLocalState = (nextHex: string) => {
+    const model = modelFromHex(nextHex);
+    setHexText(model.normalized);
+    setRgbText({ r: String(model.rgb.r), g: String(model.rgb.g), b: String(model.rgb.b) });
+    setHsv(model.hsv);
+    return model.normalized;
+  };
+
   const commitColor = (nextColor: string) => {
     const nextHex = normalizeHex(nextColor);
     if (!nextHex) return;
 
-    onChange(nextHex);
+    const cleanHex = syncLocalState(nextHex);
+    onChange(cleanHex);
 
     setRecents((current) => {
-      const next = [nextHex, ...current.filter((item) => item !== nextHex)].slice(0, 8);
+      const next = [cleanHex, ...current.filter((item) => item !== cleanHex)].slice(0, 8);
       writeStorageList(storageKey, next);
       return next;
     });
   };
 
   const updateFromHsv = (nextHsv: HSV) => {
-    setHsv({
+    const safeHsv = {
       h: ((nextHsv.h % 360) + 360) % 360,
       s: clamp(nextHsv.s, 0, 1),
       v: clamp(nextHsv.v, 0, 1),
-    });
-    const nextHex = hsvToHex(nextHsv.h, nextHsv.s, nextHsv.v);
+    };
+    const nextHex = hsvToHex(safeHsv.h, safeHsv.s, safeHsv.v);
+    setHsv(safeHsv);
+    setHexText(nextHex);
+    const nextRgb = hexToRgb(nextHex);
+    setRgbText({ r: String(nextRgb.r), g: String(nextRgb.g), b: String(nextRgb.b) });
     commitColor(nextHex);
   };
 
@@ -262,25 +274,18 @@ export default function PremiumColorPicker({
     setHexText(draft);
     const nextHex = normalizeHex(nextValue);
     if (!nextHex) return;
-    const nextRgb = hexToRgb(nextHex);
-    setRgbText({ r: String(nextRgb.r), g: String(nextRgb.g), b: String(nextRgb.b) });
-    setHsv(rgbToHsv(nextRgb.r, nextRgb.g, nextRgb.b));
     commitColor(nextHex);
   };
 
   const updateFromRgb = (channel: "r" | "g" | "b", nextValue: string) => {
     const numeric = clamp(Number(nextValue || 0), 0, 255);
     const nextRgb = {
-      r: Number(channel === "r" ? numeric : rgbText.r),
-      g: Number(channel === "g" ? numeric : rgbText.g),
-      b: Number(channel === "b" ? numeric : rgbText.b),
+      r: Number(channel === "r" ? numeric : rgbText.r || 0),
+      g: Number(channel === "g" ? numeric : rgbText.g || 0),
+      b: Number(channel === "b" ? numeric : rgbText.b || 0),
     };
     const nextHex = rgbToHex(nextRgb.r, nextRgb.g, nextRgb.b);
-    setRgbText({
-      r: String(nextRgb.r),
-      g: String(nextRgb.g),
-      b: String(nextRgb.b),
-    });
+    setRgbText({ r: String(nextRgb.r), g: String(nextRgb.g), b: String(nextRgb.b) });
     setHexText(nextHex);
     setHsv(rgbToHsv(nextRgb.r, nextRgb.g, nextRgb.b));
     commitColor(nextHex);
@@ -295,117 +300,32 @@ export default function PremiumColorPicker({
       writeStorageList(SAVED_STORAGE_KEY, next);
       return next;
     });
-
-    setOpen(false);
   };
 
-  const drawWheel = () => {
-    const canvas = canvasRef.current;
-    const wheel = wheelRef.current;
-    if (!canvas || !wheel) return;
-
-    const rect = wheel.getBoundingClientRect();
-    const measuredSize = Math.min(rect.width || wheel.clientWidth, rect.height || wheel.clientHeight);
-    const size = Math.max(180, Math.floor(measuredSize || wheel.clientWidth || 240));
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, size, size);
-
-    const image = ctx.createImageData(size, size);
-    const center = size / 2;
-    const radius = center - 1;
-
-    for (let y = 0; y < size; y += 1) {
-      for (let x = 0; x < size; x += 1) {
-        const dx = x - center;
-        const dy = y - center;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const index = (y * size + x) * 4;
-
-        if (distance > radius) {
-          image.data[index + 3] = 0;
-          continue;
-        }
-
-        const saturation = distance / radius;
-        const hue = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
-        const { r: red, g: green, b: blue } = hsvToRgb(hue, saturation, hsv.v);
-        image.data[index] = red;
-        image.data[index + 1] = green;
-        image.data[index + 2] = blue;
-        image.data[index + 3] = 255;
-      }
-    }
-
-    ctx.putImageData(image, 0, 0);
-
-    const gradient = ctx.createRadialGradient(center, center, radius * 0.48, center, center, radius);
-    gradient.addColorStop(0, `rgba(255,255,255,${Math.max(0, 1 - hsv.v) * 0.08})`);
-    gradient.addColorStop(1, `rgba(15,23,42,${Math.max(0, 1 - hsv.v) * 0.18})`);
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(center, center, radius, 0, Math.PI * 2);
-    ctx.fill();
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const frame = requestAnimationFrame(drawWheel);
-    return () => cancelAnimationFrame(frame);
-  }, [open, hsv.v]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onResize = () => requestAnimationFrame(drawWheel);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [open, hsv.v]);
-
-  useEffect(() => {
-    if (!open || !wheelRef.current || typeof ResizeObserver === "undefined") return;
-
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(drawWheel);
-    });
-
-    observer.observe(wheelRef.current);
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [open, hsv.v]);
-
-  const handleWheelPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    const container = wheelRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
+  const handleWheelPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
     const dx = x - centerX;
     const dy = y - centerY;
-    const radius = rect.width / 2;
+    const radius = Math.max(1, Math.min(rect.width, rect.height) / 2);
     const distance = Math.sqrt(dx * dx + dy * dy);
     const saturation = clamp(distance / radius, 0, 1);
     const hue = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
+    const value = hsv.v < 0.12 ? 0.9 : hsv.v;
 
-    updateFromHsv({ h: hue, s: saturation, v: hsv.v });
+    updateFromHsv({ h: hue, s: saturation, v: value });
   };
 
   const markerX = 50 + Math.cos((hsv.h * Math.PI) / 180) * Math.min(50, hsv.s * 50);
   const markerY = 50 + Math.sin((hsv.h * Math.PI) / 180) * Math.min(50, hsv.s * 50);
+
+  const wheelBackground = `
+    radial-gradient(circle at center, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.72) 10%, rgba(255,255,255,0) 48%),
+    conic-gradient(from 0deg, #ff004c, #ff8a00, #fff000, #00d46a, #00d7ff, #2f55ff, #aa00ff, #ff004c)
+  `;
 
   return (
     <div className={`${styles.root}${className ? ` ${className}` : ""}`.trim()}>
@@ -428,11 +348,12 @@ export default function PremiumColorPicker({
         className={`${styles.valueChip}${valueClassName ? ` ${valueClassName}` : ""}`.trim()}
         style={{ background: normalized, color: textColor }}
         value={hexText}
-        onChange={(event) => setHexText(coerceHexDraft(event.target.value))}
-        onBlur={(event) => {
-          const nextHex = normalizeHex(event.target.value) || normalized;
-          updateFromHex(nextHex);
+        onChange={(event) => {
+          const draft = coerceHexDraft(event.target.value);
+          setHexText(draft);
+          if (draft.length === 7) updateFromHex(draft);
         }}
+        onBlur={(event) => updateFromHex(normalizeHex(event.target.value) || normalized)}
         onKeyDown={(event) => {
           const target = event.target as HTMLInputElement;
           if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
@@ -441,15 +362,16 @@ export default function PremiumColorPicker({
           }
           if (event.key === "Enter") {
             event.preventDefault();
-            const nextHex = normalizeHex(target.value) || normalized;
-            updateFromHex(nextHex);
+            updateFromHex(normalizeHex(target.value) || normalized);
             target.blur();
           }
         }}
         onPaste={(event) => {
           event.preventDefault();
           const pasted = event.clipboardData.getData("text");
-          setHexText(coerceHexDraft(pasted));
+          const draft = coerceHexDraft(pasted);
+          setHexText(draft);
+          if (draft.length === 7) updateFromHex(draft);
         }}
         onFocus={(event) => event.currentTarget.select()}
         aria-label={`${ariaLabel} hex value`}
@@ -473,9 +395,18 @@ export default function PremiumColorPicker({
 
                 <div className={styles.body}>
                   <div className={styles.wheelColumn}>
-                    <div className={styles.wheelWrap} ref={wheelRef} onPointerDown={handleWheelPointer} onPointerMove={(event) => event.buttons === 1 && handleWheelPointer(event)}>
-                      <canvas ref={canvasRef} className={styles.canvas} />
-                      <div className={styles.marker} style={{ left: `${markerX}%`, top: `${markerY}%`, background: normalized }} />
+                    <div
+                      className={styles.wheelWrap}
+                      style={{ background: wheelBackground }}
+                      onPointerDown={handleWheelPointer}
+                      onPointerMove={(event) => event.buttons === 1 && handleWheelPointer(event)}
+                      role="application"
+                      aria-label={`${ariaLabel} hue and saturation`}
+                    >
+                      <div
+                        className={styles.marker}
+                        style={{ left: `${markerX}%`, top: `${markerY}%`, background: normalized }}
+                      />
                     </div>
 
                     <label className={styles.sliderRow}>
@@ -514,11 +445,12 @@ export default function PremiumColorPicker({
                         <input
                           type="text"
                           value={hexText}
-                          onChange={(event) => setHexText(coerceHexDraft(event.target.value))}
-                          onBlur={(event) => {
-                            const nextHex = normalizeHex(event.target.value) || normalized;
-                            updateFromHex(nextHex);
+                          onChange={(event) => {
+                            const draft = coerceHexDraft(event.target.value);
+                            setHexText(draft);
+                            if (draft.length === 7) updateFromHex(draft);
                           }}
+                          onBlur={(event) => updateFromHex(normalizeHex(event.target.value) || normalized)}
                           onKeyDown={(event) => {
                             const target = event.target as HTMLInputElement;
                             if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
@@ -527,15 +459,16 @@ export default function PremiumColorPicker({
                             }
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              const nextHex = normalizeHex(target.value) || normalized;
-                              updateFromHex(nextHex);
+                              updateFromHex(normalizeHex(target.value) || normalized);
                               target.blur();
                             }
                           }}
                           onPaste={(event) => {
                             event.preventDefault();
                             const pasted = event.clipboardData.getData("text");
-                            setHexText(coerceHexDraft(pasted));
+                            const draft = coerceHexDraft(pasted);
+                            setHexText(draft);
+                            if (draft.length === 7) updateFromHex(draft);
                           }}
                           placeholder="#FFFFFF"
                         />
