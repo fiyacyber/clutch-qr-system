@@ -43,6 +43,39 @@ function findFontWeightSelect(fontSelect: HTMLSelectElement) {
   }) || null;
 }
 
+function setRangeMax(input: HTMLInputElement, max: number) {
+  const currentMax = Number(input.max || 0);
+  if (!Number.isFinite(currentMax) || currentMax >= max) return;
+  input.max = String(max);
+  input.dataset.clutchExpandedMax = String(max);
+}
+
+function labelForRange(input: HTMLInputElement) {
+  const field = input.closest(".saas-field");
+  return (field?.textContent || "").toLowerCase();
+}
+
+function expandBuilderRangeLimits(root: ParentNode = document) {
+  if (!window.location.pathname.includes("/portal/connect/build")) return;
+
+  const ranges = Array.from(root.querySelectorAll('input[type="range"]')) as HTMLInputElement[];
+  for (const input of ranges) {
+    const label = labelForRange(input);
+
+    if (label.includes("border width")) setRangeMax(input, 24);
+    if (label.includes("avatar") && label.includes("border width")) setRangeMax(input, 32);
+    if (label.includes("font size")) setRangeMax(input, 72);
+    if (label.includes("letter spacing")) setRangeMax(input, 16);
+    if (label.includes("padding x")) setRangeMax(input, 96);
+    if (label.includes("padding y")) setRangeMax(input, 72);
+    if (label.includes("margin top") || label.includes("margin bottom")) setRangeMax(input, 120);
+    if (label.includes("glow blur")) setRangeMax(input, 120);
+    if (label.includes("glow spread")) setRangeMax(input, 96);
+    if (label.includes("badge size")) setRangeMax(input, 72);
+    if (label.includes("banner height")) setRangeMax(input, 420);
+  }
+}
+
 export default function BuilderPreviewLinkBridge() {
   useEffect(() => {
     const handleClick = async (event: MouseEvent) => {
@@ -92,10 +125,24 @@ export default function BuilderPreviewLinkBridge() {
       dispatchReactChange(weightSelect, recommendedWeight);
     };
 
+    expandBuilderRangeLimits();
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof Element || node instanceof DocumentFragment) {
+            expandBuilderRangeLimits(node);
+          }
+        });
+      }
+      expandBuilderRangeLimits();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
     document.addEventListener("click", handleClick, true);
     document.addEventListener("change", handleFontChange, true);
 
     return () => {
+      observer.disconnect();
       document.removeEventListener("click", handleClick, true);
       document.removeEventListener("change", handleFontChange, true);
     };
