@@ -25,6 +25,24 @@ function isBuilderPreviewButton(target: EventTarget | null) {
   return Boolean(button.closest(".saas-builder"));
 }
 
+function dispatchReactChange(select: HTMLSelectElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")?.set;
+  setter?.call(select, value);
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function findFontWeightSelect(fontSelect: HTMLSelectElement) {
+  const panel = fontSelect.closest(".builder-selected-section-panel");
+  if (!panel) return null;
+
+  const selects = Array.from(panel.querySelectorAll("select")) as HTMLSelectElement[];
+  return selects.find((select) => {
+    const values = Array.from(select.options).map((option) => option.value);
+    return ["500", "600", "700", "800", "900"].every((value) => values.includes(value));
+  }) || null;
+}
+
 export default function BuilderPreviewLinkBridge() {
   useEffect(() => {
     const handleClick = async (event: MouseEvent) => {
@@ -58,8 +76,29 @@ export default function BuilderPreviewLinkBridge() {
       }
     };
 
+    const handleFontChange = (event: Event) => {
+      if (!window.location.pathname.includes("/portal/connect/build")) return;
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      if (target.dataset.clutchFontSelect !== "true") return;
+
+      const selectedOption = target.selectedOptions?.[0];
+      const recommendedWeight = selectedOption?.dataset.recommendedWeight || target.dataset.recommendedWeight;
+      if (!recommendedWeight) return;
+
+      const weightSelect = findFontWeightSelect(target);
+      if (!weightSelect || weightSelect.value === recommendedWeight) return;
+
+      dispatchReactChange(weightSelect, recommendedWeight);
+    };
+
     document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
+    document.addEventListener("change", handleFontChange, true);
+
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("change", handleFontChange, true);
+    };
   }, []);
 
   return null;
