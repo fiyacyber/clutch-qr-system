@@ -25,6 +25,9 @@
       }
     ],
     "paths": {
+      "@/lib/builder-config": [
+        "./lib/builder-config-patched.ts"
+      ],
       "@/*": [
         "./*"
       ]
