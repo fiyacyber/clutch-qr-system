@@ -3,7 +3,7 @@
  */
 
 import { BuilderConfig, BuilderBlock } from "./builder-types";
-import { createBlock } from "./builder-config";
+import { createBlock, createDefaultTheme } from "./builder-config";
 
 export type TemplateType =
   | "contractor"
@@ -43,18 +43,8 @@ function generateTemplate(
     icon,
     config: {
       version: 1,
-      theme: {
-        accentColor: "#FFA665",
-        buttonColor: "#FFA665",
-        textColor: "#0F172A",
-        fontFamily: "exo2",
-        fontScale: "normal",
-        layout: "default",
-        showProfilePicture: true,
-        showBio: true,
-        showFooter: true,
-        darkMode: false,
-      },
+      theme: createDefaultTheme(),
+      sections: [],
       blocks: builtBlocks,
       forms: [],
     },

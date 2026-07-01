@@ -3,6 +3,7 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .trigger {
@@ -10,6 +11,7 @@
   align-items: center;
   gap: 10px;
   min-width: 160px;
+  max-width: 100%;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--b-border, rgba(148, 163, 184, 0.22));
@@ -58,6 +60,13 @@
   text-transform: uppercase;
   border: 1px solid rgba(148, 163, 184, 0.2);
   backdrop-filter: blur(14px);
+  text-align: center;
+  outline: none;
+}
+
+.valueChip:focus {
+  border-color: color-mix(in srgb, var(--b-accent, #FFA665) 52%, rgba(148, 163, 184, 0.2));
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.18);
 }
 
 .overlay {
@@ -188,6 +197,31 @@
 .previewLabel {
   font-size: 0.95rem;
   font-weight: 700;
+}
+
+.nativeColorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.nativeColorRow input {
+  width: 44px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
 }
 
 .grid {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 import {
   getBrowser,
   getDeviceType,
@@ -65,8 +66,7 @@ export async function GET(
       .maybeSingle();
 
     if (profile?.slug && profile.is_active) {
-      const base = (process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com").replace(/\/$/, "");
-      redirectTarget = `${base}/u/${profile.slug}`;
+      redirectTarget = clutchConnectProfileUrl(profile.slug);
     }
   }
 

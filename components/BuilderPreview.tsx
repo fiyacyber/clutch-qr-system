@@ -9,9 +9,25 @@ interface BuilderPreviewProps {
   editablePreview?: boolean;
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string) => void;
+  onSelectSection?: (sectionId: string) => void;
+  onSelectSaveShare?: () => void;
+  onRemoveBlock?: (blockId: string) => void;
+  onRemoveSection?: (sectionId: string) => void;
+  onClearSelection?: () => void;
 }
 
-export default function BuilderPreview({ config, profile, editablePreview = false, selectedBlockId, onSelectBlock }: BuilderPreviewProps) {
+export default function BuilderPreview({
+  config,
+  profile,
+  editablePreview = false,
+  selectedBlockId,
+  onSelectBlock,
+  onSelectSection,
+  onSelectSaveShare,
+  onRemoveBlock,
+  onRemoveSection,
+  onClearSelection,
+}: BuilderPreviewProps) {
   return (
     <div className="saas-preview-wrap">
       {/* Label row */}
@@ -34,14 +50,28 @@ export default function BuilderPreview({ config, profile, editablePreview = fals
             <span className="saas-notch-island" />
           </div>
           {/* Screen scroll area */}
-          <div className="saas-device-screen">
+          <div
+            className="saas-device-screen"
+            onClickCapture={(event) => {
+              if (!editablePreview) return;
+              const target = event.target as HTMLElement | null;
+              if (target?.closest(".builder-preview-selectable")) return;
+              onClearSelection?.();
+            }}
+          >
             <ConnectProfileView
               profile={profile}
               blocks={config.blocks}
+              sections={config.sections}
+              forms={config.forms}
               theme={config.theme}
               mode={editablePreview ? "editor" : "preview"}
               selectedBlockId={selectedBlockId}
               onSelectBlock={onSelectBlock}
+              onSelectSection={onSelectSection}
+              onSelectSaveShare={onSelectSaveShare}
+              onRemoveBlock={onRemoveBlock}
+              onRemoveSection={onRemoveSection}
             />
           </div>
           {/* Home bar */}

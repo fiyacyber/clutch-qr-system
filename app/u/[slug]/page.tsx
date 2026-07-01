@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
 import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
-import { validateBuilderConfig } from "@/lib/builder-config";
+import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import ConnectProfileView from "@/components/connect/ConnectProfileView";
 
 export default async function PublicConnectProfilePage({
@@ -109,14 +109,17 @@ export default async function PublicConnectProfilePage({
     referrer: getReferrerSource(referrer),
   });
 
-  const builderBlocks = profile.builder_config && validateBuilderConfig(profile.builder_config)
-    ? profile.builder_config.blocks
-    : [];
+  const builderConfig = profile.builder_config
+    ? sanitizeBuilderConfig(profile.builder_config)
+    : createDefaultBuilderConfig(profile.theme_color);
 
   return (
     <ConnectProfileView
       profile={profile}
-      blocks={builderBlocks as any}
+      blocks={builderConfig.blocks as any}
+      sections={builderConfig.sections}
+      forms={builderConfig.forms}
+      theme={builderConfig.theme}
       socialLinks={(linkRows || []) as any}
       mode="public"
     />

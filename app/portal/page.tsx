@@ -15,7 +15,6 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
-import HeatmapPreview from "@/components/dashboard/HeatmapPreview";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
 import { requireCustomer } from "@/lib/auth";
@@ -30,7 +29,7 @@ import {
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface PortalPageProps {
-  searchParams?: Record<string, string>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function formatDate(value?: string | null) {
@@ -48,7 +47,10 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
   if (!user) redirect("/login");
 
-  const errorMessage = searchParams?.error;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const errorMessage = Array.isArray(resolvedSearchParams?.error)
+    ? resolvedSearchParams?.error[0]
+    : resolvedSearchParams?.error;
 
   if (!customer) {
     return (
@@ -227,15 +229,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             label="Account Plan"
             value={plan.shortName}
             description={`${plan.name} • ${subscriptionStatus}`}
-          />
-        </section>
-
-        <section className="portal-overview-heatmap-snapshot">
-          <HeatmapPreview
-            demo={!topLocationRows.length}
-            locations={topLocationRows}
-            title="Marketing Heatmap Snapshot"
-            subtitle="See where scans, taps, and campaign interactions are happening."
           />
         </section>
 

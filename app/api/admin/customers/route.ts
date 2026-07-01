@@ -28,10 +28,11 @@ export async function POST(req: NextRequest) {
   const internal_notes = String(form.get("internal_notes") || "").trim() || null;
   const subscription_status = String(form.get("subscription_status") || "active");
   const mark_invited = form.get("mark_invited") === "on";
-  const is_admin = form.get("is_admin") === "on";
+  const submittedPlanCode = normalizePlanCode(String(form.get("plan_code") || "qr_pro"));
+  const is_admin = form.get("is_admin") === "on" || submittedPlanCode === "admin";
   const must_change_password = form.get("must_change_password") === "on";
   const reset_temp_password = form.get("reset_temp_password") === "on";
-  const plan_code = is_admin ? "admin" : normalizePlanCode(String(form.get("plan_code") || "qr_pro"));
+  const plan_code = is_admin ? "admin" : submittedPlanCode;
   const submittedLimit = Number(form.get("qr_limit") || 0);
   const qr_limit = submittedLimit || PLAN_DEFINITIONS[plan_code].qrLimit;
 

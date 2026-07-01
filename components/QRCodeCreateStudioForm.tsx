@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QRTypeSelector, { QRType } from "@/components/QRTypeSelector";
 import QRLivePreview from "@/components/QRLivePreview";
 import QRStylePanel, { DownloadSize, ThemePreset } from "@/components/QRStylePanel";
-import { normalizeUrl } from "@/lib/qr";
+import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import styles from "./QRCodeCreateStudioForm.module.css";
 
 type DotStyle =
@@ -150,7 +150,7 @@ export default function QRCodeCreateStudioForm({
 
     if (qrType === "connect_profile") {
       const profile = connectProfiles.find((item) => item.id === selectedProfileId);
-      baseUrl = profile ? `https://connect.clutchprintshop.com/u/${profile.slug}` : "";
+      baseUrl = profile ? clutchConnectProfileUrl(profile.slug) : "";
     } else {
       // All mailing piece types use destination URL
       if (!destinationUrl.trim()) return "";
@@ -277,7 +277,7 @@ export default function QRCodeCreateStudioForm({
       const formData = new FormData();
       formData.append("name", name.trim());
       formData.append("destination_url", validatedUrl);
-      formData.append("qr_type", qrType);
+      formData.append("qr_type", qrType === "connect_profile" ? "connect_profile" : "url");
       if (selectedProfileId) formData.append("profile_id", selectedProfileId);
       formData.append("foreground_color", foregroundColor);
       formData.append("background_color", backgroundColor);

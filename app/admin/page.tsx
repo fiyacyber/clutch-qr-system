@@ -241,8 +241,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 </select>
                 <select className="input" name="plan_code" defaultValue="qr_pro">
                   <option value="free_qr">Free QR - {PLAN_DEFINITIONS.free_qr.qrLimit} QR code</option>
-                  <option value="qr_pro">QR Pro - {PLAN_DEFINITIONS.qr_pro.qrLimit} QR codes</option>
-                  <option value="qr_pro_plus">QR Pro+ - {PLAN_DEFINITIONS.qr_pro_plus.qrLimit} QR codes</option>
+                  <option value="qr_pro">{PLAN_DEFINITIONS.qr_pro.name} - {PLAN_DEFINITIONS.qr_pro.qrLimit} QR codes</option>
+                  <option value="qr_pro_plus">{PLAN_DEFINITIONS.qr_pro_plus.name} - {PLAN_DEFINITIONS.qr_pro_plus.qrLimit} QR codes</option>
+                  <option value="admin">Admin - unlimited QR codes</option>
                 </select>
                 <select className="input" name="subscription_status" defaultValue="active">
                   {SUBSCRIPTION_STATUSES.map((status) => (
@@ -486,10 +487,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <form className="admin-account-form" action="/api/admin/customers" method="post">
                         <input type="hidden" name="id" value={c.id} />
                         <input className="input" name="company_name" defaultValue={c.company_name || ""} placeholder="Company" />
-                        <select className="input" name="plan_code" defaultValue={plan.code === "admin" ? "qr_pro_plus" : plan.code}>
+                        <select className="input" name="plan_code" defaultValue={plan.code}>
                           <option value="free_qr">Free QR</option>
-                          <option value="qr_pro">QR Pro</option>
-                          <option value="qr_pro_plus">QR Pro+</option>
+                          <option value="qr_pro">{PLAN_DEFINITIONS.qr_pro.name}</option>
+                          <option value="qr_pro_plus">{PLAN_DEFINITIONS.qr_pro_plus.name}</option>
+                          <option value="admin">Admin</option>
                         </select>
                         <input className="input" name="qr_limit" type="number" defaultValue={c.qr_limit} min="1" />
                         <select className="input" name="subscription_status" defaultValue={c.subscription_status || c.plan_status || "active"}>

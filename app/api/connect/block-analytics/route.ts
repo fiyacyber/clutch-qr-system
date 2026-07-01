@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const profileId = searchParams.get("profileId");
+  const profileId = searchParams.get("profileId") || searchParams.get("profile_id");
 
   if (!profileId) {
     return NextResponse.json({ error: "profileId required" }, { status: 400 });

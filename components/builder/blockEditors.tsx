@@ -1,16 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ChevronDown, UploadCloud } from "lucide-react";
 import { BuilderBlock } from "@/lib/builder-types";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
+import FontFamilyPicker from "../FontFamilyPicker";
 import PremiumColorPicker from "../PremiumColorPicker";
 
 export interface BlockEditorProps {
   block: BuilderBlock;
   onUpdate: (patch: Record<string, any>) => void;
 }
-
-const BRAND_SWATCHES = ["#FFA665", "#384862", "#FFFFFF", "#111827", "#6B7280"];
 
 function Field({ label, tooltip, children }: { label: string; tooltip?: string; children: React.ReactNode }) {
   return (
@@ -57,59 +57,99 @@ function Toggle({
 function RowActions({ onUp, onDown, onDelete }: { onUp: () => void; onDown: () => void; onDelete: () => void }) {
   return (
     <div className="saas-inline-actions">
-      <button type="button" className="saas-mini-btn" onClick={onUp}>↑</button>
-      <button type="button" className="saas-mini-btn" onClick={onDown}>↓</button>
-      <button type="button" className="saas-mini-btn danger" onClick={onDelete}>×</button>
+      <button type="button" className="saas-mini-btn" onClick={onUp} aria-label="Move item up">↑</button>
+      <button type="button" className="saas-mini-btn" onClick={onDown} aria-label="Move item down">↓</button>
+      <button type="button" className="saas-mini-btn danger" onClick={onDelete} aria-label="Remove item">×</button>
     </div>
-  );
-}
-
-function EditorSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <section className="saas-editor-section">
-      <div className="saas-editor-section-header">
-        <h4>{title}</h4>
-        {description ? <p>{description}</p> : null}
-      </div>
-      <div className="saas-editor-section-body">{children}</div>
-    </section>
   );
 }
 
 function AdvancedAccordion({ children }: { children: React.ReactNode }) {
+  return <CollapsibleSection title="Advanced styling" defaultOpen={false}>{children}</CollapsibleSection>;
+}
+
+function CollapsibleSection({
+  title,
+  description,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   return (
-    <details className="saas-advanced-accordion">
-      <summary>Advanced styling</summary>
-      <div className="saas-advanced-content">{children}</div>
-    </details>
+    <section className={`saas-advanced-accordion${isOpen ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className="saas-accordion-trigger"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span>{title}</span>
+        <ChevronDown className="saas-accordion-caret" size={16} strokeWidth={2} aria-hidden="true" />
+      </button>
+      {isOpen ? (
+        <div className="saas-advanced-content">
+        {description ? <p className="saas-field-hint">{description}</p> : null}
+        {children}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
-function ColorPresetRow({ value, onChange }: { value?: string; onChange: (color: string) => void }) {
+function NestedSection({ title, description, children, defaultOpen = true }: { title: string; description?: string; children: React.ReactNode; defaultOpen?: boolean }) {
   return (
-    <div className="saas-swatch-row">
-      {BRAND_SWATCHES.map((swatch) => (
-        <button
-          key={swatch}
-          type="button"
-          className={`saas-swatch-chip${(value || "").toLowerCase() === swatch.toLowerCase() ? " active" : ""}`}
-          onClick={() => onChange(swatch)}
-        >
-          <span className="saas-swatch-dot" style={{ backgroundColor: swatch }} />
-          <span>{swatch}</span>
-        </button>
-      ))}
-    </div>
+    <CollapsibleSection title={title} description={description} defaultOpen={defaultOpen}>
+      {children}
+    </CollapsibleSection>
+  );
+}
+
+function AlignmentControl({ value, onChange }: { value?: string; onChange: (value: "left" | "center" | "right") => void }) {
+  const active = value === "left" || value === "right" ? value : "center";
+  return (
+    <Field label="Alignment">
+      <div className="saas-chip-row" role="radiogroup" aria-label="Block alignment">
+        {(["left", "center", "right"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={active === option}
+            className={`saas-chip-btn${active === option ? " active" : ""}`}
+            onClick={() => onChange(option)}
+          >
+            {option[0].toUpperCase() + option.slice(1)}
+          </button>
+        ))}
+      </div>
+    </Field>
+  );
+}
+
+function BlockAdvancedControls({ block, onUpdate }: BlockEditorProps) {
+  const data = getBlockData(block);
+  return (
+    <>
+      <AlignmentControl value={data.alignment} onChange={(alignment) => onUpdate({ alignment })} />
+      <Toggle label="Show on public profile" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+    </>
   );
 }
 
 export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
-  const avatarUrl = typeof data.avatarUrl === "string" && data.avatarUrl !== "null" && data.avatarUrl !== "undefined" && !data.avatarUrl.startsWith("blob:") ? data.avatarUrl : "";
+  const avatarUrl = !data.avatarRemoved && typeof data.avatarUrl === "string" && data.avatarUrl !== "null" && data.avatarUrl !== "undefined" && !data.avatarUrl.startsWith("blob:") ? data.avatarUrl : "";
   const badgeEnabled = Boolean(data.verifiedBadgeEnabled ?? data.verified);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const [isAvatarDragActive, setIsAvatarDragActive] = useState(false);
   const initials = createInitials(data.businessName, undefined, undefined);
 
   const isClose = (a: number, b: number, epsilon = 0.01) => Math.abs(a - b) <= epsilon;
@@ -223,9 +263,26 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
     });
   };
 
-  const handleAvatarFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const uploadAvatarFile = async (file: File) => {
     if (!file) return;
+
+    const heicTypes = ["image/heic", "image/heif"];
+    if (heicTypes.includes(file.type)) {
+      setAvatarUploadError("HEIC photos are not supported yet. Please upload PNG, JPG, or WebP.");
+      return;
+    }
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      setAvatarUploadError("Profile photo must be PNG, JPG, WebP, or SVG.");
+      return;
+    }
+
+    const maxBytes = 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setAvatarUploadError("Profile photo must be 2MB or smaller.");
+      return;
+    }
 
     setIsUploadingAvatar(true);
     setAvatarUploadError(null);
@@ -240,6 +297,10 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        console.warn("Avatar upload failed", {
+          status: response.status,
+          error: result?.error,
+        });
         throw new Error(result.error || "Avatar upload failed.");
       }
 
@@ -248,37 +309,85 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
         throw new Error("Avatar upload did not return a public image URL.");
       }
 
-      onUpdate({ avatarUrl });
+      onUpdate({ avatarUrl, avatarRemoved: false });
     } catch (error) {
       setAvatarUploadError(error instanceof Error ? error.message : "Avatar upload failed.");
     } finally {
       setIsUploadingAvatar(false);
-      event.target.value = "";
     }
+  };
+
+  const handleAvatarFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadAvatarFile(file);
+    event.target.value = "";
   };
 
   return (
     <div className="saas-fields">
-      <EditorSection title="Avatar" description="Profile imagery and presence.">
+      <CollapsibleSection title="Avatar" description="Profile imagery and presence.">
         <div className="saas-avatar-panel">
           <div className="saas-avatar-preview-circle">
             {avatarUrl ? <img src={avatarUrl} alt="Avatar preview" /> : <span>{initials}</span>}
           </div>
+          <div
+            className={`saas-avatar-upload-drop${isAvatarDragActive ? " is-drag-active" : ""}${isUploadingAvatar ? " is-uploading" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && !isUploadingAvatar) {
+                event.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              if (!isUploadingAvatar) setIsAvatarDragActive(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!isUploadingAvatar) setIsAvatarDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setIsAvatarDragActive(false);
+            }}
+            onDrop={async (event) => {
+              event.preventDefault();
+              setIsAvatarDragActive(false);
+              if (isUploadingAvatar) return;
+              const file = event.dataTransfer?.files?.[0];
+              if (!file) return;
+              await uploadAvatarFile(file);
+            }}
+          >
+            <span className="saas-avatar-upload-icon" aria-hidden="true">
+              <UploadCloud size={18} />
+            </span>
+            <span className="saas-avatar-upload-copy">
+              <strong>{isUploadingAvatar ? "Uploading profile photo..." : "Upload Profile Photo"}</strong>
+              <small>Drag & drop or click to browse</small>
+            </span>
+          </div>
+          {avatarUploadError ? <p className="saas-field-error">{avatarUploadError}</p> : null}
           <div className="saas-avatar-actions">
-            <button type="button" className="saas-mini-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploadingAvatar}>
-              {isUploadingAvatar ? "Uploading..." : "Upload avatar"}
-            </button>
-            <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ avatarUrl: "" })}>
+            <button
+              type="button"
+              className="saas-avatar-secondary-btn"
+              onClick={() => onUpdate({ avatarUrl: "", avatarRemoved: true })}
+              disabled={isUploadingAvatar}
+            >
               Remove avatar
             </button>
           </div>
-          {avatarUploadError ? <p className="saas-field-error">{avatarUploadError}</p> : null}
-          <p className="saas-field-hint">Recommended: square image, at least 1000x1000px, 300 DPI source, PNG/JPG/WebP/SVG, max 1MB.</p>
-          <input ref={fileInputRef} type="file" accept="image/*" className="saas-hidden-input" onChange={handleAvatarFile} />
+          <p className="saas-field-hint">Recommended: square image, at least 1000×1000px, PNG/JPG/WebP/SVG, max 2MB.</p>
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" className="saas-hidden-input" onChange={handleAvatarFile} />
         </div>
-      </EditorSection>
+      </CollapsibleSection>
 
-      <EditorSection title="Appearance" description="Glow, badge, and brand emphasis.">
+      <CollapsibleSection title="Appearance" description="Glow, badge, and brand emphasis.">
         <Toggle
           label="Avatar glow"
           tooltip="Turn the halo behind the avatar on or off."
@@ -289,13 +398,12 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
         {data.avatarGlowEnabled !== false && (
           <>
             <Field label="Glow color" tooltip="The tint used for the halo behind your avatar.">
-              <ColorPresetRow value={data.avatarGlowColor || "#FF6B2C"} onChange={(color) => onUpdate({ avatarGlowColor: color })} />
               <PremiumColorPicker
                 value={data.avatarGlowColor || "#FF6B2C"}
                 onChange={(color) => onUpdate({ avatarGlowColor: color })}
                 ariaLabel="Avatar glow color"
                 buttonText="Custom"
-                presets={["#FFA665", "#384862", "#FFFFFF", "#111827", "#6B7280"]}
+                presets={[]}
               />
             </Field>
             <Field
@@ -323,36 +431,64 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
 
         {badgeEnabled && (
           <Field label="Verified badge color" tooltip="Background color of the badge circle.">
-            <ColorPresetRow value={data.verifiedBadgeColor || "#3B82F6"} onChange={(color) => onUpdate({ verifiedBadgeColor: color })} />
             <PremiumColorPicker
               value={data.verifiedBadgeColor || "#3B82F6"}
               onChange={(color) => onUpdate({ verifiedBadgeColor: color })}
               ariaLabel="Verified badge color"
               buttonText="Custom"
-              presets={["#FFA665", "#384862", "#FFFFFF", "#111827", "#6B7280"]}
+              presets={[]}
             />
           </Field>
         )}
 
-        <div className="saas-field">
-          <span className="saas-field-label-row">
-            <span className="saas-field-label">Style presets</span>
-            <span className="saas-help-tip" title="One-click looks that set glow and badge values together." aria-label="One-click looks that set glow and badge values together.">?</span>
-          </span>
-          <div className="saas-chip-row">
-            <button type="button" className={`saas-chip-btn${isPresetActive("subtle") ? " active" : ""}`} aria-pressed={isPresetActive("subtle")} onClick={() => applyHeroStylePreset("subtle")}>Subtle</button>
-            <button type="button" className={`saas-chip-btn${isPresetActive("bold") ? " active" : ""}`} aria-pressed={isPresetActive("bold")} onClick={() => applyHeroStylePreset("bold")}>Bold</button>
-            <button type="button" className={`saas-chip-btn${isPresetActive("premium") ? " active" : ""}`} aria-pressed={isPresetActive("premium")} onClick={() => applyHeroStylePreset("premium")}>Premium</button>
-          </div>
-        </div>
-      </EditorSection>
+        <Toggle
+          label="Avatar border"
+          tooltip="Add a custom border around the avatar."
+          checked={data.avatarBorderEnabled === true}
+          onChange={(v) => onUpdate({ avatarBorderEnabled: v })}
+        />
+
+        {data.avatarBorderEnabled === true ? (
+          <>
+            <Field label="Border color">
+              <PremiumColorPicker
+                value={data.avatarBorderColor || "#FFA665"}
+                onChange={(color) => onUpdate({ avatarBorderColor: color })}
+                ariaLabel="Avatar border color"
+                buttonText="Custom"
+                presets={[]}
+              />
+            </Field>
+            <Field label={`Border width (${Number(data.avatarBorderWidth ?? 4)}px)`}>
+              <input
+                type="range"
+                min="0"
+                max="12"
+                step="1"
+                value={Number(data.avatarBorderWidth ?? 4)}
+                onChange={(e) => onUpdate({ avatarBorderWidth: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label={`Border radius (${Number(data.avatarBorderRadius ?? 999)}px)`}>
+              <input
+                type="range"
+                min="0"
+                max="999"
+                step="1"
+                value={Number(data.avatarBorderRadius ?? 999)}
+                onChange={(e) => onUpdate({ avatarBorderRadius: Number(e.target.value) })}
+              />
+            </Field>
+          </>
+        ) : null}
+      </CollapsibleSection>
 
       <AdvancedAccordion>
         <Field label="Avatar image URL">
-          <input type="text" value={avatarUrl} onChange={(e) => onUpdate({ avatarUrl: e.target.value })} placeholder="https://..." />
+          <input type="text" value={avatarUrl} onChange={(e) => onUpdate({ avatarUrl: e.target.value, avatarRemoved: false })} placeholder="https://..." />
         </Field>
         <Field label="Glow hex">
-          <input type="text" value={data.avatarGlowColor || "#FF6B2C"} onChange={(e) => onUpdate({ avatarGlowColor: e.target.value })} placeholder="#FFA665" />
+          <input type="text" value={data.avatarGlowColor || "#FF6B2C"} onChange={(e) => onUpdate({ avatarGlowColor: e.target.value })} placeholder="#FFFFFF" />
         </Field>
         <Field label={`Glow blur (${data.avatarGlowBlur ?? 18}px)`} tooltip="Controls softness. Higher blur creates a diffused glow.">
           <input type="range" min="0" max="60" step="1" value={data.avatarGlowBlur ?? 18} onChange={(e) => onUpdate({ avatarGlowBlur: Number(e.target.value) })} />
@@ -361,15 +497,15 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
           <input type="range" min="0" max="48" step="1" value={data.avatarGlowSpread ?? 10} onChange={(e) => onUpdate({ avatarGlowSpread: Number(e.target.value) })} />
         </Field>
         <Field label="Brand color">
-          <PremiumColorPicker value={data.brandColor || "#FF6B2C"} onChange={(color) => onUpdate({ brandColor: color })} ariaLabel="Theme / brand color" buttonText="Choose brand color" presets={["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"]} />
+          <PremiumColorPicker value={data.brandColor || "#FF6B2C"} onChange={(color) => onUpdate({ brandColor: color })} ariaLabel="Theme / brand color" buttonText="Choose brand color" presets={[]} />
         </Field>
         {badgeEnabled ? (
           <>
             <Field label="Badge hex">
-              <input type="text" value={data.verifiedBadgeColor || "#3B82F6"} onChange={(e) => onUpdate({ verifiedBadgeColor: e.target.value })} placeholder="#3B82F6" />
+              <input type="text" value={data.verifiedBadgeColor || "#3B82F6"} onChange={(e) => onUpdate({ verifiedBadgeColor: e.target.value })} placeholder="#FFFFFF" />
             </Field>
             <Field label="Badge icon color">
-              <PremiumColorPicker value={data.verifiedBadgeIconColor || "#0f172a"} onChange={(color) => onUpdate({ verifiedBadgeIconColor: color })} ariaLabel="Verified badge icon color" buttonText="Choose icon color" presets={["#FFA665", "#384862", "#111827", "#FFFFFF", "#F5F7FA"]} />
+              <PremiumColorPicker value={data.verifiedBadgeIconColor || "#0f172a"} onChange={(color) => onUpdate({ verifiedBadgeIconColor: color })} ariaLabel="Verified badge icon color" buttonText="Choose icon color" presets={[]} />
             </Field>
             <Field label="Badge icon">
               <select value={data.verifiedBadgeIcon || "checkmark"} onChange={(e) => onUpdate({ verifiedBadgeIcon: e.target.value })}>
@@ -395,6 +531,7 @@ export function AvatarBlockEditor({ block, onUpdate }: BlockEditorProps) {
             </Field>
           </>
         ) : null}
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
       </AdvancedAccordion>
 
       <div className="saas-inline-actions" style={{ justifyContent: "flex-end" }}>
@@ -408,7 +545,7 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <EditorSection title="Content" description="Primary contact actions for your profile.">
+      <CollapsibleSection title="Content" description="Primary contact actions for your profile.">
         <Field label="Phone"><input type="text" value={data.phone || ""} onChange={(e) => onUpdate({ phone: e.target.value })} placeholder="(555) 123-4567" /></Field>
         <Field label="Email"><input type="email" value={data.email || ""} onChange={(e) => onUpdate({ email: e.target.value })} placeholder="you@company.com" /></Field>
         <Field label="Website"><input type="text" value={data.website || ""} onChange={(e) => onUpdate({ website: e.target.value })} placeholder="https://example.com" /></Field>
@@ -416,9 +553,9 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
         <Field label="SMS / text number"><input type="text" value={data.sms || ""} onChange={(e) => onUpdate({ sms: e.target.value })} placeholder="(555) 123-4567" /></Field>
         <Field label="Custom button label"><input type="text" value={data.customLabel || ""} onChange={(e) => onUpdate({ customLabel: e.target.value })} placeholder="Book Now" /></Field>
         <Field label="Custom button URL"><input type="text" value={data.customUrl || ""} onChange={(e) => onUpdate({ customUrl: e.target.value })} placeholder="https://..." /></Field>
-      </EditorSection>
+      </CollapsibleSection>
 
-      <EditorSection title="Appearance" description="Choose how contact buttons are arranged.">
+      <CollapsibleSection title="Appearance" description="Choose how contact buttons are arranged.">
         <Field label="Button style">
           <select value={data.style || "grid"} onChange={(e) => onUpdate({ style: e.target.value })}>
             <option value="grid">Grid</option>
@@ -426,7 +563,7 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
           </select>
         </Field>
         <p className="saas-field-hint">Color controls for grouped contact buttons are coming soon.</p>
-      </EditorSection>
+      </CollapsibleSection>
 
       <AdvancedAccordion>
         <Toggle label="Show phone" checked={data.showPhone !== false} onChange={(v) => onUpdate({ showPhone: v })} />
@@ -435,6 +572,7 @@ export function ContactButtonsEditor({ block, onUpdate }: BlockEditorProps) {
         <Toggle label="Show address" checked={Boolean(data.showAddress)} onChange={(v) => onUpdate({ showAddress: v })} />
         <Toggle label="Show SMS" checked={Boolean(data.showSms)} onChange={(v) => onUpdate({ showSms: v })} />
         <Toggle label="Show custom" checked={Boolean(data.showCustom)} onChange={(v) => onUpdate({ showCustom: v })} />
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
       </AdvancedAccordion>
     </div>
   );
@@ -447,6 +585,7 @@ function TextBlockStyleEditor({
   placeholder,
   defaultSize,
   defaultWeight,
+  maxChars,
 }: {
   block: BuilderBlock;
   onUpdate: (patch: Record<string, any>) => void;
@@ -454,30 +593,45 @@ function TextBlockStyleEditor({
   placeholder: string;
   defaultSize: number;
   defaultWeight: number;
+  maxChars: number;
 }) {
   const data = getBlockData(block);
   const size = Number(data.fontSize) || defaultSize;
   const weight = Number(data.fontWeight) || defaultWeight;
+  const textValue = String(data.text || "");
+  const [textLengthError, setTextLengthError] = useState<string | null>(null);
 
   return (
     <div className="saas-fields">
-      <EditorSection title="Content" description="Text shown in your profile header.">
+      <CollapsibleSection title="Content" description="Text shown in your profile header.">
         <Field label={label}>
           <input
             type="text"
-            value={data.text || ""}
-            onChange={(e) => onUpdate({ text: e.target.value })}
+            value={textValue}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              if (nextValue.length > maxChars) {
+                setTextLengthError(`Maximum ${maxChars} characters.`);
+                return;
+              }
+              if (textLengthError) {
+                setTextLengthError(null);
+              }
+              onUpdate({ text: nextValue });
+            }}
             placeholder={placeholder}
           />
+          <p className="saas-field-hint">{textValue.length}/{maxChars} characters</p>
+          {textLengthError ? <p className="saas-field-error">{textLengthError}</p> : null}
         </Field>
-      </EditorSection>
+      </CollapsibleSection>
 
-      <EditorSection title="Appearance" description="Typography and color controls.">
+      <CollapsibleSection title="Appearance" description="Typography and color controls.">
         <Field label={`Font size (${size}px)`}>
           <input
             type="range"
             min="16"
-            max="72"
+            max="64"
             step="1"
             value={size}
             onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
@@ -493,27 +647,21 @@ function TextBlockStyleEditor({
           </select>
         </Field>
         <Field label="Font family">
-          <select value={data.fontFamily || "inherit"} onChange={(e) => onUpdate({ fontFamily: e.target.value })}>
-            <option value="inherit">Theme default</option>
-            <option value="display">Display</option>
-            <option value="sans">Sans</option>
-            <option value="serif">Serif</option>
-          </select>
+          <FontFamilyPicker value={data.fontFamily || "inherit"} allowInherit onChange={(value) => onUpdate({ fontFamily: value })} />
         </Field>
         <Field label="Text color">
-          <ColorPresetRow value={data.color || ""} onChange={(color) => onUpdate({ color })} />
           <PremiumColorPicker
             value={data.color || "#0F172A"}
             onChange={(color) => onUpdate({ color })}
             ariaLabel={`${label} text color`}
             buttonText="Custom"
-            presets={["#FFA665", "#384862", "#FFFFFF", "#111827", "#6B7280"]}
+            presets={[]}
           />
         </Field>
-      </EditorSection>
+      </CollapsibleSection>
 
       <AdvancedAccordion>
-        <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
       </AdvancedAccordion>
     </div>
   );
@@ -525,9 +673,10 @@ export function BusinessNameBlockEditor({ block, onUpdate }: BlockEditorProps) {
       block={block}
       onUpdate={onUpdate}
       label="Business name"
-      placeholder="Zach Test Business"
+      placeholder="Your Business Name"
       defaultSize={40}
       defaultWeight={800}
+      maxChars={60}
     />
   );
 }
@@ -541,6 +690,7 @@ export function SubheaderBlockEditor({ block, onUpdate }: BlockEditorProps) {
       placeholder="Owner / Designer"
       defaultSize={22}
       defaultWeight={600}
+      maxChars={80}
     />
   );
 }
@@ -566,7 +716,7 @@ export function PhoneBlockEditor({ block, onUpdate }: BlockEditorProps) {
 
   return (
     <div className="saas-fields">
-      <EditorSection title="Content">
+      <CollapsibleSection title="Content">
         <Field label="Label"><input type="text" value={data.label || defaultLabel} onChange={(e) => onUpdate({ label: e.target.value })} /></Field>
 
         {isPhone ? (
@@ -591,10 +741,10 @@ export function PhoneBlockEditor({ block, onUpdate }: BlockEditorProps) {
             </Field>
           </>
         ) : null}
-      </EditorSection>
+      </CollapsibleSection>
 
       {isPhone ? (
-        <EditorSection title="Appearance">
+        <CollapsibleSection title="Appearance" description="Behavior and visual treatment for this action button.">
           <Field label="Button action">
             <select value={data.behavior || "call"} onChange={(e) => handleBehaviorChange(e.target.value)}>
               <option value="call">Call</option>
@@ -602,14 +752,16 @@ export function PhoneBlockEditor({ block, onUpdate }: BlockEditorProps) {
             </select>
           </Field>
           <p className="saas-field-hint">Icon and label update with the selected action type.</p>
-        </EditorSection>
+        </CollapsibleSection>
       ) : (
-        <EditorSection title="Appearance">
+        <CollapsibleSection title="Appearance" description="Behavior and visual treatment for this action button.">
           <p className="saas-field-hint">This block uses an action-specific icon and destination based on its type.</p>
-        </EditorSection>
+        </CollapsibleSection>
       )}
 
-      <AdvancedAccordion><Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} /></AdvancedAccordion>
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -618,16 +770,16 @@ export function BookingBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <EditorSection title="Content">
+      <CollapsibleSection title="Content">
         <Field label="Label"><input type="text" value={data.label || "Request / Book"} onChange={(e) => onUpdate({ label: e.target.value })} /></Field>
         <Field label="Value / URL"><input type="text" value={data.url || ""} onChange={(e) => onUpdate({ url: e.target.value })} placeholder="https://..." /></Field>
-      </EditorSection>
-      <EditorSection title="Appearance">
+      </CollapsibleSection>
+      <CollapsibleSection title="Appearance" description="Behavior and visual treatment for this booking action.">
         <p className="saas-field-hint">Button style and color controls will appear here as this block expands.</p>
-      </EditorSection>
+      </CollapsibleSection>
       <AdvancedAccordion>
         <Field label="Form mode placeholder"><input type="text" value={data.formPlaceholder || "Optional form mode"} onChange={(e) => onUpdate({ formPlaceholder: e.target.value })} /></Field>
-        <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
       </AdvancedAccordion>
     </div>
   );
@@ -648,11 +800,12 @@ const PLATFORMS = [
 
 export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
-  const links = Array.isArray(data.links) ? data.links : [];
+  const links = Array.isArray(data.links) ? data.links.slice(0, 6) : [];
   const iconColorMode = data.iconColorMode || "mono";
+  const reachedLimit = links.length >= 6;
 
   const updateLink = (idx: number, patch: Record<string, any>) => {
-    const next = links.map((link: any, i: number) => (i === idx ? { ...link, ...patch } : link));
+    const next = links.map((link: any, i: number) => (i === idx ? { ...link, ...patch } : link)).slice(0, 6);
     onUpdate({ links: next });
   };
 
@@ -666,7 +819,7 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
 
   return (
     <div className="saas-fields">
-      <EditorSection title="Content" description="Manage every social destination in one place.">
+      <CollapsibleSection title="Content" description="Manage every social destination in one place.">
         <div className="saas-field">
           <span className="saas-field-label-row">
             <span className="saas-field-label">Icon color style</span>
@@ -701,19 +854,42 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
                 ))}
               </select>
             </Field>
+            <Field label="Label">
+              <input type="text" value={link.label || link.platform || ""} onChange={(e) => updateLink(idx, { label: e.target.value })} placeholder="Instagram" />
+            </Field>
             <Field label="Value / URL">
               <input type="text" value={link.value || ""} onChange={(e) => updateLink(idx, { value: e.target.value })} placeholder="@handle or https://..." />
+            </Field>
+            <Field label="Icon treatment">
+              <select value={link.iconTreatment || "default"} onChange={(e) => updateLink(idx, { iconTreatment: e.target.value === "default" ? undefined : e.target.value })}>
+                <option value="default">Use block style</option>
+                <option value="mono">Monochrome</option>
+                <option value="brand">Brand color</option>
+              </select>
             </Field>
             <div className="saas-icon-preview">{(link.platform || "Custom").slice(0, 1)}</div>
             <RowActions onUp={() => move(idx, -1)} onDown={() => move(idx, 1)} onDelete={() => onUpdate({ links: links.filter((_: any, i: number) => i !== idx) })} />
           </div>
         ))}
-        <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ links: [...links, { id: `${Date.now()}`, platform: "Instagram", value: "" }] })}>+ Add link</button>
-      </EditorSection>
-      <EditorSection title="Appearance">
+        <button
+          type="button"
+          className="saas-mini-btn"
+          disabled={reachedLimit}
+          onClick={() => {
+            if (reachedLimit) return;
+            onUpdate({ links: [...links, { id: `${Date.now()}`, platform: "Instagram", label: "Instagram", value: "", iconTreatment: "mono" }] });
+          }}
+        >
+          + Add social link
+        </button>
+        {reachedLimit ? <p className="saas-field-hint">Maximum of 6 social links reached.</p> : null}
+      </CollapsibleSection>
+      <CollapsibleSection title="Appearance" description="Behavior and visual treatment for social icons.">
         <p className="saas-field-hint">Icons inherit the selected color style automatically in the live preview.</p>
-      </EditorSection>
-      <AdvancedAccordion><Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} /></AdvancedAccordion>
+      </CollapsibleSection>
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -737,25 +913,29 @@ export function ServicesEditor({ block, onUpdate }: BlockEditorProps) {
 
   return (
     <div className="saas-fields">
-      {services.map((service: any, idx: number) => (
-        <div key={`${service.id || idx}`} className="saas-inline-group">
-          <Field label="Service Title">
-            <input type="text" value={service.title || ""} onChange={(e) => updateService(idx, { title: e.target.value })} placeholder="Service title" />
-          </Field>
-          <Field label="Description">
-            <textarea value={service.description || ""} onChange={(e) => updateService(idx, { description: e.target.value })} rows={2} placeholder="Description" />
-          </Field>
-          <Field label="Price / Range (optional)">
-            <input type="text" value={service.price || ""} onChange={(e) => updateService(idx, { price: e.target.value })} placeholder="$99" />
-          </Field>
-          <Field label="Button URL (optional)">
-            <input type="text" value={service.url || ""} onChange={(e) => updateService(idx, { url: e.target.value })} placeholder="https://..." />
-          </Field>
-          <RowActions onUp={() => move(idx, -1)} onDown={() => move(idx, 1)} onDelete={() => onUpdate({ services: services.filter((_: any, i: number) => i !== idx) })} />
-        </div>
-      ))}
-      <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ services: [...services, { id: `${Date.now()}`, title: "", description: "", price: "", url: "" }] })}>+ Add Service</button>
-      <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+      <CollapsibleSection title="Content" description="Add, edit, remove, and reorder services.">
+        {services.map((service: any, idx: number) => (
+          <div key={`${service.id || idx}`} className="saas-inline-group">
+            <Field label="Service Title">
+              <input type="text" value={service.title || ""} onChange={(e) => updateService(idx, { title: e.target.value })} placeholder="Service title" />
+            </Field>
+            <Field label="Description">
+              <textarea value={service.description || ""} onChange={(e) => updateService(idx, { description: e.target.value })} rows={2} placeholder="Description" />
+            </Field>
+            <Field label="Price / Range (optional)">
+              <input type="text" value={service.price || ""} onChange={(e) => updateService(idx, { price: e.target.value })} placeholder="$99" />
+            </Field>
+            <Field label="Button URL (optional)">
+              <input type="text" value={service.url || ""} onChange={(e) => updateService(idx, { url: e.target.value })} placeholder="https://..." />
+            </Field>
+            <RowActions onUp={() => move(idx, -1)} onDown={() => move(idx, 1)} onDelete={() => onUpdate({ services: services.filter((_: any, i: number) => i !== idx) })} />
+          </div>
+        ))}
+        <button type="button" className="saas-mini-btn" onClick={() => onUpdate({ services: [...services, { id: `${Date.now()}`, title: "", description: "", price: "", url: "" }] })}>+ Add Service</button>
+      </CollapsibleSection>
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -764,41 +944,155 @@ export function TextSectionEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <Field label="Section Heading">
-        <input type="text" value={data.heading || ""} onChange={(e) => onUpdate({ heading: e.target.value })} placeholder="About Me" />
-      </Field>
-      <Field label="Body Text">
-        <textarea value={data.content || ""} onChange={(e) => onUpdate({ content: e.target.value })} rows={4} placeholder="Write your section content" />
-      </Field>
-      <Field label="Alignment">
-        <select value={data.alignment || "center"} onChange={(e) => onUpdate({ alignment: e.target.value })}>
-          <option value="left">Left</option>
-          <option value="center">Center</option>
-          <option value="right">Right</option>
-        </select>
-      </Field>
-      <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+      <CollapsibleSection title="Content" description="Write the text that appears in this section.">
+        <Field label="Section Heading">
+          <input type="text" value={data.heading || ""} onChange={(e) => onUpdate({ heading: e.target.value })} placeholder="About Me" />
+        </Field>
+        <Field label="Body Text">
+          <textarea value={data.content || ""} onChange={(e) => onUpdate({ content: e.target.value })} rows={4} placeholder="Write your section content" />
+        </Field>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Appearance" description="Tweak alignment and spacing behavior.">
+        <Field label="Alignment">
+          <select value={data.alignment || "center"} onChange={(e) => onUpdate({ alignment: e.target.value })}>
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </Field>
+      </CollapsibleSection>
+
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
 
 export function ImageBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
+  const [isBannerDragActive, setIsBannerDragActive] = useState(false);
+
+  const uploadBannerFile = async (file: File) => {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      setBannerUploadError("Please use PNG, JPG, WEBP, or SVG files.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setBannerUploadError("Image is too large. Maximum size is 2 MB.");
+      return;
+    }
+
+    setIsUploadingBanner(true);
+    setBannerUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("banner", file);
+
+      const response = await fetch("/api/connect/banner-image", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+        headers: {
+          accept: "application/json",
+          "x-clutch-fetch": "true",
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        setBannerUploadError(result.error || "Failed to upload image.");
+        return;
+      }
+
+      onUpdate({ imageUrl: result.imageUrl });
+    } catch (error) {
+      setBannerUploadError(error instanceof Error ? error.message : "Failed to upload image.");
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleBannerFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    await uploadBannerFile(file);
+    input.value = "";
+  };
+
   return (
     <div className="saas-fields">
-      <Field label="Image URL / Upload URL">
-        <input type="text" value={data.imageUrl || ""} onChange={(e) => onUpdate({ imageUrl: e.target.value })} placeholder="https://..." />
-      </Field>
-      <Field label="Alt Text">
-        <input type="text" value={data.altText || ""} onChange={(e) => onUpdate({ altText: e.target.value })} placeholder="Describe image" />
-      </Field>
-      <Field label="Caption">
-        <input type="text" value={data.caption || ""} onChange={(e) => onUpdate({ caption: e.target.value })} placeholder="Caption" />
-      </Field>
-      <Field label="Link URL (optional)">
-        <input type="text" value={data.linkUrl || ""} onChange={(e) => onUpdate({ linkUrl: e.target.value })} placeholder="https://..." />
-      </Field>
-      <Toggle label="Visible" checked={block.visible !== false} onChange={(v) => onUpdate({ __toggleVisibility: v })} />
+      <div className="saas-avatar-panel">
+        <div
+          className={`saas-avatar-upload-drop${isBannerDragActive ? " is-drag-active" : ""}${isUploadingBanner ? " is-uploading" : ""}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => !isUploadingBanner && fileInputRef.current?.click()}
+          onKeyDown={(event) => {
+            if ((event.key === "Enter" || event.key === " ") && !isUploadingBanner) {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            if (!isUploadingBanner) setIsBannerDragActive(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!isUploadingBanner) setIsBannerDragActive(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setIsBannerDragActive(false);
+          }}
+          onDrop={async (event) => {
+            event.preventDefault();
+            setIsBannerDragActive(false);
+            if (isUploadingBanner) return;
+            const file = event.dataTransfer?.files?.[0];
+            if (!file) return;
+            await uploadBannerFile(file);
+          }}
+        >
+          <span className="saas-avatar-upload-icon" aria-hidden="true">
+            <UploadCloud size={18} />
+          </span>
+          <span className="saas-avatar-upload-copy">
+            <strong>{isUploadingBanner ? "Uploading banner image..." : "Upload Banner Image"}</strong>
+            <small>Drag & drop or click to browse</small>
+          </span>
+        </div>
+        {bannerUploadError ? <p className="saas-field-error">{bannerUploadError}</p> : null}
+        <p className="saas-field-hint">Recommended: wide image, at least 1400px across, PNG/JPG/WEBP/SVG, max 2 MB.</p>
+        <input ref={fileInputRef} type="file" accept="image/*" className="saas-hidden-input" onChange={handleBannerFile} />
+      </div>
+
+      <CollapsibleSection title="More settings" description="Image URL, alt text, caption, and link settings.">
+        <Field label="Image URL / Upload URL">
+          <input type="text" value={data.imageUrl || ""} onChange={(e) => onUpdate({ imageUrl: e.target.value })} placeholder="https://..." />
+        </Field>
+        <Field label="Alt Text">
+          <input type="text" value={data.altText || ""} onChange={(e) => onUpdate({ altText: e.target.value })} placeholder="Describe image" />
+        </Field>
+        <Field label="Caption">
+          <input type="text" value={data.caption || ""} onChange={(e) => onUpdate({ caption: e.target.value })} placeholder="Caption" />
+        </Field>
+        <Field label="Link URL (optional)">
+          <input type="text" value={data.linkUrl || ""} onChange={(e) => onUpdate({ linkUrl: e.target.value })} placeholder="https://..." />
+        </Field>
+      </CollapsibleSection>
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -818,29 +1112,29 @@ export function BusinessHoursEditor({ block, onUpdate }: BlockEditorProps) {
 
   return (
     <div className="saas-fields">
-      <Field label="Section Title">
-        <input
-          type="text"
-          value={data.title || "Business Hours"}
-          onChange={(e) => onUpdate({ title: e.target.value })}
-          placeholder="Business Hours"
-        />
-      </Field>
-      {days.map((day) => (
-        <Field key={day} label={day}>
+      <NestedSection title="Content" description="Set the heading and hours for each day.">
+        <Field label="Section Title">
           <input
             type="text"
-            value={hours[day] || ""}
-            onChange={(e) => onUpdate({ hours: { ...hours, [day]: e.target.value } })}
-            placeholder={day === "Saturday" || day === "Sunday" ? "Closed" : "9:00 AM - 5:00 PM"}
+            value={data.title || "Business Hours"}
+            onChange={(e) => onUpdate({ title: e.target.value })}
+            placeholder="Business Hours"
           />
         </Field>
-      ))}
-      <Toggle
-        label="Visible"
-        checked={block.visible !== false}
-        onChange={(v) => onUpdate({ __toggleVisibility: v })}
-      />
+        {days.map((day) => (
+          <Field key={day} label={day}>
+            <input
+              type="text"
+              value={hours[day] || ""}
+              onChange={(e) => onUpdate({ hours: { ...hours, [day]: e.target.value } })}
+              placeholder={day === "Saturday" || day === "Sunday" ? "Closed" : "9:00 AM - 5:00 PM"}
+            />
+          </Field>
+        ))}
+      </NestedSection>
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -849,35 +1143,36 @@ export function FormBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <Field label="Form Label">
-        <input
-          type="text"
-          value={data.formLabel || "Contact Form"}
-          onChange={(e) => onUpdate({ formLabel: e.target.value })}
-          placeholder="Contact Form"
-        />
-      </Field>
-      <Field label="Description">
-        <textarea
-          value={data.description || ""}
-          onChange={(e) => onUpdate({ description: e.target.value })}
-          rows={3}
-          placeholder="Tell customers what this form is for"
-        />
-      </Field>
-      <Field label="Submit Button Text">
-        <input
-          type="text"
-          value={data.submitText || "Send"}
-          onChange={(e) => onUpdate({ submitText: e.target.value })}
-          placeholder="Send"
-        />
-      </Field>
-      <Toggle
-        label="Visible"
-        checked={block.visible !== false}
-        onChange={(v) => onUpdate({ __toggleVisibility: v })}
-      />
+      <CollapsibleSection title="Content" description="Name the form and describe what it does.">
+        <Field label="Form Label">
+          <input
+            type="text"
+            value={data.formLabel || "Contact Form"}
+            onChange={(e) => onUpdate({ formLabel: e.target.value })}
+            placeholder="Contact Form"
+          />
+        </Field>
+        <Field label="Description">
+          <textarea
+            value={data.description || ""}
+            onChange={(e) => onUpdate({ description: e.target.value })}
+            rows={3}
+            placeholder="Tell customers what this form is for"
+          />
+        </Field>
+        <Field label="Submit Button Text">
+          <input
+            type="text"
+            value={data.submitText || "Send"}
+            onChange={(e) => onUpdate({ submitText: e.target.value })}
+            placeholder="Send"
+          />
+        </Field>
+      </CollapsibleSection>
+
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -886,32 +1181,36 @@ export function WalletButtonEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <Field label="Button Label">
-        <input
-          type="text"
-          value={data.label || "Add to Wallet"}
-          onChange={(e) => onUpdate({ label: e.target.value })}
-          placeholder="Add to Wallet"
+      <CollapsibleSection title="Content" description="Label and destination for the wallet action.">
+        <Field label="Button Label">
+          <input
+            type="text"
+            value={data.label || "Add to Wallet"}
+            onChange={(e) => onUpdate({ label: e.target.value })}
+            placeholder="Add to Wallet"
+          />
+        </Field>
+        <Field label="Destination URL (optional)">
+          <input
+            type="text"
+            value={data.url || ""}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="https://..."
+          />
+        </Field>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Appearance" description="Visual tweaks for the wallet button.">
+        <Toggle
+          label="Show icon"
+          checked={data.showIcon !== false}
+          onChange={(v) => onUpdate({ showIcon: v })}
         />
-      </Field>
-      <Field label="Destination URL (optional)">
-        <input
-          type="text"
-          value={data.url || ""}
-          onChange={(e) => onUpdate({ url: e.target.value })}
-          placeholder="https://..."
-        />
-      </Field>
-      <Toggle
-        label="Show icon"
-        checked={data.showIcon !== false}
-        onChange={(v) => onUpdate({ showIcon: v })}
-      />
-      <Toggle
-        label="Visible"
-        checked={block.visible !== false}
-        onChange={(v) => onUpdate({ __toggleVisibility: v })}
-      />
+      </CollapsibleSection>
+
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }
@@ -920,40 +1219,44 @@ export function QRCodeBlockEditor({ block, onUpdate }: BlockEditorProps) {
   const data = getBlockData(block);
   return (
     <div className="saas-fields">
-      <Field label="Label">
-        <input
-          type="text"
-          value={data.label || "Scan to connect"}
-          onChange={(e) => onUpdate({ label: e.target.value })}
-          placeholder="Scan to connect"
+      <CollapsibleSection title="Content" description="The scan label, URL, and helper text.">
+        <Field label="Label">
+          <input
+            type="text"
+            value={data.label || "Scan to connect"}
+            onChange={(e) => onUpdate({ label: e.target.value })}
+            placeholder="Scan to connect"
+          />
+        </Field>
+        <Field label="QR Destination URL">
+          <input
+            type="text"
+            value={data.url || ""}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="https://..."
+          />
+        </Field>
+        <Field label="Caption (optional)">
+          <input
+            type="text"
+            value={data.caption || ""}
+            onChange={(e) => onUpdate({ caption: e.target.value })}
+            placeholder="Quick contact"
+          />
+        </Field>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Appearance" description="Control the supporting label beneath the QR code.">
+        <Toggle
+          label="Show label"
+          checked={data.showLabel !== false}
+          onChange={(v) => onUpdate({ showLabel: v })}
         />
-      </Field>
-      <Field label="QR Destination URL">
-        <input
-          type="text"
-          value={data.url || ""}
-          onChange={(e) => onUpdate({ url: e.target.value })}
-          placeholder="https://..."
-        />
-      </Field>
-      <Field label="Caption (optional)">
-        <input
-          type="text"
-          value={data.caption || ""}
-          onChange={(e) => onUpdate({ caption: e.target.value })}
-          placeholder="Quick contact"
-        />
-      </Field>
-      <Toggle
-        label="Show label"
-        checked={data.showLabel !== false}
-        onChange={(v) => onUpdate({ showLabel: v })}
-      />
-      <Toggle
-        label="Visible"
-        checked={block.visible !== false}
-        onChange={(v) => onUpdate({ __toggleVisibility: v })}
-      />
+      </CollapsibleSection>
+
+      <AdvancedAccordion>
+        <BlockAdvancedControls block={block} onUpdate={onUpdate} />
+      </AdvancedAccordion>
     </div>
   );
 }

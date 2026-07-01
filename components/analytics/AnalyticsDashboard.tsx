@@ -14,9 +14,7 @@ import {
 import CampaignMetricGrid from "@/components/dashboard/CampaignMetricGrid";
 import DashboardPreviewCard from "@/components/dashboard/DashboardPreviewCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import HeatmapPreview from "@/components/dashboard/HeatmapPreview";
 
-const WorldMap      = dynamic(() => import("./WorldMap"),       { ssr: false, loading: () => <div className="ca-map-skeleton" /> });
 const ScansLineChart = dynamic(() => import("./ScansLineChart"), { ssr: false, loading: () => <div className="ca-chart-skeleton" /> });
 const DeviceDonut   = dynamic(() => import("./DeviceDonut"),    { ssr: false, loading: () => <div className="ca-chart-skeleton" /> });
 
@@ -114,7 +112,6 @@ function heatLevel(count: number, max: number) {
 /* ─────────────── Main component ─────────────── */
 export default function AnalyticsDashboard(props: DashboardProps) {
   const { activeTab, heatmap } = props;
-  const [viewBy, setViewBy] = useState("Scans");
   const [topLocationView, setTopLocationView] = useState<"cities" | "countries">("countries");
   const [timeFilter, setTimeFilter] = useState("30D");
   const [qrSearch, setQrSearch] = useState("");
@@ -283,71 +280,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     [props.geographyRows]
   );
 
-  const filteredMapPoints = useMemo(() => {
-    const grouped = new Map<
-      string,
-      {
-        lat: number;
-        lon: number;
-        scans: number;
-        visitors: Set<string>;
-        label: string;
-        city: string;
-        region: string;
-        country: string;
-        campaignCounts: Map<string, number>;
-      }
-    >();
-
-    for (const row of geoRows) {
-      const latitude = row.latitude;
-      const longitude = row.longitude;
-      if (latitude === null || longitude === null) continue;
-      const key = `${latitude.toFixed(2)}:${longitude.toFixed(2)}:${row.locationLabel}`;
-      const existing = grouped.get(key);
-      if (existing) {
-        existing.scans += 1;
-        existing.visitors.add(row.id);
-        existing.campaignCounts.set(row.campaign, (existing.campaignCounts.get(row.campaign) || 0) + 1);
-      } else {
-        grouped.set(key, {
-          lat: latitude,
-          lon: longitude,
-          scans: 1,
-          visitors: new Set([row.id]),
-          label: row.locationLabel,
-          city: row.city,
-          region: row.region,
-          country: row.country,
-          campaignCounts: new Map([[row.campaign, 1]]),
-        });
-      }
-    }
-
-    return Array.from(grouped.values()).map((point) => ({
-      lat: point.lat,
-      lon: point.lon,
-      scans: point.scans,
-      uniqueVisitors: point.visitors.size,
-      label: point.label,
-      city: point.city,
-      region: point.region,
-      country: point.country,
-      topCampaign:
-        Array.from(point.campaignCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
-    }));
-  }, [geoRows]);
-
-  const geoCountryData = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const row of geoRows) {
-      counts.set(row.country, (counts.get(row.country) || 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .map(([name, scans]) => ({ name, scans }))
-      .sort((a, b) => b.scans - a.scans);
-  }, [geoRows]);
-
   const topCities = useMemo(() => {
     const counts = new Map<string, number>();
     for (const row of geoRows) {
@@ -419,7 +351,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
     let fastestLocation = "—";
     let fastestDelta = Number.NEGATIVE_INFINITY;
-    for (const [location, count] of current.entries()) {
+    for (const [location, count] of Array.from(current.entries())) {
       const delta = count - (previous.get(location) || 0);
       if (delta > fastestDelta) {
         fastestDelta = delta;
@@ -1005,7 +937,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                   type="button"
                   className="ca-secondary-link-btn"
                   onClick={() => {
-                    setViewBy("Scans");
                     setTimeFilter("30D");
                     setQrSearch("");
                     setQrFilter("all");
@@ -1022,14 +953,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               </div>
 
               <div className="ca-dashboard-filter-grid">
-                <label>
-                  <span>Map View</span>
-                  <select className="ca-select" value={viewBy} onChange={(event) => setViewBy(event.target.value)}>
-                    <option>Scans</option>
-                    <option>Visitors</option>
-                    <option>Leads</option>
-                  </select>
-                </label>
                 <label>
                   <span>QR Campaigns</span>
                   <select className="ca-select" value={qrFilter} onChange={(event) => setQrFilter(event.target.value)}>
@@ -1088,29 +1011,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
           {/* ── Overview / Analytics tab ── */}
           {isMainView && (
             <>
-              {/* Geographic Heatmap */}
-              <div className="ca-card ca-geo-card">
-                <div className="ca-card-head">
-                  <h2 className="ca-card-title">Geographic Heatmap</h2>
-                  <div className="ca-card-controls">
-                    <span className="ca-viewby-label">View by:</span>
-                    <div className="ca-select-wrap">
-                      <select
-                        className="ca-select"
-                        value={viewBy}
-                        onChange={e => setViewBy(e.target.value)}
-                      >
-                        <option>Scans</option>
-                        <option>Visitors</option>
-                        <option>Leads</option>
-                      </select>
-                      <ChevronDown size={12} className="ca-select-caret" />
-                    </div>
-                  </div>
-                </div>
-                <WorldMap countryData={props.countryData} mapPoints={props.mapPoints} viewBy={viewBy} />
-              </div>
-
               {/* 3-column row */}
               <div className="ca-three-col">
                 {/* Top Locations */}
@@ -1477,31 +1377,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                 <article className="ca-geo-kpi-card"><span>Cities Reached</span><strong>{new Set(geoRows.map((r) => r.city)).size}</strong></article>
                 <article className="ca-geo-kpi-card"><span>Top City</span><strong>{geoTopCity}</strong></article>
                 <article className="ca-geo-kpi-card"><span>Top Region</span><strong>{geoTopRegion}</strong></article>
-              </div>
-
-              <div className="ca-card ca-geo-card">
-                <div className="ca-card-head">
-                  <h2 className="ca-card-title">Geographic Heatmap</h2>
-                  <div className="ca-card-controls">
-                    <span className="ca-viewby-label">View by:</span>
-                    <div className="ca-select-wrap">
-                      <select className="ca-select" value={viewBy} onChange={e => setViewBy(e.target.value)}>
-                        <option>Scans</option><option>Visitors</option><option>Leads</option>
-                      </select>
-                      <ChevronDown size={12} className="ca-select-caret" />
-                    </div>
-                  </div>
-                </div>
-                <WorldMap
-                  countryData={geoCountryData}
-                  mapPoints={filteredMapPoints}
-                  viewBy={viewBy}
-                  onDrillDown={(location) => {
-                    if (location.country) setGeoCountry(location.country);
-                    if (location.region) setGeoState(location.region);
-                    if (location.city) setGeoCity(location.city);
-                  }}
-                />
               </div>
 
               <div className="ca-three-col">

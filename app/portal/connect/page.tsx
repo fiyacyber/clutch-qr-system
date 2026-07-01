@@ -17,7 +17,6 @@ import {
   Smartphone,
   Sparkles,
   Star,
-  Wallet,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import RetryNotice from "@/components/dashboard/RetryNotice";
@@ -26,6 +25,7 @@ import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
 import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
+import { clutchConnectDisplayUrl, clutchConnectProfileUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface ConnectPageProps {
@@ -79,19 +79,24 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             subtitle="Build your Clutch Connect profile and share it from your smart card, QR campaigns, and customer touchpoints."
             actions={(
               <div className="connect-center-header-actions">
+                <Link className="btn secondary" href="/portal/connect/setup">
+                  <Sparkles size={15} />
+                  Guided Setup
+                </Link>
                 <Link className="btn primary" href="/portal/connect/build">
                   <Palette size={15} />
-                  Profile Builder
+                  Advanced Builder
                 </Link>
               </div>
             )}
           />
           <section className="connect-center-card">
             <p className="connect-center-kicker">Start Here</p>
-            <h2>Create your Profile Builder page</h2>
-            <p className="muted">Open the new builder to create your public Clutch Connect profile. Once saved, your profile button will appear here.</p>
+            <h2>Create your Clutch Connect profile</h2>
+            <p className="muted">Use guided setup for the essentials, then fine tune layout and design in the advanced builder.</p>
             <div className="connect-center-inline-actions">
-              <Link className="btn primary" href="/portal/connect/build">Profile Builder</Link>
+              <Link className="btn secondary" href="/portal/connect/setup">Guided Setup</Link>
+              <Link className="btn primary" href="/portal/connect/build">Advanced Builder</Link>
             </div>
           </section>
         </main>
@@ -247,9 +252,9 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const missingItems = completionChecks.filter((item) => !item.done);
   const publicProfileHref = profile.slug ? `/u/${profile.slug}` : "/portal/connect/build";
   const publicProfileUrl = profile.slug
-    ? `qr.clutchprintshop.com/u/${profile.slug}`
+    ? clutchConnectDisplayUrl(profile.slug)
     : "Open Profile Builder to publish your page";
-  const publicProfileFullUrl = profile.slug ? `https://qr.clutchprintshop.com/u/${profile.slug}` : null;
+  const publicProfileFullUrl = profile.slug ? clutchConnectProfileUrl(profile.slug) : null;
 
   const builderImprovements = [
     { icon: <MessageSquare size={16} />, label: "Drag-and-drop blocks", status: "Ready" },
@@ -279,9 +284,13 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           subtitle="Open your Profile Builder workspace or view the profile your customers see."
           actions={
             <div className="connect-center-header-actions">
+              <Link className="btn secondary" href="/portal/connect/setup">
+                <Sparkles size={15} />
+                Guided Setup
+              </Link>
               <Link className="btn primary" href="/portal/connect/build">
                 <Palette size={15} />
-                Profile Builder
+                Advanced Builder
               </Link>
               <div className="connect-profile-view-row">
                 <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>

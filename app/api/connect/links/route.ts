@@ -3,6 +3,24 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { requireCustomer } from "@/lib/auth";
 import { getPlatform } from "@/lib/platforms";
 
+
+function wantsJson(req: NextRequest) {
+  const accept = req.headers.get("accept") || "";
+  return accept.includes("application/json") || req.headers.get("x-clutch-fetch") === "true";
+}
+
+function successResponse(req: NextRequest, payload: Record<string, unknown> = {}) {
+  if (wantsJson(req)) {
+    return NextResponse.json({ ok: true, ...payload });
+  }
+
+  return NextResponse.redirect(new URL("/portal/connect?saved=1", req.url));
+}
+
+function errorResponse(error: string, status = 400) {
+  return NextResponse.json({ error }, { status });
+}
+
 function safeUrl(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -12,13 +30,13 @@ function safeUrl(value: string) {
 
 export async function POST(req: NextRequest) {
   const { user, customer } = await requireCustomer();
-  if (!user || !customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user || !customer) return errorResponse("Unauthorized", 401);
 
   const form = await req.formData();
   const action = String(form.get("action") || "").trim();
   const profileId = String(form.get("profile_id") || "").trim();
 
-  if (!profileId) return NextResponse.json({ error: "Profile is required." }, { status: 400 });
+  if (!profileId) return errorResponse("Profile is required.", 400);
 
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
@@ -28,7 +46,7 @@ export async function POST(req: NextRequest) {
     .eq("customer_id", customer.id)
     .maybeSingle();
 
-  if (!profile) return NextResponse.json({ error: "Profile not found." }, { status: 404 });
+  if (!profile) return errorResponse("Profile not found.", 404);
 
   if (action === "create") {
     const label = String(form.get("label") || "").trim();
@@ -40,7 +58,7 @@ export async function POST(req: NextRequest) {
     const description = String(form.get("description") || "").trim() || null;
 
     if (!label || !url) {
-      return NextResponse.json({ error: "Label and URL are required." }, { status: 400 });
+      return errorResponse("Label and URL are required.", 400);
     }
 
     // If platform is not custom, try to build the full URL
@@ -85,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("CONNECT LINK CREATE ERROR", error);
-      return NextResponse.json({ error: "Failed to add link." }, { status: 500 });
+      return errorResponse("Failed to add link.", 500);
     }
   }
 
@@ -117,7 +135,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("CONNECT LINK UPDATE ERROR", error);
-      return NextResponse.json({ error: "Failed to update link." }, { status: 500 });
+      return errorResponse("Failed to update link.", 500);
     }
   }
 
@@ -132,9 +150,9 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("CONNECT LINK DELETE ERROR", error);
-      return NextResponse.json({ error: "Failed to delete link." }, { status: 500 });
+      return errorResponse("Failed to delete link.", 500);
     }
   }
 
-  return NextResponse.redirect(new URL("/portal/connect?saved=1", req.url));
+  return successResponse(req);
 }

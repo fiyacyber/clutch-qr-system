@@ -9,10 +9,11 @@ import {
 } from "@/lib/analytics";
 
 interface AnalyticsReportPageProps {
-  searchParams?: Record<string, string>;
+  searchParams?: Promise<Record<string, string>>;
 }
 
 export default async function AnalyticsReportPage({ searchParams }: AnalyticsReportPageProps) {
+  const params = (await searchParams) || {};
   const { user, customer } = await requireCustomer();
 
   if (!user) redirect("/login");
@@ -38,13 +39,13 @@ export default async function AnalyticsReportPage({ searchParams }: AnalyticsRep
     : { data: [] };
 
   const filters: AnalyticsFilters = {
-    qr: searchParams?.qr || undefined,
-    from: searchParams?.from || undefined,
-    to: searchParams?.to || undefined,
-    device: searchParams?.device || undefined,
-    browser: searchParams?.browser || undefined,
-    location: searchParams?.location || undefined,
-    referrer: searchParams?.referrer || undefined,
+    qr: params.qr || undefined,
+    from: params.from || undefined,
+    to: params.to || undefined,
+    device: params.device || undefined,
+    browser: params.browser || undefined,
+    location: params.location || undefined,
+    referrer: params.referrer || undefined,
   };
   const analytics = buildAdvancedAnalytics(codes, scanRows || [], filters);
   const scannedBestPerforming = analytics.bestPerforming.filter((item) => item.totalScans > 0);

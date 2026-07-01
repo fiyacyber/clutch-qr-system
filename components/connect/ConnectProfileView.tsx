@@ -2,7 +2,7 @@
 
 import BuilderPublicProfile from "@/components/BuilderPublicProfile";
 import { BuilderBlock, BuilderConfig, BuilderTheme } from "@/lib/builder-types";
-import { createDefaultTheme } from "@/lib/builder-config";
+import { createDefaultTheme, sanitizeBuilderConfig } from "@/lib/builder-config";
 
 type SocialLink = {
   id?: string;
@@ -14,18 +14,27 @@ type SocialLink = {
 interface ConnectProfileViewProps {
   profile: any;
   blocks?: BuilderBlock[];
+  sections?: BuilderConfig["sections"];
+  forms?: BuilderConfig["forms"];
   socialLinks?: SocialLink[];
   theme?: Partial<BuilderTheme>;
   mode: "public" | "preview" | "editor";
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string) => void;
+  onSelectSection?: (sectionId: string) => void;
+  onSelectSaveShare?: () => void;
+  onRemoveBlock?: (blockId: string) => void;
+  onRemoveSection?: (sectionId: string) => void;
 }
 
 function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
-  if (Array.isArray(blocks) && blocks.length > 0) {
-    return blocks;
-  }
-
+  const customBlocks: BuilderBlock[] = Array.isArray(blocks)
+    ? blocks.map((block) => ({
+      ...block,
+      data: block.data ? { ...block.data } : undefined,
+      settings: block.settings ? { ...block.settings } : undefined,
+    }))
+    : [];
   const generated: BuilderBlock[] = [
     {
       id: "profile-hero-default",
@@ -40,6 +49,96 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
       },
     },
   ];
+
+  const existingTypes = new Set(customBlocks.map((block) => String(block.type)));
+
+  if (customBlocks.length > 0) {
+    let order = customBlocks.length;
+
+    if (profile?.phone && !existingTypes.has("phone-button")) {
+      customBlocks.push({
+        id: "phone-button-default",
+        type: "phone-button",
+        order: order++,
+        visible: true,
+        data: { label: "Call", phone: profile.phone, value: profile.phone },
+      });
+    }
+
+    if (profile?.email && !existingTypes.has("email-button")) {
+      customBlocks.push({
+        id: "email-button-default",
+        type: "email-button",
+        order: order++,
+        visible: true,
+        data: { label: "Email", email: profile.email, value: profile.email },
+      });
+    }
+
+    if (profile?.website && !existingTypes.has("website-button")) {
+      customBlocks.push({
+        id: "website-button-default",
+        type: "website-button",
+        order: order++,
+        visible: true,
+        data: { label: "Website", website: profile.website, url: profile.website },
+      });
+    }
+
+    if ((profile?.address || profile?.location) && !existingTypes.has("directions-button")) {
+      const address = String(profile?.address || profile?.location || "").trim();
+      customBlocks.push({
+        id: "directions-button-default",
+        type: "directions-button",
+        order: order++,
+        visible: true,
+        data: {
+          label: "Directions",
+          address,
+          url: address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : "",
+        },
+      });
+    }
+
+    const mappedSocialLinks = (socialLinks || [])
+      .filter((item) => item?.url)
+      .map((item, idx) => ({
+        id: item.id || `social-${idx}`,
+        label: item.label || item.platform || "Social",
+        platform: item.platform || item.label || "Social",
+        value: String(item.url),
+      }));
+
+    if (mappedSocialLinks.length && !existingTypes.has("social-media-links")) {
+      customBlocks.push({
+        id: "social-media-links-default",
+        type: "social-media-links",
+        order: order++,
+        visible: true,
+        data: {
+          links: mappedSocialLinks,
+          iconColorMode: "mono",
+        },
+      });
+    }
+
+    if (!existingTypes.has("custom-link-button")) {
+      customBlocks.push({
+        id: "save-contact-default",
+        type: "custom-link-button",
+        order: order++,
+        visible: true,
+        data: {
+          label: "Save Contact",
+          url: profile?.id ? `/api/vcard/${profile.id}` : "",
+          icon: "📇",
+          description: "Download vCard",
+        },
+      });
+    }
+
+    return customBlocks;
+  }
 
   let order = 1;
 
@@ -96,6 +195,7 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
     .filter((item) => item?.url)
     .map((item, idx) => ({
       id: item.id || `social-${idx}`,
+      label: item.label || item.platform || "Social",
       platform: item.platform || item.label || "Social",
       value: String(item.url),
     }));
@@ -108,6 +208,7 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
       visible: true,
       data: {
         links: mappedSocialLinks,
+        iconColorMode: "mono",
       },
     });
     order += 1;
@@ -132,11 +233,17 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
 export default function ConnectProfileView({
   profile,
   blocks,
+  sections,
+  forms,
   socialLinks,
   theme: themeOverrides,
   mode,
   selectedBlockId,
   onSelectBlock,
+  onSelectSection,
+  onSelectSaveShare,
+  onRemoveBlock,
+  onRemoveSection,
 }: ConnectProfileViewProps) {
   const resolvedBlocks = toBuilderBlocks(profile, blocks, socialLinks)
     .map((block, index) => ({ ...block, order: typeof block.order === "number" ? block.order : index }))
@@ -153,18 +260,29 @@ export default function ConnectProfileView({
   const config: BuilderConfig = {
     version: Number(profile?.builder_config?.version || 1),
     theme: resolvedTheme,
+    sections: Array.isArray(sections)
+      ? sections
+      : (Array.isArray(profile?.builder_config?.sections) ? profile.builder_config.sections : []),
     blocks: resolvedBlocks,
-    forms: Array.isArray(profile?.builder_config?.forms) ? profile.builder_config.forms : [],
+    forms: Array.isArray(forms)
+      ? forms
+      : (Array.isArray(profile?.builder_config?.forms) ? profile.builder_config.forms : []),
   };
+
+  const hydratedConfig = sanitizeBuilderConfig(config);
 
   return (
     <BuilderPublicProfile
-      config={config}
+      config={hydratedConfig}
       profile={profile}
       mode={mode}
       editablePreview={mode === "editor"}
       selectedBlockId={selectedBlockId}
       onSelectBlock={onSelectBlock}
+      onSelectSection={onSelectSection}
+      onSelectSaveShare={onSelectSaveShare}
+      onRemoveBlock={onRemoveBlock}
+      onRemoveSection={onRemoveSection}
     />
   );
 }
