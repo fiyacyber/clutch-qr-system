@@ -1,7 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { FaAddressCard, FaApple, FaGooglePay, FaLink, FaQrcode, FaShareNodes } from "react-icons/fa6";
+import { Fragment, useCallback, useRef, useState } from "react";
 import { BuilderConfig, ProfileSection } from "@/lib/builder-types";
 import { getBlockData, normalizeBlockType } from "./builder/blockUtils";
 import {
@@ -218,6 +217,9 @@ export default function BuilderPublicProfile({
   const buttonColor = normalizeHex(buttons.color) || normalizeHex(config.theme.buttonColor) || normalizeHex(config.theme.accentColor) || "#FFA665";
   const buttonTextColor = normalizeHex(buttons.textColor) || getReadableTextColor(buttonColor);
   const buttonShape = buttons.style === "pill" || buttons.style === "square" ? buttons.style : "rounded";
+  const profileTheme = config.theme.themeMode || (config.theme.darkMode ? "dark" : "light");
+  const profileStyleName = config.theme.profileStyle || "clutch";
+  const profileLayout = config.theme.layout || "default";
   const backgroundStyle: React.CSSProperties = background.type === "solid"
     ? { background: background.color || "#F8FAFC" }
     : background.type === "gradient"
@@ -253,6 +255,9 @@ export default function BuilderPublicProfile({
     ["--builder-accent" as any]: buttonColor,
     ["--builder-button-text" as any]: buttonTextColor,
     ["--builder-button-radius" as any]: buttonShape === "pill" ? "999px" : buttonShape === "square" ? "12px" : "18px",
+    ["--builder-bg-color" as any]: background.color || "#F8FAFC",
+    ["--builder-bg-gradient-from" as any]: background.gradientFrom || "#FFFFFF",
+    ["--builder-bg-gradient-to" as any]: background.gradientTo || "#FFF4EC",
   };
 
   const orderedBlocks = [...(config.blocks || [])].sort((a, b) => a.order - b.order);
@@ -278,7 +283,7 @@ export default function BuilderPublicProfile({
         data-builder-block-id={block.id}
       >
         {canEdit ? (
-          <div className="builder-preview-toolbar" aria-hidden="true">
+          <div className="builder-preview-toolbar">
             <button type="button" onClick={(event) => { event.stopPropagation(); onSelectBlock?.(block.id); }}>Edit</button>
             {onRemoveBlock ? <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveBlock(block.id); }}>Remove</button> : null}
           </div>
@@ -310,7 +315,16 @@ export default function BuilderPublicProfile({
   };
 
   return (
-    <div ref={rootRef} className={`builder-public-profile builder-profile-style-${config.theme.profileStyle || "clutch"}`} data-mode={mode} style={profileStyle}>
+    <div
+      ref={rootRef}
+      className={`builder-public-profile builder-profile-style-${profileStyleName}`}
+      data-mode={mode}
+      data-theme={profileTheme}
+      data-style={profileStyleName}
+      data-background={background.type || "soft"}
+      data-layout={profileLayout}
+      style={profileStyle}
+    >
       <div className="builder-public-shell">
         <div className="builder-public-banner" style={bannerStyle} />
         <div className="builder-public-hero">
@@ -336,7 +350,7 @@ export default function BuilderPublicProfile({
                 } : undefined}
               >
                 {editablePreview && onRemoveSection ? (
-                  <div className="builder-preview-toolbar section-toolbar" aria-hidden="true">
+                  <div className="builder-preview-toolbar section-toolbar">
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelectSection?.(section.id); }}>Edit</button>
                     <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveSection(section.id); }}>Remove</button>
                   </div>
