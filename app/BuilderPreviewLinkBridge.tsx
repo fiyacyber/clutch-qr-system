@@ -76,6 +76,15 @@ function expandBuilderRangeLimits(root: ParentNode = document) {
   }
 }
 
+function stabilizePreviewToolbars(root: ParentNode = document) {
+  if (!window.location.pathname.includes("/portal/connect/build")) return;
+
+  const toolbars = Array.from(root.querySelectorAll(".builder-preview-toolbar"));
+  for (const toolbar of toolbars) {
+    toolbar.removeAttribute("aria-hidden");
+  }
+}
+
 export default function BuilderPreviewLinkBridge() {
   useEffect(() => {
     const handleClick = async (event: MouseEvent) => {
@@ -126,15 +135,19 @@ export default function BuilderPreviewLinkBridge() {
     };
 
     expandBuilderRangeLimits();
+    stabilizePreviewToolbars();
+
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
           if (node instanceof Element || node instanceof DocumentFragment) {
             expandBuilderRangeLimits(node);
+            stabilizePreviewToolbars(node);
           }
         });
       }
       expandBuilderRangeLimits();
+      stabilizePreviewToolbars();
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
