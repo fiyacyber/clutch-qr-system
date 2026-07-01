@@ -1,0 +1,99 @@
+/* Builder full-background theming
+   Design controls should affect the full public profile canvas, not only section cards. */
+
+.builder-public-profile {
+  --builder-page-bg-effective: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --builder-page-shadow-color: rgba(15, 23, 42, 0.08);
+  background: var(--builder-page-bg-effective) !important;
+}
+
+.builder-public-profile[data-background="solid"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 14%, transparent) 0%, transparent 38%),
+    var(--builder-bg-color, #F8FAFC);
+}
+
+.builder-public-profile[data-background="gradient"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--builder-accent, #FFA665) 18%, transparent) 0%, transparent 42%),
+    linear-gradient(180deg, var(--builder-bg-gradient-from, #FFFFFF) 0%, var(--builder-bg-gradient-to, #FFF4EC) 100%);
+}
+
+.builder-public-profile[data-background="soft"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 18%, transparent) 0%, transparent 38%),
+    linear-gradient(180deg, var(--builder-bg-gradient-from, #FFFFFF) 0%, var(--builder-bg-color, #F8FAFC) 54%, var(--builder-bg-gradient-to, #FFF4EC) 100%);
+}
+
+.builder-public-profile[data-theme="dark"] {
+  --builder-page-shadow-color: rgba(2, 6, 23, 0.34);
+}
+
+.builder-public-profile[data-theme="dark"][data-background="solid"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 20%, transparent) 0%, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--builder-bg-color, #0B1324) 72%, #111827) 0%, #07101f 100%);
+}
+
+.builder-public-profile[data-theme="dark"][data-background="gradient"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 22%, transparent) 0%, transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--builder-bg-gradient-from, #111827) 58%, #020617) 0%, color-mix(in srgb, var(--builder-bg-gradient-to, #0B1324) 70%, #020617) 100%);
+}
+
+.builder-public-profile[data-theme="dark"][data-background="soft"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 20%, transparent) 0%, transparent 42%),
+    linear-gradient(180deg, #111a2d 0%, #0b1324 58%, #07101f 100%);
+}
+
+.builder-public-profile[data-style="minimal"] {
+  box-shadow: none !important;
+}
+
+.builder-public-profile[data-style="executive"] {
+  box-shadow: 0 28px 72px var(--builder-page-shadow-color) !important;
+}
+
+.builder-public-profile[data-style="glass"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 24%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 75% 16%, color-mix(in srgb, var(--builder-bg-gradient-to, #FFF4EC) 46%, transparent) 0%, transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--builder-bg-gradient-from, #FFFFFF) 70%, transparent) 0%, var(--builder-bg-color, #F8FAFC) 100%);
+  box-shadow: 0 30px 78px var(--builder-page-shadow-color) !important;
+}
+
+.builder-public-profile[data-style="glass"][data-theme="dark"] {
+  --builder-page-bg-effective:
+    radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--builder-accent, #FFA665) 22%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 75% 16%, rgba(99, 102, 241, 0.2) 0%, transparent 42%),
+    linear-gradient(180deg, #101827 0%, #07101f 100%);
+}
+
+.builder-public-profile[data-layout="compact"] {
+  --builder-radius-xl: 20px;
+}
+
+.builder-public-profile[data-layout="minimal"] {
+  --builder-radius-xl: 18px;
+}
+
+/* Make empty profiles visibly respond to design changes too. */
+.builder-public-profile .builder-profile-header-stack,
+.builder-public-profile .builder-public-sections,
+.builder-public-profile .builder-public-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-public-footer {
+  background: color-mix(in srgb, var(--builder-surface-strong, rgba(255, 255, 255, 0.92)) 72%, transparent);
+  border-top-color: var(--builder-surface-border, rgba(148, 163, 184, 0.18));
+}
+
+/* Public pages should fill the browser viewport, not just a small inner card. */
+.builder-public-profile[data-mode="public"] {
+  width: 100%;
+  max-width: 480px;
+  box-shadow: none !important;
+}
