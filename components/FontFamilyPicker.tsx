@@ -10,6 +10,16 @@ interface FontFamilyPickerProps {
   inheritLabel?: string;
 }
 
+function recommendedWeightForFont(value: string) {
+  if (["display", "poster"].includes(value)) return "900";
+  if (["condensed", "narrow", "geometric", "grotesk", "neo-grotesk"].includes(value)) return "800";
+  if (["serif", "editorial", "elegant", "luxury", "newspaper", "slab", "slab-alt", "book", "modern-serif"].includes(value)) return "700";
+  if (["signature"].includes(value)) return "500";
+  if (["mono", "ui-mono", "tech"].includes(value)) return "700";
+  if (value === "inherit") return "700";
+  return "700";
+}
+
 export default function FontFamilyPicker({
   value,
   onChange,
@@ -39,13 +49,15 @@ export default function FontFamilyPicker({
         <span className="saas-font-select-label">Font</span>
         <select
           className="saas-font-select"
+          data-clutch-font-select="true"
+          data-recommended-weight={recommendedWeightForFont(selectedOption?.value || "inherit")}
           value={selectedOption?.value || "inherit"}
           onChange={(event) => onChange(event.target.value)}
           aria-label="Choose font family"
           style={{ fontFamily: selectedFontFamily }}
         >
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} data-recommended-weight={recommendedWeightForFont(option.value)}>
               {option.label} — {option.keywords}
             </option>
           ))}
