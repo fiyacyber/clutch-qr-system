@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Exo_2, Montserrat } from "next/font/google";
 import "./globals.css";
+import "./builder-stabilization.css";
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 const exo2 = Exo_2({ subsets: ["latin"], variable: "--font-exo2" });
