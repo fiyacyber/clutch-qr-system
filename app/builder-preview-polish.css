@@ -44,106 +44,125 @@
   filter: saturate(0.82) !important;
 }
 
-/* Font picker card readability. */
+/* Font picker card readability.
+   The old font cards used a huge label + Aa overlay, which made names collide.
+   These are simple selector cards now; the live preview still shows the actual font. */
 .saas-font-picker {
-  min-width: 0;
+  min-width: 0 !important;
 }
 
 .saas-font-picker-grid {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 12px !important;
+  gap: 10px !important;
 }
 
 .saas-font-option {
   position: relative !important;
-  display: grid !important;
-  align-items: end !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
   min-width: 0 !important;
-  min-height: 92px !important;
-  padding: 16px 72px 16px 16px !important;
+  min-height: 72px !important;
+  padding: 14px 14px !important;
   overflow: hidden !important;
-  border-radius: 18px !important;
-  border: 1px solid rgba(148, 163, 184, 0.28) !important;
-  background: linear-gradient(180deg, #253044 0%, #101827 100%) !important;
-  color: #f8fafc !important;
+  border-radius: 16px !important;
+  border: 1px solid #dbe4ee !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
   text-align: left !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 22px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045) !important;
 }
 
 .saas-font-option:hover {
-  border-color: rgba(255, 166, 101, 0.56) !important;
-  background: linear-gradient(180deg, #2b374d 0%, #121c2f 100%) !important;
+  border-color: rgba(255, 166, 101, 0.62) !important;
+  background: #fffaf6 !important;
 }
 
 .saas-font-option.is-active {
-  border-color: rgba(255, 166, 101, 0.92) !important;
-  background:
-    radial-gradient(circle at 90% 95%, rgba(255, 166, 101, 0.22), transparent 38%),
-    linear-gradient(180deg, #fff3ea 0%, #1c2637 66%, #101827 100%) !important;
-  box-shadow: 0 0 0 2px rgba(255, 166, 101, 0.18), 0 14px 28px rgba(15, 23, 42, 0.14) !important;
+  border-color: rgba(255, 166, 101, 0.95) !important;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%) !important;
+  box-shadow: 0 0 0 2px rgba(255, 166, 101, 0.16), 0 12px 26px rgba(15, 23, 42, 0.07) !important;
 }
 
 .saas-font-option-copy {
   position: relative !important;
   z-index: 2 !important;
   min-width: 0 !important;
-  display: grid !important;
-  gap: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 1 1 auto !important;
 }
 
 .saas-font-option-label {
   display: block !important;
   max-width: 100% !important;
-  color: #f8fafc !important;
-  font-size: clamp(1rem, 1.65vw, 1.22rem) !important;
-  font-weight: 900 !important;
-  line-height: 1.05 !important;
-  letter-spacing: -0.03em !important;
-  overflow-wrap: anywhere !important;
-  word-break: normal !important;
+  color: #0f172a !important;
+  font-family: var(--font-montserrat), system-ui, sans-serif !important;
+  font-size: 0.92rem !important;
+  font-weight: 850 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.015em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .saas-font-option.is-active .saas-font-option-label {
-  color: #111827 !important;
+  color: #0f172a !important;
 }
 
 .saas-font-option-keywords {
   display: block !important;
   max-width: 100% !important;
-  color: #cbd5e1 !important;
-  font-size: 0.86rem !important;
-  font-weight: 800 !important;
-  line-height: 1.18 !important;
-  overflow-wrap: anywhere !important;
+  color: #64748b !important;
+  font-family: var(--font-montserrat), system-ui, sans-serif !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .saas-font-option.is-active .saas-font-option-keywords {
-  color: #94a3b8 !important;
+  color: #475569 !important;
 }
 
 .saas-font-option-preview {
-  position: absolute !important;
-  top: 14px !important;
-  right: 16px !important;
-  z-index: 1 !important;
-  color: rgba(248, 250, 252, 0.18) !important;
-  font-size: 1.65rem !important;
-  font-weight: 900 !important;
-  line-height: 1 !important;
-  pointer-events: none !important;
-}
-
-.saas-font-option.is-active .saas-font-option-preview {
-  color: rgba(15, 23, 42, 0.2) !important;
+  display: none !important;
 }
 
 .saas-font-option-check {
-  position: absolute !important;
-  right: 16px !important;
-  bottom: 14px !important;
+  position: static !important;
   z-index: 3 !important;
-  color: #22c55e !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex: 0 0 auto !important;
+  padding: 4px !important;
+  border-radius: 999px !important;
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.saas-font-picker-selected {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  padding: 12px 14px !important;
+}
+
+.saas-font-picker-selected-label {
+  color: #94a3b8 !important;
+}
+
+.saas-font-picker-selected-value {
+  color: #0f172a !important;
+  font-family: var(--font-montserrat), system-ui, sans-serif !important;
+  font-size: 0.95rem !important;
+  font-weight: 850 !important;
 }
 
 @media (max-width: 520px) {
@@ -152,6 +171,6 @@
   }
 
   .saas-font-option {
-    min-height: 84px !important;
+    min-height: 64px !important;
   }
 }
