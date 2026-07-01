@@ -5,6 +5,7 @@ import "./globals.css";
 import "./builder-stabilization.css";
 import "./builder-background-theme.css";
 import "./builder-preview-polish.css";
+import "./builder-sidebar-polish.css";
 
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 const exo2 = Exo_2({ subsets: ["latin"], variable: "--font-exo2" });
