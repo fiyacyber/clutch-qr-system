@@ -1,0 +1,359 @@
+/* Builder sidebar polish
+   Cleans the left editor column after the builder logic stabilization pass. */
+
+@media (min-width: 769px) {
+  .saas-left-panel {
+    background: #ffffff !important;
+    border-right: 1px solid #e5eaf2 !important;
+  }
+
+  .saas-left-panel .saas-panel-inner {
+    background: #ffffff !important;
+  }
+
+  .saas-left-panel .saas-canvas-list,
+  .saas-left-panel .saas-mobile-panel-content {
+    padding: 14px 16px 22px !important;
+    gap: 12px !important;
+    background: #f8fafc !important;
+  }
+
+  .saas-left-panel .saas-section-manager,
+  .saas-left-panel .saas-canvas-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e5eaf2 !important;
+  }
+
+  .saas-left-panel .saas-section-manager-head,
+  .saas-left-panel .saas-canvas-header {
+    min-height: 56px !important;
+    padding-inline: 14px !important;
+  }
+}
+
+/* Section cards */
+.builder-sections-list {
+  gap: 10px !important;
+}
+
+.builder-section-card {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
+  overflow: hidden !important;
+}
+
+.builder-section-card:hover {
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+.builder-section-card.is-expanded {
+  border-color: rgba(255, 166, 101, 0.72) !important;
+  background: linear-gradient(180deg, #fffaf6 0%, #ffffff 34%) !important;
+  box-shadow: 0 0 0 1px rgba(255, 166, 101, 0.18), 0 14px 34px rgba(15, 23, 42, 0.075) !important;
+}
+
+.builder-section-card.is-drop-target {
+  border-color: rgba(255, 166, 101, 0.9) !important;
+  background: #fff7ed !important;
+}
+
+.builder-section-header {
+  grid-template-columns: 28px 42px minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  min-height: 62px !important;
+  padding: 10px 14px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.builder-section-header:hover {
+  background: #f8fafc !important;
+}
+
+.builder-section-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  background: #f1f5f9 !important;
+  border-color: #dbe4ee !important;
+  color: #384862 !important;
+}
+
+.builder-section-card.is-expanded .builder-section-icon {
+  background: #fff2e8 !important;
+  border-color: rgba(255, 166, 101, 0.58) !important;
+  color: #f97316 !important;
+}
+
+.builder-section-title {
+  color: #111827 !important;
+  font-size: 0.98rem !important;
+  line-height: 1.14 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.builder-section-meta {
+  color: #64748b !important;
+  font-size: 0.76rem !important;
+  font-weight: 650 !important;
+}
+
+.builder-section-expanded-body {
+  padding: 12px 14px 16px !important;
+  gap: 14px !important;
+  border-top: 1px solid #eef2f7 !important;
+  background: #ffffff !important;
+}
+
+/* Selected section editor */
+.builder-selected-section-panel {
+  border: 1px solid #dbe4ee !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055) !important;
+}
+
+.builder-selected-section-inner {
+  padding: 16px !important;
+  gap: 14px !important;
+}
+
+.builder-selected-section-head {
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid #e5eaf2 !important;
+}
+
+.builder-selected-section-head h3,
+.builder-selected-section-head h4,
+.builder-selected-section-head .saas-canvas-title,
+.builder-selected-section-head [class*="title"] {
+  color: #334155 !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.builder-section-input,
+.builder-selected-section-panel input[type="text"],
+.builder-selected-section-panel input[type="number"],
+.builder-selected-section-panel select,
+.builder-selected-section-panel textarea {
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid #cfd8e6 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  font-size: 0.95rem !important;
+  font-weight: 650 !important;
+}
+
+.builder-section-input:focus,
+.builder-selected-section-panel input[type="text"]:focus,
+.builder-selected-section-panel input[type="number"]:focus,
+.builder-selected-section-panel select:focus,
+.builder-selected-section-panel textarea:focus {
+  border-color: #ff8a3d !important;
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.18) !important;
+  outline: none !important;
+}
+
+.builder-selected-section-panel .saas-field,
+.builder-selected-section-panel label.saas-field {
+  gap: 7px !important;
+}
+
+.builder-selected-section-panel .saas-field-label,
+.builder-selected-section-panel label > span:first-child,
+.builder-selected-section-panel .saas-design-label {
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+}
+
+.builder-selected-section-panel .saas-design-copy,
+.builder-selected-section-panel small,
+.builder-selected-section-panel .helper-text {
+  color: #64748b !important;
+}
+
+/* Section design accordion */
+.builder-section-design-button,
+.builder-section-design-panel,
+.saas-left-panel .saas-advanced-accordion,
+.saas-left-panel .saas-nested-accordion {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.builder-section-design-button {
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  justify-content: space-between !important;
+}
+
+.builder-section-design-button:hover,
+.saas-left-panel .saas-advanced-accordion:hover,
+.saas-left-panel .saas-nested-accordion:hover {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+
+.builder-section-design-panel {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.builder-section-design-panel .saas-advanced-content,
+.saas-left-panel .saas-advanced-content {
+  padding: 14px !important;
+  gap: 14px !important;
+  background: #f8fafc !important;
+}
+
+.saas-left-panel .saas-advanced-accordion summary,
+.saas-left-panel .saas-nested-accordion summary {
+  min-height: 44px !important;
+  padding: 12px 14px !important;
+  color: #0f172a !important;
+}
+
+/* Sliders */
+.saas-left-panel input[type="range"] {
+  width: 100% !important;
+  accent-color: #ff8a3d !important;
+}
+
+.saas-left-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+}
+
+.saas-left-panel input[type="range"]::-webkit-slider-thumb {
+  margin-top: -6px;
+}
+
+/* Color controls inside the editor */
+.saas-left-panel [aria-haspopup="dialog"] {
+  min-height: 42px !important;
+  border-radius: 12px !important;
+  border: 1px solid #cfd8e6 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+.saas-left-panel [aria-haspopup="dialog"]:hover {
+  border-color: #ff8a3d !important;
+  background: #fff7ed !important;
+}
+
+.saas-left-panel .saas-color-input-row,
+.saas-left-panel .saas-swatch-grid,
+.saas-left-panel .saas-chip-row {
+  gap: 8px !important;
+}
+
+/* Block cards */
+.saas-block-card {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05) !important;
+  overflow: hidden !important;
+}
+
+.saas-block-card:hover,
+.saas-block-card.selected,
+.saas-block-card.is-selected {
+  border-color: rgba(255, 166, 101, 0.82) !important;
+  box-shadow: 0 0 0 1px rgba(255, 166, 101, 0.18), 0 12px 28px rgba(15, 23, 42, 0.07) !important;
+}
+
+.saas-block-row {
+  min-height: 72px !important;
+  padding: 12px 14px !important;
+  gap: 10px !important;
+}
+
+.saas-block-left {
+  gap: 12px !important;
+}
+
+.saas-drag-handle {
+  width: 28px !important;
+  color: #94a3b8 !important;
+}
+
+.saas-block-icon-pill {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  background: #f1f5f9 !important;
+  border-color: #dbe4ee !important;
+  color: #384862 !important;
+}
+
+.saas-block-name {
+  color: #0f172a !important;
+  font-size: 0.96rem !important;
+  font-weight: 850 !important;
+}
+
+.saas-block-index {
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  line-height: 1.25 !important;
+}
+
+.saas-block-actions {
+  gap: 6px !important;
+}
+
+.saas-icon-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+  color: #64748b !important;
+}
+
+.saas-icon-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.saas-icon-btn.danger:hover {
+  background: #fff1f2 !important;
+  color: #dc2626 !important;
+}
+
+/* Keep the section/item area from feeling like one giant orange outline. */
+.builder-section-card.is-expanded > .builder-section-expanded-body,
+.builder-section-card.is-expanded .builder-selected-section-panel,
+.builder-section-card.is-expanded .saas-block-card {
+  outline: none !important;
+}
+
+/* Font picker layout inside nested section panel. */
+.builder-selected-section-panel .saas-font-picker-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.builder-selected-section-panel .saas-font-option {
+  min-height: 86px !important;
+  padding: 14px 64px 14px 14px !important;
+}
+
+@media (max-width: 1200px) {
+  .builder-selected-section-panel .saas-font-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
