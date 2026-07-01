@@ -35,7 +35,7 @@ export default function PlanCards({ currentPlanCode, compact = false }: PlanCard
               </span>
             ) : (
               <Link className="btn primary full" href={plan.checkoutUrl}>
-                {plan.code === "qr_pro_plus" ? "Upgrade to QR Pro+" : "Start QR Pro"}
+                {plan.code === "qr_pro_plus" ? "Upgrade to Agency" : "Start Clutch Connect"}
               </Link>
             )}
           </article>

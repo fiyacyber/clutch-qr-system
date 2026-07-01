@@ -20,8 +20,9 @@ import "../analytics.css";
 export default async function QRAnalyticsPage({
   params,
 }: {
-  params: { qrId: string };
+  params: Promise<{ qrId: string }>;
 }) {
+  const { qrId } = await params;
   const { user, customer } = await requireCustomer();
   if (!user || !customer) redirect("/login");
 
@@ -31,7 +32,7 @@ export default async function QRAnalyticsPage({
   const { data: code, error: codeError } = await admin
     .from("qr_codes")
     .select("*")
-    .eq("id", params.qrId)
+    .eq("id", qrId)
     .eq("customer_id", customer.id)
     .single();
 
@@ -43,7 +44,7 @@ export default async function QRAnalyticsPage({
   const { data: scans, error: scansError } = await admin
     .from("qr_scans")
     .select("*")
-    .eq("qr_code_id", params.qrId)
+    .eq("qr_code_id", qrId)
     .order("created_at", { ascending: false });
 
   if (scansError) {
@@ -100,8 +101,8 @@ export default async function QRAnalyticsPage({
   };
 
   const maxHeatmapValue = Math.max(
-    ...[...heatmapData.values()].map((m) =>
-      Math.max(...[...m.values()])
+    ...Array.from(heatmapData.values()).map((m) =>
+      Math.max(...Array.from(m.values()))
     )
   );
 

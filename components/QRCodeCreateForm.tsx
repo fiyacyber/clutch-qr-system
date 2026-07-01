@@ -45,7 +45,7 @@ export default function QRCodeCreateForm({ used, limit }: QRCodeCreateFormProps)
     }
 
     if (used >= limit) {
-      setError("Account limit reached. Upgrade to QR Pro+ for additional QR codes.");
+      setError("Account limit reached. Upgrade to Agency for additional QR codes.");
       setIsSaving(false);
       return;
     }
@@ -117,7 +117,7 @@ export default function QRCodeCreateForm({ used, limit }: QRCodeCreateFormProps)
       {used >= limit ? (
         <div className="limit-callout">
           <strong>Account limit reached.</strong>
-          <span> Upgrade to QR Pro+ for additional QR codes.</span>
+          <span> Upgrade to Agency for additional QR codes.</span>
           <a href="https://clutchprintshop.com/pages/qr-pro">View plans</a>
         </div>
       ) : null}

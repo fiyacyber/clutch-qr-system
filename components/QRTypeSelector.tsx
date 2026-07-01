@@ -2,7 +2,14 @@
 
 import styles from "./QRTypeSelector.module.css";
 
-export type QRType = "flyers" | "business_cards" | "brochures" | "postcards" | "door_hangers" | "yard_signs";
+export type QRType =
+  | "flyers"
+  | "business_cards"
+  | "brochures"
+  | "postcards"
+  | "door_hangers"
+  | "yard_signs"
+  | "connect_profile";
 
 type QRTypeOption = {
   value: QRType;
@@ -19,6 +26,7 @@ const QR_TYPES: QRTypeOption[] = [
   { value: "postcards", label: "Postcards", icon: "📮" },
   { value: "door_hangers", label: "Door Hangers", icon: "🚪" },
   { value: "yard_signs", label: "Yard Signs", icon: "🪧" },
+  { value: "connect_profile", label: "Clutch Connect Profile", icon: "🔗" },
 ];
 
 type QRTypeSelectorProps = {

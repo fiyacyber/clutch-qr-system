@@ -4,7 +4,7 @@ import {
   createSupabaseAdminClient,
 } from "@/lib/supabase-server";
 import { nanoid } from "nanoid";
-import { normalizeUrl } from "@/lib/qr";
+import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import { getSubscriptionLockMessage, isCustomerSubscriptionLocked } from "@/lib/plans";
 
 const QR_LOGO_BUCKET = "qr-logos";
@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
     String(form.get("remove_logo") || "false") === "true";
 
   const theme = String(form.get("theme") || "default");
-  const download_size = String(form.get("download_size") || "print");
 
   const logoEntry = form.get("logo");
   const logoFile =
@@ -175,7 +174,7 @@ export async function POST(req: NextRequest) {
     }
 
     profile_id = profile.id;
-    resolvedDestination = `${process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com"}/u/${profile.slug}`;
+    resolvedDestination = clutchConnectProfileUrl(profile.slug);
   }
 
   const { error } = await admin
@@ -190,7 +189,6 @@ export async function POST(req: NextRequest) {
       qr_type,
       profile_id,
       theme,
-      download_size,
       logo_enabled,
       logo_url,
       logo_path,

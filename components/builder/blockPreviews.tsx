@@ -34,6 +34,7 @@ export interface BlockPreviewProps {
   block: BuilderBlock;
   profile: any;
   profileId: string;
+  mode?: "public" | "preview" | "editor";
 }
 
 function Placeholder({ text }: { text: string }) {
@@ -119,6 +120,27 @@ function getSocialIconColor(platform?: string | null, iconColorMode?: string | n
   return "#384862";
 }
 
+function resolveSocialHref(platform?: string | null, value?: string | null) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+  if (/^(https?:|mailto:|tel:|sms:)/i.test(rawValue)) return rawValue;
+
+  const handle = rawValue.replace(/^@+/, "").trim();
+  if (!handle) return "";
+  const encoded = encodeURIComponent(handle);
+  const normalizedPlatform = String(platform || "").toLowerCase();
+
+  if (normalizedPlatform === "instagram") return `https://instagram.com/${encoded}`;
+  if (normalizedPlatform === "facebook") return `https://facebook.com/${encoded}`;
+  if (normalizedPlatform === "tiktok") return `https://tiktok.com/@${encoded}`;
+  if (normalizedPlatform === "x" || normalizedPlatform === "twitter") return `https://x.com/${encoded}`;
+  if (normalizedPlatform === "linkedin") return `https://linkedin.com/in/${encoded}`;
+  if (normalizedPlatform === "youtube") return `https://youtube.com/@${encoded}`;
+  if (normalizedPlatform === "snapchat") return `https://snapchat.com/add/${encoded}`;
+  if (rawValue.includes(".")) return `https://${rawValue}`;
+  return "";
+}
+
 type ActionCardProps = {
   icon: ReactNode;
   title: string;
@@ -180,7 +202,17 @@ function ActionCard({
   );
 }
 
-function HeroAvatar({ data, profile }: { data: any; profile: any }) {
+function HeroAvatar({
+  data,
+  profile,
+  glowEnabled = true,
+  glowOpacity = 0.35,
+}: {
+  data: any;
+  profile: any;
+  glowEnabled?: boolean;
+  glowOpacity?: number;
+}) {
   const [failed, setFailed] = useState(false);
   const normalizeAvatarUrl = (value: unknown) => {
     const url = typeof value === "string" ? value.trim() : "";
@@ -188,14 +220,26 @@ function HeroAvatar({ data, profile }: { data: any; profile: any }) {
     return url;
   };
   const avatarUrl = normalizeAvatarUrl(data.avatarUrl) || normalizeAvatarUrl(profile.avatar_url);
+  const resolvedAvatarUrl = data.avatarRemoved === true ? "" : avatarUrl;
   const initials = useMemo(
     () => createInitials(data.businessName, profile.business_name, profile.email),
     [data.businessName, profile.business_name, profile.email]
   );
 
-  if (!avatarUrl || failed) {
+  const haloOpacity = glowEnabled ? Math.max(0, Math.min(1, Number(glowOpacity) || 0)) : 0;
+  const avatarShadow = `0 18px 40px rgba(0,0,0,0.18), 0 0 0 10px rgba(255, 107, 44, ${0.09 * haloOpacity})`;
+  const borderEnabled = data.avatarBorderEnabled === true;
+  const borderWidth = Number.isFinite(Number(data.avatarBorderWidth)) ? Math.max(0, Math.min(8, Number(data.avatarBorderWidth))) : 4;
+  const borderRadius = Number.isFinite(Number(data.avatarBorderRadius)) ? Math.max(0, Math.min(999, Number(data.avatarBorderRadius))) : 999;
+  const avatarStyle = {
+    boxShadow: avatarShadow,
+    border: borderEnabled && borderWidth > 0 ? `${borderWidth}px solid ${data.avatarBorderColor || "#FFFFFF"}` : "none",
+    borderRadius: `${borderEnabled ? borderRadius : 999}px`,
+  };
+
+  if (!resolvedAvatarUrl || failed) {
     return (
-      <div className="builder-hero-avatar builder-hero-avatar-fallback" aria-label="Profile initials">
+      <div className="builder-hero-avatar builder-hero-avatar-fallback" aria-label="Profile initials" style={avatarStyle}>
         <span>{initials}</span>
       </div>
     );
@@ -203,9 +247,10 @@ function HeroAvatar({ data, profile }: { data: any; profile: any }) {
 
   return (
     <img
-      src={avatarUrl}
+      src={resolvedAvatarUrl}
       alt={data.businessName || profile.business_name || "Profile"}
       className="builder-hero-avatar"
+      style={avatarStyle}
       onError={() => setFailed(true)}
     />
   );
@@ -238,6 +283,29 @@ function resolveTextBlockFont(fontFamily?: string) {
   if (fontFamily === "mono") return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
   if (fontFamily === "rounded") return '"Trebuchet MS", "Avenir Next Rounded", "Nunito", sans-serif';
   if (fontFamily === "editorial") return 'Georgia, "Times New Roman", Times, serif';
+  if (fontFamily === "grotesk") return '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  if (fontFamily === "humanist") return '"Gill Sans", "Optima", "Segoe UI", sans-serif';
+  if (fontFamily === "condensed") return '"Arial Narrow", "Franklin Gothic Medium", "Roboto Condensed", sans-serif';
+  if (fontFamily === "geometric") return '"Futura", "Century Gothic", "Avenir Next", sans-serif';
+  if (fontFamily === "elegant") return '"Didot", "Bodoni MT", "Book Antiqua", serif';
+  if (fontFamily === "newspaper") return '"Times New Roman", Georgia, Cambria, serif';
+  if (fontFamily === "slab") return '"Rockwell", "Roboto Slab", "Georgia", serif';
+  if (fontFamily === "clean") return 'Calibri, "Segoe UI", "Avenir Next", sans-serif';
+  if (fontFamily === "system") return '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  if (fontFamily === "ui-sans") return '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  if (fontFamily === "ui-serif") return 'ui-serif, Georgia, "Times New Roman", serif';
+  if (fontFamily === "ui-mono") return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+  if (fontFamily === "humanist-alt") return 'Optima, "Gill Sans", "Segoe UI", sans-serif';
+  if (fontFamily === "neo-grotesk") return '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  if (fontFamily === "book") return '"Book Antiqua", Palatino, Georgia, serif';
+  if (fontFamily === "modern-serif") return 'Baskerville, "Garamond", Georgia, serif';
+  if (fontFamily === "tech") return '"SF Mono", Menlo, Monaco, Consolas, monospace';
+  if (fontFamily === "narrow") return '"Arial Narrow", "Franklin Gothic Medium", sans-serif';
+  if (fontFamily === "poster") return 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif';
+  if (fontFamily === "friendly") return 'Verdana, "Trebuchet MS", sans-serif';
+  if (fontFamily === "signature") return '"Segoe Script", "Brush Script MT", cursive';
+  if (fontFamily === "luxury") return 'Didot, "Bodoni MT", "Times New Roman", serif';
+  if (fontFamily === "slab-alt") return '"Roboto Slab", Rockwell, Georgia, serif';
   return "var(--builder-font-family)";
 }
 
@@ -253,13 +321,13 @@ export function AvatarBlockPreview({ block, profile }: BlockPreviewProps) {
   const badgeColor = data.verifiedBadgeColor || "#f59e0b";
   const badgeIconColor = data.verifiedBadgeIconColor || "#0f172a";
   const badgeIcon = data.verifiedBadgeIcon || "checkmark";
-  const badgePosition = data.verifiedBadgePosition || "bottom-right";
+  const badgePosition = data.verifiedBadgePosition || "top-right";
   const badgeSize = data.verifiedBadgeSize ?? 24;
 
   return (
     <div className="builder-block builder-block-avatar">
       <div className="builder-hero-avatar-wrap">
-        {glowEnabled && (
+        {glowEnabled && glowOpacity > 0 && (glowBlur > 0 || glowSpread > 0) && (
           <span
             className="builder-avatar-glow-layer"
             style={{
@@ -272,7 +340,7 @@ export function AvatarBlockPreview({ block, profile }: BlockPreviewProps) {
           />
         )}
 
-        <HeroAvatar data={data} profile={profile} />
+        <HeroAvatar data={data} profile={profile} glowEnabled={glowEnabled} glowOpacity={glowOpacity} />
 
         {badgeEnabled && (
           <span
@@ -297,12 +365,14 @@ export function AvatarBlockPreview({ block, profile }: BlockPreviewProps) {
 export function BusinessNameBlockPreview({ block, profile }: BlockPreviewProps) {
   const data = getBlockData(block);
   const text = data.text || profile.business_name || "Your Business Name";
+  const colorValue = typeof data.color === "string" ? data.color.trim().toUpperCase() : "";
+  const useThemeTextColor = !colorValue || colorValue === "#0F172A" || colorValue === "#111827";
   return (
     <div className="builder-block builder-block-business-name">
       <h1
         className="builder-hero-name"
         style={{
-          color: data.color || undefined,
+          color: useThemeTextColor ? "var(--builder-text-color, #F8FAFC)" : data.color || undefined,
           fontSize: `${Number(data.fontSize) || 40}px`,
           fontWeight: Number(data.fontWeight) || 800,
           fontFamily: resolveTextBlockFont(data.fontFamily),
@@ -317,12 +387,14 @@ export function BusinessNameBlockPreview({ block, profile }: BlockPreviewProps) 
 export function SubheaderBlockPreview({ block, profile }: BlockPreviewProps) {
   const data = getBlockData(block);
   const text = data.text || profile.title || "Your title or subheader";
+  const colorValue = typeof data.color === "string" ? data.color.trim().toUpperCase() : "";
+  const useThemeTextColor = !colorValue || colorValue === "#0F172A" || colorValue === "#111827";
   return (
     <div className="builder-block builder-block-subheader">
       <p
         className="builder-hero-title"
         style={{
-          color: data.color || undefined,
+          color: useThemeTextColor ? "var(--builder-text-color, #F8FAFC)" : data.color || undefined,
           fontSize: `${Number(data.fontSize) || 22}px`,
           fontWeight: Number(data.fontWeight) || 600,
           fontFamily: resolveTextBlockFont(data.fontFamily),
@@ -346,7 +418,7 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
   const badgeColor = data.verifiedBadgeColor || "#f59e0b";
   const badgeIconColor = data.verifiedBadgeIconColor || "#0f172a";
   const badgeIcon = data.verifiedBadgeIcon || "checkmark";
-  const badgePosition = data.verifiedBadgePosition || "bottom-right";
+  const badgePosition = data.verifiedBadgePosition || "top-right";
   const badgeSize = data.verifiedBadgeSize ?? 24;
 
   return (
@@ -354,7 +426,7 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
       <div className="builder-hero-cover" aria-hidden="true" />
       {data.showProfilePicture !== false && (
         <div className="builder-hero-avatar-wrap">
-          {glowEnabled && (
+          {glowEnabled && glowOpacity > 0 && (glowBlur > 0 || glowSpread > 0) && (
             <span
               className="builder-avatar-glow-layer"
               style={{
@@ -367,7 +439,7 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
             />
           )}
 
-          <HeroAvatar data={data} profile={profile} />
+          <HeroAvatar data={data} profile={profile} glowEnabled={glowEnabled} glowOpacity={glowOpacity} />
 
           {badgeEnabled && (
             <span
@@ -578,7 +650,7 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
 
 export function SocialLinksPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
-  const links = Array.isArray(data.links) ? data.links : [];
+  const links = Array.isArray(data.links) ? data.links.slice(0, 6) : [];
   const iconColorMode = data.iconColorMode || "mono";
   if (links.length === 0) {
     return (
@@ -590,30 +662,36 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
 
   return (
     <div className="builder-block builder-block-social">
-      {links.map((link: any, idx: number) => (
-        <a
-          key={link.id || idx}
-          href={link.value || "#"}
-          className="builder-button builder-action-card builder-button-social"
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => {
-            if (!link.value) e.preventDefault();
-          }}
-          title={link.platform || "Social"}
-        >
-          <span className="builder-action-icon" aria-hidden="true">
-            <span style={{ color: getSocialIconColor(link.platform, iconColorMode) }}>
-              <SocialGlyph platform={link.platform} />
+      {links.map((link: any, idx: number) => {
+        const href = resolveSocialHref(link.platform, link.value);
+        const treatment = link.iconTreatment === "brand" || link.iconTreatment === "mono" ? link.iconTreatment : iconColorMode;
+        const title = link.label || link.platform || "Social";
+        return (
+          <a
+            key={link.id || idx}
+            href={href || "#"}
+            className="builder-button builder-action-card builder-button-social"
+            target={href ? "_blank" : undefined}
+            rel={href ? "noreferrer" : undefined}
+            aria-disabled={!href}
+            onClick={(e) => {
+              if (!href) e.preventDefault();
+            }}
+            title={title}
+          >
+            <span className="builder-action-icon" aria-hidden="true">
+              <span style={{ color: getSocialIconColor(link.platform, treatment) }}>
+                <SocialGlyph platform={link.platform} />
+              </span>
             </span>
-          </span>
-          <span className="builder-action-content">
-            <span className="builder-action-title">{link.platform || "Social"}</span>
-            {link.value ? <span className="builder-action-subtitle">{link.value}</span> : null}
-          </span>
-          <ActionChevron />
-        </a>
-      ))}
+            <span className="builder-action-content">
+              <span className="builder-action-title">{title}</span>
+              {link.value ? <span className="builder-action-subtitle">{link.value}</span> : null}
+            </span>
+            <ActionChevron />
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -652,15 +730,18 @@ export function TextSectionPreview({ block }: BlockPreviewProps) {
   );
 }
 
-export function ImageBlockPreview({ block }: BlockPreviewProps) {
+export function ImageBlockPreview({ block, profileId }: BlockPreviewProps) {
   const data = getBlockData(block);
   const [failed, setFailed] = useState(false);
+  
   const content = data.imageUrl && !failed ? (
     <img src={data.imageUrl} alt={data.altText || "Image"} className="builder-image" onError={() => setFailed(true)} />
   ) : (
-    <div className="builder-image-placeholder">
-      <span>🖼️</span>
-      <Placeholder text="Add an image URL to display this block." />
+    <div className="builder-image-placeholder" title="Tap to add image">
+      <svg viewBox="0 0 24 24" className="builder-image-icon">
+        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+      </svg>
+      <p className="builder-image-placeholder-text">Add image</p>
     </div>
   );
 
@@ -671,7 +752,7 @@ export function ImageBlockPreview({ block }: BlockPreviewProps) {
       ) : (
         content
       )}
-      <p className="builder-image-caption">{data.caption || "Image caption"}</p>
+      {data.caption && <p className="builder-image-caption">{data.caption}</p>}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 .env*.local
 .npm-cache
+.npm-tmp-cache
+.npm-tmp-cache-vercel
 .next
 node_modules

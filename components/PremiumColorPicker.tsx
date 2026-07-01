@@ -35,6 +35,12 @@ function normalizeHex(input: string) {
   return null;
 }
 
+function coerceHexDraft(input: string) {
+  const raw = String(input || "").replace(/[^#0-9a-fA-F]/g, "");
+  const withoutHash = raw.replace(/#/g, "").slice(0, 6).toUpperCase();
+  return `#${withoutHash}`;
+}
+
 function hexToRgb(hex: string) {
   const normalized = normalizeHex(hex) || "#000000";
   const raw = normalized.slice(1);
@@ -252,7 +258,8 @@ export default function PremiumColorPicker({
   };
 
   const updateFromHex = (nextValue: string) => {
-    setHexText(nextValue);
+    const draft = coerceHexDraft(nextValue);
+    setHexText(draft);
     const nextHex = normalizeHex(nextValue);
     if (!nextHex) return;
     const nextRgb = hexToRgb(nextHex);
@@ -280,11 +287,16 @@ export default function PremiumColorPicker({
   };
 
   const saveCustomColor = () => {
+    const nextHex = normalizeHex(hexText) || normalized;
+    commitColor(nextHex);
+
     setSavedColors((current) => {
-      const next = [normalized, ...current.filter((item) => item !== normalized)].slice(0, 12);
+      const next = [nextHex, ...current.filter((item) => item !== nextHex)].slice(0, 12);
       writeStorageList(SAVED_STORAGE_KEY, next);
       return next;
     });
+
+    setOpen(false);
   };
 
   const drawWheel = () => {
@@ -411,9 +423,39 @@ export default function PremiumColorPicker({
         <span className={styles.triggerLabel}>{buttonText}</span>
       </button>
 
-      <span className={`${styles.valueChip}${valueClassName ? ` ${valueClassName}` : ""}`.trim()} style={{ background: normalized, color: textColor }}>
-        {normalized}
-      </span>
+      <input
+        type="text"
+        className={`${styles.valueChip}${valueClassName ? ` ${valueClassName}` : ""}`.trim()}
+        style={{ background: normalized, color: textColor }}
+        value={hexText}
+        onChange={(event) => setHexText(coerceHexDraft(event.target.value))}
+        onBlur={(event) => {
+          const nextHex = normalizeHex(event.target.value) || normalized;
+          updateFromHex(nextHex);
+        }}
+        onKeyDown={(event) => {
+          const target = event.target as HTMLInputElement;
+          if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
+            event.preventDefault();
+            return;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            const nextHex = normalizeHex(target.value) || normalized;
+            updateFromHex(nextHex);
+            target.blur();
+          }
+        }}
+        onPaste={(event) => {
+          event.preventDefault();
+          const pasted = event.clipboardData.getData("text");
+          setHexText(coerceHexDraft(pasted));
+        }}
+        onFocus={(event) => event.currentTarget.select()}
+        aria-label={`${ariaLabel} hex value`}
+        placeholder="#FFFFFF"
+        spellCheck={false}
+      />
 
       {open && isMounted
         ? createPortal(
@@ -456,18 +498,46 @@ export default function PremiumColorPicker({
                       </span>
                     </div>
 
+                    <label className={styles.nativeColorRow}>
+                      <span>Native color picker</span>
+                      <input
+                        type="color"
+                        value={normalized}
+                        onChange={(event) => updateFromHex(event.target.value)}
+                        aria-label={`${ariaLabel} native color picker`}
+                      />
+                    </label>
+
                     <div className={styles.grid}>
                       <label className={styles.inputGroup}>
                         <span>HEX</span>
                         <input
                           type="text"
                           value={hexText}
-                          onChange={(event) => setHexText(event.target.value)}
+                          onChange={(event) => setHexText(coerceHexDraft(event.target.value))}
                           onBlur={(event) => {
                             const nextHex = normalizeHex(event.target.value) || normalized;
                             updateFromHex(nextHex);
                           }}
-                          placeholder="#FFA665"
+                          onKeyDown={(event) => {
+                            const target = event.target as HTMLInputElement;
+                            if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
+                              event.preventDefault();
+                              return;
+                            }
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              const nextHex = normalizeHex(target.value) || normalized;
+                              updateFromHex(nextHex);
+                              target.blur();
+                            }
+                          }}
+                          onPaste={(event) => {
+                            event.preventDefault();
+                            const pasted = event.clipboardData.getData("text");
+                            setHexText(coerceHexDraft(pasted));
+                          }}
+                          placeholder="#FFFFFF"
                         />
                       </label>
 
@@ -487,19 +557,21 @@ export default function PremiumColorPicker({
                       </div>
                     </div>
 
-                    <div className={styles.section}>
-                      <div className={styles.sectionHeader}>
-                        <span>Brand presets</span>
+                    {presets.length > 0 ? (
+                      <div className={styles.section}>
+                        <div className={styles.sectionHeader}>
+                          <span>Brand presets</span>
+                        </div>
+                        <div className={styles.swatchRow}>
+                          {presets.map((preset) => (
+                            <button key={preset} type="button" className={styles.swatchButton} onClick={() => commitColor(preset)} aria-label={`Use preset ${preset}`}>
+                              <span className={styles.swatch} style={{ background: preset }} />
+                              <span>{preset}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className={styles.swatchRow}>
-                        {presets.map((preset) => (
-                          <button key={preset} type="button" className={styles.swatchButton} onClick={() => commitColor(preset)} aria-label={`Use preset ${preset}`}>
-                            <span className={styles.swatch} style={{ background: preset }} />
-                            <span>{preset}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    ) : null}
 
                     <div className={styles.section}>
                       <div className={styles.sectionHeader}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PKPass } from "passkit-generator";
 import QRCode from "qrcode";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 import { trackWalletEvent } from "@/lib/wallet-events";
 
 export const runtime = "nodejs";
@@ -40,8 +41,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qr.clutchprintshop.com";
-  const profileUrl = `${baseUrl.replace(/\/$/, "")}/u/${profile.slug}`;
+  const profileUrl = clutchConnectProfileUrl(profile.slug);
+  const fallbackUrl = new URL(`/u/${profile.slug}`, _req.url);
+  fallbackUrl.searchParams.set("wallet", "apple_unavailable");
 
   try {
     const wwdr = requiredEnv("APPLE_WALLET_WWDR_CERT_BASE64");
@@ -149,11 +151,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     });
   } catch (error) {
     console.error("APPLE WALLET PASS ERROR", error);
-    return NextResponse.json(
-      {
-        error: "Apple Wallet pass generation is not configured.",
-      },
-      { status: 503 }
-    );
+    return NextResponse.redirect(fallbackUrl, { status: 302 });
   }
 }

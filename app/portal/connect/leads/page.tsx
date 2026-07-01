@@ -19,6 +19,16 @@ function sourceFromQrType(qrType?: string | null) {
   return "Clutch Connect Profile";
 }
 
+type LeadCrmStatus = "new" | "contacted" | "qualified" | "converted" | "closed" | "archived";
+
+function normalizeLeadStatus(value?: string | null): LeadCrmStatus {
+  const status = String(value || "new").toLowerCase();
+  if (["new", "contacted", "qualified", "converted", "closed", "archived"].includes(status)) {
+    return status as LeadCrmStatus;
+  }
+  return "new";
+}
+
 export default async function PortalConnectLeadsPage() {
   const { user, customer } = await requireCustomer();
 
@@ -99,6 +109,14 @@ export default async function PortalConnectLeadsPage() {
       source,
       createdAt: lead.created_at,
       ipHash: lead.ip_hash || "",
+      status: normalizeLeadStatus(lead.status),
+      archivedAt: lead.archived_at || null,
+      contactedAt: lead.contacted_at || null,
+      qualifiedAt: lead.qualified_at || null,
+      convertedAt: lead.converted_at || null,
+      closedAt: lead.closed_at || null,
+      crmNotes: lead.crm_notes || "",
+      updatedAt: lead.updated_at || lead.created_at,
     };
   });
 

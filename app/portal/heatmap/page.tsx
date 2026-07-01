@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
-import LocationHeatmap from "@/components/dashboard/LocationHeatmap";
+import LocationHeatmapClient from "@/components/dashboard/LocationHeatmapClient";
 import { requireCustomer } from "@/lib/auth";
 import { parseCoordinate } from "@/lib/analytics";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -14,21 +14,29 @@ export default async function HeatmapCommandCenterPage() {
   if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();
-  const { data: qrCodes } = await admin
+  const { data: qrCodes, error: qrError } = await admin
     .from("qr_codes")
     .select("id, name, is_active")
     .eq("customer_id", customer.id);
 
+  if (qrError) {
+    console.error("HEATMAP QR LOAD ERROR", qrError);
+  }
+
   const codes = qrCodes || [];
   const qrIds = codes.map((code) => code.id);
-  const { data: scanRows } = qrIds.length
+  const { data: scanRows, error: scanError } = qrIds.length
     ? await admin
         .from("qr_scans")
-        .select("id, qr_code_id, created_at, city, region, country, latitude, longitude, location_source")
+        .select("id, qr_code_id, created_at, city, region, country, latitude, longitude")
         .in("qr_code_id", qrIds)
         .order("created_at", { ascending: false })
         .limit(5000)
-    : { data: [] };
+    : { data: [], error: null };
+
+  if (scanError) {
+    console.error("HEATMAP SCAN LOAD ERROR", scanError);
+  }
 
   const scans = scanRows || [];
   const hasCoordinateData = scans.some((scan: any) => parseCoordinate(scan.latitude) !== null && parseCoordinate(scan.longitude) !== null);
@@ -42,7 +50,7 @@ export default async function HeatmapCommandCenterPage() {
           actions={<Link className="btn secondary" href="/portal/analytics?tab=geography">Geography Insights</Link>}
         />
 
-        <LocationHeatmap
+        <LocationHeatmapClient
           scans={scans as any}
           hasCoordinateData={hasCoordinateData}
         />

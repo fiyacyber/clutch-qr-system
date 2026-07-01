@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase-server";
-import { normalizeUrl } from "@/lib/qr";
+import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import {
   getCustomerPlan,
   getEffectiveQrLimit,
@@ -28,6 +28,7 @@ const DOT_STYLES = new Set([
 ]);
 
 const CORNER_STYLES = new Set(["square", "dot", "extra-rounded"]);
+const QR_TYPES = new Set(["url", "connect_profile"]);
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -37,10 +38,10 @@ export async function POST(req: NextRequest) {
   const background_color = String(form.get("background_color") || "#ffffff");
   const dot_style = String(form.get("dot_style") || "square");
   const corner_style = String(form.get("corner_style") || "square");
-  const qr_type = String(form.get("qr_type") || "flyers");
+  const requestedQrType = String(form.get("qr_type") || "url").trim();
+  const qr_type = QR_TYPES.has(requestedQrType) ? requestedQrType : "url";
   const profile_id_raw = String(form.get("profile_id") || "").trim();
   const theme = String(form.get("theme") || "default");
-  const download_size = String(form.get("download_size") || "print");
 
   const logoEntry = form.get("logo");
   const logoFile =
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
       {
         error:
           plan.code === "qr_pro"
-            ? "Account limit reached. Upgrade to QR Pro+ for additional QR codes."
+            ? "Account limit reached. Upgrade to Agency for additional QR codes."
             : plan.code === "free_qr"
               ? "Your free Clutch QR plan includes 1 QR code. Upgrade to QR Pro for more."
             : `You've reached your QR code limit (${limit}). Contact Clutch to increase it.`,
@@ -178,10 +179,10 @@ export async function POST(req: NextRequest) {
     }
 
     profile_id = profile.id;
-    destination_url = `${process.env.CLUTCH_QR_BASE_URL || "https://connect.clutchprintshop.com"}/u/${profile.slug}`;
+    destination_url = clutchConnectProfileUrl(profile.slug);
   }
 
-  const { data: createdQR, error } = await admin.from("qr_codes").insert({
+  const primaryInsertPayload: Record<string, any> = {
     customer_id: customer.id,
     name,
     destination_url,
@@ -193,13 +194,52 @@ export async function POST(req: NextRequest) {
     qr_type,
     profile_id,
     theme,
-    download_size,
     logo_enabled,
     logo_url,
     logo_path,
     scan_count: 0,
     is_active: true
-  }).select().single();
+  };
+
+  let { data: createdQR, error } = await admin
+    .from("qr_codes")
+    .insert(primaryInsertPayload)
+    .select()
+    .single();
+
+  if (error) {
+    const fallbackInsertPayload: Record<string, any> = {
+      customer_id: customer.id,
+      name,
+      destination_url,
+      slug,
+      foreground_color,
+      background_color,
+      dot_style,
+      corner_style,
+      logo_enabled,
+      logo_url,
+      logo_path,
+      scan_count: 0,
+      is_active: true,
+    };
+
+    if (qr_type === "connect_profile") {
+      fallbackInsertPayload.qr_type = "connect_profile";
+      fallbackInsertPayload.profile_id = profile_id;
+    }
+
+    const fallbackResult = await admin
+      .from("qr_codes")
+      .insert(fallbackInsertPayload)
+      .select()
+      .single();
+
+    if (!fallbackResult.error) {
+      createdQR = fallbackResult.data;
+      error = null;
+    }
+  }
 
   if (error) {
     if (logo_path) {

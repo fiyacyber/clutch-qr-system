@@ -95,6 +95,49 @@
   overflow-x: auto;
 }
 
+.mobileLeadList {
+  display: none;
+}
+
+.mobileLeadCard {
+  width: 100%;
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+  color: #384862;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobileLeadCard span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+
+.mobileLeadTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobileLeadTopline strong {
+  min-width: 0;
+  color: #0b1f35;
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.activeMobileCard {
+  border-color: rgba(255, 166, 101, 0.75);
+  background: #fff8f1;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -179,11 +222,38 @@
   color: #627189;
 }
 
+.statusPill.archived {
+  border-color: rgba(90, 98, 115, 0.32);
+  background: rgba(90, 98, 115, 0.08);
+  color: #4b5563;
+}
+
+.notice {
+  margin: 0;
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.success {
+  border: 1px solid rgba(22, 138, 78, 0.25);
+  background: rgba(22, 138, 78, 0.08);
+  color: #0f7a43;
+}
+
+.error {
+  border: 1px solid rgba(190, 18, 60, 0.2);
+  background: rgba(190, 18, 60, 0.07);
+  color: #be123c;
+}
+
 .drawer {
   border: 1px solid var(--clutch-border);
   border-radius: 12px;
   padding: 12px;
   background: #fcfdff;
+  min-width: 0;
 }
 
 .detailList {
@@ -209,6 +279,7 @@
   margin: 0;
   color: #0b1f35;
   font-size: 0.84rem;
+  overflow-wrap: anywhere;
 }
 
 .drawerActions {
@@ -216,6 +287,32 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.notesBox {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.notesBox label {
+  color: #6b7a8d;
+  font-size: 0.71rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.notesBox textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  padding: 10px 11px;
+  color: #0b1f35;
+  background: #fff;
+  font: inherit;
+  resize: vertical;
 }
 
 .drawerEmpty {
@@ -369,5 +466,45 @@
 
   .inboxControls > * {
     width: 100%;
+  }
+
+  .table {
+    min-width: 560px;
+  }
+
+  .drawerActions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .inboxShell,
+  .card,
+  .emptyState,
+  .summaryCard {
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .inboxLayout > .tableWrap {
+    display: none;
+  }
+
+  .mobileLeadList {
+    display: grid;
+    gap: 10px;
+  }
+
+  .drawer {
+    padding: 11px;
+  }
+
+  .detailList {
+    grid-template-columns: 1fr;
+  }
+
+  .notesBox textarea {
+    min-height: 120px;
   }
 }

@@ -2,17 +2,19 @@
 
 import { useMemo, useState } from "react";
 import {
+  Archive,
   ArrowUpDown,
   Download,
   Mail,
   Phone,
+  Save,
   Share2,
-  Trash2,
   UserRoundCheck,
 } from "lucide-react";
 import styles from "./ConnectLeadsCRM.module.css";
 
-type LeadStatus = "New" | "Contacted" | "Qualified" | "Converted" | "Closed";
+type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "closed" | "archived";
+type ArchiveFilter = "active" | "archived" | "all";
 
 type LeadRow = {
   id: string;
@@ -24,6 +26,14 @@ type LeadRow = {
   source: string;
   createdAt: string;
   ipHash: string;
+  status: LeadStatus;
+  archivedAt?: string | null;
+  contactedAt?: string | null;
+  qualifiedAt?: string | null;
+  convertedAt?: string | null;
+  closedAt?: string | null;
+  crmNotes?: string | null;
+  updatedAt?: string | null;
 };
 
 type TimelineRow = {
@@ -82,6 +92,55 @@ function toCsv(rows: string[][]) {
     .join("\n");
 }
 
+function normalizeLeadStatus(value?: string | null): LeadStatus {
+  const status = String(value || "new").toLowerCase();
+  if (["new", "contacted", "qualified", "converted", "closed", "archived"].includes(status)) {
+    return status as LeadStatus;
+  }
+  return "new";
+}
+
+function formatStatus(status: LeadStatus) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getLeadErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to update lead";
+}
+
+function normalizeLead(lead: LeadRow): LeadRow {
+  return {
+    ...lead,
+    status: normalizeLeadStatus(lead.status),
+    archivedAt: lead.archivedAt || null,
+    contactedAt: lead.contactedAt || null,
+    qualifiedAt: lead.qualifiedAt || null,
+    convertedAt: lead.convertedAt || null,
+    closedAt: lead.closedAt || null,
+    crmNotes: lead.crmNotes || "",
+  };
+}
+
+function mergeUpdatedLead(current: LeadRow, updated: any): LeadRow {
+  return normalizeLead({
+    ...current,
+    name: updated.name ?? current.name,
+    email: updated.email ?? current.email,
+    phone: updated.phone ?? current.phone,
+    message: updated.message ?? current.message,
+    createdAt: updated.created_at ?? current.createdAt,
+    ipHash: updated.ip_hash ?? current.ipHash,
+    status: normalizeLeadStatus(updated.status),
+    archivedAt: updated.archived_at ?? null,
+    contactedAt: updated.contacted_at ?? null,
+    qualifiedAt: updated.qualified_at ?? null,
+    convertedAt: updated.converted_at ?? null,
+    closedAt: updated.closed_at ?? null,
+    crmNotes: updated.crm_notes ?? "",
+    updatedAt: updated.updated_at ?? current.updatedAt,
+  });
+}
+
 export default function ConnectLeadsCRM({
   profileSlug,
   leads,
@@ -90,52 +149,57 @@ export default function ConnectLeadsCRM({
   qrRows,
   funnel,
 }: ConnectLeadsCRMProps) {
+  const [leadRows, setLeadRows] = useState<LeadRow[]>(() => leads.map(normalizeLead));
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">("All");
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("active");
   const [sourceFilter, setSourceFilter] = useState<string>("All");
   const [sortKey, setSortKey] = useState<"name" | "email" | "source" | "createdAt" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(leads[0]?.id || null);
-  const [statusByLead, setStatusByLead] = useState<Record<string, LeadStatus>>({});
-  const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(
+    leadRows.find((lead) => !lead.archivedAt && lead.status !== "archived")?.id || leadRows[0]?.id || null
+  );
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+  const [notesDraftByLead, setNotesDraftByLead] = useState<Record<string, string>>({});
 
   const sources = useMemo(
-    () => ["All", ...Array.from(new Set(leads.map((lead) => lead.source))).filter(Boolean)],
-    [leads]
+    () => ["All", ...Array.from(new Set(leadRows.map((lead) => lead.source))).filter(Boolean)],
+    [leadRows]
   );
 
   const activeLeads = useMemo(
-    () => leads.filter((lead) => !dismissedIds[lead.id]),
-    [leads, dismissedIds]
+    () => leadRows.filter((lead) => !lead.archivedAt && lead.status !== "archived"),
+    [leadRows]
   );
-
-  function getLeadStatus(lead: LeadRow): LeadStatus {
-    return statusByLead[lead.id] || "New";
-  }
 
   const filteredLeads = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const rows = activeLeads.filter((lead) => {
-      if (statusFilter !== "All" && getLeadStatus(lead) !== statusFilter) return false;
+    const sourceRows = leadRows.filter((lead) => {
+      const archived = Boolean(lead.archivedAt || lead.status === "archived");
+      if (archiveFilter === "active" && archived) return false;
+      if (archiveFilter === "archived" && !archived) return false;
+      return true;
+    });
+
+    const rows = sourceRows.filter((lead) => {
+      if (statusFilter !== "all" && lead.status !== statusFilter) return false;
       if (sourceFilter !== "All" && lead.source !== sourceFilter) return false;
 
       if (!needle) return true;
-      return [lead.name, lead.email, lead.phone, lead.message, lead.source]
+      return [lead.name, lead.email, lead.phone, lead.message, lead.source, lead.crmNotes]
         .join(" ")
         .toLowerCase()
         .includes(needle);
     });
 
     rows.sort((a, b) => {
-      const aStatus = getLeadStatus(a);
-      const bStatus = getLeadStatus(b);
-
       const values: Record<typeof sortKey, [string | number, string | number]> = {
         name: [a.name, b.name],
         email: [a.email, b.email],
         source: [a.source, b.source],
         createdAt: [new Date(a.createdAt).getTime(), new Date(b.createdAt).getTime()],
-        status: [aStatus, bStatus],
+        status: [a.status, b.status],
       };
 
       const [left, right] = values[sortKey];
@@ -144,17 +208,23 @@ export default function ConnectLeadsCRM({
     });
 
     return rows;
-  }, [activeLeads, query, statusFilter, sourceFilter, sortKey, sortDir, statusByLead]);
+  }, [leadRows, archiveFilter, query, statusFilter, sourceFilter, sortKey, sortDir]);
 
-  const selectedLead = filteredLeads.find((lead) => lead.id === selectedLeadId) || filteredLeads[0] || null;
+  const selectedLead =
+    filteredLeads.find((lead) => lead.id === selectedLeadId) ||
+    filteredLeads[0] ||
+    null;
+  const selectedLeadNotes = selectedLead
+    ? notesDraftByLead[selectedLead.id] ?? selectedLead.crmNotes ?? ""
+    : "";
 
   const summary = useMemo(() => {
     const total = activeLeads.length;
-    const newLeads = activeLeads.filter((lead) => getLeadStatus(lead) === "New").length;
-    const contacted = activeLeads.filter((lead) => getLeadStatus(lead) === "Contacted").length;
-    const converted = activeLeads.filter((lead) => getLeadStatus(lead) === "Converted").length;
+    const newLeads = activeLeads.filter((lead) => lead.status === "new").length;
+    const contacted = activeLeads.filter((lead) => lead.status === "contacted").length;
+    const converted = activeLeads.filter((lead) => lead.status === "converted").length;
     return { total, newLeads, contacted, converted };
-  }, [activeLeads, statusByLead]);
+  }, [activeLeads]);
 
   const sourceBreakdown = useMemo(() => {
     const counts = new Map<string, number>();
@@ -181,16 +251,71 @@ export default function ConnectLeadsCRM({
     ].map((row) => ({ ...row, pct: Math.round((row.value / total) * 100) }));
   }, [funnel]);
 
-  function setLeadStatus(leadId: string, status: LeadStatus) {
-    setStatusByLead((current) => ({ ...current, [leadId]: status }));
+  async function patchLead(
+    leadId: string,
+    payload: { status?: LeadStatus; action?: "archive" | "unarchive"; crm_notes?: string },
+    successMessage: string
+  ) {
+    const previousRows = leadRows;
+    const now = new Date().toISOString();
+    setNotice(null);
+    setPendingAction(`${leadId}:${payload.action || payload.status || "notes"}`);
+
+    setLeadRows((current) =>
+      current.map((lead) => {
+        if (lead.id !== leadId) return lead;
+        const nextStatus = payload.action === "archive"
+          ? "archived"
+          : payload.action === "unarchive"
+            ? "new"
+            : payload.status || lead.status;
+
+        return normalizeLead({
+          ...lead,
+          status: nextStatus,
+          archivedAt: payload.action === "archive" ? (lead.archivedAt || now) : payload.action === "unarchive" ? null : lead.archivedAt,
+          contactedAt: nextStatus === "contacted" ? (lead.contactedAt || now) : lead.contactedAt,
+          qualifiedAt: nextStatus === "qualified" ? (lead.qualifiedAt || now) : lead.qualifiedAt,
+          convertedAt: nextStatus === "converted" ? (lead.convertedAt || now) : lead.convertedAt,
+          closedAt: nextStatus === "closed" ? (lead.closedAt || now) : lead.closedAt,
+          crmNotes: payload.crm_notes ?? lead.crmNotes,
+          updatedAt: now,
+        });
+      })
+    );
+
+    try {
+      const response = await fetch(`/api/connect/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.lead) {
+        console.warn("Lead update failed", {
+          status: response.status,
+          error: result.error,
+        });
+        throw new Error(result.error || "Failed to update lead");
+      }
+
+      setLeadRows((current) =>
+        current.map((lead) => (lead.id === leadId ? mergeUpdatedLead(lead, result.lead) : lead))
+      );
+      setNotice({ tone: "success", message: successMessage });
+    } catch (error) {
+      console.warn("Failed to update lead", error);
+      setLeadRows(previousRows);
+      setNotice({ tone: "error", message: getLeadErrorMessage(error) });
+    } finally {
+      setPendingAction(null);
+    }
   }
 
-  function removeLead(leadId: string) {
-    setDismissedIds((current) => ({ ...current, [leadId]: true }));
-    if (selectedLeadId === leadId) {
-      const fallback = filteredLeads.find((lead) => lead.id !== leadId);
-      setSelectedLeadId(fallback?.id || null);
-    }
+  function isLeadSaving(leadId: string) {
+    return Boolean(pendingAction?.startsWith(`${leadId}:`));
   }
 
   function toggleSort(next: typeof sortKey) {
@@ -204,14 +329,36 @@ export default function ConnectLeadsCRM({
 
   function exportCsv() {
     const csv = toCsv([
-      ["Name", "Email", "Phone", "Source", "Date", "Status", "Message"],
+      [
+        "Name",
+        "Email",
+        "Phone",
+        "Company",
+        "Source",
+        "Date Captured",
+        "Status",
+        "Contacted At",
+        "Qualified At",
+        "Converted At",
+        "Closed At",
+        "Archived At",
+        "CRM Notes",
+        "Message",
+      ],
       ...filteredLeads.map((lead) => [
         lead.name,
         lead.email,
         lead.phone,
+        lead.company,
         lead.source,
         lead.createdAt,
-        getLeadStatus(lead),
+        formatStatus(lead.status),
+        lead.contactedAt || "",
+        lead.qualifiedAt || "",
+        lead.convertedAt || "",
+        lead.closedAt || "",
+        lead.archivedAt || "",
+        lead.crmNotes || "",
         lead.message,
       ]),
     ]);
@@ -252,7 +399,7 @@ export default function ConnectLeadsCRM({
         </article>
       </section>
 
-      {!activeLeads.length ? (
+      {!leadRows.length ? (
         <section className={styles.emptyState}>
           <div className={styles.emptyIllustration}><Share2 size={28} /></div>
           <h3>No leads yet.</h3>
@@ -275,13 +422,19 @@ export default function ConnectLeadsCRM({
                   className={styles.search}
                   placeholder="Search leads"
                 />
-                <select className={styles.select} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as LeadStatus | "All")}>
-                  <option value="All">All Statuses</option>
-                  <option value="New">New</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Qualified">Qualified</option>
-                  <option value="Converted">Converted</option>
-                  <option value="Closed">Closed</option>
+                <select className={styles.select} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as LeadStatus | "all")}>
+                  <option value="all">All Statuses</option>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="converted">Converted</option>
+                  <option value="closed">Closed</option>
+                  <option value="archived">Archived</option>
+                </select>
+                <select className={styles.select} value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as ArchiveFilter)}>
+                  <option value="active">Active Leads</option>
+                  <option value="archived">Archived Leads</option>
+                  <option value="all">All Leads</option>
                 </select>
                 <select className={styles.select} value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
                   {sources.map((source) => (
@@ -291,6 +444,7 @@ export default function ConnectLeadsCRM({
                 <button className="btn ghost" onClick={exportCsv} type="button"><Download size={14} /> CSV Export</button>
                 <button className="btn ghost" onClick={() => window.print()} type="button"><Download size={14} /> PDF Export</button>
               </div>
+              {notice ? <p className={`${styles.notice} ${styles[notice.tone]}`}>{notice.message}</p> : null}
             </header>
 
             <div className={styles.inboxLayout}>
@@ -314,11 +468,29 @@ export default function ConnectLeadsCRM({
                         <td>{lead.phone || "-"}</td>
                         <td>{lead.source || "-"}</td>
                         <td>{formatDate(lead.createdAt)}</td>
-                        <td><span className={`${styles.statusPill} ${styles[getLeadStatus(lead).toLowerCase()]}`}>{getLeadStatus(lead)}</span></td>
+                        <td><span className={`${styles.statusPill} ${styles[lead.status]}`}>{formatStatus(lead.status)}</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              <div className={styles.mobileLeadList}>
+                {filteredLeads.map((lead) => (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    className={`${styles.mobileLeadCard} ${selectedLead?.id === lead.id ? styles.activeMobileCard : ""}`}
+                    onClick={() => setSelectedLeadId(lead.id)}
+                  >
+                    <span className={styles.mobileLeadTopline}>
+                      <strong>{lead.name || "Unnamed lead"}</strong>
+                      <span className={`${styles.statusPill} ${styles[lead.status]}`}>{formatStatus(lead.status)}</span>
+                    </span>
+                    <span>{lead.email || lead.phone || "No contact provided"}</span>
+                    <span>{lead.source || "Clutch Connect Profile"} · {formatDate(lead.createdAt)}</span>
+                  </button>
+                ))}
               </div>
 
               <aside className={styles.drawer}>
@@ -330,16 +502,93 @@ export default function ConnectLeadsCRM({
                       <div><dt>Email</dt><dd>{selectedLead.email || "-"}</dd></div>
                       <div><dt>Phone</dt><dd>{selectedLead.phone || "-"}</dd></div>
                       <div><dt>Company</dt><dd>{selectedLead.company || "-"}</dd></div>
+                      <div><dt>Status</dt><dd><span className={`${styles.statusPill} ${styles[selectedLead.status]}`}>{formatStatus(selectedLead.status)}</span></dd></div>
                       <div><dt>Message</dt><dd>{selectedLead.message || "-"}</dd></div>
                       <div><dt>Source</dt><dd>{selectedLead.source || "-"}</dd></div>
                       <div><dt>Date Captured</dt><dd>{formatDate(selectedLead.createdAt)}</dd></div>
+                      <div><dt>Contacted</dt><dd>{formatDate(selectedLead.contactedAt)}</dd></div>
+                      <div><dt>Qualified</dt><dd>{formatDate(selectedLead.qualifiedAt)}</dd></div>
+                      <div><dt>Converted</dt><dd>{formatDate(selectedLead.convertedAt)}</dd></div>
+                      <div><dt>Closed</dt><dd>{formatDate(selectedLead.closedAt)}</dd></div>
+                      {selectedLead.archivedAt ? <div><dt>Archived</dt><dd>{formatDate(selectedLead.archivedAt)}</dd></div> : null}
                     </dl>
+                    <div className={styles.notesBox}>
+                      <label htmlFor={`lead-notes-${selectedLead.id}`}>CRM Notes</label>
+                      <textarea
+                        id={`lead-notes-${selectedLead.id}`}
+                        value={selectedLeadNotes}
+                        onChange={(event) =>
+                          setNotesDraftByLead((current) => ({ ...current, [selectedLead.id]: event.target.value }))
+                        }
+                        placeholder="Add follow-up notes"
+                        rows={4}
+                      />
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        disabled={isLeadSaving(selectedLead.id)}
+                        onClick={() => patchLead(selectedLead.id, { crm_notes: selectedLeadNotes }, "Saved")}
+                      >
+                        <Save size={14} />
+                        {pendingAction === `${selectedLead.id}:notes` ? "Saving..." : "Save Notes"}
+                      </button>
+                    </div>
                     <div className={styles.drawerActions}>
                       <a className="btn ghost" href={`tel:${selectedLead.phone}`}><Phone size={14} /> Call</a>
                       <a className="btn ghost" href={`mailto:${selectedLead.email}`}><Mail size={14} /> Email</a>
-                      <button className="btn secondary" type="button" onClick={() => setLeadStatus(selectedLead.id, "Contacted")}><UserRoundCheck size={14} /> Mark Contacted</button>
-                      <button className="btn primary" type="button" onClick={() => setLeadStatus(selectedLead.id, "Converted")}>Mark Converted</button>
-                      <button className="btn ghost" type="button" onClick={() => removeLead(selectedLead.id)}><Trash2 size={14} /> Delete</button>
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        disabled={isLeadSaving(selectedLead.id)}
+                        onClick={() => patchLead(selectedLead.id, { status: "contacted" }, "Saved")}
+                      >
+                        <UserRoundCheck size={14} />
+                        {pendingAction === `${selectedLead.id}:contacted` ? "Saving..." : "Mark Contacted"}
+                      </button>
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        disabled={isLeadSaving(selectedLead.id)}
+                        onClick={() => patchLead(selectedLead.id, { status: "qualified" }, "Saved")}
+                      >
+                        {pendingAction === `${selectedLead.id}:qualified` ? "Saving..." : "Mark Qualified"}
+                      </button>
+                      <button
+                        className="btn primary"
+                        type="button"
+                        disabled={isLeadSaving(selectedLead.id)}
+                        onClick={() => patchLead(selectedLead.id, { status: "converted" }, "Saved")}
+                      >
+                        {pendingAction === `${selectedLead.id}:converted` ? "Saving..." : "Mark Converted"}
+                      </button>
+                      <button
+                        className="btn ghost"
+                        type="button"
+                        disabled={isLeadSaving(selectedLead.id)}
+                        onClick={() => patchLead(selectedLead.id, { status: "closed" }, "Saved")}
+                      >
+                        {pendingAction === `${selectedLead.id}:closed` ? "Saving..." : "Close"}
+                      </button>
+                      {selectedLead.status === "archived" || selectedLead.archivedAt ? (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          disabled={isLeadSaving(selectedLead.id)}
+                          onClick={() => patchLead(selectedLead.id, { action: "unarchive" }, "Saved")}
+                        >
+                          {pendingAction === `${selectedLead.id}:unarchive` ? "Saving..." : "Unarchive"}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          disabled={isLeadSaving(selectedLead.id)}
+                          onClick={() => patchLead(selectedLead.id, { action: "archive" }, "Archived")}
+                        >
+                          <Archive size={14} />
+                          {pendingAction === `${selectedLead.id}:archive` ? "Saving..." : "Archive Lead"}
+                        </button>
+                      )}
                     </div>
                   </>
                 ) : (

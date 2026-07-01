@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!isAdvancedAnalyticsUnlocked(customer)) {
-    return NextResponse.json({ error: "QR Pro+ is required." }, { status: 403 });
+    return NextResponse.json({ error: "Agency is required." }, { status: 403 });
   }
 
   const admin = createSupabaseAdminClient();

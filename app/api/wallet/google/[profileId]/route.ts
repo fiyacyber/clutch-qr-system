@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { getClutchConnectPublicBaseUrl } from "@/lib/qr";
 import { createGoogleWalletUrl } from "@/lib/google-wallet";
 import { trackWalletEvent } from "@/lib/wallet-events";
 
@@ -20,7 +21,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prof
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  const appUrl = getClutchConnectPublicBaseUrl();
+  const fallbackUrl = new URL(`/u/${profile.slug}`, req.url);
+  fallbackUrl.searchParams.set("wallet", "google_unavailable");
 
   try {
     const walletUrl = createGoogleWalletUrl(
@@ -42,11 +45,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prof
     return NextResponse.redirect(walletUrl, { status: 302 });
   } catch (error) {
     console.error("GOOGLE WALLET URL ERROR", error);
-    return NextResponse.json(
-      {
-        error: "Google Wallet is not configured.",
-      },
-      { status: 503 }
-    );
+    return NextResponse.redirect(fallbackUrl, { status: 302 });
   }
 }

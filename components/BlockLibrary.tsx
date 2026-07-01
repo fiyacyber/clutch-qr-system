@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays, ClipboardList, GalleryVerticalEnd, ImageIcon, Link2, Mail, MapPin, Phone, PlusCircle, Share2, Star, Type, UserCircle2, Video } from "lucide-react";
 import { BlockType } from "@/lib/builder-types";
+import { isSingletonBlockType } from "@/lib/builder-config";
 
 interface BlockLibraryItem {
   id: string;
@@ -16,27 +17,33 @@ interface BlockLibraryItem {
 }
 
 const BLOCK_LIBRARY: BlockLibraryItem[] = [
-  { id: "avatar", type: "avatar-block", label: "Avatar", description: "Upload and style profile image", icon: UserCircle2, category: "core", available: true },
-  { id: "business-name", type: "business-name-block", label: "Business Name", description: "Primary name headline", icon: Type, category: "core", available: true },
-  { id: "subheader", type: "subheader-block", label: "Subheader", description: "Role, tagline, or short subtitle", icon: Type, category: "core", available: true },
-  { id: "email", type: "email-button", label: "Email", description: "Single email call-to-action", icon: Mail, category: "contact", available: true },
-  { id: "phone", type: "phone-button", label: "Phone", description: "Single phone or text action", icon: Phone, category: "contact", available: true },
-  { id: "social", type: "social-media-links", label: "Social links", description: "Display your social network grid", icon: Share2, category: "contact", available: true },
-  { id: "button", type: "custom-link-button", label: "Button", description: "Add a custom link button", icon: Link2, category: "contact", available: true },
+  { id: "avatar", type: "avatar-block", label: "Avatar", description: "Profile photo and badge", icon: UserCircle2, category: "core", available: true },
+  { id: "business-name", type: "business-name-block", label: "Profile Name", description: "Your name or business name", icon: Type, category: "core", available: true },
+  { id: "subheader", type: "subheader-block", label: "Title / Subtitle", description: "Role, tagline, or short intro", icon: Type, category: "core", available: true },
+  { id: "email", type: "email-button", label: "Email", description: "Let visitors email you", icon: Mail, category: "contact", available: true },
+  { id: "phone", type: "phone-button", label: "Phone", description: "Let visitors call or text", icon: Phone, category: "contact", available: true },
+  { id: "social", type: "social-media-links", label: "Social Links", description: "Add Instagram, Facebook, LinkedIn, and more", icon: Share2, category: "contact", available: true },
+  { id: "button", type: "custom-link-button", label: "Link Button", description: "Add a custom button", icon: Link2, category: "contact", available: true },
   { id: "location", type: "directions-button", label: "Location", description: "Send visitors to your map listing", icon: MapPin, category: "contact", available: true },
-  { id: "lead-form", type: "form-block", label: "Lead form", description: "Capture inquiries directly in-page", icon: ClipboardList, category: "growth", available: true },
+  { id: "lead-form", type: "form-block", label: "Lead Form", description: "Collect inquiries from your profile", icon: ClipboardList, category: "growth", available: true },
   { id: "calendar", label: "Calendar", description: "Embed booking and availability", icon: CalendarDays, category: "growth", available: false },
   { id: "video", label: "Video", description: "Feature a product or intro video", icon: Video, category: "growth", available: false },
   { id: "reviews", label: "Reviews", description: "Showcase testimonials and ratings", icon: Star, category: "growth", available: false },
   { id: "gallery", label: "Gallery", description: "Create an image gallery section", icon: GalleryVerticalEnd, category: "growth", available: false },
-  { id: "image", type: "image-banner", label: "Image", description: "Banner or promo image block", icon: ImageIcon, category: "core", available: true },
+  { id: "image", type: "image-banner", label: "Image Block", description: "Add a promo image or visual section", icon: ImageIcon, category: "core", available: true },
 ];
 
 const CATEGORIES = ["core", "contact", "growth"] as const;
 const CATEGORY_LABELS: Record<typeof CATEGORIES[number], string> = {
-  core: "Core blocks",
-  contact: "Contact actions",
-  growth: "Growth + media",
+  core: "Profile basics",
+  contact: "Contact + links",
+  growth: "Growth tools",
+};
+
+const CATEGORY_HELP: Record<typeof CATEGORIES[number], string> = {
+  core: "Name, photo, title, and visual content.",
+  contact: "Ways visitors can call, email, follow, or visit you.",
+  growth: "Lead capture, booking, wallet, and advanced tools.",
 };
 
 interface BlockLibraryProps {
@@ -51,7 +58,7 @@ export default function BlockLibrary({ onAddBlock, existingBlockTypes = [], isAt
 
   const isBlockedByConflict = (type?: BlockType) => {
     if (!type) return false;
-    return existingTypes.has(type);
+    return isSingletonBlockType(type) && existingTypes.has(type);
   };
 
   const filtered = search
@@ -99,6 +106,7 @@ export default function BlockLibrary({ onAddBlock, existingBlockTypes = [], isAt
             return (
               <div key={cat} className="saas-lib-section">
                 <span className="saas-lib-section-label">{CATEGORY_LABELS[cat]}</span>
+                <p className="saas-lib-section-help">{CATEGORY_HELP[cat]}</p>
                 <div className="saas-lib-group">
                   {items.map((block, idx) => (
                     <LibraryItem key={`${block.id}-${block.label}-${idx}`} block={block} onAdd={onAddBlock} disabledByConflict={isBlockedByConflict(block.type)} isAtBlockLimit={isAtBlockLimit} />
@@ -141,4 +149,3 @@ function LibraryItem({ block, onAdd, disabledByConflict, isAtBlockLimit }: { blo
     </motion.div>
   );
 }
-
