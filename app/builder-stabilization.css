@@ -103,8 +103,7 @@
 }
 
 .builder-preview-chip-row,
-.builder-preview-selectable > .builder-preview-remove-chip,
-.builder-preview-selectable > .builder-preview-edit-chip {
+.builder-preview-selectable > .builder-preview-remove-chip {
   position: absolute !important;
   top: 8px !important;
   right: 8px !important;
@@ -122,8 +121,12 @@
   pointer-events: auto;
 }
 
-.builder-preview-selectable > .builder-preview-edit-chip {
-  right: 76px !important;
+.builder-preview-edit-chip {
+  display: none !important;
+}
+
+.builder-preview-edit-chip::before {
+  content: none !important;
 }
 
 .builder-preview-chip,
@@ -144,15 +147,6 @@
   transform: translateY(-2px);
   transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
   pointer-events: auto !important;
-}
-
-.builder-preview-edit-chip {
-  font-size: 0;
-}
-
-.builder-preview-edit-chip::before {
-  content: "Edit";
-  font-size: 0.65rem;
 }
 
 .builder-preview-hidden-chip {
@@ -181,10 +175,7 @@
 .builder-preview-selectable.is-hidden .builder-preview-chip,
 .builder-preview-selectable:hover > .builder-preview-remove-chip,
 .builder-preview-selectable:focus-within > .builder-preview-remove-chip,
-.builder-preview-selectable.selected > .builder-preview-remove-chip,
-.builder-preview-selectable:hover > .builder-preview-edit-chip,
-.builder-preview-selectable:focus-within > .builder-preview-edit-chip,
-.builder-preview-selectable.selected > .builder-preview-edit-chip {
+.builder-preview-selectable.selected > .builder-preview-remove-chip {
   opacity: 1;
   transform: translateY(0);
 }
@@ -217,12 +208,11 @@
 }
 
 /* Section header edit targets previously rendered their chips directly in-flow.
-   Keep those controls absolute too so every section label feels editable. */
+   Keep remove controls absolute while hiding the redundant Edit label. */
 .builder-public-section .builder-preview-selectable {
   min-height: 34px;
 }
 
-.builder-public-section .builder-preview-selectable > .builder-preview-edit-chip,
 .builder-public-section .builder-preview-selectable > .builder-preview-remove-chip {
   display: inline-flex;
   align-items: center;
@@ -232,25 +222,16 @@
 /* Keep the compact toolbar off tiny phone previews so it does not cover buttons. */
 @media (max-width: 520px) {
   .builder-preview-chip-row,
-  .builder-preview-selectable > .builder-preview-remove-chip,
-  .builder-preview-selectable > .builder-preview-edit-chip {
+  .builder-preview-selectable > .builder-preview-remove-chip {
     top: 6px !important;
     right: 6px !important;
     gap: 4px;
-  }
-
-  .builder-preview-selectable > .builder-preview-edit-chip {
-    right: 68px !important;
   }
 
   .builder-preview-chip,
   .builder-preview-remove-chip {
     min-height: 24px;
     padding: 5px 7px;
-    font-size: 0.58rem;
-  }
-
-  .builder-preview-edit-chip::before {
     font-size: 0.58rem;
   }
 }
