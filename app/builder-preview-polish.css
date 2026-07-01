@@ -1,0 +1,157 @@
+/* Builder preview polish
+   Fixes selected-section dimming and makes font option cards readable. */
+
+/* Selected preview elements should not gray out the live card. */
+.builder-public-profile[data-mode="editor"] .builder-public-sections,
+.builder-public-profile[data-mode="editor"] .builder-public-section,
+.builder-public-profile[data-mode="editor"] .builder-public-section-stack,
+.builder-public-profile[data-mode="editor"] .builder-public-footer,
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable,
+.builder-public-profile[data-mode="editor"] .builder-public-section-block,
+.builder-public-profile[data-mode="editor"] .builder-public-section-empty {
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable::before,
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable::after {
+  background: transparent !important;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable.selected,
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable:focus-visible,
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable:hover {
+  background: transparent !important;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-public-section:not(.builder-preview-hidden-block) {
+  background: transparent !important;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-public-section:not(.builder-preview-hidden-block) .builder-public-section-stack {
+  background: var(--builder-section-surface, var(--builder-surface, rgba(255, 255, 255, 0.92))) !important;
+  color: var(--builder-text-color, #0f172a) !important;
+}
+
+.builder-public-profile[data-mode="editor"] .builder-public-section-empty {
+  color: color-mix(in srgb, var(--builder-accent, #FFA665) 70%, #8a5a3c) !important;
+}
+
+/* Keep intentionally hidden sections visibly muted, but not like a broken overlay. */
+.builder-public-profile[data-mode="editor"] .builder-public-section.builder-preview-hidden-block {
+  opacity: 0.58 !important;
+  filter: saturate(0.82) !important;
+}
+
+/* Font picker card readability. */
+.saas-font-picker {
+  min-width: 0;
+}
+
+.saas-font-picker-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.saas-font-option {
+  position: relative !important;
+  display: grid !important;
+  align-items: end !important;
+  min-width: 0 !important;
+  min-height: 92px !important;
+  padding: 16px 72px 16px 16px !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  background: linear-gradient(180deg, #253044 0%, #101827 100%) !important;
+  color: #f8fafc !important;
+  text-align: left !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 22px rgba(15, 23, 42, 0.12) !important;
+}
+
+.saas-font-option:hover {
+  border-color: rgba(255, 166, 101, 0.56) !important;
+  background: linear-gradient(180deg, #2b374d 0%, #121c2f 100%) !important;
+}
+
+.saas-font-option.is-active {
+  border-color: rgba(255, 166, 101, 0.92) !important;
+  background:
+    radial-gradient(circle at 90% 95%, rgba(255, 166, 101, 0.22), transparent 38%),
+    linear-gradient(180deg, #fff3ea 0%, #1c2637 66%, #101827 100%) !important;
+  box-shadow: 0 0 0 2px rgba(255, 166, 101, 0.18), 0 14px 28px rgba(15, 23, 42, 0.14) !important;
+}
+
+.saas-font-option-copy {
+  position: relative !important;
+  z-index: 2 !important;
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 6px !important;
+}
+
+.saas-font-option-label {
+  display: block !important;
+  max-width: 100% !important;
+  color: #f8fafc !important;
+  font-size: clamp(1rem, 1.65vw, 1.22rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.03em !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+.saas-font-option.is-active .saas-font-option-label {
+  color: #111827 !important;
+}
+
+.saas-font-option-keywords {
+  display: block !important;
+  max-width: 100% !important;
+  color: #cbd5e1 !important;
+  font-size: 0.86rem !important;
+  font-weight: 800 !important;
+  line-height: 1.18 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.saas-font-option.is-active .saas-font-option-keywords {
+  color: #94a3b8 !important;
+}
+
+.saas-font-option-preview {
+  position: absolute !important;
+  top: 14px !important;
+  right: 16px !important;
+  z-index: 1 !important;
+  color: rgba(248, 250, 252, 0.18) !important;
+  font-size: 1.65rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+}
+
+.saas-font-option.is-active .saas-font-option-preview {
+  color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.saas-font-option-check {
+  position: absolute !important;
+  right: 16px !important;
+  bottom: 14px !important;
+  z-index: 3 !important;
+  color: #22c55e !important;
+}
+
+@media (max-width: 520px) {
+  .saas-font-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .saas-font-option {
+    min-height: 84px !important;
+  }
+}
