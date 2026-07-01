@@ -27,14 +27,17 @@ interface ConnectProfileViewProps {
   onRemoveSection?: (sectionId: string) => void;
 }
 
-function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
-  const customBlocks: BuilderBlock[] = Array.isArray(blocks)
+function cloneBuilderBlocks(blocks?: BuilderBlock[]): BuilderBlock[] {
+  return Array.isArray(blocks)
     ? blocks.map((block) => ({
       ...block,
       data: block.data ? { ...block.data } : undefined,
       settings: block.settings ? { ...block.settings } : undefined,
     }))
     : [];
+}
+
+function createLegacyFallbackBlocks(profile: any, socialLinks?: SocialLink[]): BuilderBlock[] {
   const generated: BuilderBlock[] = [
     {
       id: "profile-hero-default",
@@ -49,96 +52,6 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
       },
     },
   ];
-
-  const existingTypes = new Set(customBlocks.map((block) => String(block.type)));
-
-  if (customBlocks.length > 0) {
-    let order = customBlocks.length;
-
-    if (profile?.phone && !existingTypes.has("phone-button")) {
-      customBlocks.push({
-        id: "phone-button-default",
-        type: "phone-button",
-        order: order++,
-        visible: true,
-        data: { label: "Call", phone: profile.phone, value: profile.phone },
-      });
-    }
-
-    if (profile?.email && !existingTypes.has("email-button")) {
-      customBlocks.push({
-        id: "email-button-default",
-        type: "email-button",
-        order: order++,
-        visible: true,
-        data: { label: "Email", email: profile.email, value: profile.email },
-      });
-    }
-
-    if (profile?.website && !existingTypes.has("website-button")) {
-      customBlocks.push({
-        id: "website-button-default",
-        type: "website-button",
-        order: order++,
-        visible: true,
-        data: { label: "Website", website: profile.website, url: profile.website },
-      });
-    }
-
-    if ((profile?.address || profile?.location) && !existingTypes.has("directions-button")) {
-      const address = String(profile?.address || profile?.location || "").trim();
-      customBlocks.push({
-        id: "directions-button-default",
-        type: "directions-button",
-        order: order++,
-        visible: true,
-        data: {
-          label: "Directions",
-          address,
-          url: address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : "",
-        },
-      });
-    }
-
-    const mappedSocialLinks = (socialLinks || [])
-      .filter((item) => item?.url)
-      .map((item, idx) => ({
-        id: item.id || `social-${idx}`,
-        label: item.label || item.platform || "Social",
-        platform: item.platform || item.label || "Social",
-        value: String(item.url),
-      }));
-
-    if (mappedSocialLinks.length && !existingTypes.has("social-media-links")) {
-      customBlocks.push({
-        id: "social-media-links-default",
-        type: "social-media-links",
-        order: order++,
-        visible: true,
-        data: {
-          links: mappedSocialLinks,
-          iconColorMode: "mono",
-        },
-      });
-    }
-
-    if (!existingTypes.has("custom-link-button")) {
-      customBlocks.push({
-        id: "save-contact-default",
-        type: "custom-link-button",
-        order: order++,
-        visible: true,
-        data: {
-          label: "Save Contact",
-          url: profile?.id ? `/api/vcard/${profile.id}` : "",
-          icon: "📇",
-          description: "Download vCard",
-        },
-      });
-    }
-
-    return customBlocks;
-  }
 
   let order = 1;
 
@@ -228,6 +141,21 @@ function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: So
   });
 
   return generated;
+}
+
+function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
+  const customBlocks = cloneBuilderBlocks(blocks);
+
+  // Critical builder rule:
+  // If a builder config exists, use it as the source of truth. Do not inject
+  // profile fallback buttons such as phone/email/website/save-contact into the
+  // live editor/preview, because those generated blocks cannot be removed from
+  // the saved config and make section counts disagree with the preview.
+  if (Array.isArray(blocks)) {
+    return customBlocks;
+  }
+
+  return createLegacyFallbackBlocks(profile, socialLinks);
 }
 
 export default function ConnectProfileView({
