@@ -1,0 +1,158 @@
+/* Advanced builder simplification
+   Keeps advanced power, but removes duplicate controls and reduces visual noise. */
+
+/* Font picker is now a simple select, not a card gallery. */
+.saas-font-picker-simple {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.saas-font-select-wrap {
+  display: grid !important;
+  gap: 7px !important;
+}
+
+.saas-font-select-label {
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+}
+
+.saas-font-select {
+  width: 100% !important;
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid #cfd8e6 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  padding: 0 38px 0 12px !important;
+  font-size: 0.95rem !important;
+  font-weight: 750 !important;
+  box-shadow: none !important;
+}
+
+.saas-font-select:focus {
+  border-color: #ff8a3d !important;
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.18) !important;
+  outline: none !important;
+}
+
+.saas-font-picker-selected-simple {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-height: 42px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+}
+
+/* Hide leftover gallery elements if old CSS still targets them. */
+.saas-font-picker-simple .saas-font-picker-section,
+.saas-font-picker-simple .saas-font-picker-grid,
+.saas-font-picker-simple .saas-field-hint,
+.saas-font-picker-simple .saas-font-picker-count {
+  display: none !important;
+}
+
+/* Color controls: one compact row instead of text field + picker + duplicate chip. */
+.builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items: end !important;
+  gap: 8px 10px !important;
+}
+
+.builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) > .saas-field-label {
+  grid-column: 1 / -1 !important;
+}
+
+.builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) > input[type="text"] {
+  display: none !important;
+}
+
+.builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) > div {
+  grid-column: 1 / -1 !important;
+}
+
+.builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) [aria-haspopup="dialog"] {
+  width: 100% !important;
+  min-height: 46px !important;
+  justify-content: flex-start !important;
+}
+
+/* PremiumColorPicker's inline editable chip duplicates the trigger in this sidebar. */
+.saas-left-panel input[aria-label$="hex value"] {
+  display: none !important;
+}
+
+/* Long color values like rgba(...) should not look broken. */
+.builder-selected-section-panel .saas-field input[type="text"] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.builder-selected-section-panel .saas-field input[value="transparent"],
+.builder-selected-section-panel .saas-field input[placeholder="transparent"] {
+  font-family: var(--font-montserrat), system-ui, sans-serif !important;
+}
+
+/* Make section design feel like an advanced area, not the main editing surface. */
+.builder-section-design-panel,
+.saas-left-panel .saas-advanced-content {
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+}
+
+.builder-section-design-panel .saas-fields,
+.saas-left-panel .saas-advanced-content .saas-fields {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+/* Group advanced controls into calmer rows. */
+.builder-selected-section-panel .saas-field:has(input[type="range"]) {
+  padding: 10px 12px !important;
+  border: 1px solid #e5eaf2 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+}
+
+.builder-selected-section-panel .saas-field:has(select) {
+  gap: 8px !important;
+}
+
+/* Reduce visual loudness of selected section border. */
+.builder-section-card.is-expanded {
+  border-color: rgba(255, 166, 101, 0.44) !important;
+  box-shadow: 0 0 0 1px rgba(255, 166, 101, 0.1), 0 10px 24px rgba(15, 23, 42, 0.055) !important;
+}
+
+.builder-selected-section-panel {
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
+}
+
+/* Make the items area read as a second step under the section editor. */
+.builder-section-blocks,
+.builder-section-items,
+.saas-section-blocks {
+  border-radius: 18px !important;
+  background: #ffffff !important;
+}
+
+.saas-block-card.selected {
+  background: linear-gradient(180deg, #fffaf6 0%, #ffffff 100%) !important;
+}
+
+/* Keep controls readable at the wider desktop sidebar sizes. */
+@media (min-width: 1024px) {
+  .builder-selected-section-panel .saas-field:has([aria-label="Section title color"]) [aria-haspopup="dialog"] {
+    max-width: 260px !important;
+  }
+}
