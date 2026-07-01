@@ -6,6 +6,8 @@
 .saas-builder-shell,
 .saas-builder-layout,
 .saas-builder-mobile-shell,
+.saas-workspace,
+.saas-left-panel,
 .saas-preview-center,
 .saas-preview-center-mobile,
 .saas-panel-inner,
@@ -25,8 +27,64 @@
 }
 
 /* ── Desktop builder sizing ───────────────────────────────────
-   The default builder sidebar was too narrow for nested section cards,
-   inspector controls, color pickers, and block actions. Keep mobile untouched. */
+   The current builder uses .saas-workspace + .saas-left-panel.
+   Earlier overrides targeted legacy layout names, so the sidebar stayed 340px. */
+@media (min-width: 1024px) {
+  .saas-workspace {
+    grid-template-columns: minmax(420px, 460px) minmax(520px, 1fr) !important;
+  }
+
+  .saas-workspace.has-inspector {
+    grid-template-columns: minmax(420px, 460px) minmax(460px, 1fr) minmax(340px, 390px) !important;
+  }
+
+  .saas-left-panel {
+    width: auto !important;
+    min-width: 420px !important;
+  }
+
+  .saas-right-inspector {
+    min-width: 340px !important;
+  }
+
+  .saas-preview-center {
+    padding-inline: clamp(24px, 3vw, 56px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .saas-workspace {
+    grid-template-columns: minmax(460px, 500px) minmax(560px, 1fr) !important;
+  }
+
+  .saas-workspace.has-inspector {
+    grid-template-columns: minmax(460px, 500px) minmax(520px, 1fr) minmax(360px, 420px) !important;
+  }
+
+  .saas-left-panel {
+    min-width: 460px !important;
+  }
+
+  .saas-right-inspector {
+    min-width: 360px !important;
+  }
+}
+
+@media (min-width: 1680px) {
+  .saas-workspace {
+    grid-template-columns: minmax(500px, 540px) minmax(620px, 1fr) !important;
+  }
+
+  .saas-workspace.has-inspector {
+    grid-template-columns: minmax(500px, 540px) minmax(580px, 1fr) minmax(380px, 440px) !important;
+  }
+
+  .saas-left-panel {
+    min-width: 500px !important;
+  }
+}
+
+/* Legacy builder layout names kept for older routes/components. */
 @media (min-width: 1200px) {
   .saas-builder-layout {
     grid-template-columns: minmax(410px, 440px) minmax(520px, 1fr) minmax(330px, 380px) !important;
@@ -46,10 +104,6 @@
   .saas-panel-right,
   .saas-inspector-panel {
     min-width: 330px;
-  }
-
-  .saas-preview-center {
-    padding-inline: clamp(24px, 3vw, 56px);
   }
 }
 
