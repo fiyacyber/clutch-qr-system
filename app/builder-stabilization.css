@@ -40,7 +40,7 @@
   border: 1px solid rgba(255, 166, 101, 0);
   border-radius: inherit;
   pointer-events: none;
-  z-index: 2;
+  z-index: 0;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
@@ -59,19 +59,28 @@
   transform: none;
 }
 
-.builder-preview-chip-row {
+.builder-preview-chip-row,
+.builder-preview-selectable > .builder-preview-remove-chip,
+.builder-preview-selectable > .builder-preview-edit-chip {
   position: absolute !important;
   top: 8px !important;
   right: 8px !important;
   left: auto !important;
   width: auto !important;
+  z-index: 40;
+}
+
+.builder-preview-chip-row {
   display: inline-flex !important;
   grid-template-columns: none !important;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  z-index: 12;
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+.builder-preview-selectable > .builder-preview-edit-chip {
+  right: 76px !important;
 }
 
 .builder-preview-chip,
@@ -91,7 +100,7 @@
   opacity: 0;
   transform: translateY(-2px);
   transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
-  pointer-events: auto;
+  pointer-events: auto !important;
 }
 
 .builder-preview-edit-chip {
@@ -126,24 +135,32 @@
 .builder-preview-selectable:hover .builder-preview-chip,
 .builder-preview-selectable:focus-within .builder-preview-chip,
 .builder-preview-selectable.selected .builder-preview-chip,
-.builder-preview-selectable.is-hidden .builder-preview-chip {
+.builder-preview-selectable.is-hidden .builder-preview-chip,
+.builder-preview-selectable:hover > .builder-preview-remove-chip,
+.builder-preview-selectable:focus-within > .builder-preview-remove-chip,
+.builder-preview-selectable.selected > .builder-preview-remove-chip,
+.builder-preview-selectable:hover > .builder-preview-edit-chip,
+.builder-preview-selectable:focus-within > .builder-preview-edit-chip,
+.builder-preview-selectable.selected > .builder-preview-edit-chip {
   opacity: 1;
   transform: translateY(0);
 }
 
-.builder-preview-selectable .builder-preview-flow-item {
+.builder-preview-selectable .builder-preview-flow-item,
+.builder-preview-selectable .builder-public-section-block {
   position: relative;
   z-index: 1;
 }
 
 .builder-preview-selectable a,
-.builder-preview-selectable button {
+.builder-preview-selectable button:not([data-preview-action="remove"]) {
   pointer-events: none;
 }
 
 .builder-preview-selectable .builder-preview-chip,
-.builder-preview-selectable [data-preview-action="remove"] {
-  pointer-events: auto;
+.builder-preview-selectable [data-preview-action="remove"],
+.builder-preview-selectable button[data-preview-action="remove"] {
+  pointer-events: auto !important;
 }
 
 .builder-preview-selectable .builder-preview-flow-item .builder-button,
@@ -156,12 +173,31 @@
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14), 0 0 0 2px rgba(255, 166, 101, 0.18);
 }
 
+/* Section header edit targets previously rendered their chips directly in-flow.
+   Keep those controls absolute too so every section label feels editable. */
+.builder-public-section .builder-preview-selectable {
+  min-height: 34px;
+}
+
+.builder-public-section .builder-preview-selectable > .builder-preview-edit-chip,
+.builder-public-section .builder-preview-selectable > .builder-preview-remove-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Keep the compact toolbar off tiny phone previews so it does not cover buttons. */
 @media (max-width: 520px) {
-  .builder-preview-chip-row {
+  .builder-preview-chip-row,
+  .builder-preview-selectable > .builder-preview-remove-chip,
+  .builder-preview-selectable > .builder-preview-edit-chip {
     top: 6px !important;
     right: 6px !important;
     gap: 4px;
+  }
+
+  .builder-preview-selectable > .builder-preview-edit-chip {
+    right: 68px !important;
   }
 
   .builder-preview-chip,
