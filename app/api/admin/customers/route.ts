@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
   const reset_temp_password = form.get("reset_temp_password") === "on";
   const plan_code = is_admin ? "admin" : submittedPlanCode;
   const submittedLimit = Number(form.get("qr_limit") || 0);
-  const qr_limit = submittedLimit || PLAN_DEFINITIONS[plan_code].qrLimit;
+  const qr_limit = is_admin
+    ? PLAN_DEFINITIONS.admin.qrLimit
+    : submittedLimit || PLAN_DEFINITIONS[plan_code].qrLimit;
 
   if (id) {
     const updatePayload: Record<string, string | number | boolean | null> = {
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
         onboarding_note,
         internal_notes,
         qr_limit,
+        is_admin,
         plan: plan_code,
         plan_code,
         subscription_status,

@@ -89,7 +89,7 @@ export default async function PublicConnectProfilePage({
     metadata: {
       slug,
       source: source || null,
-      view_kind: "profile_view",
+      view_kind: "server_profile_view",
     },
   });
 
@@ -97,6 +97,7 @@ export default async function PublicConnectProfilePage({
     profile_id: profile.id,
     qr_code_id: null,
     event_type: "profile_view",
+    link_label: "Server profile view",
     visitor_id: ip_hash,
     ip_hash,
     user_agent,

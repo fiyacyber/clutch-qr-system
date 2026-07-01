@@ -77,6 +77,14 @@ export async function POST(req: NextRequest) {
   let link_label: string | null = String(body?.link_label || metadata?.link_label || "").trim() || null;
   let link_url: string | null = String(body?.link_url || metadata?.link_url || "").trim() || null;
 
+  if (event_type === "profile_view" && !link_label) {
+    if (metadata?.view_kind === "client_page_view" || metadata?.view_kind === "page_view") {
+      link_label = "Client page view";
+    } else if (metadata?.view_kind === "server_profile_view" || metadata?.view_kind === "profile_view") {
+      link_label = "Server profile view";
+    }
+  }
+
   if (profile_link_id && (!link_label || !link_url)) {
     const { data: linkRow } = await admin
       .from("profile_links")

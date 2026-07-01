@@ -451,7 +451,10 @@ export default function BuilderPublicProfile({
     if (mode !== "public") return;
 
     // Distinguish client-rendered page view from server profile view logging.
-    sendEvent("profile_view", { view_kind: "page_view" });
+    sendEvent("profile_view", {
+      view_kind: "client_page_view",
+      link_label: "Client page view",
+    });
 
     const root = rootRef.current;
     if (!root) return;

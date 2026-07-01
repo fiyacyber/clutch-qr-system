@@ -82,6 +82,11 @@ export type UnifiedAnalyticsData = {
   connectEvents: UnifiedConnectEvent[];
 };
 
+export function isCountedProfileView(event: Pick<UnifiedConnectEvent, "event_type" | "link_label">) {
+  if (event.event_type !== "profile_view") return false;
+  return event.link_label !== "Server profile view";
+}
+
 function normalizeLegacyEventType(eventType: string) {
   switch (eventType) {
     case "profile_view":
@@ -205,7 +210,13 @@ export async function fetchUnifiedAnalyticsData(admin: SupabaseAdmin, customer: 
           qr_code_id: row.metadata?.qr_code_id || null,
           event_type: normalizeLegacyEventType(String(row.event_type || "")),
           link_id: row.profile_link_id || null,
-          link_label: row.metadata?.link_label || row.metadata?.label || null,
+          link_label:
+            row.metadata?.link_label ||
+            (row.event_type === "profile_view" && (row.metadata?.view_kind === "server_profile_view" || row.metadata?.view_kind === "profile_view")
+              ? "Server profile view"
+              : row.event_type === "profile_view" && (row.metadata?.view_kind === "client_page_view" || row.metadata?.view_kind === "page_view")
+                ? "Client page view"
+                : row.metadata?.label || null),
           link_url: row.metadata?.link_url || row.metadata?.url || null,
           visitor_id: row.ip_hash || null,
           ip_hash: row.ip_hash || null,

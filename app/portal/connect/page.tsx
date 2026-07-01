@@ -42,6 +42,20 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function hasBuilderBannerImage(builderConfig: unknown) {
+  if (!builderConfig || typeof builderConfig !== "object") return false;
+
+  const theme = (builderConfig as { theme?: unknown }).theme;
+  if (!theme || typeof theme !== "object") return false;
+
+  const banner = (theme as { banner?: unknown }).banner;
+  if (!banner || typeof banner !== "object") return false;
+
+  const enabled = (banner as { enabled?: unknown }).enabled;
+  const imageUrl = (banner as { imageUrl?: unknown }).imageUrl;
+  return enabled !== false && typeof imageUrl === "string" && imageUrl.trim().length > 0;
+}
+
 export default async function PortalConnectPage({ searchParams }: ConnectPageProps) {
   const params = (await searchParams) || {};
   const { user, customer } = await requireCustomer();
@@ -212,6 +226,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const profileLinks = links || [];
   const activeLinks = profileLinks.filter((link: any) => link.is_active !== false).length;
+  const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(
     (row: any) => row.connect_profile_id === profile.id || row.profile_id === profile.id
@@ -241,7 +256,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     { label: "Business name", done: Boolean(profile.business_name) },
     { label: "Contact details", done: Boolean(profile.contact_name && profile.email && profile.phone) },
     { label: "Avatar uploaded", done: Boolean(profile.avatar_url) },
-    { label: "Cover photo added", done: Boolean((profile as any).cover_url) },
+    { label: "Cover photo added", done: hasCoverPhoto },
     { label: "At least one active link", done: activeLinks > 0 },
     { label: "Public page published", done: Boolean(profile.is_active && profile.slug) },
   ];
@@ -260,7 +275,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     { icon: <MessageSquare size={16} />, label: "Drag-and-drop blocks", status: "Ready" },
     { icon: <Sparkles size={16} />, label: "Industry templates", status: "Ready" },
     { icon: <Link2 size={16} />, label: "Social media block library", status: "Ready" },
-    { icon: <CalendarRange size={16} />, label: "Calendly block", status: "Ready" },
+    { icon: <CalendarRange size={16} />, label: "Booking / request quote block", status: "Ready" },
     { icon: <Star size={16} />, label: "Google Reviews block", status: "Planned" },
     { icon: <CreditCard size={16} />, label: "Payment blocks", status: "Planned" },
     { icon: <GalleryHorizontal size={16} />, label: "Gallery block", status: "Planned" },
@@ -268,7 +283,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   ];
 
   const publicProfileImprovements = [
-    { icon: <GalleryHorizontal size={16} />, label: "Cover photo", done: Boolean((profile as any).cover_url) },
+    { icon: <GalleryHorizontal size={16} />, label: "Cover photo", done: hasCoverPhoto },
     { icon: <BadgeCheck size={16} />, label: "Avatar upload", done: Boolean(profile.avatar_url) },
     { icon: <BadgeCheck size={16} />, label: "Verified badge", done: Boolean((profile as any).is_verified) },
     { icon: <Link2 size={16} />, label: "Save Contact button", done: true },

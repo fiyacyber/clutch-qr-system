@@ -9,3 +9,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vercel
+tsconfig.tsbuildinfo
+.npm-cache/
+.npm-tmp-cache/
+.npm-tmp-cache-vercel/

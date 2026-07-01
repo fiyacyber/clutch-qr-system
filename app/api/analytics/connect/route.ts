@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { fetchUnifiedAnalyticsData } from "@/lib/clutch-analytics";
+import { fetchUnifiedAnalyticsData, isCountedProfileView } from "@/lib/clutch-analytics";
 
 export async function GET() {
   const { user, customer } = await requireCustomer();
@@ -30,7 +30,7 @@ export async function GET() {
 
   const rows = data.profiles.map((profile) => {
     const events = profileEventMap.get(profile.id) || [];
-    const profileViews = events.filter((row) => row.event_type === "profile_view").length;
+    const profileViews = events.filter(isCountedProfileView).length;
     const linkClicks = events.filter((row) => row.event_type === "link_click").length;
     const leadsCaptured = events.filter((row) => row.event_type === "lead_submit").length;
 

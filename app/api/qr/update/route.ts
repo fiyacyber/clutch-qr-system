@@ -15,6 +15,7 @@ const ALLOWED_LOGO_TYPES = new Map([
   ["image/webp", "webp"],
   ["image/svg+xml", "svg"],
 ]);
+const QR_TYPES = new Set(["url", "connect_profile"]);
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -45,7 +46,8 @@ export async function POST(req: NextRequest) {
     form.get("corner_style") || "square"
   );
 
-  const qr_type = String(form.get("qr_type") || "flyers");
+  const requestedQrType = String(form.get("qr_type") || "url").trim();
+  const qr_type = QR_TYPES.has(requestedQrType) ? requestedQrType : "url";
   const profile_id_raw = String(form.get("profile_id") || "").trim();
 
   const remove_logo =

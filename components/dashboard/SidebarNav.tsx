@@ -49,9 +49,9 @@ const navItems: NavItem[] = [
   },
   {
     label: "QR Codes",
-    href: "/portal/create",
+    href: "/portal/qr",
     icon: QrCode,
-    match: (pathname) => pathname === "/portal/create" || pathname === "/create",
+    match: (pathname) => pathname === "/portal/qr" || pathname.startsWith("/portal/qr/"),
   },
   {
     label: "Analytics",

@@ -7,6 +7,7 @@ import {
   buildScansOverTime,
   countBy,
   fetchUnifiedAnalyticsData,
+  isCountedProfileView,
   type UnifiedAnalyticsData,
 } from "@/lib/clutch-analytics";
 import { parseCoordinate } from "@/lib/analytics";
@@ -82,7 +83,7 @@ export default async function AnalyticsPage({
 
   /* ── KPI metrics ── */
   const totalScans     = data.qrScans.length;
-  const connectViews   = data.connectEvents.filter(e => e.event_type === "profile_view").length;
+  const connectViews   = data.connectEvents.filter(isCountedProfileView).length;
   const linkClicks     = data.connectEvents.filter(e => e.event_type === "link_click").length;
   const leadsCaptured  = data.connectEvents.filter(e => e.event_type === "lead_submit").length;
   const activeQrCodes  = data.qrCodes.filter(q => q.is_active !== false).length;
@@ -145,7 +146,7 @@ export default async function AnalyticsPage({
     return {
       id: profile.id,
       profileName: profile.business_name || profile.contact_name || profile.slug,
-      profileViews: events.filter(e => e.event_type === "profile_view").length,
+      profileViews: events.filter(isCountedProfileView).length,
       linkClicks: linkClickEvents.length,
       topClickedLink,
       leadsCaptured: events.filter(e => e.event_type === "lead_submit").length,

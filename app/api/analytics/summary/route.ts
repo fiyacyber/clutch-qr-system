@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { fetchUnifiedAnalyticsData } from "@/lib/clutch-analytics";
+import { fetchUnifiedAnalyticsData, isCountedProfileView } from "@/lib/clutch-analytics";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const data = await fetchUnifiedAnalyticsData(admin, customer as any);
 
     const totalScans = data.qrScans.length;
-    const connectViews = data.connectEvents.filter((row) => row.event_type === "profile_view").length;
+    const connectViews = data.connectEvents.filter(isCountedProfileView).length;
     const linkClicks = data.connectEvents.filter((row) => row.event_type === "link_click").length;
     const leadsCaptured = data.connectEvents.filter((row) => row.event_type === "lead_submit").length;
     const activeQrCodes = data.qrCodes.filter((row) => row.is_active !== false).length;
