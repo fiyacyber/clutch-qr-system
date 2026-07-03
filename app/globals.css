@@ -5936,6 +5936,10 @@ button:disabled {
     box-shadow: 0 -10px 20px rgba(16, 35, 59, 0.1);
   }
 
+  .connect-setup-panel {
+    padding-bottom: 88px;
+  }
+
   .connect-setup-footer-actions {
     width: 100%;
     justify-content: space-between;
