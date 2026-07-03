@@ -1339,7 +1339,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
         </div>
         <div className="connect-setup-header-actions">
           <span className="connect-setup-save-badge">{saveState === "saving" ? "Saving draft..." : saveState === "saved" ? "Draft saved" : "Draft auto-saved"}</span>
-          <button type="button" className="btn secondary" onClick={saveAndExit} disabled={saveState === "saving"}>
+          <button type="button" className="btn secondary connect-setup-save-exit-btn" onClick={saveAndExit} disabled={saveState === "saving"}>
             Save & Exit
           </button>
         </div>
@@ -1400,175 +1400,190 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                 </div>
 
                 <div className="connect-setup-grid">
-                  <label className="label connect-setup-span-2">
-                    Display name
-                    <input
-                      className="input"
-                      value={draft.basic.displayName}
-                      onChange={(event) => updateDraft({ basic: { ...draft.basic, displayName: event.target.value } })}
-                      placeholder="Jordan Smith"
-                    />
-                  </label>
+                  <section className="connect-setup-section-group connect-setup-span-2" aria-label="Profile Basics section">
+                    <div className="connect-setup-section-head">
+                      <h4>Profile Basics</h4>
+                    </div>
+                    <div className="connect-setup-section-grid">
+                      <label className="label connect-setup-span-2">
+                        Display name
+                        <input
+                          className="input"
+                          value={draft.basic.displayName}
+                          onChange={(event) => updateDraft({ basic: { ...draft.basic, displayName: event.target.value } })}
+                          placeholder="Jordan Smith"
+                        />
+                      </label>
 
-                  <label className="label">
-                    Organization
-                    <input
-                      className="input"
-                      value={draft.basic.organization}
-                      onChange={(event) => updateDraft({ basic: { ...draft.basic, organization: event.target.value } })}
-                      placeholder="Clutch Print Shop"
-                    />
-                    {fieldErrors.businessName ? <span className="helper-text connect-setup-error-text">{fieldErrors.businessName}</span> : null}
-                  </label>
+                      <label className="label">
+                        Organization
+                        <input
+                          className="input"
+                          value={draft.basic.organization}
+                          onChange={(event) => updateDraft({ basic: { ...draft.basic, organization: event.target.value } })}
+                          placeholder="Clutch Print Shop"
+                        />
+                        {fieldErrors.businessName ? <span className="helper-text connect-setup-error-text">{fieldErrors.businessName}</span> : null}
+                      </label>
 
-                  <label className="label">
-                    Role or headline
-                    <input
-                      className="input"
-                      value={draft.basic.role}
-                      onChange={(event) => updateDraft({ basic: { ...draft.basic, role: event.target.value } })}
-                      placeholder="Founder, Sales lead, Brand strategist"
-                    />
-                  </label>
+                      <label className="label">
+                        Role or headline
+                        <input
+                          className="input"
+                          value={draft.basic.role}
+                          onChange={(event) => updateDraft({ basic: { ...draft.basic, role: event.target.value } })}
+                          placeholder="Founder, Sales lead, Brand strategist"
+                        />
+                      </label>
+                    </div>
+                  </section>
 
-                  <label className="label connect-setup-span-2">
-                    Profile photo
-                    <div className="connect-setup-avatar-row">
-                      <div className="connect-setup-avatar-preview">
-                        {normalizeOptionalHttpUrl(draft.basic.avatarUrl)
-                          ? <img src={normalizeOptionalHttpUrl(draft.basic.avatarUrl)} alt="Profile preview" />
-                          : <span>{safeText(draft.basic.displayName).slice(0, 1).toUpperCase() || "C"}</span>}
+                  <section className="connect-setup-section-group connect-setup-span-2" aria-label="Profile Photo section">
+                    <div className="connect-setup-section-head">
+                      <h4>Profile Photo</h4>
+                    </div>
+                    <label className="label connect-setup-span-2">
+                      Profile photo
+                      <div className="connect-setup-avatar-row">
+                        <div className="connect-setup-avatar-preview">
+                          {normalizeOptionalHttpUrl(draft.basic.avatarUrl)
+                            ? <img src={normalizeOptionalHttpUrl(draft.basic.avatarUrl)} alt="Profile preview" />
+                            : <span>{safeText(draft.basic.displayName).slice(0, 1).toUpperCase() || "C"}</span>}
+                        </div>
+                        <div className="connect-setup-avatar-actions">
+                          <label className="btn secondary connect-setup-upload-btn" aria-disabled={isUploadingAvatar}>
+                            <ImagePlus size={14} />
+                            {isUploadingAvatar ? "Uploading..." : "Upload photo"}
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                              onChange={handleAvatarFile}
+                              disabled={isUploadingAvatar}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="btn ghost"
+                            onClick={() => updateDraft({ basic: { ...draft.basic, avatarUrl: "" } })}
+                            disabled={isUploadingAvatar || !draft.basic.avatarUrl}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                      <div className="connect-setup-avatar-actions">
-                        <label className="btn secondary connect-setup-upload-btn" aria-disabled={isUploadingAvatar}>
+                      <span className="helper-text">PNG, JPG, WebP, or SVG up to 2MB.</span>
+                      {avatarUploadError ? <span className="helper-text connect-setup-error-text">{avatarUploadError}</span> : null}
+                      {fieldErrors.avatarUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.avatarUrl}</span> : null}
+                    </label>
+                  </section>
+
+                  <section className="connect-setup-section-group connect-setup-span-2" aria-label="Banner Style section">
+                    <div className="connect-setup-section-head">
+                      <h4>Banner Style</h4>
+                    </div>
+                    <div className="label connect-setup-span-2">
+                      Banner theme
+                      <div className="connect-setup-banner-theme-grid">
+                        {BANNER_THEME_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`connect-setup-banner-theme-card${draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? " is-active" : ""}`}
+                            style={{ ["--banner-theme-preview" as any]: option.preview, ["--banner-theme-accent" as any]: option.accent }}
+                            aria-pressed={draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme"}
+                            onClick={() => updateDraft({ basic: { ...draft.basic, bannerTheme: option.value, bannerMode: "theme", bannerEnabled: true } })}
+                          >
+                            <span className="connect-setup-banner-theme-preview" aria-hidden="true" />
+                            <span className="connect-setup-banner-theme-copy">
+                              <strong>{option.label}</strong>
+                              <small>{option.tone}</small>
+                            </span>
+                            {draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? (
+                              <span className="connect-setup-banner-selected-pill"><Check size={12} />Selected</span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="label connect-setup-span-2">
+                      Banner source
+                      <div className="connect-setup-banner-mode-toggle" role="group" aria-label="Banner source">
+                        <button
+                          type="button"
+                          className={draft.basic.bannerMode === "theme" ? "is-active" : ""}
+                          aria-pressed={draft.basic.bannerMode === "theme"}
+                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "theme", bannerEnabled: true } })}
+                        >
+                          Use Theme
+                        </button>
+                        <button
+                          type="button"
+                          className={draft.basic.bannerMode === "image" ? "is-active" : ""}
+                          aria-pressed={draft.basic.bannerMode === "image"}
+                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "image", bannerEnabled: true } })}
+                          disabled={!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl)}
+                        >
+                          Use Uploaded Image
+                        </button>
+                      </div>
+                      {!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) ? (
+                        <span className="helper-text">Upload a banner image to enable image mode.</span>
+                      ) : null}
+                    </div>
+
+                    <label className="label connect-setup-span-2">
+                      Banner Image
+                      <div className="connect-setup-banner-upload-row">
+                        <label className="btn secondary connect-setup-upload-btn" aria-disabled={isUploadingBanner}>
                           <ImagePlus size={14} />
-                          {isUploadingAvatar ? "Uploading..." : "Upload photo"}
+                          {isUploadingBanner ? "Uploading..." : "Upload Banner"}
                           <input
                             type="file"
                             accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-                            onChange={handleAvatarFile}
-                            disabled={isUploadingAvatar}
+                            onChange={handleBannerFile}
+                            disabled={isUploadingBanner}
                           />
                         </label>
                         <button
                           type="button"
                           className="btn ghost"
-                          onClick={() => updateDraft({ basic: { ...draft.basic, avatarUrl: "" } })}
-                          disabled={isUploadingAvatar || !draft.basic.avatarUrl}
+                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerImageUrl: "", bannerMode: "theme", bannerEnabled: true } })}
+                          disabled={isUploadingBanner || !draft.basic.bannerImageUrl}
                         >
-                          Remove
+                          Remove Banner
                         </button>
                       </div>
-                    </div>
-                    <span className="helper-text">PNG, JPG, WebP, or SVG up to 2MB.</span>
-                    {avatarUploadError ? <span className="helper-text connect-setup-error-text">{avatarUploadError}</span> : null}
-                    {fieldErrors.avatarUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.avatarUrl}</span> : null}
-                  </label>
+                      <span className="helper-text">Upload a wide image for the top of your profile, or switch back to a theme without deleting the upload.</span>
+                      {bannerUploadError ? <span className="helper-text connect-setup-error-text">{bannerUploadError}</span> : null}
+                      {fieldErrors.bannerImageUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.bannerImageUrl}</span> : null}
+                    </label>
+                  </section>
 
-                  <div className="label connect-setup-span-2">
-                    Banner theme
-                    <div className="connect-setup-banner-theme-grid">
-                      {BANNER_THEME_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`connect-setup-banner-theme-card${draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? " is-active" : ""}`}
-                          style={{ ["--banner-theme-preview" as any]: option.preview, ["--banner-theme-accent" as any]: option.accent }}
-                          aria-pressed={draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme"}
-                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerTheme: option.value, bannerMode: "theme", bannerEnabled: true } })}
-                        >
-                          <span className="connect-setup-banner-theme-preview" aria-hidden="true" />
-                          <span className="connect-setup-banner-theme-copy">
-                            <strong>{option.label}</strong>
-                            <small>{option.tone}</small>
-                          </span>
-                          {draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? (
-                            <span className="connect-setup-banner-selected-pill"><Check size={12} />Selected</span>
-                          ) : null}
-                        </button>
-                      ))}
+                  <section className="connect-setup-section-group connect-setup-span-2" aria-label="Profile Link section">
+                    <div className="connect-setup-section-head">
+                      <h4>Profile Link</h4>
                     </div>
-                  </div>
-
-                  <div className="label connect-setup-span-2">
-                    Banner source
-                    <div className="connect-setup-banner-mode-toggle" role="group" aria-label="Banner source">
-                      <button
-                        type="button"
-                        className={draft.basic.bannerMode === "theme" ? "is-active" : ""}
-                        aria-pressed={draft.basic.bannerMode === "theme"}
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "theme", bannerEnabled: true } })}
-                      >
-                        Use Theme
-                      </button>
-                      <button
-                        type="button"
-                        className={draft.basic.bannerMode === "image" ? "is-active" : ""}
-                        aria-pressed={draft.basic.bannerMode === "image"}
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "image", bannerEnabled: true } })}
-                        disabled={!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl)}
-                      >
-                        Use Uploaded Image
-                      </button>
-                    </div>
-                    {!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) ? (
-                      <span className="helper-text">Upload a banner image to enable image mode.</span>
-                    ) : null}
-                  </div>
-
-                  <label className="label connect-setup-span-2">
-                    Banner Image
-                    <div className="connect-setup-banner-upload-row">
-                      <label className="btn secondary connect-setup-upload-btn" aria-disabled={isUploadingBanner}>
-                        <ImagePlus size={14} />
-                        {isUploadingBanner ? "Uploading..." : "Upload Banner"}
+                    <label className="label connect-setup-span-2">
+                      Custom slug
+                      <div className="connect-setup-slug-row">
+                        <span>clutchconnect.link/</span>
                         <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-                          onChange={handleBannerFile}
-                          disabled={isUploadingBanner}
+                          className="input"
+                          value={draft.basic.slug}
+                          onChange={(event) => updateDraft({ basic: { ...draft.basic, slug: event.target.value } })}
+                          placeholder={previewSlug}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
-                      </label>
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerImageUrl: "", bannerMode: "theme", bannerEnabled: true } })}
-                        disabled={isUploadingBanner || !draft.basic.bannerImageUrl}
-                      >
-                        Remove Banner
-                      </button>
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "theme", bannerEnabled: true } })}
-                      >
-                        Use Theme
-                      </button>
-                    </div>
-                    <span className="helper-text">Upload a wide image for the top of your profile, or switch back to a theme without deleting the upload.</span>
-                    {bannerUploadError ? <span className="helper-text connect-setup-error-text">{bannerUploadError}</span> : null}
-                    {fieldErrors.bannerImageUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.bannerImageUrl}</span> : null}
-                  </label>
-
-                  <label className="label connect-setup-span-2">
-                    Custom slug
-                    <div className="connect-setup-slug-row">
-                      <span>clutchconnect.link/</span>
-                      <input
-                        className="input"
-                        value={draft.basic.slug}
-                        onChange={(event) => updateDraft({ basic: { ...draft.basic, slug: event.target.value } })}
-                        placeholder={previewSlug}
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        spellCheck={false}
-                      />
-                    </div>
-                    <span className="helper-text">Leave this blank and we will auto-generate a clean slug for you.</span>
-                    {!fieldErrors.slug ? <span className="helper-text">System and brand words like clutchprintshop are reserved and cannot be claimed.</span> : null}
-                    {fieldErrors.slug ? <span className="helper-text connect-setup-error-text">{fieldErrors.slug}</span> : null}
-                    {!fieldErrors.slug ? <span className="helper-text">Preview: {buildConnectSlugPreview(previewSlug)}</span> : null}
-                  </label>
+                      </div>
+                      <span className="helper-text">Leave this blank and we will auto-generate a clean slug for you.</span>
+                      {!fieldErrors.slug ? <span className="helper-text">System and brand words like clutchprintshop are reserved and cannot be claimed.</span> : null}
+                      {fieldErrors.slug ? <span className="helper-text connect-setup-error-text">{fieldErrors.slug}</span> : null}
+                      {!fieldErrors.slug ? <span className="helper-text">Preview: {buildConnectSlugPreview(previewSlug)}</span> : null}
+                    </label>
+                  </section>
                 </div>
               </div>
             ) : null}
@@ -1899,7 +1914,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                 </button>
                 <button type="button" className="btn ghost" onClick={previousStep} disabled={currentStep === "basic" || saveState === "saving"}>
                   <ChevronLeft size={14} />
-                  Back
+                  <span className="connect-setup-action-label">Back</span>
                 </button>
                 {finalStep ? (
                   <button type="button" className="btn primary" onClick={() => persistDraft("complete")} disabled={saveState === "saving"}>
@@ -1908,7 +1923,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                 ) : (
                   <button type="button" className="btn primary" onClick={continueToNextStep} disabled={saveState === "saving"}>
                     <ChevronRight size={14} />
-                    Continue
+                    <span className="connect-setup-action-label">Continue</span>
                   </button>
                 )}
               </div>

@@ -4,6 +4,8 @@ import {
   BarChart3,
   CheckCircle2,
   Circle,
+  Clock3,
+  Globe2,
   Link2,
   Map as MapIcon,
   QrCode,
@@ -44,6 +46,18 @@ function formatDate(value?: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "No taps yet";
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -98,11 +112,11 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
       route: "/portal",
       endpoint: "supabase:qr_codes.select",
       customerId: customer.id,
-      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; is_active: boolean | null; is_system?: boolean | null }>,
+      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; is_active: boolean | null; is_system?: boolean | null; qr_type?: string | null; card_order_id?: string | null; destination_url?: string | null; profile_id?: string | null; connect_profile_id?: string | null }>,
       task: () =>
         admin
           .from("qr_codes")
-          .select("id, name, slug, scan_count, created_at, is_active, is_system")
+          .select("id, name, slug, scan_count, created_at, is_active, is_system, qr_type, card_order_id, destination_url, profile_id, connect_profile_id")
           .eq("customer_id", customer.id)
           .order("created_at", { ascending: false }),
     }),
@@ -184,22 +198,27 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         route: "/portal",
         endpoint: "supabase:qr_scans.select",
         customerId: customer.id,
-        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null }>,
+        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null; device_type?: string | null; browser?: string | null; operating_system?: string | null }>,
         task: () =>
           admin
             .from("qr_scans")
-            .select("id, qr_code_id, created_at, city, region, country")
+            .select("id, qr_code_id, created_at, city, region, country, device_type, browser, operating_system")
             .in("qr_code_id", qrIds)
             .order("created_at", { ascending: false })
             .limit(250),
       })
-    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null }>, failed: false };
+    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null; device_type?: string | null; browser?: string | null; operating_system?: string | null }>, failed: false };
   if (scanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
 
   const scans = scanRowsResult.data || [];
   const campaignCodes = codes.filter((code: any) => code.is_system !== true);
   const campaignCodeIds = new Set(campaignCodes.map((code) => code.id));
   const campaignScans = scans.filter((scan) => campaignCodeIds.has(scan.qr_code_id));
+  const smartCardCodes = codes.filter((code: any) => code.is_system === true && code.qr_type === "smart_card");
+  const smartCardCodeIds = new Set(smartCardCodes.map((code) => code.id));
+  const smartCardScans = scans.filter((scan) => smartCardCodeIds.has(scan.qr_code_id));
+  const smartCardTotalTaps = smartCardScans.length || smartCardCodes.reduce((sum, code) => sum + (code.scan_count || 0), 0);
+  const smartCardLastTap = smartCardScans[0]?.created_at || null;
   const used = campaignCodes.length;
   const activeQrCodes = campaignCodes.filter((code) => code.is_active !== false).length;
   const limit = getEffectiveQrLimit(customer);
@@ -230,6 +249,30 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const hasPublicProfile = Boolean(connectProfile?.slug);
   const appBaseUrl = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
   const publicProfileUrl = hasPublicProfile ? `${appBaseUrl}/u/${encodeURIComponent(String(connectProfile?.slug || ""))}` : "";
+
+  function summarizeRows(values: Array<string | null | undefined>) {
+    return Object.entries(values.reduce<Record<string, number>>((acc, value) => {
+      const label = String(value || "Unknown").trim() || "Unknown";
+      if (label !== "Unknown") acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {}))
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+  }
+
+  const smartCardRecentActivity = smartCardScans.slice(0, 6).map((scan) => {
+    const location = [scan.city, scan.region, scan.country].filter(Boolean).join(", ");
+    return {
+      id: scan.id,
+      title: "Smart card tap",
+      date: formatDateTime(scan.created_at),
+      location: location || "Location unavailable",
+    };
+  });
+  const smartCardDeviceRows = summarizeRows(smartCardScans.map((scan) => scan.device_type)).slice(0, 4);
+  const smartCardBrowserRows = summarizeRows(smartCardScans.map((scan) => scan.browser)).slice(0, 4);
+  const smartCardOsRows = summarizeRows(smartCardScans.map((scan) => scan.operating_system)).slice(0, 4);
+  const smartCardLocationRows = summarizeRows(smartCardScans.map((scan) => [scan.city, scan.region, scan.country].filter(Boolean).join(", "))).slice(0, 5);
 
   let leadInboxCount = 0;
   let profileViewCount = 0;
@@ -517,9 +560,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                 description={leadInboxCount > 0 ? "New leads captured from your profile." : "Your Lead Inbox will populate when someone submits your profile form."}
               />
               <StatCard
-                label="Profile Views"
-                value={profileViewCount.toLocaleString()}
-                description="Track how often people open your smart card profile."
+                label="Card Taps"
+                value={smartCardTotalTaps.toLocaleString()}
+                description={smartCardLastTap ? `Last tap ${formatDate(smartCardLastTap)}.` : "Taps appear after your smart card is scanned."}
               />
               <StatCard
                 label="Account Plan"
@@ -527,6 +570,86 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                 description={`${plan.name} • ${subscriptionStatus}`}
               />
             </section>
+
+            <AnalyticsCard className="portal-overview-smart-card-activity-card">
+              <div className="portal-overview-section-head">
+                <h2>Smart Card Activity</h2>
+                <p>Your smart card QR is automatically connected to your Clutch Connect profile. You do not need to create a QR code.</p>
+              </div>
+
+              <div className="portal-overview-smart-metrics">
+                <article>
+                  <span>Total card taps</span>
+                  <strong>{smartCardTotalTaps.toLocaleString()}</strong>
+                  <p>{smartCardTotalTaps ? "Scans from your system-managed smart card QR." : "No card taps yet."}</p>
+                </article>
+                <article>
+                  <span>Last tap</span>
+                  <strong>{formatDateTime(smartCardLastTap)}</strong>
+                  <p>Taps will appear here after your smart card is scanned.</p>
+                </article>
+                <article>
+                  <span>Profile views</span>
+                  <strong>{profileViewCount.toLocaleString()}</strong>
+                  <p>Public profile views connected to your smart card experience.</p>
+                </article>
+                <article>
+                  <span>Leads</span>
+                  <strong>{leadInboxCount.toLocaleString()}</strong>
+                  <p>Lead form submissions captured from your profile.</p>
+                </article>
+              </div>
+
+              {smartCardTotalTaps ? (
+                <div className="portal-overview-smart-activity-grid">
+                  <div className="portal-overview-smart-panel">
+                    <div className="portal-overview-smart-panel-head"><Clock3 size={16} /><h3>Recent card activity</h3></div>
+                    <ul className="portal-overview-activity-list">
+                      {smartCardRecentActivity.map((item) => (
+                        <li key={item.id}>
+                          <div>
+                            <strong>{item.title}</strong>
+                            <p>{item.location}</p>
+                          </div>
+                          <span>{item.date}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="portal-overview-smart-panel">
+                    <div className="portal-overview-smart-panel-head"><Globe2 size={16} /><h3>Breakdowns</h3></div>
+                    <div className="portal-overview-smart-breakdowns">
+                      {[
+                        { title: "Devices", rows: smartCardDeviceRows },
+                        { title: "Browsers", rows: smartCardBrowserRows },
+                        { title: "Operating systems", rows: smartCardOsRows },
+                        { title: "Top locations", rows: smartCardLocationRows },
+                      ].map((group) => (
+                        <div key={group.title} className="portal-overview-smart-breakdown-group">
+                          <h4>{group.title}</h4>
+                          {group.rows.length ? (
+                            <ul>
+                              {group.rows.map((row) => (
+                                <li key={row.label}><span>{row.label}</span><strong>{row.value}</strong></li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>No data yet</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="portal-overview-smart-empty">
+                  <QrCode size={22} />
+                  <h3>No card taps yet</h3>
+                  <p>Taps will appear here after your smart card is scanned.</p>
+                </div>
+              )}
+            </AnalyticsCard>
 
             <AnalyticsCard className="portal-overview-actions-card">
               <div className="portal-overview-section-head">

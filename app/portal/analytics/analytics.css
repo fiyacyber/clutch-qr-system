@@ -2,6 +2,212 @@
    Clutch Analytics Dashboard — Premium SaaS layout
    ═══════════════════════════════════════════════════ */
 
+.analytics-smart-card-shell {
+  display: grid;
+}
+
+.analytics-smart-card-activity {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+  border: 1px solid #d9e3f1;
+  border-radius: 24px;
+  padding: clamp(18px, 3vw, 28px);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(255, 122, 26, 0.22), transparent 30%),
+    radial-gradient(circle at 8% 86%, rgba(18, 52, 90, 0.12), transparent 34%),
+    linear-gradient(145deg, #ffffff 0%, #f6faff 100%);
+  box-shadow: 0 22px 58px rgba(11, 31, 53, 0.12);
+}
+
+.analytics-smart-card-header {
+  display: grid;
+  gap: 8px;
+  max-width: 780px;
+}
+
+.analytics-smart-card-header span {
+  width: fit-content;
+  border: 1px solid rgba(255, 122, 26, 0.32);
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #c35600;
+  background: rgba(255, 122, 26, 0.1);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.analytics-smart-card-header h1 {
+  margin: 0;
+  color: #0b1f35;
+  font-family: var(--font-exo2, Arial, sans-serif);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1;
+}
+
+.analytics-smart-card-header p {
+  margin: 0;
+  color: #5f6f83;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.analytics-smart-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-smart-card-metrics article,
+.analytics-smart-card-panel,
+.analytics-smart-card-empty {
+  border: 1px solid rgba(219, 229, 241, 0.96);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(11, 31, 53, 0.07);
+}
+
+.analytics-smart-card-metrics article {
+  padding: 16px;
+}
+
+.analytics-smart-card-metrics span {
+  display: block;
+  color: #6b7a8d;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analytics-smart-card-metrics strong {
+  display: block;
+  margin-top: 8px;
+  color: #0b1f35;
+  font-family: var(--font-exo2, Arial, sans-serif);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1;
+}
+
+.analytics-smart-card-metrics p,
+.analytics-smart-card-empty p {
+  margin: 8px 0 0;
+  color: #65758a;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.analytics-smart-card-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 14px;
+}
+
+.analytics-smart-card-panel,
+.analytics-smart-card-empty {
+  padding: 16px;
+}
+
+.analytics-smart-card-panel h2,
+.analytics-smart-card-empty h2 {
+  margin: 0 0 12px;
+  color: #0b1f35;
+  font-size: 1rem;
+}
+
+.analytics-smart-card-list,
+.analytics-smart-card-breakdowns ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-smart-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-smart-card-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #edf1f6;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.analytics-smart-card-list strong,
+.analytics-smart-card-breakdowns strong {
+  color: #0b1f35;
+}
+
+.analytics-smart-card-list span,
+.analytics-smart-card-list p,
+.analytics-smart-card-breakdowns p {
+  margin: 0;
+  color: #6b7a8d;
+  font-size: 0.84rem;
+}
+
+.analytics-smart-card-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-smart-card-breakdowns > div {
+  border: 1px solid #edf1f6;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.analytics-smart-card-breakdowns h3 {
+  margin: 0 0 8px;
+  color: #0b1f35;
+  font-size: 0.86rem;
+}
+
+.analytics-smart-card-breakdowns ul {
+  display: grid;
+  gap: 7px;
+}
+
+.analytics-smart-card-breakdowns li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #65758a;
+  font-size: 0.86rem;
+}
+
+.analytics-smart-card-empty {
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .analytics-smart-card-metrics,
+  .analytics-smart-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .analytics-smart-card-metrics,
+  .analytics-smart-card-grid,
+  .analytics-smart-card-breakdowns {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-smart-card-list li {
+    display: grid;
+  }
+}
+
 /* Shell */
 .ca-shell {
   display: flex;

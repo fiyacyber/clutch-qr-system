@@ -20,6 +20,9 @@ export type UnifiedQrCode = {
   background_color?: string | null;
   scan_count: number | null;
   is_active?: boolean | null;
+  is_system?: boolean | null;
+  qr_type?: string | null;
+  card_order_id?: string | null;
   profile_id?: string | null;
   connect_profile_id?: string | null;
   created_at?: string | null;
@@ -118,7 +121,7 @@ export async function fetchUnifiedAnalyticsData(admin: SupabaseAdmin, customer: 
 
   let codesQuery = admin
     .from("qr_codes")
-    .select("id, customer_id, name, slug, destination_url, foreground_color, background_color, scan_count, is_active, profile_id, connect_profile_id, created_at")
+    .select("id, customer_id, name, slug, destination_url, foreground_color, background_color, scan_count, is_active, is_system, qr_type, card_order_id, profile_id, connect_profile_id, created_at")
     .order("created_at", { ascending: false });
 
   if (!isAdmin) {
