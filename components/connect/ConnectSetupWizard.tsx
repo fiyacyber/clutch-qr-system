@@ -1397,7 +1397,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
 
       <div className="connect-setup-layout">
         <div className="connect-setup-form-column">
-          <div className="connect-setup-card">
+          <div className="connect-setup-card" data-current-step={currentStep}>
             {currentStep === "basic" ? (
               <div className="connect-setup-panel">
                 <div className="connect-setup-panel-head">
@@ -1603,15 +1603,16 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                   <p>These details power your public profile and contact save actions so customers can reach you fast.</p>
                 </div>
 
-                <div className="connect-setup-grid">
-                  <label className="label">
+                <div className="connect-setup-grid connect-setup-contact-grid">
+                  <label className="label connect-setup-contact-field">
                     <span className="connect-setup-label-row">
                       <span>Phone</span>
                       <button
                         type="button"
-                        className={`connect-setup-visibility-toggle${draft.contact.showPhone ? " is-visible" : ""}`}
+                        className={`connect-setup-visibility-toggle${draft.contact.showPhone ? " is-visible" : " is-hidden"}`}
                         onClick={() => updateDraft({ contact: { ...draft.contact, showPhone: !draft.contact.showPhone } })}
                         aria-pressed={draft.contact.showPhone}
+                        aria-label={`Phone visibility: ${draft.contact.showPhone ? "Visible" : "Hidden"}. Click to ${draft.contact.showPhone ? "hide" : "show"}.`}
                       >
                         {draft.contact.showPhone ? <Eye size={14} /> : <EyeOff size={14} />}
                         {draft.contact.showPhone ? "Visible" : "Hidden"}
@@ -1624,16 +1625,18 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       placeholder="(555) 123-4567"
                       inputMode="tel"
                     />
+                    <span className="helper-text">Optional. Use your preferred business line format.</span>
                   </label>
 
-                  <label className="label">
+                  <label className="label connect-setup-contact-field">
                     <span className="connect-setup-label-row">
                       <span>Email</span>
                       <button
                         type="button"
-                        className={`connect-setup-visibility-toggle${draft.contact.showEmail ? " is-visible" : ""}`}
+                        className={`connect-setup-visibility-toggle${draft.contact.showEmail ? " is-visible" : " is-hidden"}`}
                         onClick={() => updateDraft({ contact: { ...draft.contact, showEmail: !draft.contact.showEmail } })}
                         aria-pressed={draft.contact.showEmail}
+                        aria-label={`Email visibility: ${draft.contact.showEmail ? "Visible" : "Hidden"}. Click to ${draft.contact.showEmail ? "hide" : "show"}.`}
                       >
                         {draft.contact.showEmail ? <Eye size={14} /> : <EyeOff size={14} />}
                         {draft.contact.showEmail ? "Visible" : "Hidden"}
@@ -1646,17 +1649,19 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       onChange={(event) => updateDraft({ contact: { ...draft.contact, email: event.target.value } })}
                       placeholder="hello@clutchprintshop.com"
                     />
+                    {!fieldErrors.email ? <span className="helper-text">Optional. Only validated when entered.</span> : null}
                     {fieldErrors.email ? <span className="helper-text connect-setup-error-text">{fieldErrors.email}</span> : null}
                   </label>
 
-                  <label className="label connect-setup-span-2">
+                  <label className="label connect-setup-span-2 connect-setup-contact-field">
                     <span className="connect-setup-label-row">
                       <span>Website</span>
                       <button
                         type="button"
-                        className={`connect-setup-visibility-toggle${draft.contact.showWebsite ? " is-visible" : ""}`}
+                        className={`connect-setup-visibility-toggle${draft.contact.showWebsite ? " is-visible" : " is-hidden"}`}
                         onClick={() => updateDraft({ contact: { ...draft.contact, showWebsite: !draft.contact.showWebsite } })}
                         aria-pressed={draft.contact.showWebsite}
+                        aria-label={`Website visibility: ${draft.contact.showWebsite ? "Visible" : "Hidden"}. Click to ${draft.contact.showWebsite ? "hide" : "show"}.`}
                       >
                         {draft.contact.showWebsite ? <Eye size={14} /> : <EyeOff size={14} />}
                         {draft.contact.showWebsite ? "Visible" : "Hidden"}
@@ -1673,7 +1678,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                     {fieldErrors.website ? <span className="helper-text connect-setup-error-text">{fieldErrors.website}</span> : null}
                   </label>
 
-                  <label className="label connect-setup-span-2">
+                  <label className="label connect-setup-span-2 connect-setup-contact-field">
                     Service area or location
                     <input
                       className="input"

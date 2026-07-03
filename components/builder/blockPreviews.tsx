@@ -163,6 +163,10 @@ function resolveSocialHref(platform?: string | null, value?: string | null) {
   return normalizeBeginnerConnectLinkHref(platform || "custom", String(value || ""));
 }
 
+function formatActionSubtitle(value: string) {
+  return String(value || "").trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+}
+
 type ActionCardProps = {
   icon: ReactNode;
   title: string;
@@ -205,7 +209,7 @@ function ActionCard({
         <span className="builder-action-icon" aria-hidden="true">{icon}</span>
         <span className="builder-action-content">
           <span className="builder-action-title">{title}</span>
-          {subtitle ? <span className="builder-action-subtitle">{subtitle}</span> : null}
+          {subtitle ? <span className="builder-action-subtitle" title={subtitle}>{subtitle}</span> : null}
         </span>
         <ActionChevron />
       </a>
@@ -217,7 +221,7 @@ function ActionCard({
       <span className="builder-action-icon" aria-hidden="true">{icon}</span>
       <span className="builder-action-content">
         <span className="builder-action-title">{title}</span>
-        {subtitle ? <span className="builder-action-subtitle">{subtitle}</span> : null}
+        {subtitle ? <span className="builder-action-subtitle" title={subtitle}>{subtitle}</span> : null}
       </span>
       <ActionChevron />
     </div>
@@ -640,17 +644,19 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   }
 
   if (type === "website-button") {
-    const website = data.website || data.url || profile.website;
-    if (!website) return null;
+    const websiteRaw = data.website || data.url || profile.website;
+    const websiteHref = normalizeBeginnerConnectLinkHref("website", websiteRaw);
+    if (!websiteHref) return null;
+    const websiteLabel = formatActionSubtitle(websiteRaw || websiteHref);
     return (
       <div className="builder-block">
         <ActionCard
           icon={<ActionGlyph name="website" /> as any}
           title={data.label || "Website"}
-          subtitle={website || undefined}
-          href={website || undefined}
-          external={Boolean(website)}
-          placeholder={!website}
+          subtitle={websiteLabel || undefined}
+          href={websiteHref}
+          external={true}
+          placeholder={false}
         />
       </div>
     );
