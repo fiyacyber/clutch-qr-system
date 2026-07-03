@@ -193,21 +193,21 @@ function normalizeBannerTheme(value: unknown) {
 
 function getBannerThemeSettings(theme: string) {
   if (theme === "clean-studio") {
-    return { type: "gradient" as const, backgroundColor: "#edf2f8", gradientFrom: "#ffffff", gradientTo: "#edf2f8", overlayEnabled: false, overlayOpacity: 0 };
+    return { type: "gradient" as const, theme, backgroundColor: "#edf2f8", gradientFrom: "#fffdf8", gradientTo: "#dbe5f0", overlayEnabled: false, overlayOpacity: 0 };
   }
   if (theme === "clutch-navy") {
-    return { type: "gradient" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#182638", overlayEnabled: false, overlayOpacity: 0 };
+    return { type: "gradient" as const, theme, backgroundColor: "#314760", gradientFrom: "#314760", gradientTo: "#101b2a", overlayEnabled: false, overlayOpacity: 0 };
   }
   if (theme === "executive-dark") {
-    return { type: "gradient" as const, backgroundColor: "#101827", gradientFrom: "#101827", gradientTo: "#263247", overlayEnabled: true, overlayOpacity: 0.08 };
+    return { type: "gradient" as const, theme, backgroundColor: "#0f1724", gradientFrom: "#0f1724", gradientTo: "#0a111d", overlayEnabled: true, overlayOpacity: 0.1 };
   }
   if (theme === "warm-gradient") {
-    return { type: "gradient" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#ff8a3a", overlayEnabled: false, overlayOpacity: 0 };
+    return { type: "gradient" as const, theme, backgroundColor: "#3b4e66", gradientFrom: "#2d4159", gradientTo: "#dd8a4d", overlayEnabled: false, overlayOpacity: 0 };
   }
   if (theme === "soft-slate") {
-    return { type: "gradient" as const, backgroundColor: "#d8e1eb", gradientFrom: "#eef3f8", gradientTo: "#c8d3df", overlayEnabled: false, overlayOpacity: 0 };
+    return { type: "gradient" as const, theme, backgroundColor: "#dce4ee", gradientFrom: "#eef3f8", gradientTo: "#c1cddc", overlayEnabled: false, overlayOpacity: 0 };
   }
-  return { type: "gradient" as const, backgroundColor: "#ff7a1a", gradientFrom: "#ff7a1a", gradientTo: "#384862", overlayEnabled: false, overlayOpacity: 0 };
+  return { type: "gradient" as const, theme, backgroundColor: "#d88645", gradientFrom: "#f2964f", gradientTo: "#2a3d57", overlayEnabled: false, overlayOpacity: 0 };
 }
 
 export async function POST(req: NextRequest) {
@@ -399,6 +399,7 @@ export async function POST(req: NextRequest) {
           ...nextConfig.theme.banner,
           enabled: bannerEnabled,
           type: bannerMode === "image" ? "image" : bannerThemeSettings.type,
+          theme: bannerTheme,
           imageUrl: bannerMode === "image" ? bannerImageUrl : null,
           backgroundColor: bannerThemeSettings.backgroundColor,
           gradientFrom: bannerThemeSettings.gradientFrom,

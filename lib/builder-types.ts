@@ -116,6 +116,7 @@ export interface BuilderAvatarSettings {
 export interface BuilderBannerSettings {
   enabled: boolean;
   type: BuilderBannerType;
+  theme?: string;
   height: number;
   backgroundColor: string;
   gradientFrom: string;

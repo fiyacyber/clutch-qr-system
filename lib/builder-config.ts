@@ -270,6 +270,7 @@ function normalizeBannerSettings(value: unknown): BuilderBannerSettings {
   return {
     enabled: source.enabled === true,
     type,
+    theme: typeof source.theme === "string" && source.theme.trim() ? source.theme.trim() : undefined,
     height: clampNumber(source.height, 80, 320, defaults.height),
     backgroundColor: safeColor(source.backgroundColor, defaults.backgroundColor),
     gradientFrom: safeColor(source.gradientFrom, defaults.gradientFrom),

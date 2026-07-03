@@ -75,6 +75,51 @@ function toCssImageUrl(value: unknown) {
   return safe ? `url("${safe}")` : null;
 }
 
+const STARTER_BANNER_THEMES = [
+  "clean-studio",
+  "clutch-navy",
+  "executive-dark",
+  "warm-gradient",
+  "soft-slate",
+  "orange-edge",
+] as const;
+
+const STARTER_BANNER_THEME_SET = new Set<string>(STARTER_BANNER_THEMES);
+
+const PREMIUM_BANNER_BACKGROUNDS: Record<string, string> = {
+  "clean-studio": "radial-gradient(120% 100% at 8% 4%, rgba(255,166,101,0.24), transparent 58%), radial-gradient(95% 95% at 88% 10%, rgba(255,255,255,0.62), transparent 60%), linear-gradient(140deg, #fffdf8 0%, #edf2f8 54%, #dbe5f0 100%)",
+  "clutch-navy": "radial-gradient(110% 96% at 14% 8%, rgba(255,166,101,0.24), transparent 56%), radial-gradient(88% 86% at 82% 10%, rgba(226,235,255,0.12), transparent 62%), linear-gradient(136deg, #314760 0%, #1b2b3d 52%, #101b2a 100%)",
+  "executive-dark": "radial-gradient(116% 96% at 88% 8%, rgba(255,166,101,0.16), transparent 52%), radial-gradient(94% 100% at 18% 18%, rgba(88,102,126,0.18), transparent 58%), linear-gradient(140deg, #0f1724 0%, #161f2f 45%, #0a111d 100%)",
+  "warm-gradient": "radial-gradient(108% 92% at 16% 8%, rgba(244,248,255,0.34), transparent 54%), radial-gradient(102% 96% at 82% 14%, rgba(255,194,138,0.28), transparent 58%), linear-gradient(136deg, #2d4159 0%, #4f5f74 36%, #a46d4c 62%, #dd8a4d 100%)",
+  "soft-slate": "radial-gradient(112% 96% at 84% 10%, rgba(255,178,120,0.18), transparent 56%), radial-gradient(88% 90% at 24% 12%, rgba(255,255,255,0.52), transparent 62%), linear-gradient(138deg, #eef3f8 0%, #dce4ee 52%, #c1cddc 100%)",
+  "orange-edge": "radial-gradient(110% 94% at 8% 14%, rgba(255,214,182,0.3), transparent 52%), radial-gradient(96% 88% at 86% 14%, rgba(183,206,242,0.16), transparent 58%), linear-gradient(136deg, #f2964f 0%, #cf7a3f 35%, #6b4d4e 62%, #2a3d57 100%)",
+};
+
+function inferBannerThemeFromColors(gradientFrom: string, gradientTo: string, backgroundColor: string): string | null {
+  const from = gradientFrom.trim().toLowerCase();
+  const to = gradientTo.trim().toLowerCase();
+  const background = backgroundColor.trim().toLowerCase();
+
+  if ((from === "#fffdf8" && to === "#dbe5f0") || (from === "#ffffff" && (to === "#edf2f8" || to === "#f1f3f7"))) return "clean-studio";
+  if ((from === "#314760" && to === "#101b2a") || (from === "#384862" && (to === "#182638" || to === "#2f3c53"))) return "clutch-navy";
+  if (from === "#0f1724" || to === "#0a111d" || from === "#101827" || background === "#1d2634" || background === "#161f2d") return "executive-dark";
+  if (to === "#dd8a4d" || to === "#ff8a3a") return "warm-gradient";
+  if (from === "#eef3f8" || to === "#c1cddc" || background === "#dce4ee" || background === "#d8e1eb") return "soft-slate";
+  if (from === "#f2964f" || to === "#2a3d57" || from === "#ff7a1a" || background === "#ff7a1a") return "orange-edge";
+
+  return null;
+}
+
+function resolveBannerThemeKey(banner: any): string {
+  const explicit = typeof banner?.theme === "string" ? banner.theme.trim().toLowerCase() : "";
+  if (STARTER_BANNER_THEME_SET.has(explicit)) return explicit;
+
+  const starter = typeof banner?.starterTheme === "string" ? banner.starterTheme.trim().toLowerCase() : "";
+  if (STARTER_BANNER_THEME_SET.has(starter)) return starter;
+
+  return inferBannerThemeFromColors(String(banner?.gradientFrom || ""), String(banner?.gradientTo || ""), String(banner?.backgroundColor || "")) || "clean-studio";
+}
+
 function resolveFontFamily(fontFamily?: string) {
   if (fontFamily === "display") return '"Archivo Black", "Anton", "Avenir Next", sans-serif';
   if (fontFamily === "sans") return '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
@@ -277,6 +322,7 @@ export default function BuilderPublicProfile({
   const profileTheme = config.theme.themeMode || (config.theme.darkMode ? "dark" : "light");
   const profileStyleName = config.theme.profileStyle || "clutch";
   const profileLayout = config.theme.layout || "default";
+  const bannerThemeKey = resolveBannerThemeKey(banner);
   const backgroundStyle: React.CSSProperties = background.type === "solid"
     ? { background: background.color || "#F8FAFC" }
     : background.type === "gradient"
@@ -299,10 +345,15 @@ export default function BuilderPublicProfile({
       };
     }
     if (banner.enabled && banner.type === "solid") {
-      return { ...base, background: banner.backgroundColor || buttonColor };
+      const themedBackground = PREMIUM_BANNER_BACKGROUNDS[bannerThemeKey];
+      return { ...base, background: themedBackground || (banner.backgroundColor || buttonColor) };
     }
     if (banner.enabled && banner.type === "gradient") {
-      return { ...base, background: `linear-gradient(135deg, ${banner.gradientFrom || "#FFFFFF"}, ${banner.gradientTo || buttonColor})` };
+      const themedBackground = PREMIUM_BANNER_BACKGROUNDS[bannerThemeKey];
+      return {
+        ...base,
+        background: themedBackground || `linear-gradient(135deg, ${banner.gradientFrom || "#FFFFFF"}, ${banner.gradientTo || buttonColor})`,
+      };
     }
     return { ...base, background: `linear-gradient(135deg, #FFF5E7 0%, ${buttonColor} 100%)` };
   })();
@@ -392,6 +443,7 @@ export default function BuilderPublicProfile({
       data-header-align={banner.textAlign || "center"}
       data-banner-enabled={banner.enabled ? "true" : "false"}
       data-banner-type={banner.type || "none"}
+      data-banner-theme={bannerThemeKey}
       data-banner-image-state={banner.imageUrl ? "set" : "empty"}
       data-banner-overlap={banner.avatarOverlap !== false ? "true" : "false"}
       style={{

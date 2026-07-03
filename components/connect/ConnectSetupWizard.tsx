@@ -165,42 +165,42 @@ const BANNER_THEME_OPTIONS: Array<{
   {
     value: "clean-studio",
     label: "Clean Studio",
-    preview: "radial-gradient(circle at 15% 20%, rgba(255,166,101,.35), transparent 32%), linear-gradient(135deg, #ffffff 0%, #edf2f8 100%)",
+    preview: "radial-gradient(120% 100% at 8% 4%, rgba(255,166,101,.28), transparent 58%), radial-gradient(95% 95% at 88% 10%, rgba(255,255,255,.62), transparent 60%), linear-gradient(140deg, #fffdf8 0%, #edf2f8 54%, #dbe5f0 100%)",
     accent: "#FFA665",
     tone: "Light, polished studio backdrop",
   },
   {
     value: "clutch-navy",
     label: "Clutch Navy",
-    preview: "radial-gradient(circle at 18% 18%, rgba(255,166,101,.3), transparent 34%), linear-gradient(135deg, #384862 0%, #182638 100%)",
+    preview: "radial-gradient(110% 96% at 14% 8%, rgba(255,166,101,.26), transparent 56%), radial-gradient(88% 86% at 82% 10%, rgba(226,235,255,.12), transparent 62%), linear-gradient(136deg, #314760 0%, #1b2b3d 52%, #101b2a 100%)",
     accent: "#FFA665",
     tone: "Signature navy with warm highlight",
   },
   {
     value: "executive-dark",
     label: "Executive Dark",
-    preview: "radial-gradient(circle at 82% 16%, rgba(255,166,101,.2), transparent 30%), linear-gradient(135deg, #101827 0%, #263247 100%)",
+    preview: "radial-gradient(116% 96% at 88% 8%, rgba(255,166,101,.18), transparent 52%), radial-gradient(94% 100% at 18% 18%, rgba(88,102,126,.18), transparent 58%), linear-gradient(140deg, #0f1724 0%, #161f2f 45%, #0a111d 100%)",
     accent: "#F6B06B",
     tone: "Premium dark boardroom feel",
   },
   {
     value: "warm-gradient",
     label: "Warm Gradient",
-    preview: "radial-gradient(circle at 20% 18%, rgba(255,255,255,.45), transparent 28%), linear-gradient(135deg, #384862 0%, #ff8a3a 100%)",
+    preview: "radial-gradient(108% 92% at 16% 8%, rgba(244,248,255,.34), transparent 54%), radial-gradient(102% 96% at 82% 14%, rgba(255,194,138,.28), transparent 58%), linear-gradient(136deg, #2d4159 0%, #4f5f74 36%, #a46d4c 62%, #dd8a4d 100%)",
     accent: "#FF8A3A",
     tone: "High-contrast Clutch warmth",
   },
   {
     value: "soft-slate",
     label: "Soft Slate",
-    preview: "radial-gradient(circle at 76% 18%, rgba(255,166,101,.24), transparent 32%), linear-gradient(135deg, #eef3f8 0%, #c8d3df 100%)",
+    preview: "radial-gradient(112% 96% at 84% 10%, rgba(255,178,120,.2), transparent 56%), radial-gradient(88% 90% at 24% 12%, rgba(255,255,255,.52), transparent 62%), linear-gradient(138deg, #eef3f8 0%, #dce4ee 52%, #c1cddc 100%)",
     accent: "#384862",
     tone: "Calm slate for clean brands",
   },
   {
     value: "orange-edge",
     label: "Orange Edge",
-    preview: "radial-gradient(circle at 12% 24%, rgba(255,255,255,.34), transparent 30%), linear-gradient(135deg, #ff7a1a 0%, #384862 88%)",
+    preview: "radial-gradient(110% 94% at 8% 14%, rgba(255,214,182,.3), transparent 52%), radial-gradient(96% 88% at 86% 14%, rgba(183,206,242,.16), transparent 58%), linear-gradient(136deg, #f2964f 0%, #cf7a3f 35%, #6b4d4e 62%, #2a3d57 100%)",
     accent: "#FF7A1A",
     tone: "Bold orange edge with navy depth",
   },
@@ -297,9 +297,10 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
   if (theme === "clean-studio") {
     return {
       type: "gradient" as const,
+      theme,
       backgroundColor: "#edf2f8",
-      gradientFrom: "#ffffff",
-      gradientTo: "#edf2f8",
+      gradientFrom: "#fffdf8",
+      gradientTo: "#dbe5f0",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
@@ -308,9 +309,10 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
   if (theme === "clutch-navy") {
     return {
       type: "gradient" as const,
-      backgroundColor: "#384862",
-      gradientFrom: "#384862",
-      gradientTo: "#182638",
+      theme,
+      backgroundColor: "#314760",
+      gradientFrom: "#314760",
+      gradientTo: "#101b2a",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
@@ -319,20 +321,22 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
   if (theme === "executive-dark") {
     return {
       type: "gradient" as const,
-      backgroundColor: "#101827",
-      gradientFrom: "#101827",
-      gradientTo: "#263247",
+      theme,
+      backgroundColor: "#0f1724",
+      gradientFrom: "#0f1724",
+      gradientTo: "#0a111d",
       overlayEnabled: true,
-      overlayOpacity: 0.08,
+      overlayOpacity: 0.1,
     };
   }
 
   if (theme === "warm-gradient") {
     return {
       type: "gradient" as const,
-      backgroundColor: "#384862",
-      gradientFrom: "#384862",
-      gradientTo: "#ff8a3a",
+      theme,
+      backgroundColor: "#3b4e66",
+      gradientFrom: "#2d4159",
+      gradientTo: "#dd8a4d",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
@@ -341,9 +345,10 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
   if (theme === "soft-slate") {
     return {
       type: "gradient" as const,
-      backgroundColor: "#d8e1eb",
+      theme,
+      backgroundColor: "#dce4ee",
       gradientFrom: "#eef3f8",
-      gradientTo: "#c8d3df",
+      gradientTo: "#c1cddc",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
@@ -351,9 +356,10 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
 
   return {
     type: "gradient" as const,
-    backgroundColor: "#ff7a1a",
-    gradientFrom: "#ff7a1a",
-    gradientTo: "#384862",
+    theme,
+    backgroundColor: "#d88645",
+    gradientFrom: "#f2964f",
+    gradientTo: "#2a3d57",
     overlayEnabled: false,
     overlayOpacity: 0,
   };
@@ -647,6 +653,7 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
         ...withContactVisibility.theme.banner,
         enabled: draft.basic.bannerEnabled,
         type: useBannerImage ? "image" : bannerThemeSettings.type,
+        theme: draft.basic.bannerTheme,
         imageUrl: useBannerImage ? normalizedBannerImageUrl : null,
         backgroundColor: bannerThemeSettings.backgroundColor,
         gradientFrom: bannerThemeSettings.gradientFrom,
@@ -680,29 +687,29 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
   const defaultButtonColor = "#FFFFFF";
 
   const initialBannerTheme: SetupDraft["basic"]["bannerTheme"] = (() => {
-    const storedTheme = (themeBanner as any).starterTheme || (themeBanner as any).themeKey;
+    const storedTheme = (themeBanner as any).theme || (themeBanner as any).starterTheme || (themeBanner as any).themeKey;
     if (isBannerThemeValue(storedTheme)) return storedTheme;
 
     const gradientFrom = safeText(themeBanner.gradientFrom).toLowerCase();
     const gradientTo = safeText(themeBanner.gradientTo).toLowerCase();
     const backgroundColor = safeText(themeBanner.backgroundColor).toLowerCase();
 
-    if (gradientFrom === "#ffffff" && (gradientTo === "#edf2f8" || gradientTo === "#f1f3f7")) {
+    if ((gradientFrom === "#fffdf8" && gradientTo === "#dbe5f0") || (gradientFrom === "#ffffff" && (gradientTo === "#edf2f8" || gradientTo === "#f1f3f7"))) {
       return "clean-studio";
     }
-    if (gradientFrom === "#384862" && (gradientTo === "#182638" || gradientTo === "#2f3c53")) {
+    if ((gradientFrom === "#314760" && gradientTo === "#101b2a") || (gradientFrom === "#384862" && (gradientTo === "#182638" || gradientTo === "#2f3c53"))) {
       return "clutch-navy";
     }
-    if (gradientFrom === "#101827" || gradientFrom === "#1d2634" || backgroundColor === "#1d2634" || backgroundColor === "#161f2d") {
+    if (gradientFrom === "#0f1724" || gradientTo === "#0a111d" || gradientFrom === "#101827" || gradientFrom === "#1d2634" || backgroundColor === "#1d2634" || backgroundColor === "#161f2d") {
       return "executive-dark";
     }
-    if (themeBanner.type === "gradient" && (gradientTo.includes("ffa665") || gradientTo === "#ff8a3a")) {
+    if (themeBanner.type === "gradient" && (gradientTo.includes("ffa665") || gradientTo === "#ff8a3a" || gradientTo === "#dd8a4d")) {
       return "warm-gradient";
     }
-    if (gradientFrom === "#eef3f8" || backgroundColor === "#d8e1eb" || backgroundColor === "#dfe4eb" || backgroundColor === "#cfd6e0") {
+    if (gradientFrom === "#eef3f8" || gradientTo === "#c1cddc" || backgroundColor === "#d8e1eb" || backgroundColor === "#dce4ee" || backgroundColor === "#dfe4eb" || backgroundColor === "#cfd6e0") {
       return "soft-slate";
     }
-    if (gradientFrom === "#ff7a1a" || backgroundColor === "#ff7a1a") {
+    if (gradientFrom === "#f2964f" || gradientTo === "#2a3d57" || gradientFrom === "#ff7a1a" || backgroundColor === "#ff7a1a") {
       return "orange-edge";
     }
     return "clean-studio";
