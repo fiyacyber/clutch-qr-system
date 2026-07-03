@@ -4,6 +4,41 @@ import { sanitizeNextPath } from "@/lib/safe-redirect";
 export const GUIDED_SETUP_ENTRY_PATH = "/setup/guided";
 export const GUIDED_SETUP_ROUTE = "/portal/connect/setup";
 
+export function getClutchAppBaseUrl() {
+  return (
+    process.env.CLUTCH_QR_BASE_URL ||
+    process.env.CLUTCH_APP_BASE_URL ||
+    "https://qr.clutchprintshop.com"
+  ).replace(/\/$/, "");
+}
+
+export function buildSetupForgotPasswordPath({
+  email,
+  nextPath = GUIDED_SETUP_ENTRY_PATH,
+}: {
+  email?: string | null;
+  nextPath?: string | null;
+}) {
+  const safeNext = sanitizeNextPath(nextPath, GUIDED_SETUP_ENTRY_PATH);
+  const params = new URLSearchParams({
+    context: "setup",
+    next: safeNext,
+  });
+
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (normalizedEmail) {
+    params.set("email", normalizedEmail);
+  }
+
+  return `/forgot-password?${params.toString()}`;
+}
+
+export function buildPasswordResetRedirectUrl(requestedNext?: string | null) {
+  const safeNext = sanitizeNextPath(requestedNext, "/portal");
+  const changePasswordPath = `/change-password?next=${encodeURIComponent(safeNext)}`;
+  return `${getClutchAppBaseUrl()}/auth/callback?next=${encodeURIComponent(changePasswordPath)}`;
+}
+
 function isMissingColumnError(error: any) {
   const message = `${error?.message || ""} ${error?.details || ""}`.toLowerCase();
   return message.includes("column") && message.includes("does not exist");

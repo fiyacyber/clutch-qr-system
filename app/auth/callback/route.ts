@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase-server";
+import { sanitizeNextPath } from "@/lib/safe-redirect";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = data?.user?.id;
-  const safeNext = next && next.startsWith("/") ? next : "/portal";
+  const safeNext = sanitizeNextPath(next, "/portal");
   const destination = new URL(safeNext, request.url);
   const response = NextResponse.redirect(destination);
 
@@ -42,6 +43,14 @@ export async function GET(request: NextRequest) {
   }
 
   if (customer?.must_change_password) {
+    const changePasswordLocation =
+      safeNext === "/change-password" ||
+      safeNext.startsWith("/change-password?") ||
+      safeNext === "/account/change-password" ||
+      safeNext.startsWith("/account/change-password?")
+        ? safeNext
+        : `/change-password?next=${encodeURIComponent(safeNext)}`;
+
     response.cookies.set("clutch-must-change-password", "true", {
       path: "/",
       httpOnly: true,
@@ -49,7 +58,7 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 7,
     });
-    response.headers.set("location", "/change-password");
+    response.headers.set("location", changePasswordLocation);
     return response;
   }
 

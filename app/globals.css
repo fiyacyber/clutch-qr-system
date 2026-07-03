@@ -10594,6 +10594,104 @@ input.saas-font-search:focus-visible {
   white-space: nowrap;
 }
 
+.portal-overview-order-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.portal-overview-order-list li {
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  background: #fff;
+}
+
+.portal-overview-order-card {
+  box-shadow: 0 8px 20px rgba(18, 34, 56, 0.05);
+}
+
+.portal-overview-order-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.portal-overview-order-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.portal-overview-order-number {
+  color: var(--clutch-dark);
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.portal-overview-order-date {
+  color: var(--clutch-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.portal-overview-order-meta-grid {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 72, 98, 0.12);
+  background: linear-gradient(180deg, rgba(247, 250, 254, 0.8), rgba(255, 255, 255, 1));
+}
+
+.portal-overview-order-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.portal-overview-order-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--clutch-border);
+  background: #f8fafd;
+  color: var(--clutch-navy);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.portal-overview-order-line {
+  margin: 0;
+  color: var(--clutch-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.portal-overview-order-line strong {
+  color: var(--clutch-dark);
+}
+
+.portal-overview-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.portal-overview-order-actions .btn {
+  min-height: 36px;
+  border-radius: 10px;
+}
+
 .portal-overview-checklist {
   margin: 0;
   padding: 0;
@@ -10666,12 +10764,71 @@ input.saas-font-search:focus-visible {
     justify-content: flex-start;
   }
 
+  .portal-overview-order-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .portal-overview-order-actions .btn {
+    min-height: 40px;
+  }
+
   .portal-overview-actions-grid {
     grid-template-columns: 1fr;
   }
 
   .portal-overview-actions-grid-smart {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .portal-overview-order-list {
+    gap: 12px;
+  }
+
+  .portal-overview-order-card {
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .portal-overview-order-heading {
+    gap: 4px;
+  }
+
+  .portal-overview-order-number {
+    font-size: 1.02rem;
+  }
+
+  .portal-overview-order-date {
+    white-space: normal;
+  }
+
+  .portal-overview-order-meta-grid {
+    gap: 8px;
+    padding: 11px;
+  }
+
+  .portal-overview-order-line {
+    font-size: 0.9rem;
+    line-height: 1.52;
+  }
+
+  .portal-overview-order-chip {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+  }
+
+  .portal-overview-order-actions {
+    display: grid;
+    gap: 8px;
+  }
+
+  .portal-overview-order-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
   }
 }
 

@@ -47,6 +47,14 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function formatLabel(value?: string | null, fallback = "Pending") {
+  const normalized = String(value || "")
+    .replace(/_/g, " ")
+    .trim();
+  if (!normalized) return fallback;
+  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export default async function PortalPage({ searchParams }: PortalPageProps) {
   const { user, customer } = await requireCustomer();
 
@@ -116,9 +124,62 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     }),
   ]);
 
+  const cardOrdersResult = await runGuardedDashboardTask({
+    route: "/portal",
+    endpoint: "supabase:card_orders.select",
+    customerId: customer.id,
+    fallback: [] as Array<{
+      id: string;
+      shopify_order_id: string | null;
+      shopify_order_number: string | null;
+      product_title: string | null;
+      variant_title: string | null;
+      status: string | null;
+      fulfillment_status: string | null;
+      approval_status: string | null;
+      engraving_requested: boolean | null;
+      engraving_business_name: string | null;
+      engraving_title: string | null;
+      engraving_phone: string | null;
+      engraving_email: string | null;
+      proof_url: string | null;
+      tracking_url: string | null;
+      tracking_number: string | null;
+      created_at: string | null;
+    }>,
+    task: () =>
+      admin
+        .from("card_orders")
+        .select(
+          "id, shopify_order_id, shopify_order_number, product_title, variant_title, status, fulfillment_status, approval_status, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, proof_url, tracking_url, tracking_number, created_at"
+        )
+        .eq("customer_id", customer.id)
+        .order("created_at", { ascending: false })
+        .limit(12),
+  });
+
+  const shopifyOrdersResult = await runGuardedDashboardTask({
+    route: "/portal",
+    endpoint: "supabase:shopify_orders.select",
+    customerId: customer.id,
+    fallback: [] as Array<{
+      shopify_order_id: string;
+      raw_payload: { order_status_url?: string | null } | null;
+    }>,
+    task: () =>
+      admin
+        .from("shopify_orders")
+        .select("shopify_order_id, raw_payload")
+        .eq("customer_id", customer.id)
+        .order("created_at", { ascending: false })
+        .limit(25),
+  });
+
   const panelIssues: string[] = [];
   if (qrCodesResult.failed) panelIssues.push("Campaign statistics are temporarily unavailable.");
   if (connectProfilesResult.failed) panelIssues.push("Clutch Connect profile status is temporarily unavailable.");
+  if (cardOrdersResult.failed) panelIssues.push("Order details are temporarily unavailable.");
+  if (shopifyOrdersResult.failed) panelIssues.push("Shopify order tracking is temporarily unavailable.");
 
   const codes = qrCodesResult.data || [];
   const qrIds = codes.map((code) => code.id);
@@ -256,6 +317,13 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   });
 
   const profiles = connectProfilesResult.data || [];
+  const cardOrders = cardOrdersResult.data || [];
+  const shopifyOrderStatusUrlById = new Map(
+    (shopifyOrdersResult.data || []).map((order) => [
+      String(order.shopify_order_id),
+      typeof order.raw_payload?.order_status_url === "string" ? order.raw_payload.order_status_url : null,
+    ])
+  );
   const checklistItems = [
     { label: "Create your first campaign", done: used > 0 },
     { label: "Add your company logo", done: Boolean(customer.logo_url) },
@@ -340,6 +408,78 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         />
 
         {!isConnectBasicPlan && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
+
+        <AnalyticsCard title="Your Orders">
+          {cardOrders.length ? (
+            <ul className="portal-overview-order-list">
+              {cardOrders.map((order) => {
+                const shopifyStatusUrl = order.shopify_order_id
+                  ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
+                  : null;
+                const engravingDetails = order.engraving_requested
+                  ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
+                    ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
+                        .filter(Boolean)
+                        .join(" • ")
+                    : "Requested"
+                  : "Not requested";
+
+                return (
+                  <li key={order.id} className="portal-overview-order-card">
+                    <div className="portal-overview-order-top">
+                      <div className="portal-overview-order-heading">
+                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                        <span className="portal-overview-order-date">Placed {formatDate(order.created_at)}</span>
+                      </div>
+                      <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                    </div>
+
+                    <div className="portal-overview-order-meta-grid">
+                      <p className="portal-overview-order-line">
+                        <strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}
+                        {order.variant_title ? ` (${order.variant_title})` : ""}
+                      </p>
+                      <p className="portal-overview-order-line">
+                        <strong>Engraving:</strong> {engravingDetails}
+                      </p>
+                      {order.tracking_number ? (
+                        <p className="portal-overview-order-line"><strong>Tracking #:</strong> {order.tracking_number}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="portal-overview-order-chips">
+                      <span className="portal-overview-order-chip">Fulfillment: {formatLabel(order.fulfillment_status, "Not Sent")}</span>
+                      <span className="portal-overview-order-chip">Proof: {formatLabel(order.approval_status, "Not Ready")}</span>
+                    </div>
+
+                    <div className="portal-overview-order-actions">
+                      {shopifyStatusUrl ? (
+                        <Link className="btn primary" href={shopifyStatusUrl} target="_blank" rel="noreferrer">
+                          Track Shopify Order
+                        </Link>
+                      ) : null}
+                      {order.proof_url ? (
+                        <Link className="btn secondary" href={order.proof_url} target="_blank" rel="noreferrer">
+                          View Proof
+                        </Link>
+                      ) : null}
+                      {order.tracking_url ? (
+                        <Link className="btn secondary" href={order.tracking_url} target="_blank" rel="noreferrer">
+                          Track Shipment
+                        </Link>
+                      ) : null}
+                      {!shopifyStatusUrl && !order.proof_url && !order.tracking_url ? (
+                        <span className="portal-overview-inline-note">Updates will appear here as your order moves forward.</span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
+          )}
+        </AnalyticsCard>
 
         {subscriptionLocked ? (
           <section className="locked-upgrade-card">

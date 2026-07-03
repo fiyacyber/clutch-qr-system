@@ -142,54 +142,158 @@ export function buildOnboardingEmailTemplate({
 }
 
 export function buildSmartCardSetupEmailTemplate({
-  subject,
-  intro,
   setupUrl,
+  orderStatusUrl,
   customerName,
   orderNumber,
+  productTitle,
+  engravingRequested,
   businessName,
+  title,
+  phone,
+  email,
 }: {
-  subject: string;
-  intro: string;
   setupUrl: string;
+  orderStatusUrl?: string | null;
   customerName?: string | null;
   orderNumber?: string | null;
+  productTitle?: string | null;
+  engravingRequested?: boolean | null;
   businessName?: string | null;
+  title?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }) {
   const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
-  const details = [
-    orderNumber ? `<p style=\"margin:0 0 6px 0;\"><strong>Order:</strong> ${escapeHtml(orderNumber)}</p>` : "",
-    businessName ? `<p style=\"margin:0;\"><strong>Business:</strong> ${escapeHtml(businessName)}</p>` : "",
+  const safeSetupUrl = escapeHtml(setupUrl);
+  const safeOrderStatusUrl = orderStatusUrl ? escapeHtml(orderStatusUrl) : null;
+  const supportEmail =
+    String(process.env.CLUTCH_SUPPORT_EMAIL || process.env.SUPPORT_EMAIL || "support@clutchprintshop.com").trim() ||
+    "support@clutchprintshop.com";
+  const safeSupportEmail = escapeHtml(supportEmail);
+
+  const detailRows = [
+    customerName ? `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Customer:</strong> ${escapeHtml(customerName)}</td></tr>` : "",
+    orderNumber ? `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Order number:</strong> ${escapeHtml(orderNumber)}</td></tr>` : "",
+    `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Product:</strong> ${escapeHtml(productTitle || "Clutch Smart Business Card")}</td></tr>`,
+    `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Engraving:</strong> ${engravingRequested ? "Requested" : "Not requested"}</td></tr>`,
+    businessName ? `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Business name:</strong> ${escapeHtml(businessName)}</td></tr>` : "",
+    title ? `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Title:</strong> ${escapeHtml(title)}</td></tr>` : "",
+    phone ? `<tr><td style="padding:0 0 8px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Phone:</strong> ${escapeHtml(phone)}</td></tr>` : "",
+    email ? `<tr><td style="padding:0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;"><strong>Email:</strong> ${escapeHtml(email)}</td></tr>` : "",
   ]
     .filter(Boolean)
     .join("");
 
-  const html = renderEmailLayout({
-    preheader: "Your Clutch Connect setup is ready.",
-    eyebrow: "Smart Card setup",
-    title: subject,
-    intro: `${greeting} ${intro}`,
-    detailsHtml: `
-      <p style="margin:0 0 10px 0;">Use the button below to start or continue Guided Setup for your Smart Business Card profile.</p>
-      ${details || ""}
-      <p style="margin:10px 0 0 0;"><strong>Setup link:</strong> <a href="${escapeHtml(setupUrl)}" style="color:#2b5c93;text-decoration:underline;">${escapeHtml(setupUrl)}</a></p>
-    `,
-    ctaLabel: "Start Guided Setup",
-    ctaUrl: setupUrl,
-    helperText: "For security, your account setup link is personalized and should not be shared.",
-  });
+  const html = `
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Your Clutch Connect setup is ready</title>
+  </head>
+  <body style="margin:0;padding:0;background:#ffffff;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;line-height:1px;color:transparent;">Your Smart Business Card order is confirmed, and your Clutch Connect setup is ready.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;padding:20px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#ffffff;border:1px solid #d9e1eb;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="background:#384862;padding:24px 24px 20px 24px;">
+                <p style="margin:0;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:28px;line-height:1.2;font-weight:700;">Clutch Connect</p>
+                <p style="margin:6px 0 0 0;color:#ffa665;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;">Smart Business Card Setup</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px 0;background:#ffffff;border:1px solid #d9e1eb;border-radius:14px;">
+                  <tr>
+                    <td style="padding:18px;">
+                      <h1 style="margin:0 0 10px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:30px;line-height:1.2;">Welcome to Clutch Connect</h1>
+                      <p style="margin:0 0 12px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">Your Smart Business Card order is confirmed, and your Clutch Connect setup is ready.</p>
+                      <p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;">Thanks for your order. Your card includes guided setup so you can build your digital profile, add your contact details and socials, and start sharing right away.</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 14px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;">${escapeHtml(greeting)}</p>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px 0;">
+                  <tr>
+                    <td align="center" style="background:#ffa665;border-radius:999px;">
+                      <a href="${safeSetupUrl}" style="display:inline-block;padding:14px 24px;color:#384862;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.2;font-weight:700;">Setup Profile</a>
+                    </td>
+                  </tr>
+                </table>
+
+                ${safeOrderStatusUrl ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px 0;"><tr><td align="center" style="background:#ffffff;border-radius:999px;border:1px solid #c8d3e2;"><a href="${safeOrderStatusUrl}" style="display:inline-block;padding:12px 22px;color:#384862;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.2;font-weight:700;">View Order Details</a></td></tr></table>` : ""}
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px 0;background:#ffffff;border:1px solid #d9e1eb;border-radius:14px;">
+                  <tr>
+                    <td style="padding:18px;">
+                      <p style="margin:0 0 12px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:18px;line-height:1.4;font-weight:700;">What happens next</p>
+                      <p style="margin:0 0 8px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>1.</strong> We prepare your card</p>
+                      <p style="margin:0 0 8px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>2.</strong> You complete guided setup</p>
+                      <p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>3.</strong> Start sharing with Clutch Connect</p>
+                    </td>
+                  </tr>
+                </table>
+
+                ${detailRows ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0;background:#ffffff;border:1px solid #d9e1eb;border-radius:14px;"><tr><td style="padding:18px;"><p style="margin:0 0 12px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:18px;line-height:1.4;font-weight:700;">Order details</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${detailRows}</table></td></tr></table>` : ""}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 22px;background:#f8fafc;border-top:1px solid #d9e1eb;">
+                <p style="margin:0 0 6px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;font-weight:700;">Clutch Print Shop</p>
+                <p style="margin:0 0 6px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;">Print Smarter. Track Everything.</p>
+                <p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;">Need help? Contact <a href="mailto:${safeSupportEmail}" style="color:#384862;text-decoration:underline;">${safeSupportEmail}</a>.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+  `;
 
   const text = [
-    subject,
+    "Your Clutch Connect setup is ready",
     "",
-    `${greeting} ${intro}`,
+    "Welcome to Clutch Connect",
     "",
-    ...(orderNumber ? [`Order: ${orderNumber}`] : []),
-    ...(businessName ? [`Business: ${businessName}`] : []),
-    `Setup link: ${setupUrl}`,
+    "Your Smart Business Card order is confirmed, and your Clutch Connect setup is ready.",
     "",
-    "Clutch Connect from Clutch Print Shop",
-  ].join("\n");
+    "Thanks for your order. Your card includes guided setup so you can build your digital profile, add your contact details and socials, and start sharing right away.",
+    "",
+    greeting,
+    "",
+    "Setup Profile:",
+    setupUrl,
+    ...(orderStatusUrl ? ["", "View Order Details:", orderStatusUrl] : []),
+    "",
+    "What happens next:",
+    "1. We prepare your card",
+    "2. You complete guided setup",
+    "3. Start sharing with Clutch Connect",
+    "",
+    detailRows ? "Order details:" : "",
+    ...(customerName ? [`Customer: ${customerName}`] : []),
+    ...(orderNumber ? [`Order number: ${orderNumber}`] : []),
+    `Product: ${productTitle || "Clutch Smart Business Card"}`,
+    `Engraving: ${engravingRequested ? "Requested" : "Not requested"}`,
+    ...(businessName ? [`Business name: ${businessName}`] : []),
+    ...(title ? [`Title: ${title}`] : []),
+    ...(phone ? [`Phone: ${phone}`] : []),
+    ...(email ? [`Email: ${email}`] : []),
+    "",
+    "Clutch Print Shop",
+    "Print Smarter. Track Everything.",
+    `Need help? Contact ${supportEmail}.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return { html, text };
 }

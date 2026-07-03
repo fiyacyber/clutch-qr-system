@@ -5,14 +5,19 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import ConnectSetupWizard from "@/components/connect/ConnectSetupWizard";
 import { requireCustomer } from "@/lib/auth";
-import { GUIDED_SETUP_ENTRY_PATH, GUIDED_SETUP_ROUTE, resolvePostLoginRedirect } from "@/lib/onboarding-routing";
+import {
+  buildSetupForgotPasswordPath,
+  GUIDED_SETUP_ENTRY_PATH,
+  GUIDED_SETUP_ROUTE,
+  resolvePostLoginRedirect,
+} from "@/lib/onboarding-routing";
 import { getAdvancedBuilderLockMessage, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function ConnectGuidedSetupPage() {
   const { user, customer } = await requireCustomer();
-  if (!user) redirect(`/login?next=${encodeURIComponent(GUIDED_SETUP_ENTRY_PATH)}`);
+  if (!user) redirect(buildSetupForgotPasswordPath({ nextPath: GUIDED_SETUP_ENTRY_PATH }));
   if (!customer) redirect("/portal");
 
   const onboardingRedirect = await resolvePostLoginRedirect({

@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     safeNext.startsWith(`${GUIDED_SETUP_ENTRY_PATH}?`) ||
     safeNext === GUIDED_SETUP_ROUTE ||
     safeNext.startsWith(`${GUIDED_SETUP_ROUTE}?`)
-      ? GUIDED_SETUP_ROUTE
+      ? GUIDED_SETUP_ENTRY_PATH
       : safeNext;
 
   if (process.env.NODE_ENV !== "production") {

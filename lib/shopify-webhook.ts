@@ -9,7 +9,6 @@ import {
 } from "@/lib/shopify-provisioning";
 
 const SUPPORTED_TOPICS = new Set([
-  "orders/paid",
   "checkouts/create",
   "checkouts/update",
   "subscriptions/create",
@@ -82,6 +81,13 @@ export async function handleShopifyWebhook(req: NextRequest) {
   }
 
   const topic = normalizeTopic(req);
+
+  // orders/paid is handled by the dedicated orders-paid webhook route.
+  // Skipping it here prevents duplicate customer emails from overlapping pipelines.
+  if (topic === "orders/paid") {
+    return NextResponse.json({ ok: true, skipped: true, reason: "Use /api/webhooks/shopify/orders-paid" });
+  }
+
   const eventId = getWebhookEventId(req, payload);
   const admin = createSupabaseAdminClient();
   const ids = getShopifyIds(payload);

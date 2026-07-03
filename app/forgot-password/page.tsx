@@ -1,8 +1,32 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { sanitizeNextPath } from "@/lib/safe-redirect";
 import Link from "next/link";
 import styles from "../login/login.module.css";
+import { buildPasswordResetRedirectUrl } from "@/lib/onboarding-routing";
+import { sanitizeNextPath } from "@/lib/safe-redirect";
+
+function buildForgotPasswordRedirect({
+  sent,
+  error,
+  email,
+  next,
+  context,
+}: {
+  sent?: boolean;
+  error?: string;
+  email?: string;
+  next?: string;
+  context?: string;
+}) {
+  const params = new URLSearchParams();
+  if (sent) params.set("sent", "1");
+  if (error) params.set("error", error);
+  if (email) params.set("email", email);
+  if (next) params.set("next", next);
+  if (context) params.set("context", context);
+  const query = params.toString();
+  return query ? `/forgot-password?${query}` : "/forgot-password";
+}
 
 async function sendPasswordReset(formData: FormData) {
   "use server";
@@ -10,30 +34,22 @@ async function sendPasswordReset(formData: FormData) {
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
+  const context = String(formData.get("context") || "").trim().toLowerCase();
   const requestedNext = String(formData.get("next") || "").trim();
   const safeNext = sanitizeNextPath(requestedNext, "/portal");
-  const isSetupFlow =
-    safeNext === "/setup/guided" ||
-    safeNext.startsWith("/setup/guided?") ||
-    safeNext === "/portal/connect/setup" ||
-    safeNext.startsWith("/portal/connect/setup?");
-
-  const contextQuery = isSetupFlow ? "&context=setup" : "";
-  const nextQuery = safeNext ? `&next=${encodeURIComponent(safeNext)}` : "";
-  const emailQuery = email ? `&email=${encodeURIComponent(email)}` : "";
 
   if (!email) {
-    redirect(`/forgot-password?error=missing-email${contextQuery}${nextQuery}`);
+    redirect(
+      buildForgotPasswordRedirect({
+        error: "missing-email",
+        next: safeNext,
+        context,
+      })
+    );
   }
 
   const supabase = await createSupabaseServerClient();
-
-  const baseUrl =
-    process.env.CLUTCH_QR_BASE_URL ||
-    process.env.CLUTCH_APP_BASE_URL ||
-    "https://qr.clutchprintshop.com";
-  const changePasswordPath = `/change-password?next=${encodeURIComponent(safeNext)}`;
-  const redirectUrl = `${baseUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(changePasswordPath)}`;
+  const redirectUrl = buildPasswordResetRedirectUrl(safeNext);
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl,
@@ -42,13 +58,23 @@ async function sendPasswordReset(formData: FormData) {
   if (error) {
     console.error("PASSWORD RESET ERROR:", error);
     redirect(
-      `/forgot-password?error=${encodeURIComponent(
-        error.message || "Unable to send reset link"
-      )}${contextQuery}${nextQuery}${emailQuery}`
+      buildForgotPasswordRedirect({
+        error: error.message || "Unable to send reset link",
+        email,
+        next: safeNext,
+        context,
+      })
     );
   }
 
-  redirect(`/forgot-password?sent=1${contextQuery}${nextQuery}${emailQuery}`);
+  redirect(
+    buildForgotPasswordRedirect({
+      sent: true,
+      email,
+      next: safeNext,
+      context,
+    })
+  );
 }
 
 export default async function ForgotPasswordPage({
@@ -71,6 +97,15 @@ export default async function ForgotPasswordPage({
     next.startsWith("/setup/guided?") ||
     next === "/portal/connect/setup" ||
     next.startsWith("/portal/connect/setup?");
+  const heading = isSetupFlow ? "Set Up Your Profile" : "Forgot Password?";
+  const intro = isSetupFlow
+    ? "Enter the email used at checkout and we'll send a secure link to start Guided Setup."
+    : "We'll help you get back into your account";
+  const successHeading = isSetupFlow ? "Check your email" : "Check your email";
+  const successBody = isSetupFlow
+    ? "We've sent a secure setup link to your email address."
+    : "We've sent a password reset link to your email address.";
+  const buttonLabel = isSetupFlow ? "Send Setup Link" : "Send Reset Link";
 
   return (
     <div className={styles.container}>
@@ -81,23 +116,15 @@ export default async function ForgotPasswordPage({
         <div className={styles.formSide}>
           <div className={styles.formCard}>
             <div className={styles.formHeader}>
-              <h2>{isSetupFlow ? "Set Up Your Profile" : "Forgot Password?"}</h2>
-              <p>
-                {isSetupFlow
-                  ? "Enter the email used at checkout and we’ll send a secure link to start Guided Setup."
-                  : "We'll help you get back into your account"}
-              </p>
+              <h2>{heading}</h2>
+              <p>{intro}</p>
             </div>
 
             {params.sent ? (
               <div className={styles.successAlert}>
                 <div className={styles.successIcon}>✓</div>
-                <h3>Check your email</h3>
-                <p>
-                  {isSetupFlow
-                    ? "We've sent a secure setup link to your email address."
-                    : "We've sent a password reset link to your email address."}
-                </p>
+                <h3>{successHeading}</h3>
+                <p>{successBody}</p>
                 <p className={styles.helpText} style={{ marginTop: "8px" }}>
                   The link expires in 24 hours.
                 </p>
@@ -112,6 +139,7 @@ export default async function ForgotPasswordPage({
 
             {!params.sent ? (
               <form className={styles.form} action={sendPasswordReset}>
+                {isSetupFlow ? <input type="hidden" name="context" value="setup" /> : null}
                 {next ? <input type="hidden" name="next" value={next} /> : null}
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Email Address</label>
@@ -127,7 +155,7 @@ export default async function ForgotPasswordPage({
                 </div>
 
                 <button className={styles.submitButton} type="submit">
-                  {isSetupFlow ? "Send Setup Link" : "Send Reset Link"}
+                  {buttonLabel}
                   <span className={styles.arrowIcon}>→</span>
                 </button>
               </form>

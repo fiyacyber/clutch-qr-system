@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildSmartCardSetupEmailTemplate } from "@/lib/email-templates";
+import { buildSetupForgotPasswordPath } from "@/lib/onboarding-routing";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,7 @@ type ShopifyOrderPayload = {
   phone?: string;
   total_price?: number | string;
   financial_status?: string;
+  order_status_url?: string;
   line_items?: ShopifyLineItem[];
 };
 
@@ -103,9 +105,14 @@ function parseCsvEnv(name: string): string[] {
     .filter(Boolean);
 }
 
-function getGuidedSetupLoginUrl(email?: string) {
+function getGuidedSetupAccessUrl(email?: string) {
   const appBase = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
-  const nextPath = "/setup/guided";
+  return `${appBase}${buildSetupForgotPasswordPath({ email })}`;
+}
+
+function getPortalOrdersLoginUrl(email?: string, shopifyOrderId?: string | null) {
+  const appBase = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
+  const nextPath = shopifyOrderId ? `/portal?order=${encodeURIComponent(shopifyOrderId)}` : "/portal";
   const withEmail = email ? `&email=${encodeURIComponent(email)}` : "";
   return `${appBase}/login?next=${encodeURIComponent(nextPath)}${withEmail}`;
 }
@@ -230,7 +237,7 @@ async function generateSetupLink(
   admin: ReturnType<typeof createWebhookSupabaseClient>,
   email: string
 ) {
-  const fallback = getGuidedSetupLoginUrl(email);
+  const fallback = getGuidedSetupAccessUrl(email);
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
@@ -1187,12 +1194,7 @@ export async function POST(req: NextRequest) {
 
     const sendEmails = String(process.env.SEND_ONBOARDING_EMAILS || "").toLowerCase() === "true";
     const emailType = provisioned.existingCustomer ? "existing_customer_setup" : "new_customer_welcome";
-    const subject = provisioned.existingCustomer
-      ? "Your new Clutch Connect card order is ready for setup"
-      : "Your Clutch Connect setup is ready";
-    const intro = provisioned.existingCustomer
-      ? "Your new Smart Business Card order is confirmed and ready for Guided Setup in your existing Clutch Connect account."
-      : "Your Smart Business Card order includes Guided Setup. Your account is now ready so you can finish your profile and launch fast.";
+    const subject = "Your Clutch Connect setup is ready";
 
     if (!sendEmails) {
       console.info("orders-paid onboarding email skipped (SEND_ONBOARDING_EMAILS is not true)", {
@@ -1210,14 +1212,19 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const setupUrl = provisioned.setupUrl || getGuidedSetupLoginUrl(customerEmail);
+    const setupUrl = provisioned.setupUrl || getGuidedSetupAccessUrl(customerEmail);
+    const orderDetailsUrl = getPortalOrdersLoginUrl(customerEmail, orderId);
     const template = buildSmartCardSetupEmailTemplate({
-      subject,
-      intro,
       setupUrl,
+      orderStatusUrl: orderDetailsUrl,
       customerName: insertedCardOrder.customer_name || customerName,
       orderNumber: insertedCardOrder.shopify_order_number || orderNumber,
+      productTitle: item.product_title || item.title || "Clutch Smart Business Card",
+      engravingRequested,
       businessName: insertedCardOrder.engraving_business_name || engravingBusinessName,
+      title: engravingTitle,
+      phone: engravingPhone || customerPhone || null,
+      email: engravingEmail || customerEmail,
     });
 
     try {
