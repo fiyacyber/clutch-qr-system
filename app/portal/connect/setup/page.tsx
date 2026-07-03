@@ -8,9 +8,8 @@ import { requireCustomer } from "@/lib/auth";
 import {
   buildSetupForgotPasswordPath,
   GUIDED_SETUP_ENTRY_PATH,
-  GUIDED_SETUP_ROUTE,
-  resolvePostLoginRedirect,
 } from "@/lib/onboarding-routing";
+import { isConnectSetupComplete } from "@/lib/connect";
 import { getAdvancedBuilderLockMessage, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -19,14 +18,7 @@ export default async function ConnectGuidedSetupPage() {
   const { user, customer } = await requireCustomer();
   if (!user) redirect(buildSetupForgotPasswordPath({ nextPath: GUIDED_SETUP_ENTRY_PATH }));
   if (!customer) redirect("/portal");
-
-  const onboardingRedirect = await resolvePostLoginRedirect({
-    authUserId: user.id,
-    requestedNext: GUIDED_SETUP_ENTRY_PATH,
-  });
-  if (onboardingRedirect !== GUIDED_SETUP_ROUTE) {
-    redirect(onboardingRedirect);
-  }
+  if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
@@ -44,6 +36,7 @@ export default async function ConnectGuidedSetupPage() {
     : { data: [] as Array<Record<string, any>> };
 
   const currentProfileLinks = links || [];
+  const setupComplete = isConnectSetupComplete(customer, profile || null, { links: currentProfileLinks });
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
   const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
   const builderConfig = profile?.builder_config
@@ -54,7 +47,7 @@ export default async function ConnectGuidedSetupPage() {
     <DashboardShell
       isAdmin={Boolean(customer.is_admin)}
       navVariant="onboarding"
-      showLeadInbox={Boolean(profile?.id)}
+      showGuidedSetup={!setupComplete}
     >
       <main className="container connect-setup-page-shell">
         {advancedBuilderUnlocked ? <ConnectTabs active="profile" showBuilder={advancedBuilderUnlocked} /> : null}

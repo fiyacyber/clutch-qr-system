@@ -12,6 +12,7 @@ import {
   QrCode,
   Settings,
   Shield,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -26,11 +27,12 @@ interface SidebarNavProps {
     heatmap?: boolean;
   };
   navVariant?: DashboardNavVariant;
+  showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
 }
 
 type NavItem = {
-  key: "overview" | "campaign-performance" | "connect" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
+  key: "overview" | "campaign-performance" | "connect" | "guided-setup" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
@@ -60,6 +62,13 @@ const navItems: NavItem[] = [
     href: "/portal/connect",
     icon: Link2,
     match: (pathname) => pathname.startsWith("/portal/connect") || pathname.startsWith("/clutch-connect"),
+  },
+  {
+    key: "guided-setup",
+    label: "Guided Setup",
+    href: "/portal/connect/setup",
+    icon: Sparkles,
+    match: (pathname) => pathname.startsWith("/portal/connect/setup") || pathname.startsWith("/setup/guided"),
   },
   {
     key: "lead-inbox",
@@ -120,18 +129,22 @@ function itemByKey(key: NavItem["key"]): NavItem {
 function getNavSections({
   navVariant,
   isAdmin,
+  showGuidedSetup,
   showLeadInbox,
 }: {
   navVariant: DashboardNavVariant;
   isAdmin?: boolean;
+  showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
 }) {
+  const shouldShowGuidedSetup = showGuidedSetup === true;
   const shouldShowLeadInbox = showLeadInbox !== false;
+  const guidedSetupKey: NavItem["key"][] = shouldShowGuidedSetup ? ["guided-setup"] : [];
   const leadInboxKey: NavItem["key"][] = shouldShowLeadInbox ? ["lead-inbox"] : [];
   const primaryKeysByVariant: Record<DashboardNavVariant, NavItem["key"][]> = {
-    default: ["overview", "campaign-performance", "connect", "qr", "analytics", "heatmap", "settings"],
-    "connect-basic": ["overview", "connect", ...leadInboxKey, "settings"],
-    onboarding: ["overview", "connect", ...leadInboxKey, "settings"],
+    default: ["overview", "campaign-performance", "connect", ...guidedSetupKey, "qr", "analytics", "heatmap", "settings"],
+    "connect-basic": ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
+    onboarding: ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
   };
 
   const primary = primaryKeysByVariant[navVariant].map(itemByKey);
@@ -152,18 +165,20 @@ function SidebarListInner({
   onNavigate,
   navLocks,
   navVariant,
+  showGuidedSetup,
   showLeadInbox,
 }: {
   isAdmin?: boolean;
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
   navVariant: DashboardNavVariant;
+  showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
-  const navSections = getNavSections({ navVariant, isAdmin, showLeadInbox });
+  const navSections = getNavSections({ navVariant, isAdmin, showGuidedSetup, showLeadInbox });
 
   function renderItem(item: NavItem, secondary = false) {
     const active = item.match(pathname, tab);

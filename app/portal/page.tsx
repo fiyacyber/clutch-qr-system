@@ -218,6 +218,18 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const hasConnectProfile = Boolean(connectProfile?.id);
+  const setupComplete = isConnectSetupComplete(customer, connectProfile || null);
+  const smartCardPrimaryCtaLabel = !hasConnectProfile
+    ? "Begin Guided Setup"
+    : setupComplete
+      ? "Edit Profile"
+      : "Continue Guided Setup";
+  const smartCardHeaderCtaLabel = !hasConnectProfile
+    ? "Begin Guided Setup"
+    : setupComplete
+      ? "Edit Clutch Connect Profile"
+      : "Continue Guided Setup";
+  const smartCardPrimaryCtaHref = setupComplete ? "/portal/connect" : "/portal/connect/setup";
   const connectProfileId = connectProfile?.id ? String(connectProfile.id) : "";
   const hasPublicProfile = Boolean(connectProfile?.slug);
   const appBaseUrl = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
@@ -335,13 +347,14 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     { label: "Guided setup is included with your smart card.", done: true },
     { label: "Finish Guided Setup to publish your smart card profile.", done: hasPublicProfile },
     { label: "Share your profile link from this dashboard.", done: hasPublicProfile },
-    { label: "Lead Inbox is ready for customer submissions.", done: hasConnectProfile },
+    { label: "Lead Inbox is ready for customer submissions.", done: setupComplete },
   ];
 
   return (
     <DashboardShell
       isAdmin={Boolean(customer.is_admin)}
       navVariant={isConnectBasicPlan ? "connect-basic" : "default"}
+      showGuidedSetup={!setupComplete}
       showLeadInbox={hasConnectProfile}
       navLocks={{
         qr: !hasDynamicQr,
@@ -379,10 +392,10 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             <div className="portal-overview-header-actions">
               {isConnectBasicPlan ? (
                 <>
-                  <Link className="btn primary" href={hasConnectProfile ? "/portal/connect" : "/portal/connect/setup"}>
-                    {hasConnectProfile ? "Edit Clutch Connect Profile" : "Start Guided Setup"}
+                  <Link className="btn primary" href={smartCardPrimaryCtaHref}>
+                    {smartCardHeaderCtaLabel}
                   </Link>
-                  {hasConnectProfile ? <Link className="btn secondary" href="/portal/connect/leads">Lead Inbox</Link> : null}
+                  {setupComplete ? <Link className="btn secondary" href="/portal/connect/leads">Lead Inbox</Link> : null}
                 </>
               ) : (
                 <>
@@ -540,8 +553,8 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                       <CopyPublicProfileButton url={publicProfileUrl} />
                     </div>
                   ) : null}
-                  <Link className="btn primary" href={hasConnectProfile ? "/portal/connect" : "/portal/connect/setup"}>
-                    {hasConnectProfile ? "Edit Profile" : "Start Setup"}
+                  <Link className="btn primary" href={smartCardPrimaryCtaHref}>
+                    {smartCardPrimaryCtaLabel}
                   </Link>
                 </article>
 

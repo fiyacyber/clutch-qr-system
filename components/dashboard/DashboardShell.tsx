@@ -12,6 +12,7 @@ interface DashboardShellProps {
     heatmap?: boolean;
   };
   navVariant?: DashboardNavVariant;
+  showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
   children: React.ReactNode;
 }
@@ -20,6 +21,7 @@ export default function DashboardShell({
   isAdmin,
   navLocks,
   navVariant,
+  showGuidedSetup,
   showLeadInbox,
   children,
 }: DashboardShellProps) {
@@ -29,6 +31,7 @@ export default function DashboardShell({
         isAdmin={isAdmin}
         navLocks={navLocks}
         navVariant={navVariant}
+        showGuidedSetup={showGuidedSetup}
         showLeadInbox={showLeadInbox}
       />
       <div className="ds-main-shell">{children}</div>

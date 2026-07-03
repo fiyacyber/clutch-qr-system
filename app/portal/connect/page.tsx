@@ -100,6 +100,8 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     return (
       <DashboardShell
         isAdmin={Boolean(customer.is_admin)}
+        navVariant="connect-basic"
+        showGuidedSetup
         navLocks={{
           qr: !hasDynamicQr,
           analytics: !hasHeatmap,
@@ -114,7 +116,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               <div className="connect-center-header-actions">
                 <Link className="btn primary" href="/portal/connect/setup">
                   <Sparkles size={15} />
-                  Guided Setup
+                  Begin Guided Setup
                 </Link>
                 {advancedBuilderUnlocked ? (
                   <Link className="btn secondary" href="/portal/connect/build">
@@ -130,7 +132,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <h2>Create your Clutch Connect profile</h2>
             <p className="muted">Use guided setup for the essentials and publish a clean starter profile.</p>
             <div className="connect-center-inline-actions">
-              <Link className="btn secondary" href="/portal/connect/setup">Guided Setup</Link>
+              <Link className="btn secondary" href="/portal/connect/setup">Begin Guided Setup</Link>
               {advancedBuilderUnlocked ? <Link className="btn primary" href="/portal/connect/build">Advanced Builder</Link> : null}
             </div>
           </section>
@@ -329,7 +331,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   ];
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      showGuidedSetup={!setupComplete}
+    >
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect"
@@ -340,7 +345,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <div className="connect-center-header-actions">
               <Link className="btn secondary" href="/portal/connect/setup">
                 <Sparkles size={15} />
-                {setupComplete ? "Guided Setup" : "Continue Setup"}
+                {setupComplete ? "Guided Setup" : "Continue Guided Setup"}
               </Link>
               {advancedBuilderUnlocked ? (
                 <Link className="btn primary" href="/portal/connect/build">

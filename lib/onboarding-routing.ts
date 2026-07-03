@@ -119,7 +119,7 @@ export async function resolvePostLoginRedirect({
         safeNext === GUIDED_SETUP_ROUTE || safeNext.startsWith(`${GUIDED_SETUP_ROUTE}?`);
 
       if (requestedGuided) {
-        finalRedirect = "/portal/connect";
+        finalRedirect = GUIDED_SETUP_ROUTE;
       } else {
         finalRedirect = safeNext || "/portal";
       }
