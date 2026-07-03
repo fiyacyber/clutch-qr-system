@@ -276,8 +276,8 @@ export default function ConnectPublicProfile({
             >
               <span className="connect-action-icon">✨</span>
               <span className="connect-action-copy">
-                <span className="connect-action-title">Request Quote</span>
-                <span className="connect-action-subtitle">Tell us about your project</span>
+                <span className="connect-action-title">Request a Quote</span>
+                <span className="connect-action-subtitle">Tell us what you need</span>
               </span>
             </a>
           </div>
@@ -336,7 +336,7 @@ export default function ConnectPublicProfile({
             <div className="connect-lead-layout">
               <div>
                 <h2>Request a Quote</h2>
-                <p className="connect-lead-description">Tell us about your project and we will follow up quickly.</p>
+                <p className="connect-lead-description">Tell us what you need and we will follow up quickly.</p>
 
                 {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
                 {rateLimited ? (

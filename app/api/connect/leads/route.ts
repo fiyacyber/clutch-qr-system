@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { extractIpHash } from "@/lib/connect";
 import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
+import { buildConnectPublicProfileUrl } from "@/lib/connect-urls";
+
+function leadRedirect(slug: string, state: "sent" | "rate_limited" | "error") {
+  const url = new URL(buildConnectPublicProfileUrl(slug));
+  url.searchParams.set(state, "1");
+  return url;
+}
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -37,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // Honeypot: silently succeed for bots.
   if (honeypot) {
-    return NextResponse.redirect(new URL(`/u/${slug}?sent=1`, req.url));
+    return NextResponse.redirect(leadRedirect(slug, "sent"));
   }
 
   const ip_hash = extractIpHash(req.headers);
@@ -52,7 +59,7 @@ export async function POST(req: NextRequest) {
     .gte("created_at", oneMinuteAgo);
 
   if ((recentCount || 0) >= 5) {
-    return NextResponse.redirect(new URL(`/u/${slug}?rate_limited=1`, req.url));
+    return NextResponse.redirect(leadRedirect(slug, "rate_limited"));
   }
 
   const { error: insertError } = await admin.from("profile_leads").insert({
@@ -68,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     console.error("CONNECT LEAD INSERT ERROR", insertError);
-    return NextResponse.redirect(new URL(`/u/${slug}?error=1`, req.url));
+    return NextResponse.redirect(leadRedirect(slug, "error"));
   }
 
   await admin.from("profile_click_events").insert({
@@ -110,5 +117,5 @@ export async function POST(req: NextRequest) {
     referrer: getReferrerSource(req.headers.get("referer")) || source,
   });
 
-  return NextResponse.redirect(new URL(`/u/${slug}?sent=1`, req.url));
+  return NextResponse.redirect(leadRedirect(slug, "sent"));
 }

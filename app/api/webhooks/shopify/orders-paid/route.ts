@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
+import { buildAppQrUrl, buildConnectPublicProfileUrl, getAppBaseUrl } from "@/lib/connect-urls";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildSmartCardSetupEmailTemplate } from "@/lib/email-templates";
 import { buildSetupForgotPasswordPath } from "@/lib/onboarding-routing";
@@ -527,24 +528,12 @@ function normalizeOrderNumber(payload: ShopifyOrderPayload): string | null {
   return null;
 }
 
-function getAppBaseUrl() {
-  return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
-}
-
-function getClutchConnectPublicBaseUrl() {
-  return (
-    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
-    "https://clutchconnect.link"
-  ).replace(/\/$/, "");
-}
-
 function buildSmartCardDestinationUrl(profileSlug?: string | null) {
-  const connectBase = getClutchConnectPublicBaseUrl();
   if (profileSlug) {
-    return `${connectBase}/${encodeURIComponent(profileSlug)}`;
+    return buildConnectPublicProfileUrl(String(profileSlug));
   }
-  return `${connectBase}/setup/guided`;
+  const appBase = getAppBaseUrl();
+  return `${appBase}/portal/connect/setup`;
 }
 
 function toSlugToken(value: string, fallback: string) {
@@ -574,9 +563,7 @@ function buildSmartCardPublicUrls(slug?: string | null) {
     };
   }
 
-  const appBase = getAppBaseUrl();
-  const encodedSlug = encodeURIComponent(slug);
-  const qrUrl = `${appBase}/qr/${encodedSlug}`;
+  const qrUrl = buildAppQrUrl(slug);
 
   return {
     qrUrl,

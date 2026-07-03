@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PKPass } from "passkit-generator";
 import QRCode from "qrcode";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { clutchConnectProfileUrl } from "@/lib/qr";
+import { buildConnectPublicProfileUrl, clutchConnectProfileUrl } from "@/lib/qr";
 import { trackWalletEvent } from "@/lib/wallet-events";
 
 export const runtime = "nodejs";
@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
   }
 
   const profileUrl = clutchConnectProfileUrl(profile.slug);
-  const fallbackUrl = new URL(`/u/${profile.slug}`, _req.url);
+  const fallbackUrl = new URL(buildConnectPublicProfileUrl(profile.slug));
   fallbackUrl.searchParams.set("wallet", "apple_unavailable");
 
   try {

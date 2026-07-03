@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -101,10 +104,17 @@ type SetupDraft = {
     themeMode: "light" | "dark" | "system";
     profileStyle: "clutch" | "minimal" | "executive" | "glass";
     layout: "grid" | "stack" | "buttons";
+    globalAlignment: "left" | "center" | "right";
     showCardShowcase: boolean;
     showLeadForm: boolean;
   };
 };
+
+const GLOBAL_ALIGNMENT_OPTIONS: Array<{ value: SetupDraft["advanced"]["globalAlignment"]; label: string; Icon: typeof AlignLeft }> = [
+  { value: "left", label: "Left", Icon: AlignLeft },
+  { value: "center", label: "Center", Icon: AlignCenter },
+  { value: "right", label: "Right", Icon: AlignRight },
+];
 
 type WizardStepId = "basic" | "contact" | "links";
 
@@ -555,7 +565,7 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
     label: draft.action.primaryActionLabel || getDefaultPrimaryActionLabel(draft.action.primaryActionType),
     url: primaryActionUrl,
     description: draft.action.primaryActionLeadCaptureEnabled
-      ? "Send submissions to your Lead Inbox."
+      ? "Tell us what you need"
       : "Opens your custom action URL.",
     icon: "bolt",
     isPrimaryAction: true,
@@ -570,11 +580,13 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
       ? draft.action.primaryActionLabel || getDefaultPrimaryActionLabel(draft.action.primaryActionType)
       : "Contact Form",
     description: draft.action.primaryActionLeadCaptureEnabled
-      ? "Send submissions to your Lead Inbox."
+      ? "Tell us what you need"
       : "Lead capture is currently disabled.",
     submitText: draft.action.primaryActionLabel || getDefaultPrimaryActionLabel(draft.action.primaryActionType),
     leadCaptureEnabled: draft.action.primaryActionLeadCaptureEnabled,
     formType: draft.action.primaryActionFormType,
+    source: "clutch_connect_profile",
+    guidedLeadCapture: true,
   }));
 
   const withPhone = updateBlockData(withLeadForm, "phone-button", (data) => ({
@@ -649,6 +661,9 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
       themeMode: "light",
       profileStyle: "minimal",
       layout: "compact",
+      globalAlignment: draft.advanced.globalAlignment || "center",
+      textAlign: draft.advanced.globalAlignment || "center",
+      alignment: draft.advanced.globalAlignment || "center",
       banner: {
         ...withContactVisibility.theme.banner,
         enabled: draft.basic.bannerEnabled,
@@ -674,6 +689,9 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
 
 function buildInitialDraft(profile: Record<string, any> | null, customer: Record<string, any>, links: Array<Record<string, any>>, builderConfig: BuilderConfig): SetupDraft {
   const theme = builderConfig.theme;
+  const rawGlobalAlignment = String((theme as any).globalAlignment || (theme as any).textAlign || (theme as any).alignment || "").toLowerCase();
+  const initialGlobalAlignment: SetupDraft["advanced"]["globalAlignment"] =
+    rawGlobalAlignment === "left" || rawGlobalAlignment === "right" ? (rawGlobalAlignment as SetupDraft["advanced"]["globalAlignment"]) : "center";
   const phoneBlock = builderConfig.blocks.find((block) => block.type === "phone-button");
   const emailBlock = builderConfig.blocks.find((block) => block.type === "email-button");
   const websiteBlock = builderConfig.blocks.find((block) => block.type === "website-button");
@@ -779,6 +797,7 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
       themeMode: "light",
       profileStyle: "minimal",
       layout: "buttons",
+      globalAlignment: initialGlobalAlignment,
       showCardShowcase: profile?.show_card_showcase ?? false,
       showLeadForm: profile?.show_lead_form ?? true,
     },
@@ -887,6 +906,9 @@ function normalizeRecoveredDraft(rawDraft: unknown, fallbackDraft: SetupDraft): 
       layout: rawAdvanced.layout === "stack" || rawAdvanced.layout === "buttons" || rawAdvanced.layout === "grid"
         ? rawAdvanced.layout
         : fallbackDraft.advanced.layout,
+      globalAlignment: rawAdvanced.globalAlignment === "left" || rawAdvanced.globalAlignment === "right" || rawAdvanced.globalAlignment === "center"
+        ? rawAdvanced.globalAlignment
+        : fallbackDraft.advanced.globalAlignment,
       showCardShowcase: rawAdvanced.showCardShowcase !== false,
       showLeadForm: rawAdvanced.showLeadForm !== false,
     },
@@ -956,6 +978,14 @@ function makeStepErrors(step: WizardStepId, draft: SetupDraft) {
   }
 
   return errors;
+}
+
+function makePublishErrors(draft: SetupDraft) {
+  return {
+    ...makeStepErrors("basic", draft),
+    ...makeStepErrors("contact", draft),
+    ...makeStepErrors("links", draft),
+  };
 }
 
 export default function ConnectSetupWizard({ customer, profile, links, builderConfig, starterLocked = false }: SetupWizardProps) {
@@ -1096,7 +1126,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
   };
 
   const persistDraft = async (nextRoute?: "builder" | "complete") => {
-    const stepErrors = makeStepErrors(currentStep, draft);
+    const stepErrors = nextRoute === "complete" ? makePublishErrors(draft) : makeStepErrors(currentStep, draft);
     setFieldErrors(stepErrors);
 
     if (Object.keys(stepErrors).length) {
@@ -1158,8 +1188,13 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
         advanced: {
           ...draft.advanced,
           showLeadForm: draft.action.primaryActionLeadCaptureEnabled,
+          globalAlignment: draft.advanced.globalAlignment,
         },
         links: payloadLinks,
+        publish: nextRoute === "complete",
+        completeSetup: nextRoute === "complete",
+        nextRoute: nextRoute || null,
+        publishRequested: nextRoute === "complete",
         validateLinks: currentStep === "links" || nextRoute === "complete",
       }),
     });
@@ -1574,7 +1609,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                     <label className="label connect-setup-span-2">
                       Custom slug
                       <div className="connect-setup-slug-row">
-                        <span>clutchconnect.link/</span>
+                        <span>clutchconnect.link/u/</span>
                         <input
                           className="input"
                           value={draft.basic.slug}
@@ -1697,7 +1732,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                 <div className="connect-setup-panel-head">
                   <p className="eyebrow">Step 3</p>
                   <h3>Actions & Links</h3>
-                  <p>Main button and quick links.</p>
+                  <p>Choose what customers can do when they view your card.</p>
                 </div>
 
                 <div className="connect-setup-primary-action-card">
@@ -1750,7 +1785,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                         {draft.action.primaryActionLeadCaptureEnabled ? "Enabled" : "Disabled"}
                       </button>
                     </span>
-                    <span className="helper-text">Send submissions to your Lead Inbox.</span>
+                    <span className="helper-text">Let visitors send a request from your profile.</span>
                   </label>
 
                   <label className="label">
@@ -1780,6 +1815,32 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       {fieldErrors.primaryActionUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.primaryActionUrl}</span> : null}
                     </label>
                   ) : null}
+                </div>
+
+                <div className="connect-setup-style-card">
+                  <h4>Profile Style</h4>
+                  <p>Choose how your profile text and section headers line up.</p>
+
+                  <div className="label">
+                    <span className="connect-setup-segment-label">Global alignment</span>
+                    <div className="connect-setup-alignment-segment" role="group" aria-label="Global alignment">
+                      {GLOBAL_ALIGNMENT_OPTIONS.map(({ value, label, Icon }) => {
+                        const selected = draft.advanced.globalAlignment === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            className={`connect-setup-alignment-option${selected ? " is-active" : ""}`}
+                            aria-pressed={selected}
+                            onClick={() => updateDraft({ advanced: { ...draft.advanced, globalAlignment: value } })}
+                          >
+                            <Icon size={14} aria-hidden="true" />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="connect-setup-link-cta-row">

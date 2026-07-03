@@ -34,7 +34,7 @@ import {
   FaYelp,
 } from "react-icons/fa";
 import { BuilderBlock } from "@/lib/builder-types";
-import { normalizeBeginnerConnectLinkHref } from "@/lib/connect";
+import { formatPhoneDisplay, normalizeBeginnerConnectLinkHref } from "@/lib/connect";
 import { trackBlockEvent } from "@/lib/builder-analytics";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 
@@ -514,6 +514,7 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
 export function ContactButtonsPreview({ block, profile, profileId }: BlockPreviewProps) {
   const data = getBlockData(block);
   const phone = data.phone || profile.phone;
+  const phoneDisplay = formatPhoneDisplay(phone);
   const email = data.email || profile.email;
   const website = data.website || profile.website;
   const address = data.address || profile.address;
@@ -523,7 +524,7 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
     data.showPhone !== false ? {
       key: "phone",
       title: "Call",
-      subtitle: phone || undefined,
+      subtitle: phoneDisplay || undefined,
       href: phone ? `tel:${phone}` : undefined,
       placeholder: !phone,
       icon: <ActionGlyph name="phone" /> as any,
@@ -681,6 +682,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   }
 
   const phone = data.phone || data.value || profile.phone;
+  const phoneDisplay = formatPhoneDisplay(phone);
   const behavior = data.behavior === "text" ? "sms" : data.behavior || "call";
   const href = behavior === "sms" ? `sms:${phone || ""}` : `tel:${phone || ""}`;
   if (!phone) return null;
@@ -690,7 +692,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
       <ActionCard
         icon={<ActionGlyph name={behavior === "sms" ? "sms" : "phone"} /> as any}
         title={data.label || (behavior === "sms" ? "Text" : "Call")}
-        subtitle={phone || undefined}
+        subtitle={phoneDisplay || undefined}
         href={phone ? href : undefined}
         placeholder={!phone}
       />
@@ -868,6 +870,7 @@ export function BusinessHoursPreview({ block }: BlockPreviewProps) {
 
 export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
   const data = getBlockData(block);
+  const isGuidedLeadForm = data.source === "clutch_connect_profile";
   const profileId = String(profile?.id || "").trim();
   const profileSlug = String(profile?.slug || "").trim();
   const leadCaptureEnabled = data.leadCaptureEnabled !== false;
@@ -880,13 +883,17 @@ export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
   }
 
   if (mode === "preview" || mode === "editor") {
+    if (isGuidedLeadForm) {
+      return null;
+    }
+
     return (
       <div className="builder-block builder-block-form">
         <h3 className="builder-form-title">{data.formLabel || "Contact Form"}</h3>
         <p className="builder-form-description">
           {data.description || "Use this form to collect lead details from visitors."}
         </p>
-        <p className="builder-form-placeholder">{(data.submitText || "Send")} button preview</p>
+        <p className="builder-form-placeholder">{data.submitText || "Send"}</p>
       </div>
     );
   }

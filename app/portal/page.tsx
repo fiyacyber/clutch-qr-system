@@ -23,7 +23,7 @@ import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButto
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
-import { isConnectSetupComplete } from "@/lib/connect";
+import { isConnectProfilePublished, isConnectSetupComplete } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import {
   hasEntitlement,
@@ -33,6 +33,7 @@ import {
   getSubscriptionLockMessage,
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface PortalPageProps {
@@ -233,7 +234,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const hasConnectProfile = Boolean(connectProfile?.id);
-  const setupComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: true });
+  const setupChecklistComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: false });
+  const hasPublicProfile = isConnectProfilePublished(connectProfile || null) && Boolean(connectProfile?.slug);
+  const setupComplete = hasPublicProfile;
   const smartCardPrimaryCtaLabel = !hasConnectProfile
     ? "Begin Guided Setup"
     : setupComplete
@@ -244,11 +247,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     : setupComplete
       ? "Edit Clutch Connect Profile"
       : "Continue Guided Setup";
-  const smartCardPrimaryCtaHref = setupComplete ? "/portal/connect" : "/portal/connect/setup";
+  const smartCardPrimaryCtaHref = hasPublicProfile ? "/portal/connect" : "/portal/connect/setup";
   const connectProfileId = connectProfile?.id ? String(connectProfile.id) : "";
-  const hasPublicProfile = Boolean(connectProfile?.slug);
-  const appBaseUrl = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
-  const publicProfileUrl = hasPublicProfile ? `${appBaseUrl}/u/${encodeURIComponent(String(connectProfile?.slug || ""))}` : "";
+  const publicProfileUrl = hasPublicProfile ? clutchConnectProfileUrl(String(connectProfile?.slug || "")) : "";
 
   function summarizeRows(values: Array<string | null | undefined>) {
     return Object.entries(values.reduce<Record<string, number>>((acc, value) => {
@@ -348,15 +349,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         : null;
 
   const qrNameMap = new Map(campaignCodes.map((code) => [code.id, code.name]));
-  const topLocationRows = Object.entries(
-    campaignScans.reduce<Record<string, number>>((acc, scan: any) => {
-      const label = [scan.city, scan.region].filter(Boolean).join(", ") || scan.country || "Unknown";
-      if (label !== "Unknown") acc[label] = (acc[label] || 0) + 1;
-      return acc;
-    }, {})
-  )
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
   const recentActivity = campaignScans.map((scan) => {
     const location = [scan.city, scan.region, scan.country].filter(Boolean).join(", ");
     return {
@@ -386,14 +378,14 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     { label: "Guided setup is included with your smart card.", done: true },
     { label: "Finish Guided Setup to publish your smart card profile.", done: hasPublicProfile },
     { label: "Share your profile link from this dashboard.", done: hasPublicProfile },
-    { label: "Lead Inbox is ready for customer submissions.", done: setupComplete },
+    { label: "Lead Inbox is ready for customer submissions.", done: setupChecklistComplete },
   ];
 
   return (
     <DashboardShell
       isAdmin={Boolean(customer.is_admin)}
       navVariant={isConnectBasicPlan ? "connect-basic" : "default"}
-      showGuidedSetup={!setupComplete}
+      showGuidedSetup={!hasPublicProfile}
       showLeadInbox={hasConnectProfile}
       navLocks={{
         qr: !hasDynamicQr,

@@ -6,10 +6,8 @@ function resolveProfileUrl(slug: string) {
   const cleanSlug = String(slug || "").trim().replace(/^\/+|\/+$/g, "");
   if (!cleanSlug) return null;
 
-  const explicitBase = process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL;
-  const fallbackBase = process.env.NEXT_PUBLIC_CLUTCH_QR_BASE_URL || window.location.origin;
-  const base = (explicitBase || fallbackBase).replace(/\/+$/, "");
-  const path = explicitBase ? encodeURIComponent(cleanSlug) : `u/${encodeURIComponent(cleanSlug)}`;
+  const base = (process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL || "https://clutchconnect.link").replace(/\/+$/, "");
+  const path = `u/${encodeURIComponent(cleanSlug)}`;
 
   return `${base}/${path}`;
 }

@@ -1,36 +1,32 @@
 import QRCode from "qrcode";
+import {
+  buildAppQrUrl,
+  buildConnectPublicProfileUrl,
+  getAppBaseUrl,
+  getConnectPublicBaseUrl,
+} from "@/lib/connect-urls";
+
+export { getAppBaseUrl, getConnectPublicBaseUrl, buildConnectPublicProfileUrl, buildAppQrUrl };
 
 export function qrUrl(slug: string) {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_CLUTCH_QR_BASE_URL ||
-    "https://qr.clutchprintshop.com";
-  return `${base.replace(/\/$/, "")}/qr/${slug}`;
+  return buildAppQrUrl(slug);
 }
 
 export function getClutchConnectPublicBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
-    process.env.CLUTCH_QR_BASE_URL ||
-    process.env.NEXT_PUBLIC_CLUTCH_QR_BASE_URL ||
-    "https://qr.clutchprintshop.com"
-  ).replace(/\/+$/, "");
+  return getConnectPublicBaseUrl();
 }
 
-function hasExplicitClutchConnectPublicBaseUrl() {
-  return Boolean(process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL);
+export function buildAppPublicProfileUrl(slug: string) {
+  const safeSlug = slug.trim().replace(/^\/+|\/+$/g, "");
+  return `${getAppBaseUrl()}/u/${encodeURIComponent(safeSlug)}`;
 }
 
 export function clutchConnectProfileUrl(slug: string) {
-  const safeSlug = slug.trim().replace(/^\/+|\/+$/g, "");
-  const profilePath = hasExplicitClutchConnectPublicBaseUrl()
-    ? encodeURIComponent(safeSlug)
-    : `u/${encodeURIComponent(safeSlug)}`;
-  return `${getClutchConnectPublicBaseUrl()}/${profilePath}`;
+  return buildConnectPublicProfileUrl(slug);
 }
 
 export function clutchConnectDisplayUrl(slug: string) {
-  return clutchConnectProfileUrl(slug).replace(/^https?:\/\//, "");
+  return buildConnectPublicProfileUrl(slug).replace(/^https?:\/\//, "");
 }
 
 export function normalizeUrl(value: string) {

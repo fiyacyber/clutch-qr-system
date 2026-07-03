@@ -67,7 +67,7 @@ export function createGoogleWalletUrl(profile: WalletProfile, appUrl: string): s
   const classId = `${env.issuerId}.${classSuffix}`;
   const objectSuffix = `profile_${profile.id.replace(/[^a-zA-Z0-9_.-]/g, "")}_${Date.now()}`;
   const objectId = `${env.issuerId}.${objectSuffix}`;
-  const profileUrl = `${appUrl.replace(/\/$/, "")}/u/${profile.slug}`;
+  const profileUrl = `${appUrl.replace(/\/+$/, "")}/u/${encodeURIComponent(profile.slug)}`;
 
   const displayName = compactText(profile.contactName, compactText(profile.businessName, "Clutch Connect"));
   const company = compactText(profile.businessName);

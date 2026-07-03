@@ -26,9 +26,9 @@ import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButto
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
-import { isConnectSetupComplete } from "@/lib/connect";
+import { isConnectProfilePublished } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
-import { PLAN_DEFINITIONS, getAdvancedBuilderLockMessage, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked, isCustomerSubscriptionLocked } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked, isCustomerSubscriptionLocked } from "@/lib/plans";
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -62,6 +62,7 @@ function hasBuilderBannerImage(builderConfig: unknown) {
 
 export default async function PortalConnectPage({ searchParams }: ConnectPageProps) {
   const params = (await searchParams) || {};
+  const setupMessage = typeof params.setup === "string" ? params.setup : "";
   const { user, customer } = await requireCustomer();
 
   if (!user) redirect("/login");
@@ -74,7 +75,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const hasAdvancedLeads = hasEntitlement(customer, "advancedLeadInbox");
   const hasBrandRemoval = hasEntitlement(customer, "removeBranding");
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
-  const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
 
   const admin = createSupabaseAdminClient();
 
@@ -259,8 +259,9 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const profileLinks = links || [];
   const activeLinks = profileLinks.filter((link: any) => link.is_active !== false).length;
-  const setupComplete = isConnectSetupComplete(customer, profile, { links: profileLinks, requirePublished: true });
-  const isBasicSetupIncomplete = plan.code === "connect_basic" && !setupComplete;
+  const profilePublished = isConnectProfilePublished(profile);
+  const setupComplete = profilePublished;
+  const isBasicSetupIncomplete = plan.code === "connect_basic" && !profilePublished;
   const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(
@@ -298,18 +299,19 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     { label: "Avatar uploaded", done: Boolean(profile.avatar_url) },
     { label: "Cover photo added", done: hasCoverPhoto },
     { label: "At least one active link", done: activeLinks > 0 },
-    { label: "Public page published", done: Boolean(profile.is_active && profile.slug) },
+    { label: "Public page published", done: profilePublished && Boolean(profile.slug) },
   ];
 
   const completedCount = completionChecks.filter((item) => item.done).length;
   const profileProgress = Math.round((completedCount / completionChecks.length) * 100);
 
   const missingItems = completionChecks.filter((item) => !item.done);
-  const publicProfileHref = profile.slug ? `/u/${profile.slug}` : "/portal/connect/build";
-  const publicProfileUrl = profile.slug
+  const editProfileHref = advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup";
+  const publicProfileFullUrl = profilePublished && profile.slug ? clutchConnectProfileUrl(profile.slug) : null;
+  const publicProfileHref = publicProfileFullUrl || "/portal/connect/setup";
+  const publicProfileUrl = profilePublished && profile.slug
     ? clutchConnectDisplayUrl(profile.slug)
-    : "Open Profile Builder to publish your page";
-  const publicProfileFullUrl = profile.slug ? clutchConnectProfileUrl(profile.slug) : null;
+    : "Publish your profile to generate a live public page";
 
   const builderImprovements = [
     { icon: <MessageSquare size={16} />, label: "Drag-and-drop blocks", status: "Ready" },
@@ -335,7 +337,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     <DashboardShell
       isAdmin={Boolean(customer.is_admin)}
       navVariant={plan.code === "connect_basic" ? "connect-basic" : "default"}
-      showGuidedSetup={!setupComplete}
+      showGuidedSetup={!profilePublished}
       navLocks={{
         qr: !hasDynamicQr,
         analytics: !hasHeatmap,
@@ -350,18 +352,18 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             : "Manage your starter profile basics and view the page your customers see."}
           actions={
             <div className="connect-center-header-actions">
-              <Link className={setupComplete ? "btn secondary" : "btn primary"} href="/portal/connect/setup">
+              <Link className="btn primary" href={setupComplete ? editProfileHref : "/portal/connect/setup"}>
                 <Sparkles size={15} />
-                {setupComplete ? "Guided Setup" : "Continue Guided Setup"}
+                {setupComplete ? "Edit Profile" : "Continue Guided Setup"}
               </Link>
               {advancedBuilderUnlocked ? (
-                <Link className="btn primary" href="/portal/connect/build">
+                <Link className="btn secondary" href="/portal/connect/build">
                   <Palette size={15} />
                   Advanced Builder
                 </Link>
               ) : null}
               <div className="connect-profile-view-row">
-                <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+                <Link className="btn secondary" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
                   <Globe size={15} />
                   View Profile
                 </Link>
@@ -392,7 +394,9 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           />
         ) : null}
 
-        {!setupComplete ? (
+        {setupMessage === "complete" ? <div className="success-message">Profile published. Your public page is now live.</div> : null}
+
+        {!profilePublished ? (
           <section className="connect-center-card">
             <p className="connect-center-kicker">Setup In Progress</p>
             <h2>Finish your guided setup</h2>
@@ -408,7 +412,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <p className="connect-center-kicker">Basic Tools</p>
             <h2>Your starter profile tools</h2>
             <div className="connect-center-quick-actions basic-tools">
-              <Link className="connect-center-action" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+              <Link className="connect-center-action" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
                 <Globe size={18} />
                 <div>
                   <strong>View Profile</strong>
@@ -462,15 +466,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
         <section className="connect-center-public-strip" aria-label="Public page status">
           <div>
-            <span className={profile.is_active ? "is-live" : "is-draft"}>
-              {profile.is_active ? "Live" : "Draft"}
+            <span className={profilePublished ? "is-live" : "is-draft"}>
+              {profilePublished ? "Live" : "Draft"}
             </span>
             <strong>{publicProfileUrl}</strong>
           </div>
           <div className="connect-center-public-strip-actions">
             <Link className="btn ghost" href="/portal/connect/leads">Leads CRM</Link>
             <div className="connect-profile-view-row">
-              <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+              <Link className="btn secondary" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
                 View Profile
               </Link>
               {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
@@ -544,7 +548,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           <article className="connect-center-card">
             <p className="connect-center-kicker">Wallet Passes</p>
             <h2>Apple + Google Wallet</h2>
-            {!setupComplete ? (
+            {!profilePublished ? (
               <p className="muted connect-center-note">Complete guided setup before creating wallet passes.</p>
             ) : null}
             <ul className="connect-center-metadata-list">
@@ -553,7 +557,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               <li><span>Wallet save analytics</span><strong>{totalWalletSaves}</strong></li>
             </ul>
             <div className="connect-center-inline-actions">
-              {setupComplete ? (
+              {profilePublished ? (
                 <>
                   <Link className="btn ghost" href={`/api/wallet/apple/${profile.id}`} target="_blank">Apple Wallet</Link>
                   <Link className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank">Google Wallet</Link>
@@ -584,7 +588,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
                   </span>
                 </div>
               </Link>
-              <Link className="connect-center-action" href={`/u/${profile.slug}`} target="_blank">
+              <Link className="connect-center-action" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
                 <Globe size={18} />
                 <div>
                   <strong>View Profile</strong>

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig, validateBuilderConfig, createBlock } from "@/lib/builder-config";
@@ -5,6 +6,7 @@ import {
   BeginnerConnectLinkDraft,
   buildDefaultProfileSlug,
   getBeginnerConnectLinkSpec,
+  isConnectProfilePublished,
   isConnectSetupComplete,
   normalizeBeginnerConnectLinkDraft,
   normalizeBeginnerConnectLinkType,
@@ -12,6 +14,7 @@ import {
   validateConnectSlug,
   RESERVED_CONNECT_SLUGS,
 } from "@/lib/connect";
+import { buildConnectPublicProfileUrl, getAppBaseUrl } from "@/lib/connect-urls";
 import { normalizeUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -19,6 +22,10 @@ type SetupPayload = {
   profile?: Record<string, unknown>;
   advanced?: Record<string, unknown>;
   links?: BeginnerConnectLinkDraft[];
+  publish?: boolean;
+  completeSetup?: boolean;
+  nextRoute?: string | null;
+  publishRequested?: boolean;
   validateLinks?: boolean;
 };
 
@@ -50,22 +57,10 @@ function trimText(value: unknown) {
   return String(value || "").trim();
 }
 
-function getAppBaseUrl() {
-  return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
-}
-
-function getClutchConnectPublicBaseUrl() {
-  return (
-    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
-    "https://clutchconnect.link"
-  ).replace(/\/$/, "");
-}
-
 function buildSmartCardDestination(slug?: string | null) {
-  const connectBase = getClutchConnectPublicBaseUrl();
-  if (slug) return `${connectBase}/${encodeURIComponent(slug)}`;
-  return `${connectBase}/setup/guided`;
+  if (slug) return buildConnectPublicProfileUrl(String(slug));
+  const appBase = getAppBaseUrl();
+  return `${appBase}/portal/connect/setup`;
 }
 
 function joinName(first: string, last: string) {
@@ -191,6 +186,12 @@ function normalizeBannerTheme(value: unknown) {
   return "clean-studio";
 }
 
+function normalizeGlobalAlignment(value: unknown): "left" | "center" | "right" {
+  const raw = trimText(value).toLowerCase();
+  if (raw === "left" || raw === "right") return raw;
+  return "center";
+}
+
 function getBannerThemeSettings(theme: string) {
   if (theme === "clean-studio") {
     return { type: "gradient" as const, theme, backgroundColor: "#edf2f8", gradientFrom: "#fffdf8", gradientTo: "#dbe5f0", overlayEnabled: false, overlayOpacity: 0 };
@@ -227,7 +228,12 @@ export async function POST(req: NextRequest) {
     const profileInput = isRecord(payload?.profile) ? payload?.profile : {};
     const advancedInput = isRecord(payload?.advanced) ? payload?.advanced : {};
     const linkDrafts = Array.isArray(payload?.links) ? payload?.links : [];
-    const shouldValidateLinks = payload?.validateLinks === true;
+    const shouldPublish =
+      payload?.publish === true ||
+      payload?.completeSetup === true ||
+      payload?.nextRoute === "complete" ||
+      payload?.publishRequested === true;
+    const shouldValidateLinks = payload?.validateLinks === true || shouldPublish;
     const nonEmptyLinkDrafts = linkDrafts.filter((link) => {
       if (!link || typeof link !== "object") return false;
       const legacyLink = link as Record<string, any>;
@@ -306,7 +312,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const bannerImageAlt = trimText(profileInput.bannerImageAlt) || "Profile banner";
     const bannerEnabled = profileInput.bannerEnabled !== false;
     const bannerMode = profileInput.bannerMode === "image" && bannerImageUrl ? "image" : "theme";
     const serviceArea = trimText(profileInput.serviceArea);
@@ -364,6 +369,12 @@ export async function POST(req: NextRequest) {
     const profileStyle = "minimal";
     const profileLayout = "grid";
     const builderLayout = "compact";
+    const globalAlignment = normalizeGlobalAlignment(
+      advancedInput.globalAlignment ||
+      (existingProfile?.builder_config as any)?.theme?.globalAlignment ||
+      (existingProfile?.builder_config as any)?.theme?.textAlign ||
+      (existingProfile?.builder_config as any)?.theme?.alignment
+    );
     const showCardShowcase = advancedInput.showCardShowcase === false ? false : existingProfile?.show_card_showcase ?? false;
     const showLeadForm = primaryActionLeadCaptureEnabled;
     const bannerThemeSettings = getBannerThemeSettings(bannerTheme);
@@ -383,6 +394,9 @@ export async function POST(req: NextRequest) {
         ...(themeMode ? { themeMode } : {}),
         ...(profileStyle ? { profileStyle } : {}),
         layout: builderLayout,
+        globalAlignment,
+        textAlign: globalAlignment,
+        alignment: globalAlignment,
         buttons: {
           ...nextConfig.theme.buttons,
           color: buttonColor,
@@ -423,24 +437,24 @@ export async function POST(req: NextRequest) {
       avatarGlowOpacity: 0,
       verifiedBadgeEnabled: false,
       avatarBorderEnabled: false,
-      alignment: "center",
+      alignment: globalAlignment,
     }));
     nextConfig = updateBlockData(nextConfig, "business-name-block", (data) => ({
       ...data,
       text: contactName || businessName,
-      alignment: "center",
+      alignment: globalAlignment,
     }));
     nextConfig = updateBlockData(nextConfig, "subheader-block", (data) => ({
       ...data,
       text: title,
-      alignment: "center",
+      alignment: globalAlignment,
     }));
     nextConfig = updateBlockData(nextConfig, "request-quote-button", (data) => ({
       ...data,
       label: primaryActionLabel,
       url: primaryActionLeadCaptureEnabled ? "#lead-form" : primaryActionUrl,
       description: primaryActionLeadCaptureEnabled
-        ? "Send submissions to your Lead Inbox."
+        ? "Tell us what you need"
         : "Opens your custom action URL.",
       icon: "bolt",
       isPrimaryAction: true,
@@ -454,12 +468,13 @@ export async function POST(req: NextRequest) {
       ...data,
       formLabel: primaryActionLeadCaptureEnabled ? primaryActionLabel : "Contact Form",
       description: primaryActionLeadCaptureEnabled
-        ? "Send submissions to your Lead Inbox."
+        ? "Tell us what you need"
         : "Lead capture is currently disabled.",
       submitText: primaryActionLabel,
       leadCaptureEnabled: primaryActionLeadCaptureEnabled,
       formType: primaryActionFormType,
       source: "clutch_connect_profile",
+      guidedLeadCapture: true,
       primaryActionType,
       primaryActionLabel,
     }), "contact");
@@ -569,7 +584,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Builder configuration is invalid.", fieldErrors: {} }, { status: 400 });
     }
 
-    const profilePayload = {
+    const nextIsActive = shouldPublish ? true : existingProfile?.is_active === true;
+    const completionCandidate = {
+      ...existingProfile,
+      business_name: businessName,
+      contact_name: contactName,
+      title,
+      phone,
+      email,
+      website,
+      bio,
+      avatar_url: avatarUrl || null,
+      cover_url: bannerImageUrl || null,
+      theme_color: themeColor,
+      slug: slugCheck.slug,
+      is_active: nextIsActive,
+      setup_completed: shouldPublish ? true : existingProfile?.setup_completed,
+      builder_config: cleanedConfig,
+    };
+    const setupReady = isConnectSetupComplete(customer, completionCandidate, {
+      links: beginnerLinks.map((link) => ({ is_active: link.visible, url: link.href })),
+      requirePublished: false,
+    });
+
+    if (shouldPublish && !setupReady) {
+      return NextResponse.json(
+        { error: "Complete the required setup fields before publishing.", fieldErrors: {} },
+        { status: 400 }
+      );
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const profilePayload: Record<string, unknown> = {
       customer_id: customer.id,
       business_name: businessName,
       contact_name: contactName,
@@ -582,18 +629,23 @@ export async function POST(req: NextRequest) {
       cover_url: bannerImageUrl || null,
       theme_color: themeColor,
       slug: slugCheck.slug,
-      is_active: existingProfile?.is_active ?? true,
+      is_active: nextIsActive,
       layout: profileLayout,
       show_card_showcase: showCardShowcase,
       show_lead_form: showLeadForm,
       builder_config: cleanedConfig,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     };
+
+    if (shouldPublish) {
+      profilePayload.setup_completed = true;
+      profilePayload.setup_completed_at = nowIso;
+    }
 
     let savedProfile = existingProfile;
 
     if (existingProfile?.id) {
-      const { data: updatedProfile, error: updateError } = await admin
+      let { data: updatedProfile, error: updateError } = await admin
         .from("profiles")
         .update(profilePayload)
         .eq("id", existingProfile.id)
@@ -601,20 +653,51 @@ export async function POST(req: NextRequest) {
         .select("*")
         .maybeSingle();
 
+      if (updateError && shouldPublish && isMissingColumnError(updateError)) {
+        const fallbackPayload = { ...profilePayload };
+        delete fallbackPayload.setup_completed;
+        delete fallbackPayload.setup_completed_at;
+        const retry = await admin
+          .from("profiles")
+          .update(fallbackPayload)
+          .eq("id", existingProfile.id)
+          .eq("customer_id", customer.id)
+          .select("*")
+          .maybeSingle();
+        updatedProfile = retry.data;
+        updateError = retry.error;
+      }
+
       if (updateError) {
         return NextResponse.json(withDevDetail({ error: "Failed to save your setup draft." }, updateError.message), { status: 500 });
       }
 
       savedProfile = updatedProfile || existingProfile;
     } else {
-      const { data: insertedProfile, error: insertError } = await admin
+      let { data: insertedProfile, error: insertError } = await admin
         .from("profiles")
         .insert({
           ...profilePayload,
-          created_at: new Date().toISOString(),
+          created_at: nowIso,
         })
         .select("*")
         .maybeSingle();
+
+      if (insertError && shouldPublish && isMissingColumnError(insertError)) {
+        const fallbackPayload = { ...profilePayload };
+        delete fallbackPayload.setup_completed;
+        delete fallbackPayload.setup_completed_at;
+        const retry = await admin
+          .from("profiles")
+          .insert({
+            ...fallbackPayload,
+            created_at: nowIso,
+          })
+          .select("*")
+          .maybeSingle();
+        insertedProfile = retry.data;
+        insertError = retry.error;
+      }
 
       if (insertError || !insertedProfile) {
         return NextResponse.json(
@@ -625,6 +708,14 @@ export async function POST(req: NextRequest) {
 
       savedProfile = insertedProfile;
     }
+
+    savedProfile = {
+      ...savedProfile,
+      is_active: nextIsActive,
+      setup_completed: shouldPublish ? true : savedProfile?.setup_completed,
+      builder_config: cleanedConfig,
+      slug: slugCheck.slug,
+    };
 
     if (savedProfile?.id) {
       const { error: deleteError } = await admin
@@ -659,14 +750,15 @@ export async function POST(req: NextRequest) {
 
       const setupComplete = isConnectSetupComplete(customer, savedProfile, {
         links: beginnerLinks.map((link) => ({ is_active: link.visible, url: link.href })),
+        requirePublished: true,
       });
 
-      if (setupComplete) {
+      if (shouldPublish) {
         const completeStatusAttempt = await admin
           .from("customers")
           .update({
             onboarding_status: "complete",
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
           .eq("id", customer.id);
 
@@ -675,7 +767,7 @@ export async function POST(req: NextRequest) {
             .from("customers")
             .update({
               onboarding_status: "active",
-              updated_at: new Date().toISOString(),
+              updated_at: nowIso,
             })
             .eq("id", customer.id);
         }
@@ -700,15 +792,60 @@ export async function POST(req: NextRequest) {
             }
           });
 
+        if (!("setup_completed" in profilePayload) || !("setup_completed_at" in profilePayload)) {
+          await admin
+            .from("profiles")
+            .update({ setup_completed: true, setup_completed_at: nowIso })
+            .eq("id", savedProfile.id)
+            .then(({ error }) => {
+              if (error && isMissingColumnError(error)) {
+                admin
+                  .from("profiles")
+                  .update({ setup_completed: true })
+                  .eq("id", savedProfile.id)
+                  .then(({ error: fallbackError }) => {
+                    if (fallbackError && !isMissingColumnError(fallbackError)) {
+                      console.warn("CONNECT SETUP profile setup_completed update skipped", fallbackError.message);
+                    }
+                  });
+              } else if (error) {
+                console.warn("CONNECT SETUP profile setup_completed update skipped", error.message);
+              }
+            });
+        }
+
         await admin
-          .from("profiles")
-          .update({ setup_completed: true })
-          .eq("id", savedProfile.id)
+          .from("card_orders")
+          .update({ setup_completed_at: nowIso })
+          .eq("customer_id", customer.id)
+          .is("setup_completed_at", null)
           .then(({ error }) => {
             if (error && !isMissingColumnError(error)) {
-              console.warn("CONNECT SETUP profile setup_completed update skipped", error.message);
+              console.warn("CONNECT SETUP card_orders setup_completed_at update skipped", error.message);
             }
           });
+
+        await admin
+          .from("card_orders")
+          .update({ status: "needs_review", updated_at: nowIso })
+          .eq("customer_id", customer.id)
+          .eq("status", "setup_pending")
+          .then(({ error }) => {
+            if (error && !isMissingColumnError(error)) {
+              console.warn("CONNECT SETUP card_orders status update skipped", error.message);
+            }
+          });
+      }
+
+      if (shouldPublish) {
+        const { data: refreshedProfile, error: refreshError } = await admin
+          .from("profiles")
+          .select("*")
+          .eq("id", savedProfile.id)
+          .maybeSingle();
+        if (!refreshError && refreshedProfile) {
+          savedProfile = refreshedProfile;
+        }
       }
 
       const smartCardDestination = buildSmartCardDestination(savedProfile.slug);
@@ -741,13 +878,21 @@ export async function POST(req: NextRequest) {
         console.warn("CONNECT SETUP smart card link update skipped", primarySmartCardPatch.error.message);
       }
 
+      revalidatePath("/portal");
+      revalidatePath("/portal/connect");
+      revalidatePath("/portal/connect/setup");
+      if (savedProfile.slug) {
+        revalidatePath(`/u/${savedProfile.slug}`);
+      }
+
       return NextResponse.json({
         ok: true,
         profile: savedProfile,
         config: cleanedConfig,
         links: normalizedLinks,
         setupComplete,
-        redirectTo: setupComplete ? "/portal/connect" : null,
+        redirectTo: shouldPublish ? "/portal/connect?setup=complete" : null,
+        published: isConnectProfilePublished(savedProfile),
       });
     }
 

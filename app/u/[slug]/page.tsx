@@ -30,6 +30,24 @@ export default async function PublicConnectProfilePage({
     .eq("is_active", true)
     .maybeSingle();
 
+  if (profile && profile.setup_completed === false) {
+    return (
+      <main className="connect-public-shell connect-public-shell-fallback">
+        <section className="connect-public-fallback-card">
+          <p className="connect-eyebrow">Clutch Connect</p>
+          <h1>This profile is not published yet.</h1>
+          <p>
+            The profile is active in draft mode, but publishing has not been completed yet.
+          </p>
+          <div className="connect-public-fallback-actions">
+            <Link className="btn primary" href="/portal/connect/setup">Complete Guided Setup</Link>
+            <Link className="btn secondary" href="/portal/connect">Go to Connect Dashboard</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   if (!profile) {
     const { data: draftProfile } = await admin
       .from("profiles")

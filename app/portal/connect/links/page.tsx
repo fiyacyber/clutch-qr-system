@@ -75,7 +75,7 @@ export default async function PortalConnectLinksPage() {
             <Link className="btn primary" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
               {advancedBuilderUnlocked ? "Manage in Builder" : "Manage in Guided Setup"}
             </Link>
-            {profile.slug ? <Link className="btn ghost" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link> : null}
+            {profile.slug ? <Link className="btn ghost" href={clutchConnectProfileUrl(profile.slug)} target="_blank">Open Public Profile</Link> : null}
           </div>
         </section>
       </main>

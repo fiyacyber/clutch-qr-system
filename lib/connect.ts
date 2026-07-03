@@ -4,6 +4,7 @@ import {
   sanitizeBuilderConfig,
   validateBuilderConfig,
 } from "@/lib/builder-config";
+import { buildConnectPublicProfileUrl, getConnectPublicBaseUrl } from "@/lib/connect-urls";
 
 export const RESERVED_CONNECT_SLUGS = new Set([
   "admin",
@@ -157,6 +158,20 @@ function normalizePhoneValue(rawValue: string) {
   const normalized = safe.replace(/(?!^)\+/g, "");
   const digits = normalized.replace(/\D/g, "");
   return digits.length >= 7 ? normalized : "";
+}
+
+export function formatPhoneDisplay(rawValue: unknown) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "";
+
+  const digits = raw.replace(/\D/g, "");
+  const normalizedDigits = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+
+  if (normalizedDigits.length === 10) {
+    return `${normalizedDigits.slice(0, 3)}-${normalizedDigits.slice(3, 6)}-${normalizedDigits.slice(6)}`;
+  }
+
+  return raw;
 }
 
 export function getBeginnerConnectLinkSpec(type?: BeginnerConnectLinkType | string) {
@@ -321,7 +336,10 @@ export function validateConnectSlug(input: string, options?: { allowEmpty?: bool
 
 export function buildConnectSlugPreview(slug: string) {
   const cleanSlug = normalizeSlug(slug);
-  return cleanSlug ? `clutchconnect.link/${cleanSlug}` : "clutchconnect.link/your-slug";
+  const base = getConnectPublicBaseUrl().replace(/^https?:\/\//, "");
+  return cleanSlug
+    ? buildConnectPublicProfileUrl(cleanSlug).replace(/^https?:\/\//, "")
+    : `${base}/u/your-slug`;
 }
 
 export function buildDefaultProfileSlug(value: string) {
@@ -452,4 +470,9 @@ export function isConnectSetupComplete(
 
   if (hasVisibleContactMethod(profile)) return true;
   return hasVisibleLinks(profile, options?.links);
+}
+
+export function isConnectProfilePublished(profile?: Pick<ConnectSetupProfile, "is_active" | "setup_completed"> | null) {
+  if (!profile) return false;
+  return profile.is_active === true && profile.setup_completed !== false;
 }

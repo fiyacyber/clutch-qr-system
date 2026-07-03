@@ -247,7 +247,7 @@ export default async function PortalConnectLeadsPage() {
           subtitle="CRM-style inbox for digital business card leads, sources, and conversion analytics."
           actions={
             <div className="connect-center-header-actions">
-              <Link className="btn primary" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link>
+              <Link className="btn primary" href={clutchConnectProfileUrl(profile.slug)} target="_blank">Open Public Profile</Link>
               <Link className="btn secondary" href="/portal/create">Generate QR Code</Link>
             </div>
           }

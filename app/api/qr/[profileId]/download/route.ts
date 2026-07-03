@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { buildConnectPublicProfileUrl } from "@/lib/qr";
 
 export const runtime = "nodejs";
 
@@ -19,9 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qr.clutchprintshop.com";
-  const base = appUrl.replace(/\/$/, "");
-  const profileUrl = `${base}/u/${profile.slug}`;
+  const profileUrl = buildConnectPublicProfileUrl(profile.slug);
 
   try {
     const png = await QRCode.toBuffer(profileUrl, {

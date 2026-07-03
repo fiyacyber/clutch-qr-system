@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { getClutchConnectPublicBaseUrl } from "@/lib/qr";
+import { buildConnectPublicProfileUrl, getClutchConnectPublicBaseUrl } from "@/lib/qr";
 import { createGoogleWalletUrl } from "@/lib/google-wallet";
 import { trackWalletEvent } from "@/lib/wallet-events";
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prof
   }
 
   const appUrl = getClutchConnectPublicBaseUrl();
-  const fallbackUrl = new URL(`/u/${profile.slug}`, req.url);
+  const fallbackUrl = new URL(buildConnectPublicProfileUrl(profile.slug));
   fallbackUrl.searchParams.set("wallet", "google_unavailable");
 
   try {

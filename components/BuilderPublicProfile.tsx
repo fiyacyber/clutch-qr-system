@@ -153,8 +153,11 @@ function resolveFontFamily(fontFamily?: string) {
   return 'var(--font-exo2), "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
 }
 
-function sectionHeaderStyle(section: ProfileSection, starterLocked: boolean): React.CSSProperties {
+function sectionHeaderStyle(section: ProfileSection, starterLocked: boolean, globalAlignment: "left" | "center" | "right"): React.CSSProperties {
   const style = section.style;
+  const effectiveAlignment = style.alignment === "left" || style.alignment === "right" || style.alignment === "center"
+    ? style.alignment
+    : globalAlignment;
   const fontSize = clampNumber(style.fontSize, 10, 72, 13);
   const letterSpacing = clampNumber(style.letterSpacing, 0, 16, 2);
   const borderWidth = clampNumber(style.borderWidth, 0, 24, 1);
@@ -168,8 +171,8 @@ function sectionHeaderStyle(section: ProfileSection, starterLocked: boolean): Re
     return {
       display: "flex",
       alignItems: "center",
-      justifyContent: "center",
-      textAlign: "center",
+      justifyContent: effectiveAlignment === "center" ? "center" : effectiveAlignment === "right" ? "flex-end" : "flex-start",
+      textAlign: effectiveAlignment,
       width: "100%",
       transform: "translateY(1px)",
       fontFamily: style.fontFamily && style.fontFamily !== "inherit" ? resolveFontFamily(style.fontFamily) : undefined,
@@ -205,7 +208,7 @@ function sectionHeaderStyle(section: ProfileSection, starterLocked: boolean): Re
     : style.borderColor;
 
   return {
-    justifyContent: style.alignment === "center" ? "center" : style.alignment === "right" ? "flex-end" : "flex-start",
+    justifyContent: effectiveAlignment === "center" ? "center" : effectiveAlignment === "right" ? "flex-end" : "flex-start",
     fontFamily: style.fontFamily && style.fontFamily !== "inherit" ? resolveFontFamily(style.fontFamily) : undefined,
     fontSize: `${fontSize}px`,
     fontWeight: style.fontWeight,
@@ -322,6 +325,8 @@ export default function BuilderPublicProfile({
   const profileTheme = config.theme.themeMode || (config.theme.darkMode ? "dark" : "light");
   const profileStyleName = config.theme.profileStyle || "clutch";
   const profileLayout = config.theme.layout || "default";
+  const rawGlobalAlignment = String(config.theme.globalAlignment || (config.theme as any).textAlign || (config.theme as any).alignment || "").toLowerCase();
+  const globalAlignment: "left" | "center" | "right" = rawGlobalAlignment === "left" || rawGlobalAlignment === "right" ? rawGlobalAlignment : "center";
   const bannerThemeKey = resolveBannerThemeKey(banner);
   const backgroundStyle: React.CSSProperties = background.type === "solid"
     ? { background: background.color || "#F8FAFC" }
@@ -376,6 +381,12 @@ export default function BuilderPublicProfile({
     return (type === "request-quote-button" || type === "custom-link-button") && data.isPrimaryAction === true;
   });
   const primaryActionIds = new Set(primaryActionBlocks.map((block) => block.id));
+  const guidedLeadFormBlocks = orderedBlocks.filter((block) => {
+    if (String(block.type) !== "form-block") return false;
+    const data = getBlockData(block);
+    return data.source === "clutch_connect_profile" && data.leadCaptureEnabled !== false;
+  });
+  const guidedLeadFormIds = new Set(guidedLeadFormBlocks.map((block) => block.id));
   const sections = [...(config.sections || [])].sort((a, b) => a.order - b.order);
 
   const handleQuickAction = useCallback((action: string) => {
@@ -439,6 +450,7 @@ export default function BuilderPublicProfile({
       data-style={profileStyleName}
       data-background={background.type || "soft"}
       data-layout={profileLayout}
+      data-global-align={globalAlignment}
       data-starter-locked={starterLocked ? "true" : "false"}
       data-header-align={banner.textAlign || "center"}
       data-banner-enabled={banner.enabled ? "true" : "false"}
@@ -471,6 +483,7 @@ export default function BuilderPublicProfile({
             const sectionBlocks = orderedBlocks.filter((block) => {
               const blockType = String(block.type);
               if (primaryActionIds.has(block.id)) return false;
+              if (guidedLeadFormIds.has(block.id)) return false;
               if (["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(blockType)) return false;
               return block.sectionId === section.id;
             });
@@ -499,7 +512,7 @@ export default function BuilderPublicProfile({
                   </div>
                 ) : null}
                 <div className="builder-public-section-stack">
-                  <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked)}>{section.label}</div>
+                  <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
                   {visibleSectionBlocks.length ? (
                     <Fragment>
                       {visibleSectionBlocks.map((block) => renderBlock(block, section.id))}
@@ -514,6 +527,11 @@ export default function BuilderPublicProfile({
             );
           })}
         </div>
+        {guidedLeadFormBlocks.length ? (
+          <div className="builder-guided-lead-slot" data-guided-lead-state="collapsed">
+            {guidedLeadFormBlocks.map((block) => renderBlock(block))}
+          </div>
+        ) : null}
         <div
           className="builder-public-footer builder-preview-selectable"
           role={editablePreview && onSelectSaveShare ? "button" : undefined}

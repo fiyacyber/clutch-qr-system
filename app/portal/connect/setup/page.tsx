@@ -10,7 +10,7 @@ import {
   GUIDED_SETUP_ENTRY_PATH,
 } from "@/lib/onboarding-routing";
 import { isConnectSetupComplete } from "@/lib/connect";
-import { getAdvancedBuilderLockMessage, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
+import { getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -41,7 +41,6 @@ export default async function ConnectGuidedSetupPage() {
   const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
-  const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
   const builderConfig = profile?.builder_config
     ? sanitizeBuilderConfig(profile.builder_config)
     : createDefaultBuilderConfig("#111111");

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import styles from "./ConnectLeadsCRM.module.css";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "closed" | "archived";
 type ArchiveFilter = "active" | "archived" | "all";
@@ -421,7 +422,7 @@ export default function ConnectLeadsCRM({
           <h3>No leads yet.</h3>
           <p>Share your digital business card and QR campaigns to start capturing contact requests.</p>
           <div className={styles.emptyActions}>
-            <a className="btn secondary" href={`/u/${profileSlug}`} target="_blank" rel="noreferrer">Open Public Profile</a>
+            <a className="btn secondary" href={clutchConnectProfileUrl(profileSlug)} target="_blank" rel="noreferrer">Open Public Profile</a>
             <a className="btn ghost" href="/portal/connect">Share Profile</a>
             <a className="btn primary" href="/portal/create">Generate QR Code</a>
           </div>
