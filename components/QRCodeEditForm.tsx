@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState, useEffect } from "react";
+import { FormEvent, Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import StyledQRPreview from "@/components/StyledQRPreview";
 import { qrUrl, normalizeUrl } from "@/lib/qr";
@@ -43,7 +43,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   qr_save_failed: "Failed to save QR code. Please try again.",
 };
 
-export default function QRCodeEditForm({ code, connectProfiles = [] }: QRCodeEditFormProps) {
+function QRCodeEditFormInner({ code, connectProfiles = [] }: QRCodeEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -421,5 +421,13 @@ export default function QRCodeEditForm({ code, connectProfiles = [] }: QRCodeEdi
         </div>
       </form>
     </div>
+  );
+}
+
+export default function QRCodeEditForm(props: QRCodeEditFormProps) {
+  return (
+    <Suspense fallback={null}>
+      <QRCodeEditFormInner {...props} />
+    </Suspense>
   );
 }

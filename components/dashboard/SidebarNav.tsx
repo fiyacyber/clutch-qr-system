@@ -14,7 +14,7 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 interface SidebarNavProps {
   isAdmin?: boolean;
@@ -89,7 +89,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-function SidebarList({
+function SidebarListInner({
   isAdmin,
   onNavigate,
   navLocks,
@@ -137,6 +137,18 @@ function SidebarList({
         </button>
       </form>
     </>
+  );
+}
+
+function SidebarList(props: {
+  isAdmin?: boolean;
+  onNavigate?: () => void;
+  navLocks?: SidebarNavProps["navLocks"];
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SidebarListInner {...props} />
+    </Suspense>
   );
 }
 

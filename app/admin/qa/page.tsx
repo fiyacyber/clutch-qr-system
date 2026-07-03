@@ -6,6 +6,8 @@ import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import styles from "./page.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface AdminQaPageProps {
   searchParams?: Promise<{ q?: string }>;
 }

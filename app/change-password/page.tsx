@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PASSWORD_POLICY_HELPER_TEXT, validatePasswordPolicy } from "@/lib/password-policy";
 import { sanitizeNextPath } from "@/lib/safe-redirect";
 
-export default function ChangePasswordPage() {
+function ChangePasswordPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -74,5 +74,13 @@ export default function ChangePasswordPage() {
         </form>
       </section>
     </main>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChangePasswordPageContent />
+    </Suspense>
   );
 }

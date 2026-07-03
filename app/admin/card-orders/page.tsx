@@ -10,6 +10,8 @@ import { sendTransactionalEmail } from "@/lib/email";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import styles from "./page.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface CardOrdersPageProps {
   searchParams?: Promise<{
     q?: string;
