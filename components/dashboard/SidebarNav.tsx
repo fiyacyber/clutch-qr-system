@@ -95,7 +95,7 @@ const navItems: NavItem[] = [
     label: "Analytics",
     href: "/portal/analytics",
     icon: BarChart3,
-    match: (pathname) => pathname === "/portal/analytics",
+    match: (pathname, tab) => pathname === "/portal/analytics" && tab !== "clutch-connect",
     lockKey: "analytics",
   },
   {
