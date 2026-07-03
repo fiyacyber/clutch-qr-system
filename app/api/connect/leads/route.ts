@@ -13,6 +13,10 @@ export async function POST(req: NextRequest) {
   const phone = String(form.get("phone") || "").trim();
   const message = String(form.get("message") || "").trim();
   const honeypot = String(form.get("company_website") || "").trim();
+  const primary_action_type = String(form.get("primary_action_type") || "").trim();
+  const primary_action_label = String(form.get("primary_action_label") || "").trim();
+  const form_type = String(form.get("form_type") || "").trim();
+  const source = String(form.get("source") || "clutch_connect_profile").trim() || "clutch_connect_profile";
 
   if (!profile_id || !slug) {
     return NextResponse.json({ error: "Missing profile." }, { status: 400 });
@@ -72,7 +76,19 @@ export async function POST(req: NextRequest) {
     event_type: "lead_submit",
     ip_hash,
     user_agent,
-    metadata: { source: "public_form" },
+    metadata: {
+      source,
+      profileId: profile_id,
+      profileSlug: slug,
+      primaryActionType: primary_action_type || null,
+      primaryActionLabel: primary_action_label || null,
+      formType: form_type || null,
+      visitorName: name || null,
+      visitorEmail: email || null,
+      visitorPhone: phone || null,
+      visitorMessage: message || null,
+      timestamp: new Date().toISOString(),
+    },
   });
 
   await admin.from("connect_events").insert({
@@ -80,8 +96,8 @@ export async function POST(req: NextRequest) {
     qr_code_id: null,
     event_type: "lead_submit",
     link_id: null,
-    link_label: null,
-    link_url: null,
+    link_label: primary_action_label || "Lead capture",
+    link_url: primary_action_type ? `lead:${primary_action_type}` : null,
     visitor_id: ip_hash,
     ip_hash,
     user_agent,
@@ -91,7 +107,7 @@ export async function POST(req: NextRequest) {
     country: req.headers.get("x-vercel-ip-country"),
     region: req.headers.get("x-vercel-ip-country-region"),
     city: req.headers.get("x-vercel-ip-city"),
-    referrer: getReferrerSource(req.headers.get("referer")),
+    referrer: getReferrerSource(req.headers.get("referer")) || source,
   });
 
   return NextResponse.redirect(new URL(`/u/${slug}?sent=1`, req.url));

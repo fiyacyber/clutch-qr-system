@@ -144,7 +144,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const qrUsageLimit = props.qrUsageLimit ?? 0;
   const qrUsagePercent = props.qrUsageLimit ? Math.min((props.qrUsageUsed || 0) / props.qrUsageLimit, 1) * 100 : 100;
   const qrUsageLabel = props.qrUsageLimit ? `${props.qrUsageUsed || 0} / ${props.qrUsageLimit} QR Codes Used` : "Unlimited QR Codes";
-  const planLabel = props.planName || props.accountType || "QR Pro";
+  const planLabel = props.planName || props.accountType || "Clutch Connect";
   const brandForeground = props.latestQrForeground || "#384862";
   const brandBackground = props.latestQrBackground || "#ffffff";
   const latestQrName = props.latestQrName || "Latest QR";
@@ -613,7 +613,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
                 </article>
                 <article>
                   <span>Account Type</span>
-                  <strong>{props.accountType || "QR Pro"}</strong>
+                  <strong>{props.accountType || "Clutch Connect"}</strong>
                 </article>
                 <article className="ca-settings-info-wide">
                   <span>Member Since</span>

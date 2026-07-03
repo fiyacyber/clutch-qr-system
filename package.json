@@ -6,13 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app components lib types --ext .ts,.tsx"
+    "lint": "eslint app components lib types --ext .ts,.tsx",
+    "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
+    "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@types/leaflet": "^1.9.21",
     "d3-scale": "^4.0.2",
+    "dotenv": "^16.6.1",
     "framer-motion": "^12.40.0",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",

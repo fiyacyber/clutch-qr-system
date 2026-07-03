@@ -5,6 +5,7 @@ import { extractIpHash } from "@/lib/connect";
 import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import ConnectProfileView from "@/components/connect/ConnectProfileView";
+import { isAdvancedBuilderUnlocked } from "@/lib/plans";
 
 export default async function PublicConnectProfilePage({
   params,
@@ -16,6 +17,9 @@ export default async function PublicConnectProfilePage({
   const { slug } = await params;
   const query = (await searchParams) || {};
   const source = typeof query.source === "string" ? query.source.trim() : "";
+  const leadSent = String(query.sent || "") === "1";
+  const leadRateLimited = String(query.rate_limited || "") === "1";
+  const leadError = String(query.error || "") === "1";
 
   const admin = createSupabaseAdminClient();
 
@@ -114,9 +118,23 @@ export default async function PublicConnectProfilePage({
     ? sanitizeBuilderConfig(profile.builder_config)
     : createDefaultBuilderConfig(profile.theme_color);
 
+  const { data: customer } = await admin
+    .from("customers")
+    .select("id, is_admin, plan, plan_code, qr_limit, subscription_status, plan_status, trial_status, trial_ends_at")
+    .eq("id", profile.customer_id)
+    .maybeSingle();
+
+  const starterLocked = !isAdvancedBuilderUnlocked(customer as any);
+
   return (
     <ConnectProfileView
-      profile={profile}
+      profile={{
+        ...profile,
+        _leadSent: leadSent,
+        _leadRateLimited: leadRateLimited,
+        _leadError: leadError,
+      }}
+      starterLocked={starterLocked}
       blocks={builderConfig.blocks as any}
       sections={builderConfig.sections}
       forms={builderConfig.forms}

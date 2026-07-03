@@ -17,9 +17,13 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
+import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
+import { isConnectSetupComplete } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import {
+  hasEntitlement,
   getCustomerPlan,
   getCustomerSubscriptionStatus,
   getEffectiveQrLimit,
@@ -51,6 +55,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const errorMessage = Array.isArray(resolvedSearchParams?.error)
     ? resolvedSearchParams?.error[0]
     : resolvedSearchParams?.error;
+  const setupMessage = Array.isArray(resolvedSearchParams?.setup)
+    ? resolvedSearchParams?.setup[0]
+    : resolvedSearchParams?.setup;
 
   if (!customer) {
     return (
@@ -58,7 +65,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         <div className="card">
           <h1>Account not active yet</h1>
           <p className="muted">
-            Use the same email from your QR Pro checkout. If you just purchased,
+            Use the same email from your Clutch Connect checkout. If you just purchased,
             wait a minute and refresh.
           </p>
         </div>
@@ -71,6 +78,15 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: connectProfile } = await admin
+    .from("profiles")
+    .select("id, business_name, contact_name, title, slug, phone, email, website, builder_config, theme_color")
+    .eq("customer_id", customer.id)
+    .maybeSingle();
+
+  if (!customer.is_admin && !isConnectSetupComplete(customer, connectProfile || null)) {
+    redirect("/portal/connect/setup");
+  }
 
   const [qrCodesResult, connectProfilesResult] = await Promise.all([
     runGuardedDashboardTask({
@@ -133,6 +149,71 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const totalScans = codes.reduce((sum, code) => sum + (code.scan_count || 0), 0);
   const remaining = Math.max(limit - used, 0);
   const remainingLabel = plan.code === "admin" ? "Unlimited" : String(remaining);
+  const isFreePlan = plan.code === "connect_basic";
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+
+  const usageLabel = plan.code === "connect_basic"
+    ? "Digital profile access included"
+    : plan.code === "connect_plus"
+      ? "Profile tools unlocked"
+      : plan.code === "agency"
+        ? `${used} / 250+ QR codes used`
+        : plan.code === "admin"
+          ? `${used} / Unlimited QR codes used`
+          : `${used} / ${limit} QR codes used`;
+
+  const nextStepCard = plan.code === "connect_basic"
+    ? {
+        title: "Unlock Clutch Connect+",
+        description: "Advanced profile customization, custom forms, lead management, and profile analytics.",
+        requiredPlan: "Clutch Connect+",
+        requiredPlanPrice: "$9.99/mo",
+        ctaLabel: "Upgrade for $9.99/mo",
+        ctaHref: "/portal/settings",
+        featureList: [
+          "Advanced profile builder",
+          "Custom quote forms",
+          "Advanced Lead Inbox",
+          "Heatmap/profile analytics",
+          "Remove Clutch branding",
+        ],
+        variant: "connect_plus" as const,
+      }
+    : plan.code === "connect_plus"
+      ? {
+          title: "Unlock QR Pro",
+          description: "Create and track up to 100 dynamic QR campaigns.",
+          requiredPlan: "QR Pro",
+          requiredPlanPrice: "$14.99/mo",
+          ctaLabel: "Upgrade for $14.99/mo",
+          ctaHref: "/portal/settings",
+          featureList: [
+            "100 dynamic QR codes",
+            "Editable destinations",
+            "QR customization",
+            "QR exports",
+            "Campaign analytics",
+          ],
+          variant: "qr_pro" as const,
+        }
+      : plan.code === "qr_pro" && used >= 90
+        ? {
+            title: "Need more QR codes?",
+            description: "Agency unlocks 250+ QR codes, higher-volume tracking, and client reporting.",
+            requiredPlan: "Agency",
+            requiredPlanPrice: "Custom",
+            ctaLabel: "Request Agency Access",
+            ctaHref: "/portal/settings",
+            featureList: [
+              "250+ QR codes",
+              "Client reporting",
+              "Advanced campaign reports",
+              "Priority setup",
+            ],
+            variant: "agency" as const,
+          }
+        : null;
 
   const qrNameMap = new Map(codes.map((code) => [code.id, code.name]));
   const topLocationRows = Object.entries(
@@ -163,12 +244,23 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   ];
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
+    >
       <main className="container portal-overview-shell">
         {errorMessage ? (
           <div className="alert">
             <strong>Error:</strong> {errorMessage}
           </div>
+        ) : null}
+
+        {setupMessage === "complete" ? (
+          <div className="success-message">Clutch Connect setup complete. Your dashboard is now unlocked.</div>
         ) : null}
 
         {panelIssues.length ? (
@@ -187,10 +279,25 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               <Link className="btn primary" href="/portal/create">Create Campaign</Link>
               <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
               <Link className="btn secondary" href="/portal/analytics">View Insights</Link>
-              <Link className="btn ghost" href="/portal/connect/edit">Edit Clutch Connect</Link>
+              <Link className="btn ghost" href={isFreePlan ? "/portal/connect/setup" : "/portal/connect/build"}>
+                {isFreePlan ? "Guided Setup" : "Edit Clutch Connect"}
+              </Link>
             </div>
           )}
         />
+
+        <CurrentPlanBadge
+          planCode={plan.code}
+          planName={plan.name}
+          priceLabel={plan.price}
+          description={plan.description}
+          usageLabel={usageLabel}
+          subscriptionStatus={subscriptionStatus}
+          locked={subscriptionLocked}
+          trialStatus={String(customer.trial_status || "none")}
+        />
+
+        {nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
 
         {subscriptionLocked ? (
           <section className="locked-upgrade-card">
@@ -254,9 +361,15 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
             <article className="portal-overview-action-item">
               <div className="portal-overview-action-icon"><Link2 size={17} /></div>
-              <h3>Build Clutch Connect Profile</h3>
-              <p>Update your smart profile, links, and public details.</p>
-              <Link className="btn secondary" href="/portal/connect/build">Open Profile Builder</Link>
+              <h3>{isFreePlan ? "Finish Guided Setup" : "Build Clutch Connect Profile"}</h3>
+              <p>
+                {isFreePlan
+                  ? "Starter plans use Guided Setup first. Upgrade later for full block-level builder customization."
+                  : "Update your smart profile, links, and public details."}
+              </p>
+              <Link className="btn secondary" href={isFreePlan ? "/portal/connect/setup" : "/portal/connect/build"}>
+                {isFreePlan ? "Open Guided Setup" : "Open Profile Builder"}
+              </Link>
             </article>
 
             <article className="portal-overview-action-item">

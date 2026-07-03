@@ -12,6 +12,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import styles from "./ConnectLeadsCRM.module.css";
+import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "closed" | "archived";
 type ArchiveFilter = "active" | "archived" | "all";
@@ -66,6 +67,13 @@ interface ConnectLeadsCRMProps {
   timeline: TimelineRow[];
   campaignRows: CampaignRow[];
   qrRows: QrPerformanceRow[];
+  canUseAdvancedInbox?: boolean;
+  canUseSourceInsights?: boolean;
+  canUseCampaignPerformance?: boolean;
+  canUsePdfReports?: boolean;
+  connectPlusCheckoutHref?: string;
+  qrProCheckoutHref?: string;
+  agencyInquiryHref?: string;
   funnel: {
     profileViews: number;
     qrScans: number;
@@ -147,6 +155,13 @@ export default function ConnectLeadsCRM({
   timeline,
   campaignRows,
   qrRows,
+  canUseAdvancedInbox = false,
+  canUseSourceInsights = false,
+  canUseCampaignPerformance = false,
+  canUsePdfReports = false,
+  connectPlusCheckoutHref = "/portal/settings",
+  qrProCheckoutHref = "/portal/settings",
+  agencyInquiryHref = "/portal/settings",
   funnel,
 }: ConnectLeadsCRMProps) {
   const [leadRows, setLeadRows] = useState<LeadRow[]>(() => leads.map(normalizeLead));
@@ -162,6 +177,7 @@ export default function ConnectLeadsCRM({
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [notesDraftByLead, setNotesDraftByLead] = useState<Record<string, string>>({});
+  const readOnlyInbox = !canUseAdvancedInbox;
 
   const sources = useMemo(
     () => ["All", ...Array.from(new Set(leadRows.map((lead) => lead.source))).filter(Boolean)],
@@ -441,8 +457,12 @@ export default function ConnectLeadsCRM({
                     <option key={source} value={source}>{source}</option>
                   ))}
                 </select>
-                <button className="btn ghost" onClick={exportCsv} type="button"><Download size={14} /> CSV Export</button>
-                <button className="btn ghost" onClick={() => window.print()} type="button"><Download size={14} /> PDF Export</button>
+                {canUseSourceInsights ? (
+                  <button className="btn ghost" onClick={exportCsv} type="button"><Download size={14} /> CSV Export</button>
+                ) : null}
+                {canUsePdfReports ? (
+                  <button className="btn ghost" onClick={() => window.print()} type="button"><Download size={14} /> PDF Export</button>
+                ) : null}
               </div>
               {notice ? <p className={`${styles.notice} ${styles[notice.tone]}`}>{notice.message}</p> : null}
             </header>
@@ -523,72 +543,78 @@ export default function ConnectLeadsCRM({
                         placeholder="Add follow-up notes"
                         rows={4}
                       />
-                      <button
-                        className="btn secondary"
-                        type="button"
-                        disabled={isLeadSaving(selectedLead.id)}
-                        onClick={() => patchLead(selectedLead.id, { crm_notes: selectedLeadNotes }, "Saved")}
-                      >
-                        <Save size={14} />
-                        {pendingAction === `${selectedLead.id}:notes` ? "Saving..." : "Save Notes"}
-                      </button>
+                      {!readOnlyInbox ? (
+                        <button
+                          className="btn secondary"
+                          type="button"
+                          disabled={isLeadSaving(selectedLead.id)}
+                          onClick={() => patchLead(selectedLead.id, { crm_notes: selectedLeadNotes }, "Saved")}
+                        >
+                          <Save size={14} />
+                          {pendingAction === `${selectedLead.id}:notes` ? "Saving..." : "Save Notes"}
+                        </button>
+                      ) : null}
                     </div>
                     <div className={styles.drawerActions}>
                       <a className="btn ghost" href={`tel:${selectedLead.phone}`}><Phone size={14} /> Call</a>
                       <a className="btn ghost" href={`mailto:${selectedLead.email}`}><Mail size={14} /> Email</a>
-                      <button
-                        className="btn secondary"
-                        type="button"
-                        disabled={isLeadSaving(selectedLead.id)}
-                        onClick={() => patchLead(selectedLead.id, { status: "contacted" }, "Saved")}
-                      >
-                        <UserRoundCheck size={14} />
-                        {pendingAction === `${selectedLead.id}:contacted` ? "Saving..." : "Mark Contacted"}
-                      </button>
-                      <button
-                        className="btn secondary"
-                        type="button"
-                        disabled={isLeadSaving(selectedLead.id)}
-                        onClick={() => patchLead(selectedLead.id, { status: "qualified" }, "Saved")}
-                      >
-                        {pendingAction === `${selectedLead.id}:qualified` ? "Saving..." : "Mark Qualified"}
-                      </button>
-                      <button
-                        className="btn primary"
-                        type="button"
-                        disabled={isLeadSaving(selectedLead.id)}
-                        onClick={() => patchLead(selectedLead.id, { status: "converted" }, "Saved")}
-                      >
-                        {pendingAction === `${selectedLead.id}:converted` ? "Saving..." : "Mark Converted"}
-                      </button>
-                      <button
-                        className="btn ghost"
-                        type="button"
-                        disabled={isLeadSaving(selectedLead.id)}
-                        onClick={() => patchLead(selectedLead.id, { status: "closed" }, "Saved")}
-                      >
-                        {pendingAction === `${selectedLead.id}:closed` ? "Saving..." : "Close"}
-                      </button>
-                      {selectedLead.status === "archived" || selectedLead.archivedAt ? (
-                        <button
-                          className="btn ghost"
-                          type="button"
-                          disabled={isLeadSaving(selectedLead.id)}
-                          onClick={() => patchLead(selectedLead.id, { action: "unarchive" }, "Saved")}
-                        >
-                          {pendingAction === `${selectedLead.id}:unarchive` ? "Saving..." : "Unarchive"}
-                        </button>
-                      ) : (
-                        <button
-                          className="btn ghost"
-                          type="button"
-                          disabled={isLeadSaving(selectedLead.id)}
-                          onClick={() => patchLead(selectedLead.id, { action: "archive" }, "Archived")}
-                        >
-                          <Archive size={14} />
-                          {pendingAction === `${selectedLead.id}:archive` ? "Saving..." : "Archive Lead"}
-                        </button>
-                      )}
+                      {!readOnlyInbox ? (
+                        <>
+                          <button
+                            className="btn secondary"
+                            type="button"
+                            disabled={isLeadSaving(selectedLead.id)}
+                            onClick={() => patchLead(selectedLead.id, { status: "contacted" }, "Saved")}
+                          >
+                            <UserRoundCheck size={14} />
+                            {pendingAction === `${selectedLead.id}:contacted` ? "Saving..." : "Mark Contacted"}
+                          </button>
+                          <button
+                            className="btn secondary"
+                            type="button"
+                            disabled={isLeadSaving(selectedLead.id)}
+                            onClick={() => patchLead(selectedLead.id, { status: "qualified" }, "Saved")}
+                          >
+                            {pendingAction === `${selectedLead.id}:qualified` ? "Saving..." : "Mark Qualified"}
+                          </button>
+                          <button
+                            className="btn primary"
+                            type="button"
+                            disabled={isLeadSaving(selectedLead.id)}
+                            onClick={() => patchLead(selectedLead.id, { status: "converted" }, "Saved")}
+                          >
+                            {pendingAction === `${selectedLead.id}:converted` ? "Saving..." : "Mark Converted"}
+                          </button>
+                          <button
+                            className="btn ghost"
+                            type="button"
+                            disabled={isLeadSaving(selectedLead.id)}
+                            onClick={() => patchLead(selectedLead.id, { status: "closed" }, "Saved")}
+                          >
+                            {pendingAction === `${selectedLead.id}:closed` ? "Saving..." : "Close"}
+                          </button>
+                          {selectedLead.status === "archived" || selectedLead.archivedAt ? (
+                            <button
+                              className="btn ghost"
+                              type="button"
+                              disabled={isLeadSaving(selectedLead.id)}
+                              onClick={() => patchLead(selectedLead.id, { action: "unarchive" }, "Saved")}
+                            >
+                              {pendingAction === `${selectedLead.id}:unarchive` ? "Saving..." : "Unarchive"}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn ghost"
+                              type="button"
+                              disabled={isLeadSaving(selectedLead.id)}
+                              onClick={() => patchLead(selectedLead.id, { action: "archive" }, "Archived")}
+                            >
+                              <Archive size={14} />
+                              {pendingAction === `${selectedLead.id}:archive` ? "Saving..." : "Archive Lead"}
+                            </button>
+                          )}
+                        </>
+                      ) : null}
                     </div>
                   </>
                 ) : (
@@ -598,33 +624,52 @@ export default function ConnectLeadsCRM({
             </div>
           </section>
 
-          <section className={styles.twoCol}>
-            <article className={styles.card}>
-              <h3>Source Tracking</h3>
-              <div className={styles.breakdownList}>
-                {sourceBreakdown.map((row) => (
-                  <div key={row.source}>
-                    <p>
-                      <span>{row.source}</span>
-                      <strong>{row.value}</strong>
-                    </p>
-                    <div className={styles.progress}><span style={{ width: `${row.pct}%` }} /></div>
-                  </div>
-                ))}
-              </div>
-            </article>
+          {canUseSourceInsights ? (
+            <section className={styles.twoCol}>
+              <article className={styles.card}>
+                <h3>Source Tracking</h3>
+                <div className={styles.breakdownList}>
+                  {sourceBreakdown.map((row) => (
+                    <div key={row.source}>
+                      <p>
+                        <span>{row.source}</span>
+                        <strong>{row.value}</strong>
+                      </p>
+                      <div className={styles.progress}><span style={{ width: `${row.pct}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+              </article>
 
-            <article className={styles.card}>
-              <h3>Conversion Funnel</h3>
-              <ul className={styles.funnelList}>
-                <li><span>Profile Views</span><strong>{funnel.profileViews}</strong></li>
-                <li><span>QR Scans</span><strong>{funnel.qrScans}</strong></li>
-                <li><span>Link Clicks</span><strong>{funnel.linkClicks}</strong></li>
-                <li><span>Lead Captures</span><strong>{funnel.leadCaptures}</strong></li>
-                <li><span>Conversions</span><strong>{funnel.conversions}</strong></li>
-              </ul>
-            </article>
-          </section>
+              <article className={styles.card}>
+                <h3>Conversion Funnel</h3>
+                <ul className={styles.funnelList}>
+                  <li><span>Profile Views</span><strong>{funnel.profileViews}</strong></li>
+                  <li><span>QR Scans</span><strong>{funnel.qrScans}</strong></li>
+                  <li><span>Link Clicks</span><strong>{funnel.linkClicks}</strong></li>
+                  <li><span>Lead Captures</span><strong>{funnel.leadCaptures}</strong></li>
+                  <li><span>Conversions</span><strong>{funnel.conversions}</strong></li>
+                </ul>
+              </article>
+            </section>
+          ) : (
+            <LockedFeatureCard
+              title="Unlock Clutch Connect+"
+              description="Advanced Lead Inbox controls, source tracking, and conversion funnel insights."
+              requiredPlan="Clutch Connect+"
+              requiredPlanPrice="$9.99/mo"
+              ctaLabel="Upgrade for $9.99/mo"
+              ctaHref={connectPlusCheckoutHref}
+              featureList={[
+                "Lead statuses and notes",
+                "Advanced filters and search",
+                "Source breakdown",
+                "Conversion funnel",
+                "CSV export",
+              ]}
+              variant="connect_plus"
+            />
+          )}
 
           <section className={styles.twoCol}>
             <article className={styles.card}>
@@ -659,61 +704,94 @@ export default function ConnectLeadsCRM({
             </article>
           </section>
 
-          <section className={styles.card}>
-            <h3>Campaign Performance</h3>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Campaign</th>
-                    <th>Scans</th>
-                    <th>Visitors</th>
-                    <th>Clicks</th>
-                    <th>Conversions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {campaignRows.map((row) => (
-                    <tr key={row.campaign}>
-                      <td>{row.campaign}</td>
-                      <td>{row.scans}</td>
-                      <td>{row.visitors}</td>
-                      <td>{row.clicks}</td>
-                      <td>{row.conversions}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          {canUseCampaignPerformance ? (
+            <>
+              <section className={styles.card}>
+                <h3>Campaign Performance</h3>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Campaign</th>
+                        <th>Scans</th>
+                        <th>Visitors</th>
+                        <th>Clicks</th>
+                        <th>Conversions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaignRows.map((row) => (
+                        <tr key={row.campaign}>
+                          <td>{row.campaign}</td>
+                          <td>{row.scans}</td>
+                          <td>{row.visitors}</td>
+                          <td>{row.clicks}</td>
+                          <td>{row.conversions}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
 
-          <section className={styles.card}>
-            <h3>Most Active QR Codes</h3>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>QR Name</th>
-                    <th>Scans</th>
-                    <th>Visitors</th>
-                    <th>Clicks</th>
-                    <th>Conversion Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {qrRows.map((row) => (
-                    <tr key={row.qrName}>
-                      <td>{row.qrName}</td>
-                      <td>{row.scans}</td>
-                      <td>{row.visitors}</td>
-                      <td>{row.clicks}</td>
-                      <td>{row.conversionRate.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+              <section className={styles.card}>
+                <h3>Most Active QR Codes</h3>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>QR Name</th>
+                        <th>Scans</th>
+                        <th>Visitors</th>
+                        <th>Clicks</th>
+                        <th>Conversion Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {qrRows.map((row) => (
+                        <tr key={row.qrName}>
+                          <td>{row.qrName}</td>
+                          <td>{row.scans}</td>
+                          <td>{row.visitors}</td>
+                          <td>{row.clicks}</td>
+                          <td>{row.conversionRate.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          ) : (
+            <LockedFeatureCard
+              title="Unlock QR Pro"
+              description="Create and track up to 100 dynamic QR campaigns with campaign and QR performance reporting."
+              requiredPlan="QR Pro"
+              requiredPlanPrice="$14.99/mo"
+              ctaLabel="Upgrade for $14.99/mo"
+              ctaHref={qrProCheckoutHref}
+              featureList={[
+                "Campaign analytics",
+                "Top QR performance",
+                "Destination analytics",
+                "Source-aware conversion tracking",
+              ]}
+              variant="qr_pro"
+            />
+          )}
+
+          {!canUsePdfReports && canUseCampaignPerformance ? (
+            <LockedFeatureCard
+              title="Need richer reporting?"
+              description="Agency unlocks PDF and client reporting for high-volume teams."
+              requiredPlan="Agency"
+              requiredPlanPrice="Custom"
+              ctaLabel="Request Agency Access"
+              ctaHref={agencyInquiryHref}
+              featureList={["PDF reporting", "Client reporting", "High-volume reporting tools"]}
+              variant="agency"
+            />
+          ) : null}
         </>
       )}
     </div>

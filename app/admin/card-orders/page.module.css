@@ -1,0 +1,522 @@
+.page {
+  display: grid;
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.hero {
+  background: linear-gradient(140deg, #0b2240 0%, #102d54 62%, #163a66 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 44px rgba(9, 25, 47, 0.2);
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.heroSubtitle {
+  margin: 0.5rem 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.92rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.summaryCard {
+  background: #ffffff;
+  border: 1px solid #dde4ef;
+  border-radius: 18px;
+  padding: 0.85rem;
+  box-shadow: 0 8px 18px rgba(11, 34, 64, 0.08);
+}
+
+.summaryLabel {
+  display: block;
+  color: #495a72;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #0b2240;
+  font-weight: 800;
+}
+
+.controlsCard {
+  background: #f9fbff;
+  border: 1px solid #dce5f2;
+  border-radius: 18px;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filtersWrap {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+}
+
+.filterChip {
+  border: 1px solid #cfd9ea;
+  border-radius: 999px;
+  padding: 0.45rem 0.78rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #20324d;
+  background: #ffffff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.filterChipActive {
+  background: #ff7a1a;
+  color: #ffffff;
+  border-color: #ff7a1a;
+  box-shadow: 0 8px 18px rgba(255, 122, 26, 0.3);
+}
+
+.searchForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid #cfd9ea;
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.9rem;
+  color: #17243a;
+  background: #ffffff;
+}
+
+.searchInput:focus {
+  outline: 2px solid rgba(255, 122, 26, 0.45);
+  outline-offset: 1px;
+}
+
+.searchButton {
+  border: 1px solid #ff7a1a;
+  background: #ff7a1a;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.handoffDiagnostic {
+  border-radius: 16px;
+  border: 1px solid #dbe5f1;
+  padding: 0.75rem 0.9rem;
+  background: #ffffff;
+}
+
+.handoffDiagnostic p {
+  margin: 0.22rem 0 0;
+  font-size: 0.82rem;
+  color: #28415f;
+}
+
+.handoffSuccess {
+  border-left: 6px solid #2d9a61;
+}
+
+.handoffFailure {
+  border-left: 6px solid #ff7a1a;
+}
+
+.ordersList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.orderCard {
+  background: #ffffff;
+  border: 1px solid #dbe4f1;
+  border-radius: 20px;
+  padding: 0.95rem;
+  box-shadow: 0 10px 20px rgba(12, 38, 68, 0.08);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.orderTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.orderNumber {
+  margin: 0;
+  color: #0b2240;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.orderMeta {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: #5d708c;
+}
+
+.statusPill {
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #e9f0fc;
+  color: #27456f;
+}
+
+.warningWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.warningPill {
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: #fff0d7;
+  color: #825000;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.infoRow {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 0.6rem;
+  align-items: start;
+}
+
+.infoLabel {
+  margin: 0;
+  color: #6c7f98;
+  font-size: 0.77rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.infoValue {
+  margin: 0;
+  color: #1b304e;
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+.statusForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.editorForm {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.35rem;
+}
+
+.editorGrid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.editorLabel {
+  display: grid;
+  gap: 0.3rem;
+  color: #5e728e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.editorInput,
+.textArea {
+  width: 100%;
+  border: 1px solid #c8d5ea;
+  border-radius: 11px;
+  padding: 0.56rem 0.65rem;
+  background: #ffffff;
+  color: #182942;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.textArea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.editorInput:focus,
+.textArea:focus {
+  outline: 2px solid rgba(255, 122, 26, 0.45);
+  outline-offset: 1px;
+}
+
+.editorActions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.handoffButton {
+  border: 1px solid #ff7a1a;
+  background: #ff7a1a;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 0.58rem 0.76rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.handoffSection {
+  border: 1px solid #dbe6f2;
+  border-radius: 14px;
+  background: #fbfdff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.proofSection {
+  border: 1px solid #dbe6f2;
+  border-radius: 14px;
+  background: #f7fbff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.handoffTitle {
+  margin: 0;
+  color: #0f2a4a;
+  font-size: 0.92rem;
+}
+
+.handoffGrid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.proofLinkRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.proofLinkRow button {
+  border: 1px solid #0b2240;
+  background: #0b2240;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 0.54rem 0.72rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.proofLinkRow button:disabled {
+  opacity: 0.45;
+}
+
+.handoffMeta {
+  border: 1px solid #dce6f2;
+  border-radius: 11px;
+  background: #ffffff;
+  padding: 0.58rem 0.65rem;
+}
+
+.handoffMeta p {
+  margin: 0;
+  color: #324d71;
+  font-size: 0.82rem;
+}
+
+.handoffMeta p + p {
+  margin-top: 0.34rem;
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.quickActionButton {
+  border: 1px solid #0b2240;
+  background: #0b2240;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 0.55rem 0.62rem;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.statusSelect {
+  width: 100%;
+  border: 1px solid #c8d5ea;
+  border-radius: 11px;
+  padding: 0.56rem 0.65rem;
+  background: #ffffff;
+  color: #182942;
+  font-size: 0.88rem;
+}
+
+.updateButton {
+  border: 1px solid #0b2240;
+  background: #0b2240;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 0.58rem 0.76rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.emptyState,
+.errorState,
+.notAuthorized {
+  background: #ffffff;
+  border: 1px solid #dbe4f1;
+  border-radius: 20px;
+  padding: 1rem;
+  color: #1f3251;
+  box-shadow: 0 10px 22px rgba(12, 38, 68, 0.08);
+}
+
+.notAuthorized {
+  border-left: 6px solid #ff7a1a;
+}
+
+.errorState {
+  border-left: 6px solid #ff7a1a;
+}
+
+.loadingWrap {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.loadingCard {
+  background: #ffffff;
+  border: 1px solid #dbe4f1;
+  border-radius: 20px;
+  padding: 0.95rem;
+  box-shadow: 0 10px 20px rgba(12, 38, 68, 0.08);
+}
+
+.shimmer {
+  display: block;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ecf2fb 20%, #f8fbff 50%, #ecf2fb 80%);
+  background-size: 200% 100%;
+  animation: cardOrderShimmer 1.4s ease infinite;
+}
+
+.shimmer + .shimmer {
+  margin-top: 0.55rem;
+}
+
+.shimmerLg {
+  width: 46%;
+  height: 1rem;
+}
+
+.shimmerMd {
+  width: 68%;
+}
+
+.shimmerSm {
+  width: 35%;
+}
+
+@keyframes cardOrderShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (min-width: 820px) {
+  .hero {
+    padding: 1.25rem;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .controlsCard {
+    padding: 1rem;
+  }
+
+  .orderCard {
+    padding: 1.1rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
+  }
+
+  .editorGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editorLabel:first-child {
+    grid-column: span 2;
+  }
+
+  .quickActions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .handoffGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .handoffGrid > :nth-child(3) {
+    grid-column: span 2;
+  }
+
+  .handoffMeta {
+    grid-column: span 2;
+  }
+}

@@ -3,6 +3,7 @@ import BuilderEditor from "@/components/BuilderEditor";
 import { createDefaultBuilderConfig } from "@/lib/builder-config";
 import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
 import { requireCustomer } from "@/lib/auth";
+import { isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function BuilderPage() {
@@ -11,6 +12,7 @@ export default async function BuilderPage() {
   if (!user) redirect("/login");
   if (!customer) redirect("/portal");
   if (customer.must_change_password) redirect("/change-password");
+  if (!isAdvancedBuilderUnlocked(customer)) redirect("/portal/connect?builder=locked");
 
   const admin = createSupabaseAdminClient();
 

@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
         error:
           plan.code === "qr_pro"
             ? "Account limit reached. Upgrade to Agency for additional QR codes."
-            : plan.code === "free_qr"
-              ? "Your free Clutch QR plan includes 1 QR code. Upgrade to QR Pro for more."
+            : plan.code === "connect_basic" || plan.code === "connect_plus"
+              ? "Dynamic QR campaigns are not included on your current plan. Upgrade to QR Pro to create dynamic QR codes."
             : `You've reached your QR code limit (${limit}). Contact Clutch to increase it.`,
       },
       { status: 400 }

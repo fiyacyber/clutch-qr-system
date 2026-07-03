@@ -786,16 +786,18 @@ export function BookingBlockEditor({ block, onUpdate }: BlockEditorProps) {
 }
 
 const PLATFORMS = [
-  "Facebook",
-  "Instagram",
-  "TikTok",
-  "LinkedIn",
-  "YouTube",
-  "X",
-  "Snapchat",
-  "Google Business",
-  "Yelp",
-  "Custom",
+  { value: "website", label: "Website" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
+  { value: "google_business", label: "Google Business Profile" },
+  { value: "yelp", label: "Yelp" },
+  { value: "booking", label: "Calendly / Booking" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "custom", label: "Custom Link" },
 ];
 
 export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
@@ -848,9 +850,9 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
         {links.map((link: any, idx: number) => (
           <div key={`${link.id || idx}`} className="saas-inline-group">
             <Field label={`Link ${idx + 1} platform`}>
-              <select value={link.platform || "Instagram"} onChange={(e) => updateLink(idx, { platform: e.target.value })}>
+              <select value={link.platform || "instagram"} onChange={(e) => updateLink(idx, { platform: e.target.value })}>
                 {PLATFORMS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>
             </Field>
@@ -877,7 +879,7 @@ export function SocialLinksEditor({ block, onUpdate }: BlockEditorProps) {
           disabled={reachedLimit}
           onClick={() => {
             if (reachedLimit) return;
-            onUpdate({ links: [...links, { id: `${Date.now()}`, platform: "Instagram", label: "Instagram", value: "", iconTreatment: "mono" }] });
+            onUpdate({ links: [...links, { id: `${Date.now()}`, platform: "instagram", label: "Instagram", value: "", iconTreatment: "mono" }] });
           }}
         >
           + Add social link

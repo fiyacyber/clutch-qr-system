@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireCustomer } from "@/lib/auth";
-import { getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
+import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
   buildHourlyHeatmap,
@@ -68,12 +70,14 @@ export default async function AnalyticsPage({
   });
   const data = analyticsDataResult.data;
   const plan = getCustomerPlan(customer as any);
+  const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
+  const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
   const qrUsageUsed = data.qrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
   const managePlanHref = plan.checkoutUrl;
   const latestQrCode = data.qrCodes[0] || null;
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
-  const planLabel = plan.code === "admin" ? "Admin" : plan.code === "qr_pro_plus" ? "Agency" : "QR Pro";
+  const planLabel = plan.code === "admin" ? "Admin" : plan.code === "agency" ? "Agency" : "Clutch Connect";
   const authenticationStatus = customer.must_change_password ? "Password reset required" : "Password login active";
   const memberSince = formatDate(customer.created_at);
   const lastLogin = formatDate(user.last_sign_in_at);
@@ -276,7 +280,14 @@ export default async function AnalyticsPage({
   ]).filter(r => r.label !== "Unknown");
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
+    >
       {analyticsDataResult.failed ? (
         <main className="container" style={{ marginBottom: 16 }}>
           <RetryNotice
@@ -285,41 +296,70 @@ export default async function AnalyticsPage({
           />
         </main>
       ) : null}
-      <AnalyticsDashboard
-        activeTab={activeTab}
-        accountName={fullName}
-        accountEmail={user.email || null}
-        companyName={companyName}
-        accountType={planLabel}
-        memberSince={memberSince}
-        lastLogin={lastLogin}
-        authenticationStatus={authenticationStatus}
-        planName={plan.name}
-        planCode={plan.code}
-        managePlanHref={managePlanHref}
-        qrUsageUsed={qrUsageUsed}
-        qrUsageLimit={qrUsageLimit}
-        latestQrName={latestQrCode?.name || null}
-        latestQrForeground={latestQrForeground}
-        latestQrBackground={latestQrBackground}
-        totalScans={totalScans}
-        connectViews={connectViews}
-        linkClicks={linkClicks}
-        uniqueVisitors={uniqueVisitors}
-        leadsCaptured={leadsCaptured}
-        activeQrCodes={activeQrCodes}
-        qrRows={qrRows}
-        connectRows={connectRows}
-        scansOverTime={scansOverTime}
-        countryData={countryData}
-        mapPoints={mapPoints}
-        cityRows={cityRows}
-        deviceRows={deviceRows}
-        browserRows={browserRows}
-        osRows={osRows}
-        heatmap={heatmap}
-        geographyRows={geographyRows}
-      />
+      <main className="container" style={{ marginBottom: 16 }}>
+        <CurrentPlanBadge
+          planCode={plan.code}
+          planName={plan.name}
+          priceLabel={plan.price}
+          description={plan.description}
+          usageLabel={hasHeatmap ? "Analytics dashboard unlocked" : "Analytics dashboard locked"}
+          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
+          trialStatus={String(customer.trial_status || "none")}
+        />
+        {!hasHeatmap ? (
+          <LockedFeatureCard
+            title="Unlock Analytics"
+            description="Advanced analytics and heatmaps are available on Clutch Connect+ and higher."
+            requiredPlan="Clutch Connect+"
+            requiredPlanPrice="$9.99/mo"
+            ctaLabel="Upgrade for $9.99/mo"
+            ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
+            featureList={[
+              "Engagement dashboard",
+              "Geography and device analytics",
+              "Heatmap command center",
+            ]}
+            variant="connect_plus"
+          />
+        ) : null}
+      </main>
+      {hasHeatmap ? (
+        <AnalyticsDashboard
+          activeTab={activeTab}
+          accountName={fullName}
+          accountEmail={user.email || null}
+          companyName={companyName}
+          accountType={planLabel}
+          memberSince={memberSince}
+          lastLogin={lastLogin}
+          authenticationStatus={authenticationStatus}
+          planName={plan.name}
+          planCode={plan.code}
+          managePlanHref={managePlanHref}
+          qrUsageUsed={qrUsageUsed}
+          qrUsageLimit={qrUsageLimit}
+          latestQrName={latestQrCode?.name || null}
+          latestQrForeground={latestQrForeground}
+          latestQrBackground={latestQrBackground}
+          totalScans={totalScans}
+          connectViews={connectViews}
+          linkClicks={linkClicks}
+          uniqueVisitors={uniqueVisitors}
+          leadsCaptured={leadsCaptured}
+          activeQrCodes={activeQrCodes}
+          qrRows={qrRows}
+          connectRows={connectRows}
+          scansOverTime={scansOverTime}
+          countryData={countryData}
+          mapPoints={mapPoints}
+          cityRows={cityRows}
+          deviceRows={deviceRows}
+          browserRows={browserRows}
+          osRows={osRows}
+          heatmap={heatmap}
+          geographyRows={geographyRows}
+        />
+      ) : null}
     </DashboardShell>
   );
 }

@@ -183,8 +183,8 @@ function createDefaultBackground(): BuilderBackgroundSettings {
 function createDefaultButtons(accentColor?: string): BuilderButtonSettings {
   return {
     style: "rounded",
-    color: accentColor || "#FFA665",
-    textColor: "#111827",
+    color: "#FFFFFF",
+    textColor: "#111111",
   };
 }
 
@@ -291,6 +291,7 @@ function normalizeSocialLink(link: unknown, index: number) {
   const iconTreatment = source.iconTreatment === "brand" || source.iconTreatment === "mono"
     ? source.iconTreatment
     : undefined;
+  const visible = source.visible !== false;
 
   if (!value && !label && !platform) return null;
 
@@ -300,6 +301,7 @@ function normalizeSocialLink(link: unknown, index: number) {
     label,
     value,
     iconTreatment,
+    visible,
   };
 }
 
@@ -326,13 +328,13 @@ export function generateBlockId(type: BlockType): string {
  * Create default theme configuration
  */
 export function createDefaultTheme(accentColor?: string): BuilderTheme {
-  const safeAccent = accentColor || "#FFA665";
+  const safeAccent = accentColor || "#111111";
   return {
     accentColor: safeAccent,
-    buttonColor: safeAccent,
-    textColor: "#0F172A",
-    themeMode: "system",
-    profileStyle: "clutch",
+    buttonColor: "#FFFFFF",
+    textColor: "#111111",
+    themeMode: "light",
+    profileStyle: "minimal",
     fontFamily: "exo2",
     fontScale: "normal",
     layout: "default",
@@ -552,7 +554,7 @@ export function sanitizeBuilderConfig(config: unknown): BuilderConfig {
 
     if (normalizedType === "social-media-links") {
       nextData.links = collectSocialLinks(nextData).slice(0, MAX_SOCIAL_LINKS);
-      nextData.iconColorMode = nextData.iconColorMode === "brand" ? "brand" : "mono";
+      nextData.iconColorMode = nextData.iconColorMode === "mono" ? "mono" : "brand";
     }
 
     return {
@@ -587,7 +589,7 @@ export function sanitizeBuilderConfig(config: unknown): BuilderConfig {
       avatarBorderColor: data.avatarBorderColor || "#FFA665",
       avatarBorderWidth: data.avatarBorderWidth ?? 4,
       avatarBorderRadius: data.avatarBorderRadius ?? 999,
-      avatarGlowEnabled: data.avatarGlowEnabled !== false,
+      avatarGlowEnabled: data.avatarGlowEnabled === true,
       avatarGlowColor: data.avatarGlowColor || "#FF6B2C",
       avatarGlowOpacity: data.avatarGlowOpacity ?? 0.35,
       avatarGlowBlur: data.avatarGlowBlur ?? 18,

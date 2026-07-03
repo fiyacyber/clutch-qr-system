@@ -1,13 +1,16 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PASSWORD_POLICY_HELPER_TEXT, validatePasswordPolicy } from "@/lib/password-policy";
+import { sanitizeNextPath } from "@/lib/safe-redirect";
 
 export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = sanitizeNextPath(searchParams.get("next"), "");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +59,7 @@ export default function ChangePasswordPage() {
         {error ? <p className="alert">Error: {error}</p> : null}
 
         <form className="form" onSubmit={handleSubmit}>
+          {next ? <input type="hidden" name="next" value={next} /> : null}
           <label className="label">
             New Password
             <input className="input" type="password" name="password" required minLength={12} />

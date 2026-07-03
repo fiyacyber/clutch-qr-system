@@ -2,9 +2,10 @@ import crypto from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { isEmailConfigured, sendTransactionalEmail } from "@/lib/email";
 import { buildOnboardingEmailTemplate } from "@/lib/email-templates";
-import { PLAN_DEFINITIONS, type PlanCode, normalizePlanCode } from "@/lib/plans";
+import { PLAN_DEFINITIONS, type CanonicalPlanCode, type SupportedPlanCode, normalizePlanCode } from "@/lib/plans";
 
-type ProvisioningPlan = Exclude<PlanCode, "admin">;
+type ProvisioningPlan = Exclude<CanonicalPlanCode, "admin">;
+type OnboardingEmailPlanCode = Exclude<SupportedPlanCode, "admin">;
 
 export type ShopifyWebhookTopic =
   | "orders/paid"
@@ -31,30 +32,65 @@ export type ShopifyProvisioningResult = {
   skippedReason?: string;
 };
 
-const QR_PRO_PRODUCT_KEYWORDS = [
-  "qr pro",
-  "qrpro",
-  "qr-pro",
-  "clutch connect",
-  "connect hosting",
+const CONNECT_BASIC_PRODUCT_KEYWORDS = [
   "smart business card",
   "clutch smart business card",
-  "clutch connect card",
   "nfc business card",
+  "clutch connect card",
+  "digital business card",
   "business kit",
   "starter kit",
-  "startup kit",
   "growth kit",
+  "qualifying print order",
+  "clutch connect",
+  "connect hosting",
 ];
-const QR_PRO_PLUS_PRODUCT_KEYWORDS = [
-  "qr pro+",
-  "qr pro plus",
-  "qrproplus",
-  "qr-pro-plus",
+
+const CONNECT_PLUS_PRODUCT_KEYWORDS = [
+  "clutch connect+",
   "clutch connect plus",
+  "connect+",
+  "connect plus",
+  "connect subscription",
+  "clutch connect subscription",
+  "advanced profile",
+  "premium profile",
+  "profile builder upgrade",
+  "lead inbox upgrade",
+];
+
+const QR_PRO_PRODUCT_KEYWORDS = [
+  "qr pro",
+  "qr-pro",
+  "qrpro",
+  "qr pro subscription",
+  "dynamic qr subscription",
+  "qr campaign tracking",
+  "100 qr codes",
+  "qr tracking plan",
+  "qr analytics plan",
+];
+
+const AGENCY_PRODUCT_KEYWORDS = [
+  "agency",
+  "agency plan",
   "agency kit",
   "custom kit",
+  "multi-client",
+  "client reporting",
+  "250 qr codes",
+  "high volume qr",
+  "custom onboarding",
 ];
+
+const QR_PRO_TRIAL_KEYWORDS = [
+  "qr pro trial",
+  "30 days qr pro",
+  "30 day qr pro",
+  "qr pro included",
+  "includes qr pro",
+];
+
 const FREE_QR_MINIMUM_CENTS = 4500;
 const MIN_TEMP_PASSWORD_LENGTH = 16;
 const CLUTCH_CONNECT_TRIAL_DAYS = 30;
@@ -107,6 +143,24 @@ function itemText(item: any) {
 
 function includesKeyword(text: string, keywords: string[]) {
   return keywords.some((keyword) => text.includes(keyword));
+}
+
+function buildPayloadSearchText(payload: any) {
+  const lineItems = getLineItems(payload);
+  const payloadText = [
+    payload?.name,
+    payload?.title,
+    payload?.product_title,
+    payload?.variant_title,
+    payload?.subscription_name,
+    payload?.plan_name,
+    payload?.line_item?.title,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return `${lineItems.map(itemText).join(" ")} ${payloadText}`.toLowerCase();
 }
 
 function getOrderTotalCents(payload: any) {
@@ -167,26 +221,20 @@ export function verifyShopifyWebhook(rawBody: string, hmacHeader: string | null)
 }
 
 export function detectPlanFromShopifyPayload(payload: any): ProvisioningPlan | null {
-  const lineItems = getLineItems(payload);
-  const payloadText = [
-    payload?.name,
-    payload?.title,
-    payload?.product_title,
-    payload?.variant_title,
-    payload?.subscription_name,
-    payload?.plan_name,
-    payload?.line_item?.title,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  const lineText = `${lineItems.map(itemText).join(" ")} ${payloadText}`;
+  const lineText = buildPayloadSearchText(payload);
 
-  if (includesKeyword(lineText, QR_PRO_PLUS_PRODUCT_KEYWORDS)) return "qr_pro_plus";
+  // Priority: Agency > QR Pro > Connect+ > Connect Basic > no qualifying plan.
+  if (includesKeyword(lineText, AGENCY_PRODUCT_KEYWORDS)) return "agency";
   if (includesKeyword(lineText, QR_PRO_PRODUCT_KEYWORDS)) return "qr_pro";
+  if (includesKeyword(lineText, CONNECT_PLUS_PRODUCT_KEYWORDS)) return "connect_plus";
+  if (includesKeyword(lineText, CONNECT_BASIC_PRODUCT_KEYWORDS)) return "connect_basic";
 
-  if (getOrderTotalCents(payload) >= FREE_QR_MINIMUM_CENTS) return "qr_pro";
+  if (getOrderTotalCents(payload) >= FREE_QR_MINIMUM_CENTS) return "connect_basic";
   return null;
+}
+
+function hasExplicitQrProTrialAccess(payload: any) {
+  return includesKeyword(buildPayloadSearchText(payload), QR_PRO_TRIAL_KEYWORDS);
 }
 
 export function normalizeSubscriptionStatus(topic: ShopifyWebhookTopic, payload: any) {
@@ -263,18 +311,38 @@ export async function sendCustomerOnboardingEmail({
 }: {
   email: string;
   temporaryPassword: string;
-  planCode: ProvisioningPlan;
+  planCode: OnboardingEmailPlanCode;
   idempotencyKey: string;
   trialEndsAt?: string | null;
 }) {
   const portalUrl = process.env.CLUTCH_QR_BASE_URL || "https://qr.clutchprintshop.com";
   const loginUrl = `${portalUrl}/login?email=${encodeURIComponent(email)}`;
-  const plan = PLAN_DEFINITIONS[planCode];
-  const intro = trialEndsAt
-    ? `Your print order includes a 30-day free trial of ${plan.name}. When the trial ends, paid Clutch Connect features will pause until you choose a monthly plan.`
-    : planCode === "free_qr"
-      ? "Your print order includes starter Clutch Connect access for one dynamic campaign."
-      : `Your account has been created for ${plan.name} access.`;
+  const normalizedPlanCode = normalizePlanCode(planCode) as CanonicalPlanCode;
+  const plan = PLAN_DEFINITIONS[normalizedPlanCode];
+
+  const introByPlan: Record<ProvisioningPlan, string> = {
+    connect_basic:
+      "Your order includes a free Clutch Connect Basic profile. Use it with your NFC card, QR code, or social bio.",
+    connect_plus:
+      "Your Clutch Connect+ account is ready. You now have access to advanced profile customization, lead capture, and profile analytics.",
+    qr_pro:
+      "Your QR Pro account is ready. You can create and track up to 100 dynamic QR codes for print and marketing campaigns.",
+    agency:
+      "Your Agency account is ready. You have access to higher QR limits, advanced reporting, and client/campaign management tools.",
+  };
+
+  const subjectByPlan: Record<ProvisioningPlan, string> = {
+    connect_basic: "Welcome to Clutch Connect Basic",
+    connect_plus: "Welcome to Clutch Connect+",
+    qr_pro: "Welcome to QR Pro",
+    agency: "Welcome to Clutch Agency",
+  };
+
+  const trialCopy = trialEndsAt
+    ? ` You also have temporary QR Pro trial access through ${new Date(trialEndsAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+    : "";
+
+  const intro = `${introByPlan[normalizedPlanCode as ProvisioningPlan]}${trialCopy}`;
   const message = buildOnboardingEmailTemplate({
     email,
     temporaryPassword,
@@ -287,7 +355,7 @@ export async function sendCustomerOnboardingEmail({
   if (isEmailConfigured()) {
     await sendTransactionalEmail({
       to: email,
-      subject: `Welcome to ${plan.name}`,
+      subject: subjectByPlan[normalizedPlanCode as ProvisioningPlan],
       text: message.text,
       html: message.html,
       idempotencyKey,
@@ -307,15 +375,16 @@ function shouldUpgradePlan(existingCustomer: any, nextPlanCode: ProvisioningPlan
   if (!existingCustomer) return true;
   if (existingCustomer.is_admin || normalizePlanCode(existingCustomer.plan_code || existingCustomer.plan) === "admin") return false;
 
-  const currentPlan = normalizePlanCode(existingCustomer.plan_code || existingCustomer.plan);
-  const rank: Record<PlanCode, number> = {
-    free_qr: 1,
-    qr_pro: 2,
-    qr_pro_plus: 3,
-    admin: 4,
+  const currentPlan = normalizePlanCode(existingCustomer.plan_code || existingCustomer.plan) as CanonicalPlanCode;
+  const rank: Record<CanonicalPlanCode, number> = {
+    connect_basic: 1,
+    connect_plus: 2,
+    qr_pro: 3,
+    agency: 4,
+    admin: 5,
   };
 
-  return rank[nextPlanCode] >= rank[currentPlan];
+  return rank[nextPlanCode] >= (rank[currentPlan] || rank.connect_basic);
 }
 
 export async function provisionCustomerFromShopify({
@@ -331,9 +400,9 @@ export async function provisionCustomerFromShopify({
     return { qualified: false, skippedReason: "Checkout is not paid yet; waiting for orders/paid." };
   }
 
-  const purchaseQualifiesForTrial = isTrialPurchaseTopic(topic) && getOrderTotalCents(payload) > 0;
-  const detectedPlan = detectPlanFromShopifyPayload(payload) || (purchaseQualifiesForTrial ? "qr_pro" : null);
-  if (!detectedPlan) return { qualified: false, skippedReason: "No qualifying QR product or free QR order." };
+  const purchaseQualifiesForTrial = isTrialPurchaseTopic(topic) && hasExplicitQrProTrialAccess(payload);
+  const detectedPlan = detectPlanFromShopifyPayload(payload);
+  if (!detectedPlan) return { qualified: false, skippedReason: "No qualifying Clutch Connect or QR plan was found." };
 
   const email = String(payload?.email || payload?.customer?.email || payload?.billing_address?.email || "")
     .trim()
@@ -351,7 +420,7 @@ export async function provisionCustomerFromShopify({
 
   const planCode = shouldUpgradePlan(existingCustomer, detectedPlan)
     ? detectedPlan
-    : normalizePlanCode(existingCustomer?.plan_code || existingCustomer?.plan) as ProvisioningPlan;
+    : (normalizePlanCode(existingCustomer?.plan_code || existingCustomer?.plan) as ProvisioningPlan);
   const plan = PLAN_DEFINITIONS[planCode];
   const temporaryPassword = generateTemporaryPassword();
   const authUserId =

@@ -1,0 +1,3864 @@
+diff --git a/assets/base.css b/assets/base.css
+index cc0d09a..eab22b2 100644
+--- a/assets/base.css
++++ b/assets/base.css
+@@ -4412,7 +4412,7 @@ textarea,
+ ========================== */
+ 
+ :root{
+---clutch-navy:#394b6a;
++--clutch-navy:#384862;
+ --clutch-orange:#ffa665;
+ --clutch-dark:#222222;
+ --clutch-light:#f8f7f4;
+@@ -4481,3 +4481,548 @@ padding-bottom:60px!important;
+   padding-top: 4px !important;
+   padding-bottom: 4px !important;
+ }
++
++/* Clutch print shop product UX */
++.clutch-eyebrow {
++  color: var(--clutch-orange);
++  font-size: .78rem;
++  font-weight: 800;
++  letter-spacing: .08em;
++  margin: 0 0 .5rem;
++  text-transform: uppercase;
++}
++
++.clutch-supporting-copy {
++  color: var(--clutch-navy);
++  font-size: .95rem;
++  line-height: 1.55;
++  margin: 0 0 1rem;
++}
++
++.clutch-print-options {
++  display: grid;
++  gap: .85rem;
++  width: 100%;
++}
++
++.clutch-option-card,
++.clutch-info-panel {
++  background: #fff;
++  border: 1px solid rgba(56, 72, 98, .16);
++  border-radius: 16px;
++  padding: 1rem;
++}
++
++.clutch-option-card--highlight {
++  background: rgba(255, 166, 101, .12);
++  border-color: rgba(255, 166, 101, .45);
++}
++
++.clutch-field-label,
++.clutch-checkbox-row strong {
++  color: var(--clutch-navy);
++  display: block;
++  font-weight: 800;
++  margin-bottom: .45rem;
++}
++
++.clutch-file-input,
++.clutch-select {
++  background: #fff;
++  border: 1px solid rgba(56, 72, 98, .28);
++  border-radius: 12px;
++  color: var(--clutch-dark);
++  min-height: 48px;
++  padding: .75rem;
++  width: 100%;
++}
++
++.clutch-field-help,
++.clutch-checkbox-row small {
++  color: rgba(56, 72, 98, .8);
++  display: block;
++  font-size: .85rem;
++  line-height: 1.45;
++  margin: .45rem 0 0;
++}
++
++.clutch-checkbox-row {
++  align-items: flex-start;
++  cursor: pointer;
++  display: flex;
++  gap: .75rem;
++}
++
++.clutch-checkbox-row input {
++  accent-color: var(--clutch-orange);
++  margin-top: .2rem;
++}
++
++.clutch-info-grid {
++  display: grid;
++  gap: .85rem;
++}
++
++.clutch-info-panel h3 {
++  color: var(--clutch-navy);
++  font-size: 1rem;
++  margin: 0 0 .6rem;
++}
++
++.clutch-info-panel p,
++.clutch-info-panel li {
++  color: var(--clutch-dark);
++  font-size: .92rem;
++  line-height: 1.5;
++}
++
++.clutch-info-panel ul {
++  margin: 0;
++  padding-left: 1.1rem;
++}
++
++.clutch-card-badges {
++  display: flex;
++  flex-wrap: wrap;
++  gap: .4rem;
++  position: relative;
++  z-index: 1;
++}
++
++.clutch-card-badge {
++  background: rgba(56, 72, 98, .08);
++  border: 1px solid rgba(56, 72, 98, .14);
++  border-radius: 999px;
++  color: var(--clutch-navy);
++  display: inline-flex;
++  font-size: .68rem;
++  font-weight: 800;
++  letter-spacing: .04em;
++  line-height: 1;
++  padding: .42rem .55rem;
++  text-transform: uppercase;
++}
++
++.clutch-card-badge--popular {
++  background: var(--clutch-orange);
++  border-color: var(--clutch-orange);
++  color: var(--clutch-navy);
++}
++
++.clutch-card-actions {
++  display: grid;
++  gap: .5rem;
++  margin-top: auto;
++  position: relative;
++  width: 100%;
++  z-index: 1;
++}
++
++.clutch-card-button {
++  min-height: 44px;
++  padding-inline: .9rem !important;
++  text-align: center;
++  width: 100%;
++}
++
++.clutch-shop {
++  display: grid;
++  gap: 2rem;
++  grid-column: 1 / -1;
++  width: 100%;
++}
++
++.clutch-shop__intro,
++.clutch-shop__group {
++  grid-column: 1 / -1;
++}
++
++.clutch-shop__intro {
++  background: linear-gradient(135deg, rgba(56, 72, 98, .08), rgba(255, 166, 101, .16));
++  border-radius: 22px;
++  padding: clamp(1.25rem, 4vw, 2.5rem);
++}
++
++.clutch-shop__intro h2,
++.clutch-shop__group h2 {
++  color: var(--clutch-navy);
++  margin-block: 0 .75rem;
++}
++
++.clutch-shop__intro p:last-child {
++  color: var(--clutch-dark);
++  line-height: 1.55;
++  margin: 0;
++  max-width: 720px;
++}
++
++.clutch-shop__grid {
++  display: grid;
++  gap: 1.1rem;
++  grid-template-columns: 1fr;
++}
++
++.clutch-shop-card {
++  background: #fff;
++  border: 1px solid rgba(56, 72, 98, .12);
++  border-radius: 22px;
++  box-shadow: 0 10px 28px rgba(56, 72, 98, .06);
++  display: grid;
++  overflow: hidden;
++}
++
++.clutch-shop-card__media {
++  background: linear-gradient(135deg, rgba(56, 72, 98, .08), rgba(255, 166, 101, .12));
++  display: block;
++  aspect-ratio: 4 / 3;
++  overflow: hidden;
++  position: relative;
++}
++
++.clutch-shop-card__media img,
++.clutch-shop-card__placeholder {
++  height: 100%;
++  width: 100%;
++}
++
++.clutch-shop-card__media img {
++  display: block;
++  object-fit: cover;
++}
++
++.clutch-shop-card__placeholder {
++  align-items: center;
++  background:
++    radial-gradient(circle at top, rgba(255, 255, 255, .65), transparent 42%),
++    linear-gradient(135deg, rgba(56, 72, 98, .08), rgba(255, 166, 101, .16));
++  color: rgba(56, 72, 98, .76);
++  display: flex;
++  font-size: .78rem;
++  font-weight: 800;
++  justify-content: center;
++  letter-spacing: .08em;
++  padding: 1rem;
++  text-align: center;
++  text-transform: uppercase;
++  position: relative;
++}
++
++.clutch-shop-card__placeholder::before {
++  content: '';
++  position: absolute;
++  inset: 1rem;
++  border: 1px dashed rgba(56, 72, 98, .16);
++  border-radius: 18px;
++}
++
++.clutch-shop-card__placeholder-label {
++  background: rgba(255, 255, 255, .68);
++  border: 1px solid rgba(56, 72, 98, .12);
++  border-radius: 999px;
++  box-shadow: 0 10px 20px rgba(56, 72, 98, .06);
++  padding: .65rem 1rem;
++  position: relative;
++  z-index: 1;
++}
++
++.clutch-shop-card__body {
++  display: grid;
++  gap: .85rem;
++  padding: 1.05rem;
++}
++
++.clutch-shop-card__body h3 {
++  font-size: 1.1rem;
++  margin: 0;
++}
++
++.clutch-shop-card__body h3 a {
++  color: var(--clutch-navy);
++  text-decoration: none;
++}
++
++.clutch-shop-card__body p {
++  color: rgba(34, 34, 34, .82);
++  font-size: .92rem;
++  line-height: 1.45;
++  margin: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.clutch-shop-card__footer {
++  display: grid;
++  gap: .75rem;
++}
++
++.clutch-shop-card__price {
++  color: var(--clutch-navy);
++  font-weight: 800;
++}
++
++@media screen and (min-width: 750px) {
++  .clutch-info-grid {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++
++  .clutch-shop__grid {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++}
++
++@media screen and (min-width: 990px) {
++  .clutch-shop__grid {
++    grid-template-columns: repeat(4, minmax(0, 1fr));
++  }
++}
++
++/* ====================================================
++   MOBILE RESPONSIVE AUDIT PATCH
++   Scope: homepage, business kits, product/collection,
++   QR Pro, reach-out/contact, header/footer
++==================================================== */
++html,
++body {
++  max-width: 100%;
++  overflow-x: clip;
++}
++
++/* Keep long strings from blowing out cards/forms/menus */
++a,
++button,
++input,
++label,
++li,
++span,
++summary,
++textarea {
++  overflow-wrap: break-word;
++}
++
++/* Defensive media scaling */
++img,
++svg,
++video,
++canvas,
++iframe {
++  height: auto;
++  max-width: 100%;
++}
++
++/* Keep homepage Business Kit QR text aligned with the feature text column. */
++.ch-kits .ch-kit-card__features > li > .ch-kit-card__feature-highlight {
++  display: block;
++  grid-column: 2;
++}
++
++/* Prevent flex/grid children from causing horizontal scroll */
++.grid > *,
++.main-collection-grid > *,
++.product-grid > *,
++.ch-kits__grid > *,
++.ch-essentials__grid > *,
++.clutch-business-kits__grid > *,
++.clutch-business-kits-collection__grid > *,
++.clutch-qr-page__card-grid > *,
++.clutch-qr-page__pricing-grid > * {
++  min-width: 0;
++}
++
++@media screen and (max-width: 990px) {
++  /* Product / collection density and wrapping */
++  .product-grid {
++    --mobile-columns: 2;
++  }
++
++  .clutch-shop-card__body p {
++    overflow: visible;
++    text-overflow: clip;
++    white-space: normal;
++  }
++
++  /* Reduce oversized desktop spacing in hero-like sections */
++  .ch-hero,
++  .clutch-qr-page__hero,
++  .clutch-reach-out,
++  .clutch-home-reach-out,
++  .clutch-business-kits,
++  .clutch-business-kits-collection,
++  .clutch-footer {
++    padding-inline: max(0.9rem, var(--page-margin));
++  }
++
++  /* Header/logo/menu fit adjustments */
++  .header,
++  .header__columns,
++  .header__row {
++    max-width: 100%;
++  }
++
++  .header__heading-logo {
++    height: auto;
++    max-height: 36px;
++    width: auto;
++  }
++
++  .menu-drawer__menu-item,
++  .menu-drawer__menu-item-text {
++    white-space: normal;
++  }
++
++  /* Contact areas and forms readability */
++  .clutch-home-reach-out__details,
++  .clutch-reach-out__details,
++  .clutch-footer__contact {
++    justify-items: center;
++  }
++
++  input,
++  select,
++  textarea,
++  button,
++  .button,
++  .button-secondary {
++    min-height: 44px;
++  }
++}
++
++@media screen and (max-width: 768px) {
++  /* Card stacks and compact spacing */
++  .ch-kits__grid,
++  .ch-essentials__grid,
++  .clutch-business-kits__grid,
++  .clutch-business-kits-collection__grid,
++  .clutch-qr-page__pricing-grid,
++  .clutch-qr-page__card-grid,
++  .clutch-qr-trust__grid {
++    gap: 0.9rem;
++    grid-template-columns: 1fr;
++  }
++
++  /* Keep some product grids at 2 columns where space allows */
++  .product-grid {
++    --mobile-columns: 2;
++  }
++
++  /* Buttons full width on mobile where needed */
++  .ch-hero__actions .ch-btn,
++  .ch-kits .ch-kit-card__button,
++  .clutch-business-kits .clutch-kit-card__button,
++  .clutch-business-kits-collection .clutch-shop-card--kit-button,
++  .clutch-qr-page__actions .button,
++  .clutch-qr-page__actions .button-secondary,
++  .clutch-qr-page__pricing-grid .button,
++  .clutch-reach-out .button,
++  .clutch-home-reach-out .button,
++  .clutch-business-kits__custom .button,
++  .clutch-business-kits-collection__custom .button {
++    width: 100%;
++  }
++
++  /* Hero and card padding reductions */
++  .ch-hero,
++  .clutch-qr-page__hero {
++    padding-block: clamp(2.5rem, 7vw, 3.5rem);
++  }
++
++  .ch-hero__inner,
++  .clutch-qr-page__hero-inner,
++  .clutch-reach-out__card,
++  .clutch-home-reach-out__inner,
++  .clutch-business-kits-collection .clutch-shop-card--kit-body,
++  .clutch-business-kits .clutch-kit-card__body,
++  .ch-kit-card__body {
++    padding: 1.1rem;
++  }
++
++  .clutch-footer__inner,
++  .clutch-footer__bottom {
++    text-align: center;
++  }
++}
++
++@media screen and (max-width: 480px) {
++  /* Single-column fallback for very small screens */
++  .product-grid,
++  .ch-essentials__grid,
++  .ch-kits__grid,
++  .clutch-business-kits__grid,
++  .clutch-business-kits-collection__grid,
++  .clutch-qr-page__card-grid,
++  .clutch-qr-page__pricing-grid {
++    --mobile-columns: 1;
++    grid-template-columns: 1fr;
++  }
++
++  .header__heading-logo {
++    max-height: 32px;
++  }
++
++  .clutch-footer p,
++  .clutch-footer a,
++  .clutch-footer li,
++  .clutch-home-reach-out__details span,
++  .clutch-reach-out__value {
++    font-size: clamp(0.92rem, 3.6vw, 1rem);
++  }
++}
++
++main[data-template^='product'] > .shopify-section[id$='__product_options'] {
++  display: none !important;
++}
++
++.clutch-business-cards-nav {
++  position: relative;
++}
++
++.clutch-business-cards-nav__submenu {
++  background: #fff;
++  border: 1px solid rgba(255, 166, 101, 0.32);
++  border-radius: 16px;
++  box-shadow: 0 20px 45px rgba(56, 72, 98, 0.16);
++  display: grid;
++  gap: 0.25rem;
++  left: 50%;
++  min-width: 240px;
++  opacity: 0;
++  padding: 0.7rem;
++  pointer-events: none;
++  position: absolute;
++  top: calc(100% + 0.75rem);
++  transform: translateX(-50%) translateY(-8px);
++  transition: opacity 0.16s ease, transform 0.16s ease;
++  z-index: 40;
++}
++
++.clutch-business-cards-nav:hover .clutch-business-cards-nav__submenu,
++.clutch-business-cards-nav:focus-within .clutch-business-cards-nav__submenu {
++  opacity: 1;
++  pointer-events: auto;
++  transform: translateX(-50%) translateY(0);
++}
++
++.clutch-business-cards-nav__submenu a,
++.clutch-business-cards-drawer__list a {
++  border-radius: 10px;
++  color: #384862;
++  display: block;
++  font-weight: 850;
++  padding: 0.75rem 0.85rem;
++  text-decoration: none;
++}
++
++.clutch-business-cards-nav__submenu a:hover,
++.clutch-business-cards-drawer__list a:hover {
++  background: rgba(255, 166, 101, 0.14);
++}
++
++.clutch-business-cards-drawer summary {
++  cursor: pointer;
++}
++
++.clutch-business-cards-drawer__list {
++  display: grid;
++  gap: 0.25rem;
++  padding: 0.25rem 0 0.75rem 1rem;
++}
+diff --git a/assets/product-form.js b/assets/product-form.js
+index 2f33d20..cdafc3e 100644
+--- a/assets/product-form.js
++++ b/assets/product-form.js
+@@ -374,6 +374,22 @@ class ProductFormComponent extends Component {
+     }
+ 
+     const formData = new FormData(form);
++    const clutchQrAddonVariantId = this.#getSelectedClutchQrAddonVariantId(form);
++    const clutchQrAddonRequired = this.#isPaidClutchQrAddonSelected(form);
++    const professionalDesignSelected = this.#isProfessionalDesignSelected(form);
++    const professionalDesignVariantId = this.#getProfessionalDesignVariantId(form);
++
++    if (clutchQrAddonRequired && !clutchQrAddonVariantId) {
++      const errorMessage = 'QR Pro hosting is not available. Please contact us.';
++      this.#showAddToCartError(errorMessage, addToCartTextError, form);
++      return;
++    }
++
++    if (professionalDesignSelected && !professionalDesignVariantId) {
++      const errorMessage = 'Professional Design product is not available. Please contact us.';
++      this.#showAddToCartError(errorMessage, addToCartTextError, form);
++      return;
++    }
+ 
+     if (overrideVariantId) {
+       formData.set('id', overrideVariantId);
+@@ -390,6 +406,7 @@ class ProductFormComponent extends Component {
+       }
+       formData.append('sections', cartItemComponentsSectionIds.join(','));
+     });
++    const cartSections = cartItemComponentsSectionIds.join(',');
+ 
+     const fetchCfg = fetchConfig('javascript', { body: formData });
+ 
+@@ -466,15 +483,39 @@ class ProductFormComponent extends Component {
+             }, SUCCESS_MESSAGE_DISPLAY_DURATION);
+           }
+ 
++          let clutchQrAddonResponse = null;
++          let professionalDesignResponse = null;
++          try {
++            clutchQrAddonResponse = await this.#addClutchQrAddonToCart(clutchQrAddonVariantId, cartSections, form);
++          } catch (error) {
++            const errorMessage =
++              error instanceof Error ? error.message : 'QR add-on could not be added to cart.';
++            this.#showAddToCartError(errorMessage, addToCartTextError, form);
++          }
++          try {
++            professionalDesignResponse = await this.#addProfessionalDesignToCart(
++              professionalDesignVariantId,
++              cartSections,
++              form
++            );
++          } catch (error) {
++            const errorMessage =
++              error instanceof Error ? error.message : 'Professional Design could not be added to cart.';
++            this.#showAddToCartError(errorMessage, addToCartTextError, form);
++          }
++          const responseSections = professionalDesignResponse?.sections || clutchQrAddonResponse?.sections || response.sections;
++
+           // Fetch the updated cart to get the actual total quantity for this variant
+           const cart = await this.#fetchAndUpdateCartQuantity();
++          const mainItemCount = Number(formData.get('quantity')) || Number(this.dataset.quantityDefault);
++          const addOnItemCount = (clutchQrAddonResponse ? 1 : 0) + (professionalDesignResponse ? 1 : 0);
+ 
+           this.dispatchEvent(
+             new CartAddEvent(cart ?? undefined, id.toString(), {
+               source: 'product-form-component',
+-              itemCount: Number(formData.get('quantity')) || Number(this.dataset.quantityDefault),
++              itemCount: mainItemCount + addOnItemCount,
+               productId: this.dataset.productId,
+-              sections: response.sections,
++              sections: responseSections,
+             })
+           );
+         }
+@@ -489,6 +530,165 @@ class ProductFormComponent extends Component {
+       });
+   }
+ 
++  /**
++   * @param {HTMLFormElement} form
++   * @returns {boolean}
++   */
++  #isPaidClutchQrAddonSelected(form) {
++    const qrSelect = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name="properties[QR Package]"]'));
++    const selectedOption = qrSelect?.selectedOptions?.[0];
++
++    return Boolean(selectedOption?.dataset.clutchQrAddonHandle);
++  }
++
++  /**
++   * @param {HTMLFormElement} form
++   * @returns {boolean}
++   */
++  #isProfessionalDesignSelected(form) {
++    const professionalDesignCheckbox = /** @type {HTMLInputElement | null} */ (
++      form.querySelector('input[type="checkbox"][name="properties[Professional Design]"]')
++    );
++    return Boolean(professionalDesignCheckbox?.checked);
++  }
++
++  /**
++   * @param {HTMLFormElement} form
++   * @returns {string | undefined}
++   */
++  #getProfessionalDesignVariantId(form) {
++    const professionalDesignCheckbox = /** @type {HTMLInputElement | null} */ (
++      form.querySelector('input[type="checkbox"][name="properties[Professional Design]"][data-clutch-professional-design-variant-id]')
++    );
++    const variantId = professionalDesignCheckbox?.dataset.clutchProfessionalDesignVariantId;
++    return variantId || undefined;
++  }
++
++  /**
++   * @param {HTMLFormElement} form
++   * @returns {string | undefined}
++   */
++  #getSelectedClutchQrAddonVariantId(form) {
++    const qrSelect = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name="properties[QR Package]"]'));
++    const selectedOption = qrSelect?.selectedOptions?.[0];
++    const variantId = selectedOption?.dataset.clutchQrAddonVariantId;
++
++    return variantId || undefined;
++  }
++
++  /**
++   * @param {string | undefined} variantId
++   * @param {string} sections
++   * @param {HTMLFormElement} form
++   * @returns {Promise<any | null>}
++   */
++  async #addClutchQrAddonToCart(variantId, sections, form) {
++    if (!variantId) return null;
++
++    const qrSelect = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name="properties[QR Package]"]'));
++    const selectedOption = qrSelect?.selectedOptions?.[0];
++    const productTitle = form.querySelector('input[name="properties[Clutch print product]"]')?.getAttribute('value') || '';
++
++    const payload = {
++      items: [
++        {
++          id: Number(variantId),
++          quantity: 1,
++          properties: {
++            'QR Package': selectedOption?.textContent?.trim() || 'QR add-on',
++            'Added for': productTitle,
++          },
++        },
++      ],
++      sections,
++    };
++
++    const response = await fetch(Theme.routes.cart_add_url, {
++      method: 'POST',
++      headers: {
++        'Content-Type': 'application/json',
++        Accept: 'application/json',
++      },
++      body: JSON.stringify(payload),
++    });
++    const json = await response.json();
++
++    if (json.status) {
++      throw new Error(json.message || 'QR add-on could not be added to cart.');
++    }
++
++    return json;
++  }
++
++  /**
++   * @param {string | undefined} variantId
++   * @param {string} sections
++   * @param {HTMLFormElement} form
++   * @returns {Promise<any | null>}
++   */
++  async #addProfessionalDesignToCart(variantId, sections, form) {
++    if (!variantId) return null;
++
++    const productTitle = form.querySelector('input[name="properties[Clutch print product]"]')?.getAttribute('value') || '';
++
++    const payload = {
++      items: [
++        {
++          id: Number(variantId),
++          quantity: 1,
++          properties: {
++            'Professional Design': 'Add-on',
++            'Added for': productTitle,
++          },
++        },
++      ],
++      sections,
++    };
++
++    const response = await fetch(Theme.routes.cart_add_url, {
++      method: 'POST',
++      headers: {
++        'Content-Type': 'application/json',
++        Accept: 'application/json',
++      },
++      body: JSON.stringify(payload),
++    });
++    const json = await response.json();
++
++    if (json.status) {
++      throw new Error(json.message || 'Professional Design could not be added to cart.');
++    }
++
++    return json;
++  }
++
++  /**
++   * @param {string} message
++   * @param {HTMLElement | undefined} addToCartTextError
++   * @param {HTMLFormElement} form
++   */
++  #showAddToCartError(message, addToCartTextError, form) {
++    this.dispatchEvent(new CartErrorEvent(form.getAttribute('id') || '', message, message));
++
++    if (!addToCartTextError) return;
++
++    addToCartTextError.classList.remove('hidden');
++    const textNode = addToCartTextError.childNodes[2];
++    if (textNode) {
++      textNode.textContent = message;
++    } else {
++      addToCartTextError.appendChild(document.createTextNode(message));
++    }
++
++    this.#setLiveRegionText(message);
++
++    if (this.#timeout) clearTimeout(this.#timeout);
++    this.#timeout = setTimeout(() => {
++      addToCartTextError.classList.add('hidden');
++      this.#clearLiveRegionText();
++    }, ERROR_MESSAGE_DISPLAY_DURATION);
++  }
++
+   /** @param {Array<{variantId: string, quantity: number}>} items */
+   #processBatchAddToCart(items) {
+     if (items.length === 0) return;
+diff --git a/blocks/_header-menu.liquid b/blocks/_header-menu.liquid
+index d3bdbb6..a550e81 100644
+--- a/blocks/_header-menu.liquid
++++ b/blocks/_header-menu.liquid
+@@ -38,20 +38,99 @@
+             class="menu-list__list list-unstyled"
+             role="list"
+           >
++            {% assign clutch_has_smart_card_link = false %}
++            {% assign clutch_has_qr_pro_link = false %}
+             {% for link in block_settings.menu.links %}
++              {% liquid
++                assign menu_link_url = link.url
++                assign menu_link_title = link.title | strip | downcase
++                assign menu_link_label = link.title
++
++                if menu_link_title == 'custom order'
++                  assign menu_link_url = '/pages/contact'
++                  assign menu_link_label = 'Reach Out'
++                elsif menu_link_title == 'reach out' or menu_link_title == 'contact'
++                  assign menu_link_url = '/pages/contact'
++                  assign menu_link_label = 'Reach Out'
++                elsif menu_link_title == 'shop'
++                  assign menu_link_url = '/collections/all'
++                  assign menu_link_label = 'Shop Products'
++                elsif menu_link_title == 'business kits'
++                  assign menu_link_url = '/collections/business-kits'
++                elsif menu_link_title == 'smart business card' or menu_link_title == 'clutch connect card'
++                  assign menu_link_url = '/pages/smart-business-card'
++                  assign menu_link_label = 'Smart Business Card'
++                  assign clutch_has_smart_card_link = true
++                elsif menu_link_title == 'qr pro' or menu_link_title == 'qr codes'
++                  assign menu_link_url = '/pages/qr-pro'
++                  assign menu_link_label = 'QR PRO'
++                  assign clutch_has_qr_pro_link = true
++                endif
++
++                assign menu_link_active = false
++                if link.current
++                  assign menu_link_active = true
++                elsif request.path == menu_link_url
++                  assign menu_link_active = true
++                endif
++              %}
++              {% if menu_link_title == 'qr pro' or menu_link_title == 'qr codes' %}
++                {% unless clutch_has_smart_card_link %}
++                  {% render 'clutch-business-cards-nav', variant: 'mobile_bar' %}
++                  {% assign clutch_has_smart_card_link = true %}
++                {% endunless %}
++              {% endif %}
++              {% if menu_link_title == 'custom order' or menu_link_title == 'reach out' or menu_link_title == 'contact' %}
++                {% unless clutch_has_smart_card_link %}
++                  {% render 'clutch-business-cards-nav', variant: 'mobile_bar' %}
++                  {% assign clutch_has_smart_card_link = true %}
++                {% endunless %}
++                {% unless clutch_has_qr_pro_link %}
++                  <li>
++                    <a
++                      href="/pages/qr-pro"
++                      id="MenuItem-qr-pro"
++                      class="menu-list__item{% if request.path == '/pages/qr-pro' %} menu-list__item--active{% endif %}"
++                      {% if request.path == '/pages/qr-pro' %}
++                        aria-current="page"
++                      {% endif %}
++                    >
++                      QR PRO
++                    </a>
++                  </li>
++                  {% assign clutch_has_qr_pro_link = true %}
++                {% endunless %}
++              {% endif %}
+               <li>
+                 <a
+-                  href="{{ link.url }}"
++                  href="{{ menu_link_url }}"
+                   id="MenuItem-{{ link.handle }}"
+-                  class="menu-list__item"
+-                  {% if link.current %}
++                  class="menu-list__item{% if menu_link_active %} menu-list__item--active{% endif %}"
++                  {% if menu_link_active %}
+                     aria-current="page"
+                   {% endif %}
+                 >
+-                  {{- link.title -}}
++                  {{- menu_link_label -}}
+                 </a>
+               </li>
+             {% endfor %}
++            {% unless clutch_has_smart_card_link %}
++              {% render 'clutch-business-cards-nav', variant: 'mobile_bar' %}
++            {% endunless %}
++            {% unless clutch_has_qr_pro_link %}
++              <li>
++                <a
++                  href="/pages/qr-pro"
++                  id="MenuItem-qr-pro"
++                  class="menu-list__item{% if request.path == '/pages/qr-pro' %} menu-list__item--active{% endif %}"
++                  {% if request.path == '/pages/qr-pro' %}
++                    aria-current="page"
++                  {% endif %}
++                >
++                  QR PRO
++                </a>
++              </li>
++            {% endunless %}
+           </ul>
+         </div>
+       </div>
+@@ -83,7 +162,77 @@
+     %}
+ 
+     {% capture children %}
++      {% assign clutch_has_smart_card_link = false %}
++      {% assign clutch_has_qr_pro_link = false %}
+       {% for link in block_settings.menu.links %}
++        {% liquid
++          assign menu_link_url = link.url
++          assign menu_link_title = link.title | strip | downcase
++          assign menu_link_label = link.title
++
++          if menu_link_title == 'custom order'
++            assign menu_link_url = '/pages/contact'
++            assign menu_link_label = 'Reach Out'
++          elsif menu_link_title == 'reach out' or menu_link_title == 'contact'
++            assign menu_link_url = '/pages/contact'
++            assign menu_link_label = 'Reach Out'
++          elsif menu_link_title == 'shop'
++            assign menu_link_url = '/collections/all'
++            assign menu_link_label = 'Shop Products'
++          elsif menu_link_title == 'business kits'
++            assign menu_link_url = '/collections/business-kits'
++          elsif menu_link_title == 'smart business card' or menu_link_title == 'clutch connect card'
++            assign menu_link_url = '/pages/smart-business-card'
++            assign menu_link_label = 'Smart Business Card'
++            assign clutch_has_smart_card_link = true
++          elsif menu_link_title == 'qr pro' or menu_link_title == 'qr codes'
++            assign menu_link_url = '/pages/qr-pro'
++            assign menu_link_label = 'QR PRO'
++            assign clutch_has_qr_pro_link = true
++          endif
++
++          assign menu_link_active = false
++          if link.current
++            assign menu_link_active = true
++          elsif request.path == menu_link_url
++            assign menu_link_active = true
++          endif
++        %}
++        {% if menu_link_title == 'qr pro' or menu_link_title == 'qr codes' %}
++          {% unless clutch_has_smart_card_link %}
++            {% render 'clutch-business-cards-nav', variant: 'desktop' %}
++            {% assign clutch_has_smart_card_link = true %}
++          {% endunless %}
++        {% endif %}
++        {% if menu_link_title == 'custom order' or menu_link_title == 'reach out' or menu_link_title == 'contact' %}
++          {% unless clutch_has_smart_card_link %}
++            {% render 'clutch-business-cards-nav', variant: 'desktop' %}
++            {% assign clutch_has_smart_card_link = true %}
++          {% endunless %}
++          {% unless clutch_has_qr_pro_link %}
++            <li
++              role="presentation"
++              class="menu-list__list-item"
++              on:focus="/activate"
++              on:blur="/deactivate"
++              on:pointerenter="/activate"
++              on:pointerleave="/deactivate"
++            >
++              <a
++                href="/pages/qr-pro"
++                data-skip-node-update="true"
++                class="menu-list__link{% if request.path == '/pages/qr-pro' %} menu-list__link--active{% endif %}"
++                {% if request.path == '/pages/qr-pro' %}
++                  aria-current="page"
++                {% endif %}
++                ref="menuitem"
++              >
++                <span class="menu-list__link-title">QR PRO</span>
++              </a>
++            </li>
++            {% assign clutch_has_qr_pro_link = true %}
++          {% endunless %}
++        {% endif %}
+         <li
+           role="presentation"
+           class="menu-list__list-item"
+@@ -93,20 +242,20 @@
+           on:pointerleave="/deactivate"
+         >
+           <a
+-            href="{{ link.url }}"
++            href="{{ menu_link_url }}"
+             data-skip-node-update="true"
+-            class="menu-list__link{% if link.active %} menu-list__link--active{% endif %}"
++            class="menu-list__link{% if link.active or menu_link_active %} menu-list__link--active{% endif %}"
+             {%- if link.links != blank -%}
+               aria-controls="submenu-{{ forloop.index }}"
+               aria-haspopup="true"
+               aria-expanded="false"
+             {%- endif -%}
+-            {% if link.current %}
++            {% if menu_link_active %}
+               aria-current="page"
+             {% endif %}
+             ref="menuitem"
+           >
+-            <span class="menu-list__link-title">{{- link.title -}}</span>
++            <span class="menu-list__link-title">{{- menu_link_label -}}</span>
+           </a>
+           {%- if link.links != blank -%}
+             <div class="menu-list__submenu{{ color_scheme_classes }}" ref="submenu[]">
+@@ -139,6 +288,31 @@
+           {%- endif -%}
+         </li>
+       {% endfor %}
++      {% unless clutch_has_smart_card_link %}
++        {% render 'clutch-business-cards-nav', variant: 'desktop' %}
++      {% endunless %}
++      {% unless clutch_has_qr_pro_link %}
++        <li
++          role="presentation"
++          class="menu-list__list-item"
++          on:focus="/activate"
++          on:blur="/deactivate"
++          on:pointerenter="/activate"
++          on:pointerleave="/deactivate"
++        >
++          <a
++            href="/pages/qr-pro"
++            data-skip-node-update="true"
++            class="menu-list__link{% if request.path == '/pages/qr-pro' %} menu-list__link--active{% endif %}"
++            {% if request.path == '/pages/qr-pro' %}
++              aria-current="page"
++            {% endif %}
++            ref="menuitem"
++          >
++            <span class="menu-list__link-title">QR PRO</span>
++          </a>
++        </li>
++      {% endunless %}
+       <li
+         class="menu-list__list-item"
+         role="presentation"
+@@ -319,6 +493,7 @@
+   .menu-list__link-title {
+     padding-inline: calc(var(--gap-xl) / 2);
+   }
++
+   [slot='overflow'] .menu-list__link-title {
+     padding-inline: 0;
+   }
+@@ -356,6 +531,57 @@
+     color: var(--menu-top-level-font-color);
+   }
+ 
++  .menu-list__link,
++  .menu-list__link-title,
++  .menu-list__item {
++    color: #1f1f1f;
++    transition: color 0.2s ease;
++  }
++
++  .menu-list__link {
++    position: relative;
++    text-decoration: none;
++  }
++
++  .menu-list .menu-list__list-item:hover .menu-list__link,
++  .menu-list .menu-list__list-item:hover .menu-list__link-title,
++  .menu-list .menu-list__list-item:focus-within .menu-list__link,
++  .menu-list .menu-list__list-item:focus-within .menu-list__link-title,
++  .menu-list__item:hover,
++  .menu-list__item:focus {
++    color: #ffa665;
++  }
++
++  .menu-list .menu-list__list-item .menu-list__link[aria-current='page'],
++  .menu-list .menu-list__list-item .menu-list__link[aria-current='page'] .menu-list__link-title,
++  .menu-list .menu-list__list-item .menu-list__link.menu-list__link--active,
++  .menu-list .menu-list__list-item .menu-list__link.menu-list__link--active .menu-list__link-title,
++  .menu-list__item[aria-current='page'],
++  .menu-list__item.menu-list__item--active {
++    color: #ffa665;
++    text-decoration: none;
++  }
++
++  .menu-list .menu-list__list-item .menu-list__link[aria-current='page']::before,
++  .menu-list .menu-list__list-item .menu-list__link.menu-list__link--active::before {
++    content: '';
++    position: absolute;
++    left: calc(var(--gap-xl) / 2);
++    right: calc(var(--gap-xl) / 2);
++    bottom: -6px;
++    height: 3px;
++    background: #ffa665;
++    border-radius: 99px;
++    pointer-events: none;
++  }
++
++  @media screen and (max-width: 749px) {
++    .menu-list .menu-list__list-item .menu-list__link[aria-current='page']::before,
++    .menu-list .menu-list__list-item .menu-list__link.menu-list__link--active::before {
++      display: none;
++    }
++  }
++
+   .overflow-menu::part(list) {
+     /* Make sure focus outline is not cut off by overflow hidden */
+     --focus-outline-size: calc(var(--focus-outline-offset) + var(--focus-outline-width));
+diff --git a/blocks/_product-details.liquid b/blocks/_product-details.liquid
+index 8b58685..d9af58e 100644
+--- a/blocks/_product-details.liquid
++++ b/blocks/_product-details.liquid
+@@ -30,10 +30,10 @@
+ </div>
+ 
+ {% stylesheet %}
+-  /* Clear padding on mobile, if not full-width */
++  /* Mobile: keep card padding consistent on page-width sections */
+   @media screen and (max-width: 749px) {
+     .product-information.section--page-width .product-details > .group-block {
+-      padding-inline: 0;
++      padding: clamp(1.25rem, 5vw, 1.75rem);
+     }
+   }
+ 
+diff --git a/blocks/buy-buttons.liquid b/blocks/buy-buttons.liquid
+index c8571ec..474598f 100644
+--- a/blocks/buy-buttons.liquid
++++ b/blocks/buy-buttons.liquid
+@@ -106,6 +106,8 @@
+             </div>
+           {%- endif -%}
+ 
++          {% render 'clutch-print-product-options', product: product, section_id: section.id %}
++
+           {% content_for 'block', type: 'quantity', id: 'quantity' %}
+ 
+           {%- if has_quantity_rules -%}
+diff --git a/layout/theme.liquid b/layout/theme.liquid
+index 155f80c..1da1ebc 100644
+--- a/layout/theme.liquid
++++ b/layout/theme.liquid
+@@ -27,6 +27,30 @@
+ 
+     {%- render 'meta-tags' -%}
+     {%- render 'stylesheets' -%}
++    <style>
++      .ch-kits .ch-kits__grid {
++        grid-template-columns: repeat(3, minmax(280px, 1fr));
++        margin-inline: auto;
++        max-width: 1240px;
++        width: 100%;
++      }
++
++      .ch-kits .ch-kit-card__features > li > .ch-kit-card__feature-highlight {
++        display: block;
++        grid-column: 2;
++      }
++
++      main[data-template^='product'] > .shopify-section[id$='__product_options'] {
++        display: none !important;
++      }
++
++      @media screen and (max-width: 989px) {
++        .ch-kits .ch-kits__grid {
++          grid-template-columns: 1fr;
++          max-width: 560px;
++        }
++      }
++    </style>
+     {%- render 'fonts' -%}
+     {%- render 'scripts' -%}
+     {%- render 'theme-styles-variables' -%}
+diff --git a/sections/footer-group.json b/sections/footer-group.json
+index 30ab9cf..e92ad81 100644
+--- a/sections/footer-group.json
++++ b/sections/footer-group.json
+@@ -11,62 +11,14 @@
+   "type": "footer",
+   "name": "Footer",
+   "sections": {
+-    "footer_utilities": {
+-      "type": "footer-utilities",
+-      "blocks": {
+-        "block_1129bf8ec394": {
+-          "type": "footer-copyright",
+-          "settings": {
+-            "show_powered_by": false,
+-            "font_size": "0.75rem",
+-            "case": "none"
+-          },
+-          "blocks": {}
+-        },
+-        "block_4ec26c67316a": {
+-          "type": "footer-policy-list",
+-          "settings": {
+-            "font_size": "0.75rem",
+-            "case": "none"
+-          },
+-          "blocks": {}
+-        },
+-        "block_691f57f98b56": {
+-          "type": "social-links",
+-          "settings": {
+-            "facebook_url": "",
+-            "instagram_url": "https://www.instagram.com/shopify",
+-            "youtube_url": "https://www.youtube.com/shopify",
+-            "tiktok_url": "https://www.tiktok.com/@shopify",
+-            "twitter_url": "https://www.twitter.com/shopify",
+-            "threads_url": "https://www.threads.net/@shopify",
+-            "linkedin_url": "",
+-            "bluesky_url": "",
+-            "snapchat_url": "",
+-            "pinterest_url": "",
+-            "tumblr_url": "",
+-            "vimeo_url": "",
+-            "custom_url": ""
+-          },
+-          "blocks": {}
+-        }
+-      },
+-      "block_order": [
+-        "block_1129bf8ec394",
+-        "block_4ec26c67316a",
+-        "block_691f57f98b56"
+-      ],
++    "clutch_footer": {
++      "type": "clutch-footer",
+       "settings": {
+-        "section_width": "page-width",
+-        "gap": 24,
+-        "divider_thickness": 1,
+-        "color_scheme": "scheme-7",
+-        "padding-block-start": 20,
+-        "padding-block-end": 20
++        "color_scheme": "scheme-1"
+       }
+     }
+   },
+   "order": [
+-    "footer_utilities"
++    "clutch_footer"
+   ]
+ }
+diff --git a/sections/footer-utilities.liquid b/sections/footer-utilities.liquid
+index 0972260..b9b794f 100644
+--- a/sections/footer-utilities.liquid
++++ b/sections/footer-utilities.liquid
+@@ -53,12 +53,12 @@
+     /* 1 block: Single column, left aligned */
+     .utilities--blocks-1 {
+       grid-template-columns: 1fr;
+-      justify-content: start;
++      justify-content: center;
+     }
+ 
+     .utilities--blocks-1 > * {
+-      justify-self: start;
+-      text-align: left;
++      justify-self: center;
++      text-align: center;
+     }
+ 
+     /* 2 blocks: Two equal columns, start and end aligned */
+diff --git a/sections/main-collection.liquid b/sections/main-collection.liquid
+index c30a4ee..7087bcf 100644
+--- a/sections/main-collection.liquid
++++ b/sections/main-collection.liquid
+@@ -33,49 +33,344 @@
+   {% render 'skip-to-content-link', href: '#ResultsList', text: 'accessibility.skip_to_results_list' %}
+ 
+   <div
+-    class="collection-wrapper grid gap-style{% if section.settings.product_grid_width == 'full-width' %} collection-wrapper--grid-full-width{% endif %}"
++    class="collection-wrapper grid gap-style{% if section.settings.product_grid_width == 'full-width' %} collection-wrapper--grid-full-width{% endif %}{% if collection.handle == 'business-kits' %} collection-wrapper--clutch-business-kits{% endif %}"
+   >
+-    {% content_for 'block',
+-      type: 'filters',
+-      id: 'filters',
+-      results: collection,
+-      results_size: collection.products_count
+-    %}
++    {% if collection.handle == 'all' %}
++      <div class="clutch-shop">
++        <div class="clutch-shop__intro">
++          <p class="clutch-eyebrow">Premium print products with built-in marketing tools.</p>
++          <h2>Print Products Built for Business Growth</h2>
++          <p>
++            Upload your artwork or let Clutch design it for you. QR Tracking is available through QR Pro hosting for
++            editable destinations, scan analytics, and dashboard access.
++          </p>
++        </div>
+ 
+-    {% assign products_per_page = 24 %}
++        {% assign clutch_shop_groups = 'Business Essentials::Business Cards|Flyers|Brochures|Postcards,Signs & Displays::Yard Signs|Banners,Local Marketing::Door Hangers|Postcards|Flyers' | split: ',' %}
+ 
+-    {% if section.settings.enable_infinite_scroll == false %}
+-      {% assign products_per_page = section.settings.products_per_page %}
+-    {% endif %}
++        {% for clutch_shop_group in clutch_shop_groups %}
++          {% liquid
++            assign clutch_group_parts = clutch_shop_group | split: '::'
++            assign clutch_group_title = clutch_group_parts[0]
++            assign clutch_group_products = clutch_group_parts[1] | split: '|'
++          %}
+ 
+-    {% paginate collection.products by products_per_page %}
+-      {% capture children %}
+-        {% for product in collection.products %}
+-          <li
+-            id="{{ section.id }}-{{ product.id }}"
+-            class="product-grid__item product-grid__item--{{ forloop.index0 }}"
+-            data-page="{{ paginate.current_page }}"
+-            data-product-id="{{ product.id }}"
+-            ref="cards[]"
+-          >
+-            {% # theme-check-disable %}
+-            {% content_for 'block', type: '_product-card', id: 'product-card', closest.product: product %}
+-            {% # theme-check-enable %}
+-          </li>
++          <section class="clutch-shop__group" aria-labelledby="clutch-shop-group-{{ forloop.index }}">
++            <h2 id="clutch-shop-group-{{ forloop.index }}">{{ clutch_group_title }}</h2>
++            <div class="clutch-shop__grid">
++              {% for clutch_product_name in clutch_group_products %}
++                {% assign clutch_product_name_downcase = clutch_product_name | downcase %}
++                {% for product in collection.products %}
++                  {% assign product_title_downcase = product.title | downcase %}
++                  {% if product_title_downcase contains clutch_product_name_downcase %}
++                    {% render 'clutch-shop-product-card', product: product %}
++                    {% break %}
++                  {% endif %}
++                {% endfor %}
++              {% endfor %}
++            </div>
++          </section>
+         {% endfor %}
+-      {% endcapture %}
+-
+-      {% render 'product-grid',
+-        section: section,
+-        children: children,
+-        products: collection.products,
+-        paginate: paginate,
+-        enable_infinite_scroll: section.settings.enable_infinite_scroll
++      </div>
++    {% elsif collection.handle == 'business-kits' %}
++      <section class="clutch-business-kits-collection" aria-labelledby="clutch-business-kits-collection-title">
++        <div class="clutch-business-kits-collection__intro">
++          <p class="clutch-eyebrow">Business Kits</p>
++          <h2 id="clutch-business-kits-collection-title">Business Print Kits</h2>
++          <p>
++            Every kit includes professional design and dynamic <span class="clutch-business-kits-collection__highlight">Clutch QR™ tracking</span>
++            for each printed marketing piece, so you can compare scans by material and update destinations anytime.
++          </p>
++        </div>
++
++        {% if collection.products_count > 0 %}
++          {% assign clutch_kit_handles = 'starter-kit,growth-kit,contractor-kit' | split: ',' %}
++          <div class="clutch-business-kits-collection__grid">
++            {% for kit_handle in clutch_kit_handles %}
++              {% assign kit_product = all_products[kit_handle] %}
++              {% if kit_product == blank and kit_handle == 'starter-kit' %}
++                {% assign kit_product = all_products['startup-kit'] %}
++              {% endif %}
++              {% if kit_product != blank %}
++                {% render 'clutch-shop-product-card', product: kit_product, card_context: 'business-kits' %}
++              {% endif %}
++            {% endfor %}
++          </div>
++        {% else %}
++          <div class="clutch-business-kits-collection__empty">
++            <p>
++              Business Kits are being updated. Request a custom bundle and we’ll build the right package for your
++              business.
++            </p>
++            <a class="button" href="/pages/contact">Request Custom Bundle</a>
++          </div>
++        {% endif %}
++
++        <div class="clutch-business-kits-collection__custom">
++          <p>Need a custom bundle?</p>
++          <a class="button" href="/pages/contact">Request Custom Bundle</a>
++        </div>
++      </section>
++    {% else %}
++      {% content_for 'block',
++        type: 'filters',
++        id: 'filters',
++        results: collection,
++        results_size: collection.products_count
+       %}
+-    {% endpaginate %}
++
++      {% assign products_per_page = 24 %}
++
++      {% if section.settings.enable_infinite_scroll == false %}
++        {% assign products_per_page = section.settings.products_per_page %}
++      {% endif %}
++
++      {% paginate collection.products by products_per_page %}
++        {% capture children %}
++          {% for product in collection.products %}
++            <li
++              id="{{ section.id }}-{{ product.id }}"
++              class="product-grid__item product-grid__item--{{ forloop.index0 }}"
++              data-page="{{ paginate.current_page }}"
++              data-product-id="{{ product.id }}"
++              ref="cards[]"
++            >
++              {% # theme-check-disable %}
++              {% content_for 'block', type: '_product-card', id: 'product-card', closest.product: product %}
++              {% # theme-check-enable %}
++            </li>
++          {% endfor %}
++        {% endcapture %}
++
++        {% render 'product-grid',
++          section: section,
++          children: children,
++          products: collection.products,
++          paginate: paginate,
++          enable_infinite_scroll: section.settings.enable_infinite_scroll
++        %}
++      {% endpaginate %}
++    {% endif %}
+   </div>
+ </results-list>
+ 
++{% stylesheet %}
++  .clutch-business-kits-collection {
++    grid-column: 1 / -1;
++    margin-inline: auto;
++    max-width: 1180px;
++    padding: clamp(2.5rem, 6vw, 4.5rem) var(--page-margin);
++    width: 100%;
++  }
++
++  .collection-wrapper--clutch-business-kits {
++    display: block;
++    width: 100%;
++  }
++
++  body:has(.collection-wrapper--clutch-business-kits) main > .shopify-section:first-of-type {
++    display: none;
++  }
++
++  .clutch-business-kits-collection__intro {
++    margin: 0 auto clamp(1.5rem, 4vw, 2.35rem);
++    max-width: 820px;
++    text-align: center;
++  }
++
++  .clutch-business-kits-collection__intro h2 {
++    color: #384862;
++    font-family: 'Exo 2', sans-serif;
++    font-size: clamp(2rem, 6vw, 3.5rem);
++    line-height: 1;
++    margin: 0.6rem 0 1rem;
++  }
++
++  .clutch-business-kits-collection__intro p:not(.clutch-eyebrow) {
++    color: rgba(56, 72, 98, 0.82);
++    font-family: 'Montserrat', sans-serif;
++    font-size: clamp(1rem, 2.5vw, 1.08rem);
++    line-height: 1.6;
++    margin: 0;
++  }
++
++  .clutch-business-kits-collection__highlight {
++    color: #ffa665;
++    font-weight: 800;
++  }
++
++  .clutch-business-kits-collection__grid {
++    display: grid;
++    gap: clamp(1rem, 2vw, 1.5rem);
++    grid-template-columns: 1fr;
++  }
++
++  .clutch-business-kits-collection__custom,
++  .clutch-business-kits-collection__empty {
++    font-family: 'Montserrat', sans-serif;
++    text-align: center;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit {
++    background: #fff;
++    border: 1px solid rgba(56, 72, 98, 0.14);
++    border-radius: 22px;
++    box-shadow: 0 16px 40px rgba(56, 72, 98, 0.08);
++    display: flex;
++    min-height: 405px;
++    width: 100%;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit.clutch-shop-card--kit-featured {
++    background: #fff7f0;
++    border-color: rgba(255, 166, 101, 0.65);
++    box-shadow: 0 22px 48px rgba(255, 166, 101, 0.18);
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-body {
++    align-items: stretch;
++    display: flex;
++    flex-direction: column;
++    flex-grow: 1;
++    padding: clamp(1.35rem, 3vw, 1.7rem);
++    text-align: center;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-flag {
++    align-self: center;
++    background: #384862;
++    border-radius: 999px;
++    box-shadow: 0 12px 24px rgba(56, 72, 98, 0.18);
++    color: #fff;
++    display: inline-block;
++    font-size: 0.7rem;
++    font-weight: 800;
++    letter-spacing: 0.08em;
++    margin: 0 0 0.85rem;
++    padding: 0.4rem 0.75rem;
++    text-transform: uppercase;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-label {
++    color: #ffa665;
++    font-family: 'Montserrat', sans-serif;
++    font-size: 0.78rem;
++    font-weight: 800;
++    letter-spacing: 0.12em;
++    line-height: 1.2;
++    margin: 0 0 0.7rem;
++    text-transform: uppercase;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-title {
++    color: #384862;
++    font-family: 'Exo 2', sans-serif;
++    font-size: clamp(1.45rem, 3vw, 1.95rem);
++    line-height: 1.08;
++    margin: 0 0 1rem;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-features {
++    display: grid;
++    align-content: start;
++    flex: 1 1 auto;
++    gap: 0.5rem;
++    list-style: none;
++    margin: 0;
++    padding: 0;
++    text-align: left;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-features li {
++    align-items: flex-start;
++    background: #f6f8fb;
++    border: 1px solid rgba(56, 72, 98, 0.08);
++    border-radius: 12px;
++    color: rgba(56, 72, 98, 0.92);
++    display: grid;
++    font-size: 0.93rem;
++    gap: 0.7rem;
++    grid-template-columns: 18px 1fr;
++    line-height: 1.45;
++    padding: 0.62rem 0.78rem;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-featured .clutch-shop-card--kit-features li {
++    background: rgba(255, 166, 101, 0.08);
++    border-color: rgba(255, 166, 101, 0.18);
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-features li::before {
++    color: #ffa665;
++    content: '✓';
++    font-size: 0.9rem;
++    font-weight: 900;
++    line-height: 1.45;
++    text-align: center;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-feature-row-highlight {
++    color: #f39d64;
++    font-weight: 700;
++  }
++
++  .clutch-business-kits-collection .clutch-shop-card--kit-button {
++    background: #ffa665 !important;
++    color: #384862 !important;
++    margin-top: 1.2rem;
++    min-height: 48px;
++    width: 100%;
++  }
++
++  .clutch-business-kits-collection__empty {
++    background: #fff;
++    border: 1px solid rgba(56, 72, 98, 0.14);
++    border-radius: 22px;
++    box-shadow: 0 14px 38px rgba(56, 72, 98, 0.08);
++    color: #384862;
++    display: grid;
++    gap: 1rem;
++    margin-inline: auto;
++    max-width: 720px;
++    padding: clamp(1.5rem, 4vw, 2.5rem);
++  }
++
++  .clutch-business-kits-collection__empty p {
++    font-size: 1rem;
++    line-height: 1.6;
++    margin: 0;
++  }
++
++  .clutch-business-kits-collection__custom {
++    align-items: center;
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++    margin-top: clamp(1.75rem, 4vw, 2.5rem);
++  }
++
++  .clutch-business-kits-collection__custom p {
++    color: #384862;
++    font-family: 'Exo 2', sans-serif;
++    font-size: clamp(1.3rem, 4vw, 1.8rem);
++    font-weight: 800;
++    line-height: 1.1;
++    margin: 0;
++  }
++
++  .clutch-business-kits-collection__custom .button,
++  .clutch-business-kits-collection__empty .button {
++    background: #384862 !important;
++    color: #fff !important;
++  }
++
++  @media screen and (min-width: 750px) {
++    .clutch-business-kits-collection__grid {
++      grid-template-columns: repeat(3, minmax(0, 1fr));
++    }
++  }
++{% endstylesheet %}
++
+ {% schema %}
+ {
+   "name": "t:names.collection_container",
+diff --git a/snippets/card-gallery.liquid b/snippets/card-gallery.liquid
+index 54e3348..775914a 100644
+--- a/snippets/card-gallery.liquid
++++ b/snippets/card-gallery.liquid
+@@ -180,7 +180,10 @@
+         href="{{ product.selected_or_first_available_variant.url }}"
+         aria-hidden="true"
+       >
+-        <span class="title-text">{{- product.title -}}</span>
++        <span class="product-card-gallery__placeholder-copy">
++          <span class="product-card-gallery__placeholder-label">Clutch Print Preview</span>
++          <span class="product-card-gallery__placeholder-title">{{- product.title -}}</span>
++        </span>
+       </a>
+     </product-title>
+   {% elsif product == blank %}
+@@ -219,24 +222,69 @@
+   }
+ 
+   .product-card-gallery__title-placeholder {
+-    padding: var(--padding-md);
+-    font-size: var(--font-size--2xl);
+-    line-height: var(--line-height--display-loose);
+-    word-break: break-word;
++    background:
++      radial-gradient(circle at top, rgba(255, 255, 255, .72), transparent 42%),
++      linear-gradient(135deg, rgba(56, 72, 98, .08), rgba(255, 166, 101, .16));
+     color: var(--color-foreground);
+-    background-color: rgb(var(--color-foreground-rgb) / var(--opacity-5));
+     aspect-ratio: var(--gallery-aspect-ratio);
+     border-radius: var(--product-corner-radius);
+-    display: -webkit-box;
+-    -webkit-box-orient: vertical;
++    display: flex;
++    align-items: center;
++    justify-content: center;
+     overflow: hidden;
+-    text-overflow: ellipsis;
++    padding: var(--padding-md);
++    position: relative;
++  }
++
++  .product-card-gallery__title-placeholder::before {
++    content: '';
++    position: absolute;
++    inset: 1rem;
++    border: 1px dashed rgba(56, 72, 98, .16);
++    border-radius: calc(var(--product-corner-radius) - 8px);
+   }
+ 
+   .product-card-gallery__title-placeholder a {
+     color: var(--color-foreground);
+   }
+ 
++  .product-card-gallery__placeholder-copy {
++    align-items: center;
++    background: rgba(255, 255, 255, .7);
++    border: 1px solid rgba(56, 72, 98, .12);
++    border-radius: 24px;
++    box-shadow: 0 12px 24px rgba(56, 72, 98, .06);
++    display: inline-flex;
++    flex-direction: column;
++    gap: 0.35rem;
++    margin: auto;
++    max-width: 100%;
++    padding: 0.9rem 1.1rem;
++    position: relative;
++    text-align: center;
++    z-index: 1;
++  }
++
++  .product-card-gallery__placeholder-label {
++    color: #ffa665;
++    font-size: var(--font-size--xs);
++    font-weight: 800;
++    letter-spacing: 0.12em;
++    text-transform: uppercase;
++  }
++
++  .product-card-gallery__placeholder-title {
++    color: #384862;
++    display: -webkit-box;
++    font-size: clamp(1rem, 2.2vw, 1.4rem);
++    font-weight: 700;
++    line-height: 1.1;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 3;
++  }
++
+   @media screen and (min-width: 750px) {
+     .product-grid[data-product-card-size='extra-large'] .product-card-gallery__title-placeholder {
+       padding: var(--padding-3xl);
+diff --git a/snippets/header-drawer.liquid b/snippets/header-drawer.liquid
+index 9f3dce1..cbe8cf0 100644
+--- a/snippets/header-drawer.liquid
++++ b/snippets/header-drawer.liquid
+@@ -98,11 +98,78 @@
+           {%- comment -%}
+             Handle menus with fewer than 3 levels of links
+           {%- endcomment -%}
++          {% assign clutch_drawer_has_smart_card_link = false %}
++          {% assign clutch_drawer_has_qr_pro_link = false %}
+           {% if linklist.levels < 3 %}
+             {% assign first_accordion_open = false %}
+             {% assign animation_index = 0 %}
+             {%- for link in linklist.links -%}
+-              {% assign animation_index = animation_index | plus: 1 %}
++              {% liquid
++                assign animation_index = animation_index | plus: 1
++                assign clutch_drawer_link_title = link.title | strip | downcase
++                assign clutch_drawer_link_url = link.url
++                assign clutch_drawer_link_label = link.title
++                if clutch_drawer_link_title == 'custom order'
++                  assign clutch_drawer_link_url = '/pages/contact'
++                  assign clutch_drawer_link_label = 'Reach Out'
++                elsif clutch_drawer_link_title == 'reach out' or clutch_drawer_link_title == 'contact'
++                  assign clutch_drawer_link_url = '/pages/contact'
++                  assign clutch_drawer_link_label = 'Reach Out'
++                elsif clutch_drawer_link_title == 'shop'
++                  assign clutch_drawer_link_url = '/collections/all'
++                  assign clutch_drawer_link_label = 'Shop Products'
++                elsif clutch_drawer_link_title == 'business kits'
++                  assign clutch_drawer_link_url = '/collections/business-kits'
++                elsif clutch_drawer_link_title == 'smart business card' or clutch_drawer_link_title == 'clutch connect card'
++                  assign clutch_drawer_link_url = '/pages/smart-business-card'
++                  assign clutch_drawer_link_label = 'Smart Business Card'
++                  assign clutch_drawer_has_smart_card_link = true
++                endif
++                if clutch_drawer_link_title == 'qr pro' or clutch_drawer_link_title == 'qr codes'
++                  assign clutch_drawer_has_qr_pro_link = true
++                  assign clutch_drawer_link_url = '/pages/qr-pro'
++                  assign clutch_drawer_link_label = 'QR PRO'
++                endif
++                assign clutch_drawer_link_active = false
++                if link.current
++                  assign clutch_drawer_link_active = true
++                elsif request.path == clutch_drawer_link_url
++                  assign clutch_drawer_link_active = true
++                endif
++              %}
++              {% if clutch_drawer_link_title == 'qr pro' or clutch_drawer_link_title == 'qr codes' %}
++                {% unless clutch_drawer_has_smart_card_link %}
++                  {% render 'clutch-business-cards-nav', variant: 'drawer', animation_index: animation_index %}
++                  {% assign clutch_drawer_has_smart_card_link = true %}
++                  {% assign animation_index = animation_index | plus: 1 %}
++                {% endunless %}
++              {% endif %}
++              {% if clutch_drawer_link_title == 'custom order' or clutch_drawer_link_title == 'reach out' or clutch_drawer_link_title == 'contact' %}
++                {% unless clutch_drawer_has_smart_card_link %}
++                  {% render 'clutch-business-cards-nav', variant: 'drawer', animation_index: animation_index %}
++                  {% assign clutch_drawer_has_smart_card_link = true %}
++                  {% assign animation_index = animation_index | plus: 1 %}
++                {% endunless %}
++                {% unless clutch_drawer_has_qr_pro_link %}
++                  <li
++                    class="{%- if block_settings.drawer_accordion -%}menu-drawer__list-item--deep{%- else -%}menu-drawer__list-item--flat{%- endif -%}{% if block_settings.drawer_dividers %} menu-drawer__list-item--divider{% endif %}"
++                    style="--menu-drawer-animation-index: {{ animation_index }};"
++                  >
++                    <a
++                      id="HeaderDrawer-qr-pro"
++                      href="/pages/qr-pro"
++                      class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if request.path == '/pages/qr-pro' %} menu-drawer__menu-item--active{% endif %}"
++                      {% if request.path == '/pages/qr-pro' %}
++                        aria-current="page"
++                      {% endif %}
++                    >
++                      <span class="menu-drawer__menu-item-text wrap-text">QR PRO</span>
++                    </a>
++                  </li>
++                  {% assign clutch_drawer_has_qr_pro_link = true %}
++                  {% assign animation_index = animation_index | plus: 1 %}
++                {% endunless %}
++              {% endif %}
+               <li
+                 style="--menu-drawer-animation-index: {{ animation_index }};"
+                 class="{%- if block_settings.drawer_accordion -%}menu-drawer__list-item--deep{%- else -%}menu-drawer__list-item--flat{%- endif -%}{% if block_settings.drawer_dividers %} menu-drawer__list-item--divider{% endif %}"
+@@ -124,9 +191,12 @@
+                     >
+                       <summary
+                         id="HeaderDrawer-{{ link.handle }}"
+-                        class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
++                        class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if clutch_drawer_link_active %} menu-drawer__menu-item--active{% endif %}"
++                        {% if clutch_drawer_link_active %}
++                          aria-current="page"
++                        {% endif %}
+                       >
+-                        <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                        <span class="menu-drawer__menu-item-text wrap-text">{{ clutch_drawer_link_label | escape }}</span>
+                         <span class="svg-wrapper icon-plus">
+                           {{- 'icon-plus.svg' | inline_asset_content -}}
+                         </span>
+@@ -184,13 +254,13 @@
+                   {%- endcomment -%}
+                   <a
+                     id="HeaderDrawer-{{ link.handle }}"
+-                    href="{{ link.url }}"
+-                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
+-                    {% if link.current %}
++                    href="{{ clutch_drawer_link_url }}"
++                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if clutch_drawer_link_active %} menu-drawer__menu-item--active{% endif %}"
++                    {% if clutch_drawer_link_active %}
+                       aria-current="page"
+                     {% endif %}
+                   >
+-                    <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                    <span class="menu-drawer__menu-item-text wrap-text">{{ clutch_drawer_link_label | escape }}</span>
+                   </a>
+                   {% liquid
+                     assign render_link_image = false
+@@ -238,13 +308,13 @@
+                   {%- endcomment -%}
+                   <a
+                     id="HeaderDrawer-{{ link.handle }}"
+-                    href="{{ link.url }}"
+-                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
+-                    {% if link.current %}
++                    href="{{ clutch_drawer_link_url }}"
++                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if clutch_drawer_link_active %} menu-drawer__menu-item--active{% endif %}"
++                    {% if clutch_drawer_link_active %}
+                       aria-current="page"
+                     {% endif %}
+                   >
+-                    <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                    <span class="menu-drawer__menu-item-text wrap-text">{{ clutch_drawer_link_label | escape }}</span>
+                   </a>
+                 {% endif %}
+               </li>
+@@ -255,7 +325,47 @@
+             {%- endcomment -%}
+             {% assign animation_index = 0 %}
+             {%- for link in linklist.links -%}
+-              {% assign animation_index = animation_index | plus: 1 %}
++              {% liquid
++                assign animation_index = animation_index | plus: 1
++                assign clutch_drawer_link_title = link.title | strip | downcase
++                assign clutch_drawer_link_url = link.url
++                assign clutch_drawer_link_label = link.title
++                if clutch_drawer_link_title == 'custom order'
++                  assign clutch_drawer_link_url = '/pages/contact'
++                  assign clutch_drawer_link_label = 'Reach Out'
++                elsif clutch_drawer_link_title == 'reach out' or clutch_drawer_link_title == 'contact'
++                  assign clutch_drawer_link_url = '/pages/contact'
++                  assign clutch_drawer_link_label = 'Reach Out'
++                elsif clutch_drawer_link_title == 'shop'
++                  assign clutch_drawer_link_url = '/collections/all'
++                  assign clutch_drawer_link_label = 'Shop Products'
++                elsif clutch_drawer_link_title == 'business kits'
++                  assign clutch_drawer_link_url = '/collections/business-kits'
++                elsif clutch_drawer_link_title == 'smart business card' or clutch_drawer_link_title == 'clutch connect card'
++                  assign clutch_drawer_link_url = '/pages/smart-business-card'
++                  assign clutch_drawer_link_label = 'Smart Business Card'
++                  assign clutch_drawer_has_smart_card_link = true
++                elsif clutch_drawer_link_title == 'qr pro' or clutch_drawer_link_title == 'qr codes'
++                  assign clutch_drawer_link_url = '/pages/qr-pro'
++                  assign clutch_drawer_link_label = 'QR PRO'
++                endif
++                assign clutch_drawer_link_active = false
++                if link.current
++                  assign clutch_drawer_link_active = true
++                elsif request.path == clutch_drawer_link_url
++                  assign clutch_drawer_link_active = true
++                endif
++                if clutch_drawer_link_title == 'qr pro' or clutch_drawer_link_title == 'qr codes'
++                  assign clutch_drawer_has_qr_pro_link = true
++                endif
++              %}
++              {% if clutch_drawer_link_title == 'qr pro' or clutch_drawer_link_title == 'qr codes' %}
++                {% unless clutch_drawer_has_smart_card_link %}
++                  {% render 'clutch-business-cards-nav', variant: 'drawer', animation_index: animation_index %}
++                  {% assign clutch_drawer_has_smart_card_link = true %}
++                  {% assign animation_index = animation_index | plus: 1 %}
++                {% endunless %}
++              {% endif %}
+               <li
+                 class="menu-drawer__list-item"
+                 style="--menu-drawer-animation-index: {{ animation_index }};"
+@@ -273,7 +383,9 @@
+                       class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if link.child_active %} menu-drawer__menu-item--active{% endif %}"
+                       on:click="header-drawer/open/submenu"
+                     >
+-                      <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                      <span class="menu-drawer__menu-item-text wrap-text">
++                        {{ clutch_drawer_link_label | escape }}
++                      </span>
+                       <span class="svg-wrapper icon-caret icon-caret--forward">
+                         {{- 'icon-caret.svg' | inline_asset_content -}}
+                       </span>
+@@ -294,7 +406,9 @@
+                             <span class="svg-wrapper icon-caret icon-caret--backward">
+                               {{- 'icon-caret.svg' | inline_asset_content -}}
+                             </span>
+-                            <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                            <span class="menu-drawer__menu-item-text wrap-text">
++                              {{ clutch_drawer_link_label | escape }}
++                            </span>
+                           </button>
+                           <button
+                             class="button button-unstyled close-button menu-drawer__close-button"
+@@ -558,18 +672,40 @@
+                   {%- endcomment -%}
+                   <a
+                     id="HeaderDrawer-{{ link.handle }}"
+-                    href="{{ link.url }}"
+-                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset"
+-                    {% if link.current %}
++                    href="{{ clutch_drawer_link_url }}"
++                    class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if clutch_drawer_link_active %} menu-drawer__menu-item--active{% endif %}"
++                    {% if clutch_drawer_link_active %}
+                       aria-current="page"
+                     {% endif %}
+                   >
+-                    <span class="menu-drawer__menu-item-text wrap-text">{{ link.title | escape }}</span>
++                    <span class="menu-drawer__menu-item-text wrap-text">
++                      {{ clutch_drawer_link_label | escape }}
++                    </span>
+                   </a>
+                 {%- endif -%}
+               </li>
+             {%- endfor -%}
+           {% endif %}
++          {% unless clutch_drawer_has_smart_card_link %}
++            {% render 'clutch-business-cards-nav', variant: 'drawer', animation_index: linklist.links.size | plus: 1 %}
++          {% endunless %}
++          {% unless clutch_drawer_has_qr_pro_link %}
++            <li
++              class="menu-drawer__list-item"
++              style="--menu-drawer-animation-index: {{ linklist.links.size | plus: 2 }};"
++            >
++              <a
++                id="HeaderDrawer-qr-pro"
++                href="/pages/qr-pro"
++                class="menu-drawer__menu-item menu-drawer__menu-item--mainlist menu-drawer__animated-element focus-inset{% if request.path == '/pages/qr-pro' %} menu-drawer__menu-item--active{% endif %}"
++                {% if request.path == '/pages/qr-pro' %}
++                  aria-current="page"
++                {% endif %}
++              >
++                <span class="menu-drawer__menu-item-text wrap-text">QR PRO</span>
++              </a>
++            </li>
++          {% endunless %}
+         </ul>
+       </nav>
+       <div
+@@ -827,6 +963,23 @@
+     }
+   }
+ 
++  .menu-drawer__menu-item,
++  .menu-drawer__menu-item-text {
++    color: #1f1f1f;
++    transition: color 0.2s ease;
++  }
++
++  .menu-drawer__menu-item:hover,
++  .menu-drawer__menu-item:hover .menu-drawer__menu-item-text,
++  .menu-drawer__menu-item:focus,
++  .menu-drawer__menu-item:focus .menu-drawer__menu-item-text,
++  .menu-drawer__menu-item[aria-current='page'],
++  .menu-drawer__menu-item[aria-current='page'] .menu-drawer__menu-item-text,
++  .menu-drawer__menu-item.menu-drawer__menu-item--active,
++  .menu-drawer__menu-item.menu-drawer__menu-item--active .menu-drawer__menu-item-text {
++    color: #ffa665;
++  }
++
+   details:not(.menu-open) .header__icon--menu .header-drawer-icon--close {
+     display: none;
+   }
+diff --git a/snippets/meta-tags.liquid b/snippets/meta-tags.liquid
+index d833b01..549d787 100644
+--- a/snippets/meta-tags.liquid
++++ b/snippets/meta-tags.liquid
+@@ -27,6 +27,15 @@
+   assign og_url = canonical_url | default: request.origin
+   assign og_type = 'website'
+   assign og_description = page_description | default: shop.description | default: shop.name
++  assign clutch_page_title = page_title
++  assign clutch_page_description = page_description
++
++  if request.page_type == 'collection' and collection.handle == 'business-kits'
++    assign clutch_page_title = 'Business Print Kits | Clutch Print Shop'
++    assign clutch_page_description = 'Pre-built business print kits with cards, flyers, signs, and QR-enabled marketing tools for growing businesses.'
++    assign og_title = clutch_page_title
++    assign og_description = clutch_page_description
++  endif
+ 
+   if request.page_type == 'product'
+     assign og_type = 'product'
+@@ -108,10 +117,14 @@
+ >
+ 
+ <title>
+-  {{ page_title }}
+-  {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
+-  {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
+-  {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
++  {%- if request.page_type == 'collection' and collection.handle == 'business-kits' -%}
++    {{ clutch_page_title }}
++  {%- else -%}
++    {{ clutch_page_title }}
++    {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
++    {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
++    {%- unless clutch_page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
++  {%- endif -%}
+ </title>
+ 
+ <link
+@@ -119,9 +132,9 @@
+   href="{{ canonical_url }}"
+ >
+ 
+-{% if page_description %}
++{% if clutch_page_description %}
+   <meta
+     name="description"
+-    content="{{ page_description | escape }}"
++    content="{{ clutch_page_description | escape }}"
+   >
+ {% endif %}
+diff --git a/snippets/price.liquid b/snippets/price.liquid
+index bbb5afd..39de1d8 100644
+--- a/snippets/price.liquid
++++ b/snippets/price.liquid
+@@ -13,6 +13,23 @@
+   assign selected_variant = product_resource.selected_or_first_available_variant
+   assign price = selected_variant.price
+   assign compare_at_price = selected_variant.compare_at_price
++  assign kit_price_override = blank
++
++  case product_resource.handle
++    when 'starter-kit'
++      assign kit_price_override = 39900
++    when 'startup-kit'
++      assign kit_price_override = 39900
++    when 'growth-kit'
++      assign kit_price_override = 64900
++    when 'contractor-kit'
++      assign kit_price_override = 99900
++  endcase
++
++  if kit_price_override != blank
++    assign price = kit_price_override
++    assign compare_at_price = blank
++  endif
+ 
+   assign show_compare_price = false
+   if compare_at_price > price
+@@ -39,6 +56,27 @@
+     assign price_min = product_resource.price_min
+     assign price_max = product_resource.price_max
+     assign has_volume_pricing = product_resource.quantity_price_breaks_configured? | default: false
++    assign card_starting_price = price_min
++
++    if kit_price_override != blank
++      assign card_starting_price = kit_price_override
++      assign price_min = kit_price_override
++      assign price_max = kit_price_override
++    endif
++
++    if card_starting_price == blank or card_starting_price <= 0
++      for product_variant in product_resource.variants
++        if product_variant.price > 0
++          assign card_starting_price = product_variant.price
++          break
++        endif
++      endfor
++    endif
++
++    assign show_card_starting_price = false
++    if card_starting_price > 0
++      assign show_card_starting_price = true
++    endif
+   else
+     # Product page: only use selected variant's pricing
+     if selected_variant.quantity_price_breaks.size > 0
+@@ -64,16 +102,30 @@
+     assign compare_at_price = compare_at_price | money_with_currency
+     assign price_min = price_min | money_with_currency
+     assign price_max = price_max | money_with_currency
++    assign card_starting_price = card_starting_price | money_with_currency
+   else
+     assign price = price | money
+     assign compare_at_price = compare_at_price | money
+     assign price_min = price_min | money
+     assign price_max = price_max | money
++    assign card_starting_price = card_starting_price | money
+   endif
+ -%}
+ 
+ <div ref="priceContainer">
+-  {% if has_volume_pricing %}
++  {% if is_product_card %}
++    {% if show_card_starting_price %}
++      <div class="price__regular">
++        <span class="price">
++          {% if kit_price_override != blank %}
++            {{ card_starting_price }}
++          {% else %}
++            Starting at {{ card_starting_price }}
++          {% endif %}
++        </span>
++      </div>
++    {% endif %}
++  {% elsif has_volume_pricing %}
+     {% comment %} Volume pricing display {% endcomment %}
+     {% if show_compare_price %}
+       <span class="price-item__group">
+diff --git a/snippets/product-card.liquid b/snippets/product-card.liquid
+index fc7477d..c249d7d 100644
+--- a/snippets/product-card.liquid
++++ b/snippets/product-card.liquid
+@@ -52,6 +52,7 @@
+   if product.id == empty or product == blank
+     assign onboarding = true
+   endif
++
+ %}
+ 
+ <product-card
+@@ -106,7 +107,20 @@
+       {% if block_settings.padding-block-end > 0 %}--zoom-out-padding-block-end: min(var(--padding-xs), {{ block_settings.padding-block-end | times: 0.7}}px);{% endif %}
+     "
+   >
++    {% unless onboarding %}
++      <div class="clutch-card-badges" aria-label="Product highlights">
++        <span class="clutch-card-badge">QR Tracking Available</span>
++        <span class="clutch-card-badge">Design Available</span>
++      </div>
++    {% endunless %}
++
+     {{ children }}
++
++    {% unless onboarding %}
++      <div class="clutch-card-actions">
++        <a class="button clutch-card-button" href="{{ variant_to_link.url }}">View Product</a>
++      </div>
++    {% endunless %}
+   </div>
+ </product-card>
+ 
+diff --git a/snippets/product-information-content.liquid b/snippets/product-information-content.liquid
+index 7f122a2..9fe1630 100644
+--- a/snippets/product-information-content.liquid
++++ b/snippets/product-information-content.liquid
+@@ -114,12 +114,15 @@
+ 
+ {% stylesheet %}
+   .product-information {
++    padding-block: clamp(var(--gap-lg), 4vw, var(--gap-3xl));
+     gap: var(--gap) 0;
+   }
+ 
+   /* Base grid layout */
+   .product-information__grid {
+     display: grid;
++    align-items: start;
++    gap: clamp(var(--gap-lg), 3vw, var(--gap-3xl));
+     grid-template-columns: subgrid;
+     grid-column: 1 / -1;
+   }
+@@ -131,8 +134,23 @@
+ 
+   .product-information__media {
+     order: 0;
++    position: sticky;
++    top: calc(var(--header-group-height, 0px) + var(--gap-lg));
++    align-self: start;
+     width: 0;
+     min-width: 100%;
++    padding: clamp(var(--gap-sm), 1.6vw, var(--gap-lg));
++    border: 1px solid rgb(var(--color-border-rgb) / 0.7);
++    border-radius: calc(var(--style-border-radius-popovers) + 4px);
++    background:
++      linear-gradient(180deg, rgb(var(--color-background-rgb) / 0.96), rgb(var(--color-background-rgb) / 1)),
++      linear-gradient(135deg, rgb(var(--color-foreground-rgb) / 0.03), transparent 55%);
++    box-shadow: var(--shadow-popover);
++    overflow: clip;
++  }
++
++  .product-information__media :is(slideshow-container, .product-media-container, .product-media > *) {
++    border-radius: calc(var(--style-border-radius-popovers) + 2px);
+   }
+ 
+   .product-information__media .product-media-gallery__placeholder-image {
+@@ -140,15 +158,49 @@
+     height: 100%;
+   }
+ 
++  .product-details > .group-block {
++    width: 100%;
++    padding: clamp(var(--gap-lg), 2vw, var(--gap-2xl));
++    border: 1px solid rgb(var(--color-border-rgb) / 0.7);
++    border-radius: calc(var(--style-border-radius-popovers) + 4px);
++    background: linear-gradient(
++      180deg,
++      rgb(var(--color-background-rgb) / 0.98),
++      rgb(var(--color-background-rgb) / 1)
++    );
++    box-shadow: var(--shadow-popover);
++  }
++
+   /* Mobile styles */
+   @media screen and (max-width: 749px) {
++    .product-information {
++      padding-block: var(--gap-lg) var(--gap-2xl);
++    }
++
++    .product-information__grid {
++      gap: var(--gap-lg);
++    }
++
+     .product-information__media {
++      position: static;
++      top: auto;
+       grid-column: 1 / -1;
++      padding: 0;
++      border: 0;
++      border-radius: 0;
++      background: none;
++      box-shadow: none;
++      overflow: visible;
+     }
+ 
+     .product-details {
+       grid-column: 2 / 3;
+     }
++
++    .product-details > .group-block {
++      padding: clamp(1.25rem, 5vw, 1.75rem);
++      border-radius: 20px;
++    }
+   }
+ 
+   /* Desktop styles */
+diff --git a/snippets/product-media.liquid b/snippets/product-media.liquid
+index efeeef5..a14d041 100644
+--- a/snippets/product-media.liquid
++++ b/snippets/product-media.liquid
+@@ -152,6 +152,13 @@
+     .media-gallery--carousel slideshow-container,
+     .media-gallery--grid .product-media > * {
+       border-radius: var(--media-radius, 0);
++      border: 1px solid rgb(var(--color-border-rgb) / 0.7);
++      box-shadow: var(--shadow-popover);
++      background: linear-gradient(
++        180deg,
++        rgb(var(--color-background-rgb) / 0.98),
++        rgb(var(--color-background-rgb) / 1)
++      );
+       overflow: hidden;
+     }
+ 
+diff --git a/snippets/stylesheets.liquid b/snippets/stylesheets.liquid
+index 88668ee..2b0a00b 100644
+--- a/snippets/stylesheets.liquid
++++ b/snippets/stylesheets.liquid
+@@ -1,2 +1,3 @@
+ {{ 'overflow-list.css' | asset_url | preload_tag: as: 'style' }}
+ {{ 'base.css' | asset_url | stylesheet_tag: preload: true }}
++{{ 'clutch-business-kits-alignment.css' | asset_url | stylesheet_tag }}
+diff --git a/snippets/variant-main-picker.liquid b/snippets/variant-main-picker.liquid
+index c6df1a4..e0b26d6 100644
+--- a/snippets/variant-main-picker.liquid
++++ b/snippets/variant-main-picker.liquid
+@@ -259,6 +259,84 @@
+     border-color: var(--color-variant-hover-border);
+   }
+ 
++  .variant-option--buttons {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 0.75rem;
++    padding: clamp(var(--padding-sm), 1.6vw, var(--padding-md));
++    border: 1px solid rgb(var(--color-border-rgb) / 0.7);
++    border-radius: 24px;
++    background:
++      linear-gradient(180deg, rgb(var(--color-background-rgb) / 0.98), rgb(var(--color-background-rgb) / 1)),
++      linear-gradient(135deg, rgb(56 72 98 / 0.04), rgb(255 166 101 / 0.08));
++    box-shadow: var(--shadow-popover);
++  }
++
++  .variant-option--buttons legend {
++    margin-bottom: 0.85rem;
++    color: #384862;
++    font-weight: 700;
++  }
++
++  .variant-option__button-label {
++    position: relative;
++    flex: 1 1 160px;
++    min-width: 0;
++    cursor: pointer;
++  }
++
++  .variant-option__button-label input {
++    position: absolute;
++    inset: 0;
++    margin: 0;
++    opacity: 0;
++    pointer-events: none;
++    outline: none;
++  }
++
++  @media (hover: hover) and (pointer: fine) {
++    .variant-option__button-label:hover {
++      border-color: rgba(255, 166, 101, 0.85);
++      box-shadow: 0 10px 24px rgb(56 72 98 / 0.08);
++      transform: translateY(-1px);
++    }
++
++    .variant-option__button-label:has(input:checked):hover {
++      box-shadow: 0 0 0 2px rgb(255 166 101 / 0.12);
++      transform: none;
++    }
++  }
++
++  .variant-option__button-label:has(input:checked) {
++    border-color: #ffa665;
++    background: linear-gradient(135deg, rgb(255 166 101 / 0.14), rgb(255 247 240 / 1));
++    box-shadow: 0 0 0 2px rgb(255 166 101 / 0.12);
++  }
++
++  .variant-option__button-label:has(input:focus-visible) {
++    border-color: #384862;
++    box-shadow: 0 0 0 2px rgb(56 72 98 / 0.16);
++    outline: 2px solid rgb(56 72 98 / 0.24);
++    outline-offset: 2px;
++  }
++
++  @media screen and (max-width: 749px) {
++    .variant-option--buttons {
++      gap: 0.8rem;
++      padding: var(--padding-md);
++    }
++
++    .variant-option--buttons legend {
++      margin-bottom: 1rem;
++      font-size: clamp(1rem, 4vw, 1.1rem);
++    }
++
++    .variant-option__button-label {
++      flex-basis: 100%;
++      min-height: 56px;
++    }
++  }
++
+   .variant-option__select:focus-visible {
+     outline: var(--focus-outline-width) solid currentcolor;
+     outline-offset: var(--focus-outline-offset);
+diff --git a/templates/collection.json b/templates/collection.json
+index 3266f76..48e585c 100644
+--- a/templates/collection.json
++++ b/templates/collection.json
+@@ -97,7 +97,7 @@
+         "padding-block-end": 48
+       }
+     },
+-    "main": {
++    "main_updated": {
+       "type": "main-collection",
+       "blocks": {
+         "filters": {
+@@ -228,6 +228,6 @@
+   },
+   "order": [
+     "section",
+-    "main"
++    "main_updated"
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/templates/index.json b/templates/index.json
+index 9920842..86278be 100644
+--- a/templates/index.json
++++ b/templates/index.json
+@@ -9,1108 +9,12 @@
+  */
+ {
+   "sections": {
+-    "hero_p9CmMG": {
+-      "type": "hero",
+-      "blocks": {
+-        "group_6w9b3Y": {
+-          "type": "group",
+-          "name": "t:names.group",
+-          "settings": {
+-            "content_direction": "column",
+-            "vertical_on_mobile": true,
+-            "horizontal_alignment": "center",
+-            "vertical_alignment": "center",
+-            "align_baseline": false,
+-            "horizontal_alignment_flex_direction_column": "center",
+-            "vertical_alignment_flex_direction_column": "center",
+-            "gap": 16,
+-            "width": "custom",
+-            "custom_width": 57,
+-            "width_mobile": "fill",
+-            "custom_width_mobile": 100,
+-            "height": "fill",
+-            "custom_height": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "scheme-6",
+-            "background_media": "none",
+-            "video_position": "cover",
+-            "background_image_position": "cover",
+-            "border": "none",
+-            "border_width": 0,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "toggle_overlay": false,
+-            "overlay_color": "#00000026",
+-            "overlay_style": "solid",
+-            "gradient_direction": "to top",
+-            "link": "",
+-            "open_in_new_tab": false,
+-            "placeholder": "",
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "image_LyVmht": {
+-              "type": "image",
+-              "name": "t:names.image",
+-              "settings": {
+-                "image": "shopify://shop_images/PRINT_IT._ADVERTISE_IT._GROW_IT._12.png",
+-                "link": "",
+-                "image_ratio": "landscape",
+-                "width": "fill",
+-                "custom_width": 65,
+-                "width_mobile": "custom",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "border": "none",
+-                "border_width": 4,
+-                "border_opacity": 53,
+-                "border_radius": 0,
+-                "padding-block-start": 100,
+-                "padding-block-end": 17,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {}
+-            },
+-            "button_x7Ddd8": {
+-              "type": "button",
+-              "name": "t:names.button",
+-              "settings": {
+-                "label": "REQUEST A CUSTOM ORDER",
+-                "link": "shopify://collections/all",
+-                "open_in_new_tab": false,
+-                "style_class": "button-secondary",
+-                "width": "fit-content",
+-                "custom_width": 3,
+-                "width_mobile": "fit-content",
+-                "custom_width_mobile": 0
+-              },
+-              "blocks": {}
+-            },
+-            "text_xTmHnb": {
+-              "type": "text",
+-              "name": "t:names.text",
+-              "settings": {
+-                "text": "<p><strong>Custom</strong> print, marketing materials, and branded products. All in one place.</p><h3></h3>",
+-                "width": "fit-content",
+-                "max_width": "none",
+-                "alignment": "left",
+-                "type_preset": "custom",
+-                "font": "var(--font-subheading--family)",
+-                "font_size": "0.75rem",
+-                "line_height": "normal",
+-                "letter_spacing": "normal",
+-                "case": "none",
+-                "wrap": "pretty",
+-                "color": "var(--color-foreground-heading)",
+-                "background": false,
+-                "background_color": "#ffffff",
+-                "corner_radius": 31,
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 17,
+-                "padding-inline-end": 17
+-              },
+-              "blocks": {}
+-            }
+-          },
+-          "block_order": [
+-            "image_LyVmht",
+-            "button_x7Ddd8",
+-            "text_xTmHnb"
+-          ]
+-        }
+-      },
+-      "block_order": [
+-        "group_6w9b3Y"
+-      ],
+-      "custom_css": [],
+-      "name": "t:names.hero",
+-      "settings": {
+-        "media_type_1": "image",
+-        "image_1": "shopify://shop_images/PRINT_IT._ADVERTISE_IT._GROW_IT._1672_x_941_px.png",
+-        "media_type_2": "image",
+-        "stack_media_on_mobile": false,
+-        "custom_mobile_media": false,
+-        "media_type_1_mobile": "image",
+-        "media_type_2_mobile": "image",
+-        "link": "",
+-        "open_in_new_tab": false,
+-        "content_direction": "column",
+-        "vertical_on_mobile": true,
+-        "horizontal_alignment": "flex-start",
+-        "vertical_alignment": "center",
+-        "align_baseline": false,
+-        "horizontal_alignment_flex_direction_column": "center",
+-        "vertical_alignment_flex_direction_column": "flex-end",
+-        "gap": 0,
+-        "section_width": "page-width",
+-        "section_height": "custom",
+-        "section_height_custom": 0,
+-        "color_scheme": "scheme-76516263-05ab-4cab-961c-4df4433b1296",
+-        "toggle_overlay": false,
+-        "overlay_color": "#000000",
+-        "overlay_style": "gradient",
+-        "gradient_direction": "to top",
+-        "blurred_reflection": false,
+-        "reflection_opacity": 75,
+-        "padding-block-start": 0,
+-        "padding-block-end": 0
+-      }
+-    },
+-    "product_list_themegen": {
+-      "type": "product-list",
+-      "blocks": {
+-        "static-header": {
+-          "type": "_product-list-content",
+-          "name": "t:names.header",
+-          "static": true,
+-          "settings": {
+-            "content_direction": "column",
+-            "vertical_on_mobile": false,
+-            "horizontal_alignment": "space-between",
+-            "vertical_alignment": "flex-end",
+-            "align_baseline": true,
+-            "horizontal_alignment_flex_direction_column": "center",
+-            "vertical_alignment_flex_direction_column": "center",
+-            "gap": 12,
+-            "width": "fill",
+-            "custom_width": 100,
+-            "width_mobile": "fill",
+-            "custom_width_mobile": 100,
+-            "height": "fit",
+-            "custom_height": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "background_media": "none",
+-            "video_position": "cover",
+-            "background_image_position": "cover",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "product_recommendations_LDfxpm": {
+-              "type": "product-recommendations",
+-              "name": "t:names.product_recommendations",
+-              "settings": {
+-                "recommendation_type": "related",
+-                "layout_type": "grid",
+-                "carousel_on_mobile": true,
+-                "max_products": 4,
+-                "columns_gap": 16,
+-                "rows_gap": 16,
+-                "icons_style": "arrow",
+-                "icons_shape": "none",
+-                "gap": 12,
+-                "border_radius": 0,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {
+-                "text_xDMr93": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<h2>Popular Business Essentials</h2>",
+-                    "width": "fit-content",
+-                    "max_width": "none",
+-                    "alignment": "left",
+-                    "type_preset": "rte",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                },
+-                "static-product-card": {
+-                  "type": "_product-card",
+-                  "static": true,
+-                  "settings": {
+-                    "product_card_gap": 4,
+-                    "inherit_color_scheme": true,
+-                    "color_scheme": "",
+-                    "border": "none",
+-                    "border_width": 1,
+-                    "border_opacity": 100,
+-                    "border_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "text_xDMr93"
+-              ]
+-            }
+-          },
+-          "block_order": [
+-            "product_recommendations_LDfxpm"
+-          ]
+-        },
+-        "static-product-card": {
+-          "type": "_product-card",
+-          "name": "t:names.product_card",
+-          "static": true,
+-          "settings": {
+-            "product_card_gap": 16,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 24,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "product_card_gallery_PhczVC": {
+-              "type": "_product-card-gallery",
+-              "name": "t:names.product_card_media",
+-              "settings": {
+-                "image_ratio": "portrait",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 24,
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {}
+-            },
+-            "group_McqFAT": {
+-              "type": "_product-card-group",
+-              "name": "t:names.group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "center",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 8,
+-                "width": "fill",
+-                "custom_width": 100,
+-                "width_mobile": "fill",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": false,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {
+-                "text_fXxeVA": {
+-                  "type": "text",
+-                  "name": "t:names.text",
+-                  "settings": {
+-                    "text": "<h5>{{ closest.product.title }}</h5>",
+-                    "width": "fit-content",
+-                    "max_width": "normal",
+-                    "alignment": "left",
+-                    "type_preset": "custom",
+-                    "font": "var(--font-heading--family)",
+-                    "font_size": "1.5rem",
+-                    "line_height": "tight",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "balance",
+-                    "color": "var(--color-foreground-heading)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                },
+-                "swatches_87VJC8": {
+-                  "type": "swatches",
+-                  "name": "t:names.swatches",
+-                  "settings": {
+-                    "product_swatches_alignment": "flex-start",
+-                    "product_swatches_alignment_mobile": "flex-start",
+-                    "hide_padding": false,
+-                    "product_swatches_padding_top": 4,
+-                    "product_swatches_padding_bottom": 0,
+-                    "product_swatches_padding_left": 0,
+-                    "product_swatches_padding_right": 0
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "text_fXxeVA",
+-                "swatches_87VJC8"
+-              ]
+-            }
+-          },
+-          "block_order": [
+-            "product_card_gallery_PhczVC",
+-            "group_McqFAT"
+-          ]
+-        }
+-      },
+-      "name": "t:names.products_grid",
+-      "settings": {
+-        "collection": "frontpage",
+-        "layout_type": "carousel",
+-        "carousel_on_mobile": false,
+-        "max_products": 4,
+-        "columns": 3,
+-        "mobile_columns": "2",
+-        "mobile_card_size": "60cqw",
+-        "columns_gap": 43,
+-        "rows_gap": 36,
+-        "icons_style": "none",
+-        "icons_shape": "none",
+-        "section_width": "page-width",
+-        "horizontal_alignment": "flex-start",
+-        "gap": 0,
+-        "color_scheme": "scheme-76516263-05ab-4cab-961c-4df4433b1296",
+-        "padding-block-start": 72,
+-        "padding-block-end": 72
+-      }
+-    },
+-    "section_npVphq": {
+-      "type": "section",
+-      "blocks": {
+-        "group_tbjeeM": {
+-          "type": "group",
+-          "settings": {
+-            "content_direction": "column",
+-            "vertical_on_mobile": true,
+-            "horizontal_alignment": "flex-start",
+-            "vertical_alignment": "center",
+-            "align_baseline": false,
+-            "horizontal_alignment_flex_direction_column": "center",
+-            "vertical_alignment_flex_direction_column": "center",
+-            "gap": 16,
+-            "width": "fill",
+-            "custom_width": 100,
+-            "width_mobile": "fill",
+-            "custom_width_mobile": 100,
+-            "height": "fit",
+-            "custom_height": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "background_media": "none",
+-            "video_position": "cover",
+-            "background_image_position": "cover",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "toggle_overlay": false,
+-            "overlay_color": "#00000026",
+-            "overlay_style": "solid",
+-            "gradient_direction": "to top",
+-            "link": "",
+-            "open_in_new_tab": false,
+-            "placeholder": "",
+-            "padding-block-start": 12,
+-            "padding-block-end": 12,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "group_8k3dVW": {
+-              "type": "group",
+-              "name": "t:names.group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fit-content",
+-                "custom_width": 100,
+-                "width_mobile": "fit-content",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": true,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 20,
+-                "padding-block-end": 20,
+-                "padding-inline-start": 20,
+-                "padding-inline-end": 20
+-              },
+-              "blocks": {
+-                "icon_iJzLRK": {
+-                  "type": "icon",
+-                  "name": "t:names.icon",
+-                  "settings": {
+-                    "icon": "eye",
+-                    "width": 24,
+-                    "link": "",
+-                    "open_in_new_tab": false
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "icon_iJzLRK"
+-              ]
+-            },
+-            "group_dXGteV": {
+-              "type": "group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fill",
+-                "custom_width": 100,
+-                "width_mobile": "fill",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": false,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {
+-                "text_Yeyppt": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Bold first impressions</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "h4",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                },
+-                "text_x7zHXJ": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Command attention with premium textures and vivid colors that set you apart instantly</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "rte",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "text_Yeyppt",
+-                "text_x7zHXJ"
+-              ]
+-            }
+-          },
+-          "block_order": [
+-            "group_8k3dVW",
+-            "group_dXGteV"
+-          ]
+-        },
+-        "group_4MCCcE": {
+-          "type": "group",
+-          "settings": {
+-            "content_direction": "column",
+-            "vertical_on_mobile": true,
+-            "horizontal_alignment": "flex-start",
+-            "vertical_alignment": "center",
+-            "align_baseline": false,
+-            "horizontal_alignment_flex_direction_column": "center",
+-            "vertical_alignment_flex_direction_column": "center",
+-            "gap": 16,
+-            "width": "fill",
+-            "custom_width": 100,
+-            "width_mobile": "fill",
+-            "custom_width_mobile": 100,
+-            "height": "fit",
+-            "custom_height": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "background_media": "none",
+-            "video_position": "cover",
+-            "background_image_position": "cover",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "toggle_overlay": false,
+-            "overlay_color": "#00000026",
+-            "overlay_style": "solid",
+-            "gradient_direction": "to top",
+-            "link": "",
+-            "open_in_new_tab": false,
+-            "placeholder": "",
+-            "padding-block-start": 12,
+-            "padding-block-end": 12,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "group_BiQxAw": {
+-              "type": "group",
+-              "name": "t:names.group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fit-content",
+-                "custom_width": 100,
+-                "width_mobile": "fit-content",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": true,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 20,
+-                "padding-block-end": 20,
+-                "padding-inline-start": 20,
+-                "padding-inline-end": 20
+-              },
+-              "blocks": {
+-                "icon_EXGWjJ": {
+-                  "type": "icon",
+-                  "name": "t:names.icon",
+-                  "settings": {
+-                    "icon": "heart",
+-                    "width": 24,
+-                    "link": "",
+-                    "open_in_new_tab": false
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "icon_EXGWjJ"
+-              ]
+-            },
+-            "group_wPTkz7": {
+-              "type": "group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fill",
+-                "custom_width": 100,
+-                "width_mobile": "fill",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": false,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {
+-                "text_JgDWa8": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Tailored for your brand</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "h4",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                },
+-                "text_B3JynR": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Customize every detail, from design to finish, for marketing collateral that fits your business perfectly</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "rte",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "text_JgDWa8",
+-                "text_B3JynR"
+-              ]
+-            }
+-          },
+-          "block_order": [
+-            "group_BiQxAw",
+-            "group_wPTkz7"
+-          ]
+-        },
+-        "group_ybpYBG": {
+-          "type": "group",
+-          "settings": {
+-            "content_direction": "column",
+-            "vertical_on_mobile": true,
+-            "horizontal_alignment": "flex-start",
+-            "vertical_alignment": "center",
+-            "align_baseline": false,
+-            "horizontal_alignment_flex_direction_column": "center",
+-            "vertical_alignment_flex_direction_column": "center",
+-            "gap": 16,
+-            "width": "fill",
+-            "custom_width": 100,
+-            "width_mobile": "fill",
+-            "custom_width_mobile": 100,
+-            "height": "fit",
+-            "custom_height": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "background_media": "none",
+-            "video_position": "cover",
+-            "background_image_position": "cover",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "toggle_overlay": false,
+-            "overlay_color": "#00000026",
+-            "overlay_style": "solid",
+-            "gradient_direction": "to top",
+-            "link": "",
+-            "open_in_new_tab": false,
+-            "placeholder": "",
+-            "padding-block-start": 12,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "group_zf7WUq": {
+-              "type": "group",
+-              "name": "t:names.group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fit-content",
+-                "custom_width": 100,
+-                "width_mobile": "fit-content",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": true,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 20,
+-                "padding-block-end": 20,
+-                "padding-inline-start": 20,
+-                "padding-inline-end": 20
+-              },
+-              "blocks": {
+-                "icon_BnVh6n": {
+-                  "type": "icon",
+-                  "name": "t:names.icon",
+-                  "settings": {
+-                    "icon": "silhouette",
+-                    "width": 24,
+-                    "link": "",
+-                    "open_in_new_tab": false
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "icon_BnVh6n"
+-              ]
+-            },
+-            "group_Qhpf3G": {
+-              "type": "group",
+-              "settings": {
+-                "content_direction": "column",
+-                "vertical_on_mobile": true,
+-                "horizontal_alignment": "flex-start",
+-                "vertical_alignment": "center",
+-                "align_baseline": false,
+-                "horizontal_alignment_flex_direction_column": "flex-start",
+-                "vertical_alignment_flex_direction_column": "center",
+-                "gap": 12,
+-                "width": "fill",
+-                "custom_width": 100,
+-                "width_mobile": "fill",
+-                "custom_width_mobile": 100,
+-                "height": "fit",
+-                "custom_height": 100,
+-                "inherit_color_scheme": true,
+-                "color_scheme": "",
+-                "background_media": "none",
+-                "video_position": "cover",
+-                "background_image_position": "cover",
+-                "border": "none",
+-                "border_width": 1,
+-                "border_opacity": 100,
+-                "border_radius": 0,
+-                "toggle_overlay": false,
+-                "overlay_color": "#00000026",
+-                "overlay_style": "solid",
+-                "gradient_direction": "to top",
+-                "link": "",
+-                "open_in_new_tab": false,
+-                "placeholder": "",
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {
+-                "text_fN9Rgj": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Fast, reliable turnaround</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "h4",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                },
+-                "text_7PjwCJ": {
+-                  "type": "text",
+-                  "settings": {
+-                    "text": "<p>Get polished, professional print materials delivered quickly—just in time for your next big move</p>",
+-                    "width": "100%",
+-                    "max_width": "normal",
+-                    "alignment": "center",
+-                    "type_preset": "rte",
+-                    "font": "var(--font-body--family)",
+-                    "font_size": "1rem",
+-                    "line_height": "normal",
+-                    "letter_spacing": "normal",
+-                    "case": "none",
+-                    "wrap": "pretty",
+-                    "color": "var(--color-foreground)",
+-                    "background": false,
+-                    "background_color": "#00000026",
+-                    "corner_radius": 0,
+-                    "padding-block-start": 0,
+-                    "padding-block-end": 0,
+-                    "padding-inline-start": 0,
+-                    "padding-inline-end": 0
+-                  },
+-                  "blocks": {}
+-                }
+-              },
+-              "block_order": [
+-                "text_fN9Rgj",
+-                "text_7PjwCJ"
+-              ]
+-            }
+-          },
+-          "block_order": [
+-            "group_zf7WUq",
+-            "group_Qhpf3G"
+-          ]
+-        }
+-      },
+-      "block_order": [
+-        "group_tbjeeM",
+-        "group_4MCCcE",
+-        "group_ybpYBG"
+-      ],
+-      "disabled": true,
+-      "name": "t:names.icons_with_text",
+-      "settings": {
+-        "content_direction": "row",
+-        "vertical_on_mobile": true,
+-        "horizontal_alignment": "flex-start",
+-        "vertical_alignment": "center",
+-        "align_baseline": false,
+-        "horizontal_alignment_flex_direction_column": "flex-start",
+-        "vertical_alignment_flex_direction_column": "center",
+-        "gap": 32,
+-        "section_width": "page-width",
+-        "section_height": "",
+-        "section_height_custom": 50,
+-        "color_scheme": "scheme-5",
+-        "background_media": "none",
+-        "video_position": "cover",
+-        "background_image_position": "cover",
+-        "border": "none",
+-        "border_width": 1,
+-        "border_opacity": 100,
+-        "border_radius": 0,
+-        "toggle_overlay": false,
+-        "overlay_color": "#00000026",
+-        "overlay_style": "solid",
+-        "gradient_direction": "to top",
+-        "padding-block-start": 100,
+-        "padding-block-end": 100
+-      }
+-    },
+-    "section_Ea3hn6": {
+-      "type": "section",
+-      "blocks": {
+-        "image_kDjCbX": {
+-          "type": "image",
+-          "name": "t:names.image",
+-          "settings": {
+-            "image": "shopify://shop_images/2.png",
+-            "link": "",
+-            "image_ratio": "adapt",
+-            "width": "fill",
+-            "custom_width": 100,
+-            "width_mobile": "custom",
+-            "custom_width_mobile": 100,
+-            "height": "fill",
+-            "border": "none",
+-            "border_width": 1,
+-            "border_opacity": 100,
+-            "border_radius": 0,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {}
+-        }
+-      },
+-      "block_order": [
+-        "image_kDjCbX"
+-      ],
+-      "name": "t:names.custom_section",
+-      "settings": {
+-        "content_direction": "row",
+-        "vertical_on_mobile": true,
+-        "horizontal_alignment": "flex-start",
+-        "vertical_alignment": "center",
+-        "align_baseline": false,
+-        "horizontal_alignment_flex_direction_column": "flex-start",
+-        "vertical_alignment_flex_direction_column": "center",
+-        "gap": 0,
+-        "section_width": "full-width",
+-        "section_height": "small",
+-        "section_height_custom": 50,
+-        "color_scheme": "scheme-76516263-05ab-4cab-961c-4df4433b1296",
+-        "background_media": "none",
+-        "video_position": "cover",
+-        "background_image_position": "cover",
+-        "border": "none",
+-        "border_width": 1,
+-        "border_opacity": 100,
+-        "border_radius": 0,
+-        "toggle_overlay": false,
+-        "overlay_color": "#00000026",
+-        "overlay_style": "solid",
+-        "gradient_direction": "to top",
+-        "padding-block-start": 0,
+-        "padding-block-end": 0
+-      }
++    "clutch_homepage": {
++      "type": "clutch-homepage-v2",
++      "settings": {}
+     }
+   },
+   "order": [
+-    "hero_p9CmMG",
+-    "product_list_themegen",
+-    "section_npVphq",
+-    "section_Ea3hn6"
++    "clutch_homepage"
+   ]
+ }
+diff --git a/templates/page.contact.json b/templates/page.contact.json
+index 1a56ec4..de91237 100644
+--- a/templates/page.contact.json
++++ b/templates/page.contact.json
+@@ -6,146 +6,17 @@
+  * or related systems. Please exercise caution as any changes
+  * made to this file may be overwritten.
+  * ------------------------------------------------------------
+- */{
++ */
++{
+   "sections": {
+-    "main": {
+-      "type": "main-page",
+-      "blocks": {
+-        "title": {
+-          "type": "text",
+-          "name": "t:names.title",
+-          "settings": {
+-            "text": "<h1>{{ closest.page.title }}</h1>",
+-            "width": "100%",
+-            "max_width": "normal",
+-            "alignment": "center",
+-            "type_preset": "h2",
+-            "font": "var(--font-primary--family)",
+-            "font_size": "",
+-            "line_height": "normal",
+-            "letter_spacing": "normal",
+-            "case": "none",
+-            "wrap": "pretty",
+-            "color": "",
+-            "background": false,
+-            "background_color": "#00000026",
+-            "corner_radius": 0,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {}
+-        },
+-        "content": {
+-          "type": "text",
+-          "name": "t:names.content",
+-          "settings": {
+-            "text": "{{ closest.page.content }}",
+-            "width": "100%",
+-            "max_width": "narrow",
+-            "alignment": "center",
+-            "type_preset": "rte",
+-            "font": "var(--font-primary--family)",
+-            "font_size": "",
+-            "line_height": "normal",
+-            "letter_spacing": "normal",
+-            "case": "none",
+-            "wrap": "pretty",
+-            "color": "",
+-            "background": false,
+-            "background_color": "#00000026",
+-            "corner_radius": 0,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {}
+-        }
+-      },
+-      "block_order": [
+-        "title",
+-        "content"
+-      ],
++    "contact": {
++      "type": "clutch-contact-page",
+       "settings": {
+-        "content_direction": "column",
+-        "gap": 32,
+-        "color_scheme": "",
+-        "padding-block-start": 40,
+-        "padding-block-end": 0
+-      }
+-    },
+-    "form": {
+-      "type": "section",
+-      "blocks": {
+-        "contact_form_UwiCkQ": {
+-          "type": "contact-form",
+-          "settings": {
+-            "width": "custom",
+-            "custom_width": 50,
+-            "width_mobile": "custom",
+-            "custom_width_mobile": 100,
+-            "inherit_color_scheme": true,
+-            "color_scheme": "",
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {
+-            "submit-button": {
+-              "type": "contact-form-submit-button",
+-              "static": true,
+-              "settings": {
+-                "label": "Submit",
+-                "style_class": "button",
+-                "width": "fit-content",
+-                "custom_width": 100,
+-                "width_mobile": "fit-content",
+-                "custom_width_mobile": 100
+-              },
+-              "blocks": {}
+-            }
+-          },
+-          "block_order": []
+-        }
+-      },
+-      "block_order": [
+-        "contact_form_UwiCkQ"
+-      ],
+-      "name": "t:names.contact_form",
+-      "settings": {
+-        "content_direction": "column",
+-        "vertical_on_mobile": true,
+-        "horizontal_alignment": "flex-start",
+-        "vertical_alignment": "center",
+-        "align_baseline": false,
+-        "horizontal_alignment_flex_direction_column": "center",
+-        "vertical_alignment_flex_direction_column": "center",
+-        "gap": 32,
+-        "section_width": "page-width",
+-        "section_height": "",
+-        "section_height_custom": 50,
+-        "color_scheme": "scheme-1",
+-        "background_media": "none",
+-        "video_position": "cover",
+-        "background_image_position": "cover",
+-        "border": "none",
+-        "border_width": 1,
+-        "border_opacity": 100,
+-        "border_radius": 0,
+-        "toggle_overlay": false,
+-        "overlay_color": "#00000026",
+-        "overlay_style": "solid",
+-        "gradient_direction": "to top",
+-        "padding-block-start": 32,
+-        "padding-block-end": 84
++        "color_scheme": "scheme-1"
+       }
+     }
+   },
+   "order": [
+-    "main",
+-    "form"
++    "contact"
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/templates/page.json b/templates/page.json
+index fce0966..9e0318c 100644
+--- a/templates/page.json
++++ b/templates/page.json
+@@ -1,62 +1 @@
+-/*
+- * ------------------------------------------------------------
+- * IMPORTANT: The contents of this file are auto-generated.
+- *
+- * This file may be updated by the Shopify admin theme editor
+- * or related systems. Please exercise caution as any changes
+- * made to this file may be overwritten.
+- * ------------------------------------------------------------
+- */{
+-  "sections": {
+-    "main": {
+-      "type": "main-page",
+-      "blocks": {
+-        "heading": {
+-          "type": "text",
+-          "name": "Title",
+-          "settings": {
+-            "text": "<h1>{{ closest.page.title }}</h1>",
+-            "width": "100%",
+-            "max_width": "normal",
+-            "alignment": "left",
+-            "type_preset": "h2",
+-            "font": "var(--font-primary--family)",
+-            "font_size": "",
+-            "line_height": "normal",
+-            "letter_spacing": "normal",
+-            "case": "none",
+-            "wrap": "pretty",
+-            "color": "",
+-            "background": false,
+-            "background_color": "#00000026",
+-            "corner_radius": 0,
+-            "padding-block-start": 0,
+-            "padding-block-end": 0,
+-            "padding-inline-start": 0,
+-            "padding-inline-end": 0
+-          },
+-          "blocks": {}
+-        },
+-        "page-content": {
+-          "type": "page-content",
+-          "settings": {},
+-          "blocks": {}
+-        }
+-      },
+-      "block_order": [
+-        "heading",
+-        "page-content"
+-      ],
+-      "settings": {
+-        "content_direction": "column",
+-        "gap": 32,
+-        "color_scheme": "",
+-        "padding-block-start": 40,
+-        "padding-block-end": 80
+-      }
+-    }
+-  },
+-  "order": [
+-    "main"
+-  ]
+-}
+\ No newline at end of file
++{"sections":{"main":{"type":"main-page","blocks":{"heading":{"type":"text","name":"Title","settings":{"text":"","width":"100%","max_width":"normal","alignment":"left","type_preset":"h2","font":"var(--font-primary--family)","font_size":"","line_height":"normal","letter_spacing":"normal","case":"none","wrap":"pretty","color":"","background":false,"background_color":"#00000026","corner_radius":0,"padding-block-start":0,"padding-block-end":0,"padding-inline-start":0,"padding-inline-end":0},"blocks":{}},"text_qgh64x":{"type":"text","name":"t:names.text","settings":{"text":"","width":"fit-content","max_width":"normal","alignment":"left","type_preset":"rte","font":"var(--font-body--family)","font_size":"1rem","line_height":"normal","letter_spacing":"normal","case":"none","wrap":"pretty","color":"var(--color-foreground)","background":false,"background_color":"#00000026","corner_radius":0,"padding-block-start":0,"padding-block-end":0,"padding-inline-start":0,"padding-inline-end":0},"blocks":{}},"page-content":{"type":"page-content","settings":{},"blocks":{}}},"block_order":["heading","text_qgh64x","page-content"],"settings":{"content_direction":"column","gap":32,"color_scheme":"","padding-block-start":40,"padding-block-end":80}}},"order":["main"]}
+\ No newline at end of file
+diff --git a/templates/product.json b/templates/product.json
+index bbba04f..abfff6b 100644
+--- a/templates/product.json
++++ b/templates/product.json
+@@ -201,7 +201,6 @@
+               "blocks": {
+                 "quantity": {
+                   "type": "quantity",
+-                  "disabled": true,
+                   "static": true,
+                   "settings": {},
+                   "blocks": {}
+@@ -222,40 +221,13 @@
+                 }
+               },
+               "block_order": []
+-            },
+-            "text_aEtTtq": {
+-              "type": "text",
+-              "name": "Product description",
+-              "settings": {
+-                "text": "{{ closest.product.description }}",
+-                "width": "100%",
+-                "max_width": "normal",
+-                "alignment": "left",
+-                "type_preset": "rte",
+-                "font": "var(--font-primary--family)",
+-                "font_size": "",
+-                "line_height": "normal",
+-                "letter_spacing": "normal",
+-                "case": "none",
+-                "wrap": "pretty",
+-                "color": "",
+-                "background": false,
+-                "background_color": "#00000026",
+-                "corner_radius": 0,
+-                "padding-block-start": 0,
+-                "padding-block-end": 0,
+-                "padding-inline-start": 0,
+-                "padding-inline-end": 0
+-              },
+-              "blocks": {}
+             }
+           },
+           "block_order": [
+             "group_icgrde",
+             "divider_VJhene",
+             "variant_picker_R3rGDr",
+-            "buy_buttons_eYQEYi",
+-            "text_aEtTtq"
++            "buy_buttons_eYQEYi"
+           ]
+         }
+       },
+@@ -274,6 +246,26 @@
+         "padding-block-end": 0
+       }
+     },
++    "product_overview": {
++      "type": "main-product-overview",
++      "name": "Product Overview",
++      "settings": {}
++    },
++    "clutch_connect_card": {
++      "type": "clutch-connect-card-product",
++      "name": "Clutch Smart Business Card",
++      "settings": {}
++    },
++    "business_kit_tracking": {
++      "type": "clutch-business-kit-tracking-product",
++      "name": "Business Kit QR Tracking",
++      "settings": {}
++    },
++    "product_clarity": {
++      "type": "clutch-product-trust-clarity",
++      "name": "Clutch product clarity",
++      "settings": {}
++    },
+     "product_recommendations_qggXJq": {
+       "type": "product-recommendations",
+       "blocks": {
+@@ -418,6 +410,10 @@
+   },
+   "order": [
+     "main",
++    "clutch_connect_card",
++    "business_kit_tracking",
++    "product_overview",
++    "product_clarity",
+     "product_recommendations_qggXJq"
+   ]
+ }

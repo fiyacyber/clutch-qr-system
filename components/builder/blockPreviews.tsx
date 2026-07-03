@@ -6,7 +6,6 @@ import {
   BadgeCheck,
   ArrowUpRight,
   Globe,
-  Link2,
   Mail,
   MapPin,
   Medal,
@@ -17,16 +16,25 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  FaFacebookF,
-  FaInstagram,
-  FaLinkedinIn,
   FaApple,
-  FaGooglePay,
+  FaFacebook,
+  FaInstagram,
+  FaLinkedin,
   FaTiktok,
-  FaXTwitter,
   FaYoutube,
+  FaGooglePay,
 } from "react-icons/fa6";
+import {
+  FaCalendarAlt,
+  FaEnvelope,
+  FaGlobe,
+  FaGoogle,
+  FaLink,
+  FaPhone,
+  FaYelp,
+} from "react-icons/fa";
 import { BuilderBlock } from "@/lib/builder-types";
+import { normalizeBeginnerConnectLinkHref } from "@/lib/connect";
 import { trackBlockEvent } from "@/lib/builder-analytics";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 
@@ -41,6 +49,13 @@ function Placeholder({ text }: { text: string }) {
   return <p className="builder-placeholder-text">{text}</p>;
 }
 
+function getOrganizationLine(text: string, profile: any) {
+  const organization = String(profile?.business_name || "").trim();
+  if (!organization) return "";
+  if (organization === text) return "";
+  return organization;
+}
+
 function ActionChevron() {
   return (
     <span className="builder-action-chevron" aria-hidden="true">
@@ -51,7 +66,16 @@ function ActionChevron() {
 
 function ActionGlyph({ name }: { name: string }) {
   const iconName = name.toLowerCase();
-  const commonProps = { size: 16, strokeWidth: 2.15, "aria-hidden": true as const };
+  const actionIconColor = (() => {
+    if (iconName === "phone" || iconName === "call") return "#22C55E";
+    if (iconName === "mail" || iconName === "email") return "#EF4444";
+    if (iconName === "globe" || iconName === "website") return "#2563EB";
+    if (iconName === "map-pin" || iconName === "directions" || iconName === "address") return "#0EA5E9";
+    if (iconName === "message" || iconName === "sms" || iconName === "text") return "#22C55E";
+    if (iconName === "link") return "#7C3AED";
+    return "currentColor";
+  })();
+  const commonProps = { size: 16, strokeWidth: 2.15, color: actionIconColor, "aria-hidden": true as const };
 
   switch (iconName) {
     case "phone":
@@ -84,16 +108,28 @@ function SocialGlyph({ platform }: { platform?: string | null }) {
     case "instagram":
       return <FaInstagram {...commonProps} />;
     case "facebook":
-      return <FaFacebookF {...commonProps} />;
+      return <FaFacebook {...commonProps} />;
     case "youtube":
       return <FaYoutube {...commonProps} />;
     case "linkedin":
-      return <FaLinkedinIn {...commonProps} />;
-    case "x":
-    case "twitter":
-      return <FaXTwitter {...commonProps} />;
+      return <FaLinkedin {...commonProps} />;
     case "tiktok":
       return <FaTiktok {...commonProps} />;
+    case "google_business":
+    case "google":
+      return <FaGoogle {...commonProps} />;
+    case "yelp":
+      return <FaYelp {...commonProps} />;
+    case "booking":
+      return <FaCalendarAlt {...commonProps} />;
+    case "email":
+      return <FaEnvelope {...commonProps} />;
+    case "phone":
+      return <FaPhone {...commonProps} />;
+    case "website":
+      return <FaGlobe {...commonProps} />;
+    case "custom":
+      return <FaLink {...commonProps} />;
     default:
       return <AtSign {...commonProps} />;
   }
@@ -111,34 +147,20 @@ function getSocialIconColor(platform?: string | null, iconColorMode?: string | n
   if (iconColorMode !== "brand") return "currentColor";
 
   const value = String(platform || "").toLowerCase();
+  if (value === "website") return "#2563EB";
   if (value === "instagram") return "#E1306C";
   if (value === "facebook") return "#1877F2";
   if (value === "youtube") return "#FF0000";
   if (value === "linkedin") return "#0A66C2";
+  if (value === "google_business") return "#34A853";
+  if (value === "yelp") return "#D32323";
   if (value === "x" || value === "twitter") return "#111827";
   if (value === "tiktok") return "#000000";
   return "#384862";
 }
 
 function resolveSocialHref(platform?: string | null, value?: string | null) {
-  const rawValue = String(value || "").trim();
-  if (!rawValue) return "";
-  if (/^(https?:|mailto:|tel:|sms:)/i.test(rawValue)) return rawValue;
-
-  const handle = rawValue.replace(/^@+/, "").trim();
-  if (!handle) return "";
-  const encoded = encodeURIComponent(handle);
-  const normalizedPlatform = String(platform || "").toLowerCase();
-
-  if (normalizedPlatform === "instagram") return `https://instagram.com/${encoded}`;
-  if (normalizedPlatform === "facebook") return `https://facebook.com/${encoded}`;
-  if (normalizedPlatform === "tiktok") return `https://tiktok.com/@${encoded}`;
-  if (normalizedPlatform === "x" || normalizedPlatform === "twitter") return `https://x.com/${encoded}`;
-  if (normalizedPlatform === "linkedin") return `https://linkedin.com/in/${encoded}`;
-  if (normalizedPlatform === "youtube") return `https://youtube.com/@${encoded}`;
-  if (normalizedPlatform === "snapchat") return `https://snapchat.com/add/${encoded}`;
-  if (rawValue.includes(".")) return `https://${rawValue}`;
-  return "";
+  return normalizeBeginnerConnectLinkHref(platform || "custom", String(value || ""));
 }
 
 type ActionCardProps = {
@@ -217,7 +239,13 @@ function HeroAvatar({
   const normalizeAvatarUrl = (value: unknown) => {
     const url = typeof value === "string" ? value.trim() : "";
     if (!url || url === "null" || url === "undefined" || url.startsWith("blob:")) return "";
-    return url;
+    if (!/^https?:\/\//i.test(url)) return "";
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : "";
+    } catch {
+      return "";
+    }
   };
   const avatarUrl = normalizeAvatarUrl(data.avatarUrl) || normalizeAvatarUrl(profile.avatar_url);
   const resolvedAvatarUrl = data.avatarRemoved === true ? "" : avatarUrl;
@@ -364,11 +392,14 @@ export function AvatarBlockPreview({ block, profile }: BlockPreviewProps) {
 
 export function BusinessNameBlockPreview({ block, profile }: BlockPreviewProps) {
   const data = getBlockData(block);
-  const text = data.text || profile.business_name || "Your Business Name";
+  const text = String(data.text || profile.contact_name || profile.business_name || "").trim();
+  if (!text) return null;
+  const organizationLine = getOrganizationLine(text, profile);
   const colorValue = typeof data.color === "string" ? data.color.trim().toUpperCase() : "";
   const useThemeTextColor = !colorValue || colorValue === "#0F172A" || colorValue === "#111827";
   return (
     <div className="builder-block builder-block-business-name">
+      {organizationLine ? <p className="builder-hero-kicker">{organizationLine}</p> : null}
       <h1
         className="builder-hero-name"
         style={{
@@ -386,7 +417,8 @@ export function BusinessNameBlockPreview({ block, profile }: BlockPreviewProps) 
 
 export function SubheaderBlockPreview({ block, profile }: BlockPreviewProps) {
   const data = getBlockData(block);
-  const text = data.text || profile.title || "Your title or subheader";
+  const text = String(data.text || profile.title || "").trim();
+  if (!text) return null;
   const colorValue = typeof data.color === "string" ? data.color.trim().toUpperCase() : "";
   const useThemeTextColor = !colorValue || colorValue === "#0F172A" || colorValue === "#111827";
   return (
@@ -420,6 +452,13 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
   const badgeIcon = data.verifiedBadgeIcon || "checkmark";
   const badgePosition = data.verifiedBadgePosition || "top-right";
   const badgeSize = data.verifiedBadgeSize ?? 24;
+
+  const headline = String(data.businessName || profile.contact_name || profile.business_name || "").trim();
+  const organizationLine = getOrganizationLine(headline, profile);
+  const title = String(data.title || profile.title || "").trim();
+  const bio = String(data.bio || profile.bio || "").trim();
+
+  if (!headline && !title && !bio && data.showProfilePicture === false) return null;
 
   return (
     <div className="builder-block builder-block-hero" style={{ "--builder-accent": data.brandColor || undefined } as React.CSSProperties}>
@@ -459,9 +498,10 @@ export function ProfileHeroPreview({ block, profile }: BlockPreviewProps) {
         </div>
       )}
       <div className="builder-hero-text">
-        <h1 className="builder-hero-name">{data.businessName || profile.business_name || "Your Business Name"}</h1>
-        <p className="builder-hero-title">{data.title || profile.title || "Your Title"}</p>
-        <p className="builder-hero-bio">{data.bio || profile.bio || "Add a short bio to introduce your business."}</p>
+        {organizationLine ? <p className="builder-hero-kicker">{organizationLine}</p> : null}
+        {headline ? <h1 className="builder-hero-name">{headline}</h1> : null}
+        {title ? <p className="builder-hero-title">{title}</p> : null}
+        {bio ? <p className="builder-hero-bio">{bio}</p> : null}
       </div>
     </div>
   );
@@ -475,75 +515,103 @@ export function ContactButtonsPreview({ block, profile, profileId }: BlockPrevie
   const address = data.address || profile.address;
   const sms = data.sms || profile.sms;
 
+  const cards = [
+    data.showPhone !== false ? {
+      key: "phone",
+      title: "Call",
+      subtitle: phone || undefined,
+      href: phone ? `tel:${phone}` : undefined,
+      placeholder: !phone,
+      icon: <ActionGlyph name="phone" /> as any,
+      onClick: phone ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "phone" }) : undefined,
+    } : null,
+    data.showEmail !== false ? {
+      key: "email",
+      title: "Email",
+      subtitle: email || undefined,
+      href: email ? `mailto:${email}` : undefined,
+      placeholder: !email,
+      icon: <ActionGlyph name="email" /> as any,
+      onClick: email ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "email" }) : undefined,
+    } : null,
+    data.showWebsite !== false ? {
+      key: "website",
+      title: "Website",
+      subtitle: website || undefined,
+      href: website || undefined,
+      external: Boolean(website),
+      placeholder: !website,
+      icon: <ActionGlyph name="website" /> as any,
+      onClick: website ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "website" }) : undefined,
+    } : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    title: string;
+    subtitle?: string;
+    href?: string;
+    external?: boolean;
+    placeholder?: boolean;
+    icon: any;
+    onClick?: () => void;
+  }>;
+
+  const visibleCards = cards.filter((card) => !card.placeholder);
+  if (!visibleCards.length) return null;
+
   return (
     <div className={`builder-block builder-block-contact builder-contact-${data.style || "grid"}`}>
       <div className="builder-contact-primary-pills">
-        {data.showPhone !== false ? (
+        {visibleCards.map((card) => (
           <ActionCard
-            icon={<ActionGlyph name="phone" /> as any}
-            title="Call"
-            subtitle={phone || undefined}
-            href={phone ? `tel:${phone}` : undefined}
-            placeholder={!phone}
+            key={card.key}
+            icon={card.icon}
+            title={card.title}
+            subtitle={card.subtitle}
+            href={card.href}
+            external={card.external}
+            placeholder={card.placeholder}
             className="builder-action-pill"
-            onClick={phone ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "phone" }) : undefined}
+            onClick={card.onClick}
           />
-        ) : null}
-        {data.showEmail !== false ? (
-          <ActionCard
-            icon={<ActionGlyph name="email" /> as any}
-            title="Email"
-            subtitle={email || undefined}
-            href={email ? `mailto:${email}` : undefined}
-            placeholder={!email}
-            className="builder-action-pill"
-            onClick={email ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "email" }) : undefined}
-          />
-        ) : null}
-        {data.showWebsite !== false ? (
-          <ActionCard
-            icon={<ActionGlyph name="website" /> as any}
-            title="Website"
-            subtitle={website || undefined}
-            href={website || undefined}
-            external={Boolean(website)}
-            placeholder={!website}
-            className="builder-action-pill"
-            onClick={website ? () => trackBlockEvent({ profileId, blockId: block.id, eventType: "website" }) : undefined}
-          />
-        ) : null}
+        ))}
       </div>
 
       {(data.showAddress || data.showSms || data.showCustom) ? (
         <div className="builder-contact-secondary-list">
           {data.showAddress ? (
+            address ? (
             <ActionCard
               icon={<ActionGlyph name="directions" /> as any}
               title="Directions"
-              subtitle={address || "Add an address"}
+              subtitle={address}
               href={address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined}
               external={Boolean(address)}
               placeholder={!address}
             />
+            ) : null
           ) : null}
           {data.showSms ? (
+            sms ? (
             <ActionCard
               icon={<ActionGlyph name="sms" /> as any}
               title="Text"
-              subtitle={sms || undefined}
+              subtitle={sms}
               href={sms ? `sms:${sms}` : undefined}
               placeholder={!sms}
             />
+            ) : null
           ) : null}
           {data.showCustom ? (
+            data.customUrl ? (
             <ActionCard
               icon={<ActionGlyph name="link" /> as any}
               title={data.customLabel || "Custom"}
-              subtitle={data.customUrl || "Add a custom URL"}
+              subtitle={data.customUrl}
               href={data.customUrl || undefined}
               external={Boolean(data.customUrl)}
               placeholder={!data.customUrl}
             />
+            ) : null
           ) : null}
         </div>
       ) : null}
@@ -557,6 +625,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
 
   if (type === "email-button") {
     const email = data.email || data.value || profile.email;
+    if (!email) return null;
     return (
       <div className="builder-block">
         <ActionCard
@@ -572,6 +641,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
 
   if (type === "website-button") {
     const website = data.website || data.url || profile.website;
+    if (!website) return null;
     return (
       <div className="builder-block">
         <ActionCard
@@ -589,6 +659,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   if (type === "directions-button") {
     const address = data.address || profile.address;
     const mapsHref = data.url || (address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined);
+    if (!mapsHref) return null;
     return (
       <div className="builder-block">
         <ActionCard
@@ -606,6 +677,7 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   const phone = data.phone || data.value || profile.phone;
   const behavior = data.behavior === "text" ? "sms" : data.behavior || "call";
   const href = behavior === "sms" ? `sms:${phone || ""}` : `tel:${phone || ""}`;
+  if (!phone) return null;
 
   return (
     <div className="builder-block">
@@ -633,6 +705,7 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
     type === "custom-link-button" ? "Custom Link" :
     "Request / Book";
   const subtitle = data.description || data.url || undefined;
+  if (!data.url) return null;
 
   return (
     <div className="builder-block">
@@ -650,33 +723,30 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
 
 export function SocialLinksPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
-  const links = Array.isArray(data.links) ? data.links.slice(0, 6) : [];
-  const iconColorMode = data.iconColorMode || "mono";
+  const links = Array.isArray(data.links)
+    ? data.links
+        .filter((link: any) => link.visible !== false)
+        .map((link: any) => ({ ...link, href: resolveSocialHref(link.platform, link.value) }))
+        .filter((link: any) => Boolean(link.href))
+        .slice(0, 6)
+    : [];
+  const iconColorMode = data.iconColorMode || "brand";
   if (links.length === 0) {
-    return (
-      <div className="builder-block builder-block-social">
-        <Placeholder text="Add social links to display them here." />
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className="builder-block builder-block-social">
       {links.map((link: any, idx: number) => {
-        const href = resolveSocialHref(link.platform, link.value);
         const treatment = link.iconTreatment === "brand" || link.iconTreatment === "mono" ? link.iconTreatment : iconColorMode;
         const title = link.label || link.platform || "Social";
         return (
           <a
             key={link.id || idx}
-            href={href || "#"}
+            href={link.href}
             className="builder-button builder-action-card builder-button-social"
-            target={href ? "_blank" : undefined}
-            rel={href ? "noreferrer" : undefined}
-            aria-disabled={!href}
-            onClick={(e) => {
-              if (!href) e.preventDefault();
-            }}
+            target="_blank"
+            rel="noreferrer"
             title={title}
           >
             <span className="builder-action-icon" aria-hidden="true">
@@ -790,15 +860,73 @@ export function BusinessHoursPreview({ block }: BlockPreviewProps) {
   );
 }
 
-export function FormBlockPreview({ block }: BlockPreviewProps) {
+export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
   const data = getBlockData(block);
+  const profileId = String(profile?.id || "").trim();
+  const profileSlug = String(profile?.slug || "").trim();
+  const leadCaptureEnabled = data.leadCaptureEnabled !== false;
+  const sent = profile?._leadSent === true;
+  const rateLimited = profile?._leadRateLimited === true;
+  const submitError = profile?._leadError === true;
+
+  if (!leadCaptureEnabled && mode !== "editor") {
+    return null;
+  }
+
+  if (mode === "preview" || mode === "editor") {
+    return (
+      <div className="builder-block builder-block-form">
+        <h3 className="builder-form-title">{data.formLabel || "Contact Form"}</h3>
+        <p className="builder-form-description">
+          {data.description || "Use this form to collect lead details from visitors."}
+        </p>
+        <p className="builder-form-placeholder">{(data.submitText || "Send")} button preview</p>
+      </div>
+    );
+  }
+
+  if (!profileId || !profileSlug) {
+    return null;
+  }
+
   return (
     <div className="builder-block builder-block-form">
-      <h3 className="builder-form-title">{data.formLabel || "Contact Form"}</h3>
+      <h3 className="builder-form-title" id="lead-form">{data.formLabel || "Contact Form"}</h3>
       <p className="builder-form-description">
         {data.description || "Use this form to collect lead details from visitors."}
       </p>
-      <p className="builder-form-placeholder">{data.submitText || "Send"} button preview</p>
+
+      {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
+      {rateLimited ? <div className="connect-error">Too many requests. Please wait one minute and try again.</div> : null}
+      {submitError ? <div className="connect-error">Something went wrong. Please try again.</div> : null}
+
+      <form action="/api/connect/leads" method="post" className="connect-lead-form">
+        <input type="hidden" name="profile_id" value={profileId} />
+        <input type="hidden" name="slug" value={profileSlug} />
+        <input type="hidden" name="source" value="clutch_connect_profile" />
+        <input type="hidden" name="primary_action_type" value={String(data.primaryActionType || "request_quote")} />
+        <input type="hidden" name="primary_action_label" value={String(data.primaryActionLabel || data.submitText || "Request a Quote")} />
+        <input type="hidden" name="form_type" value={String(data.formType || "quote_request")} />
+
+        <div className="connect-lead-grid">
+          <input name="name" placeholder="Your name" className="connect-input" required />
+          <input name="email" type="email" placeholder="Your email" className="connect-input" />
+          <input name="phone" placeholder="Your phone" className="connect-input" />
+          <textarea name="message" placeholder="How can we help?" className="connect-input" rows={3} />
+        </div>
+
+        <input
+          name="company_website"
+          className="connect-honeypot"
+          autoComplete="off"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+
+        <button className="connect-submit" type="submit">
+          {data.submitText || "Send"}
+        </button>
+      </form>
     </div>
   );
 }

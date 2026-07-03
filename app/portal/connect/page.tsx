@@ -23,8 +23,12 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
+import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
+import { isConnectSetupComplete } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
+import { PLAN_DEFINITIONS, getAdvancedBuilderLockMessage, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked, isCustomerSubscriptionLocked } from "@/lib/plans";
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -64,6 +68,14 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   if (!customer) redirect("/portal");
   if (customer.must_change_password) redirect("/change-password");
 
+  const plan = getCustomerPlan(customer);
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const hasAdvancedLeads = hasEntitlement(customer, "advancedLeadInbox");
+  const hasBrandRemoval = hasEntitlement(customer, "removeBranding");
+  const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
+  const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
+
   const admin = createSupabaseAdminClient();
 
   const panelIssues: string[] = [];
@@ -86,31 +98,40 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   if (!profile) {
     return (
-      <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+      <DashboardShell
+        isAdmin={Boolean(customer.is_admin)}
+        navLocks={{
+          qr: !hasDynamicQr,
+          analytics: !hasHeatmap,
+          heatmap: !hasHeatmap,
+        }}
+      >
         <main className="container connect-center-shell">
           <DashboardHeader
             title="Clutch Connect"
             subtitle="Build your Clutch Connect profile and share it from your smart card, QR campaigns, and customer touchpoints."
             actions={(
               <div className="connect-center-header-actions">
-                <Link className="btn secondary" href="/portal/connect/setup">
+                <Link className="btn primary" href="/portal/connect/setup">
                   <Sparkles size={15} />
                   Guided Setup
                 </Link>
-                <Link className="btn primary" href="/portal/connect/build">
-                  <Palette size={15} />
-                  Advanced Builder
-                </Link>
+                {advancedBuilderUnlocked ? (
+                  <Link className="btn secondary" href="/portal/connect/build">
+                    <Palette size={15} />
+                    Advanced Builder
+                  </Link>
+                ) : null}
               </div>
             )}
           />
           <section className="connect-center-card">
             <p className="connect-center-kicker">Start Here</p>
             <h2>Create your Clutch Connect profile</h2>
-            <p className="muted">Use guided setup for the essentials, then fine tune layout and design in the advanced builder.</p>
+            <p className="muted">Use guided setup for the essentials and publish a clean starter profile.</p>
             <div className="connect-center-inline-actions">
               <Link className="btn secondary" href="/portal/connect/setup">Guided Setup</Link>
-              <Link className="btn primary" href="/portal/connect/build">Advanced Builder</Link>
+              {advancedBuilderUnlocked ? <Link className="btn primary" href="/portal/connect/build">Advanced Builder</Link> : null}
             </div>
           </section>
         </main>
@@ -226,6 +247,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const profileLinks = links || [];
   const activeLinks = profileLinks.filter((link: any) => link.is_active !== false).length;
+  const setupComplete = isConnectSetupComplete(customer, profile, { links: profileLinks });
   const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(
@@ -296,17 +318,21 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect"
-          subtitle="Open your Profile Builder workspace or view the profile your customers see."
+          subtitle={advancedBuilderUnlocked
+            ? "Open your Profile Builder workspace or view the profile your customers see."
+            : "Manage your starter profile basics and view the page your customers see."}
           actions={
             <div className="connect-center-header-actions">
               <Link className="btn secondary" href="/portal/connect/setup">
                 <Sparkles size={15} />
-                Guided Setup
+                {setupComplete ? "Guided Setup" : "Continue Setup"}
               </Link>
-              <Link className="btn primary" href="/portal/connect/build">
-                <Palette size={15} />
-                Advanced Builder
-              </Link>
+              {advancedBuilderUnlocked ? (
+                <Link className="btn primary" href="/portal/connect/build">
+                  <Palette size={15} />
+                  Advanced Builder
+                </Link>
+              ) : null}
               <div className="connect-profile-view-row">
                 <Link className="btn secondary" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
                   <Globe size={15} />
@@ -318,7 +344,37 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           }
         />
 
-        <ConnectTabs active="profile" />
+        <ConnectTabs active="profile" showBuilder={advancedBuilderUnlocked} />
+
+        <CurrentPlanBadge
+          planCode={plan.code}
+          planName={plan.name}
+          priceLabel={plan.price}
+          description={plan.description}
+          usageLabel={plan.code === "connect_basic" ? "Basic profile and Lead Inbox active" : "Advanced profile features active"}
+          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
+          locked={isCustomerSubscriptionLocked(customer)}
+          trialStatus={String(customer.trial_status || "none")}
+        />
+
+        {plan.code === "connect_basic" ? (
+          <LockedFeatureCard
+            title="Unlock Clutch Connect+"
+            description="Advanced profile customization, custom forms, lead management, and profile analytics."
+            requiredPlan="Clutch Connect+"
+            requiredPlanPrice="$9.99/mo"
+            ctaLabel="Upgrade for $9.99/mo"
+            ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
+            featureList={[
+              "Advanced profile builder",
+              "Premium banner themes",
+              "Custom form controls",
+              "Advanced Lead Inbox tools",
+              "Remove Clutch branding",
+            ]}
+            variant="connect_plus"
+          />
+        ) : null}
 
         {panelIssues.length ? (
           <RetryNotice
@@ -326,6 +382,17 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             description={panelIssues[0]}
             details={panelIssues.slice(1)}
           />
+        ) : null}
+
+        {!setupComplete ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Setup In Progress</p>
+            <h2>Finish your guided setup to unlock full dashboard flow.</h2>
+            <p className="muted">Complete your contact details and at least one visible call-to-action so your public page is ready for real customer traffic.</p>
+            <div className="connect-center-inline-actions">
+              <Link className="btn primary" href="/portal/connect/setup">Continue Guided Setup</Link>
+            </div>
+          </section>
         ) : null}
 
         <section className="connect-center-public-strip" aria-label="Public page status">
@@ -439,11 +506,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           <p className="connect-center-kicker">Quick Actions</p>
           <h2>Open Clutch Connect</h2>
           <div className="connect-center-quick-actions">
-            <Link className="connect-center-action" href="/portal/connect/build">
+            <Link className="connect-center-action" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
               <Palette size={18} />
               <div>
-                <strong>Profile Builder</strong>
-                <span>Edit your new public page, blocks, links, and design.</span>
+                <strong>{advancedBuilderUnlocked ? "Profile Builder" : "Guided Setup"}</strong>
+                <span>
+                  {advancedBuilderUnlocked
+                    ? "Edit your new public page, blocks, links, and design."
+                    : "Starter plans manage profile basics in Guided Setup."}
+                </span>
               </div>
             </Link>
             <Link className="connect-center-action" href={`/u/${profile.slug}`} target="_blank">
@@ -470,21 +541,34 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           </div>
         </section>
 
-        <section className="connect-center-grid connect-center-builder-grid">
-          <article className="connect-center-card">
-            <p className="connect-center-kicker">Builder Improvements</p>
-            <h2>Block Library + Templates</h2>
-            <ul className="connect-center-feature-list">
-              {builderImprovements.map((item) => (
-                <li key={item.label}>
-                  <span className="connect-center-feature-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                  <em className={item.status === "Ready" ? "ready" : "planned"}>{item.status}</em>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </section>
+        {!hasAdvancedLeads || !hasBrandRemoval ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Plan Awareness</p>
+            <h2>Starter profile access remains fully usable.</h2>
+            <p className="muted">
+              Guided setup, contact actions, social links, and a basic lead capture flow stay active on Clutch Connect Basic.
+              Upgrade to Clutch Connect+ to unlock advanced Lead Inbox controls, premium theming, and brand removal.
+            </p>
+          </section>
+        ) : null}
+
+        {advancedBuilderUnlocked ? (
+          <section className="connect-center-grid connect-center-builder-grid">
+            <article className="connect-center-card">
+              <p className="connect-center-kicker">Builder Improvements</p>
+              <h2>Block Library + Templates</h2>
+              <ul className="connect-center-feature-list">
+                {builderImprovements.map((item) => (
+                  <li key={item.label}>
+                    <span className="connect-center-feature-icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                    <em className={item.status === "Ready" ? "ready" : "planned"}>{item.status}</em>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </section>
+        ) : null}
 
         <section className="connect-center-card">
           <p className="connect-center-kicker">Public Page Improvements</p>

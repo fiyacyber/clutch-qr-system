@@ -1,0 +1,177 @@
+.planBadge {
+  display: grid;
+  gap: 10px;
+  background: #f6f8fb;
+  border: 1px solid #dde5ef;
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #0b1f35;
+  box-shadow: 0 8px 20px rgba(56, 72, 98, 0.08);
+}
+
+.planBadgeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.planPill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border: 1px solid #dde5ef;
+  background: #fff;
+  color: #384862;
+}
+
+.planPill.connect_plus {
+  border-color: rgba(255, 166, 101, 0.45);
+  color: #8c4c1f;
+  background: rgba(255, 166, 101, 0.14);
+}
+
+.planPill.qr_pro,
+.planPill.agency {
+  border-color: rgba(56, 72, 98, 0.3);
+  color: #f6f8fb;
+  background: #384862;
+}
+
+.planPill.admin {
+  border-color: rgba(255, 166, 101, 0.45);
+  color: #fff;
+  background: linear-gradient(135deg, #384862, #1f2d42);
+}
+
+.planTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #0b1f35;
+}
+
+.planSubtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #69758a;
+}
+
+.planMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planMeta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #516177;
+  border: 1px solid #dde5ef;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #fff;
+}
+
+.lockedCard {
+  border: 1px solid #dde5ef;
+  border-radius: 16px;
+  background: #f6f8fb;
+  box-shadow: 0 10px 24px rgba(56, 72, 98, 0.08);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.lockedCard.connect_plus {
+  border-color: rgba(255, 166, 101, 0.35);
+}
+
+.lockedCard.qr_pro {
+  border-color: rgba(56, 72, 98, 0.3);
+}
+
+.lockedCard.agency {
+  border-color: rgba(35, 57, 85, 0.38);
+}
+
+.lockedEyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #69758a;
+}
+
+.lockedTitle {
+  margin: 0;
+  color: #0b1f35;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.lockedDescription {
+  margin: 0;
+  color: #4f5f75;
+  font-size: 0.92rem;
+}
+
+.lockedFeatures {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #22344d;
+  font-size: 0.88rem;
+}
+
+.lockedActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lockedPlan {
+  font-size: 0.82rem;
+  color: #69758a;
+  font-weight: 700;
+}
+
+.lockedCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  font-weight: 800;
+  text-decoration: none;
+  padding: 9px 12px;
+  border: 1px solid #384862;
+  background: #384862;
+  color: #fff;
+}
+
+.lockedCard.connect_plus .lockedCta {
+  border-color: #ff9c59;
+  background: #ff9c59;
+  color: #14253c;
+}
+
+@media (max-width: 640px) {
+  .lockedActionRow {
+    align-items: stretch;
+  }
+
+  .lockedCta {
+    width: 100%;
+  }
+}

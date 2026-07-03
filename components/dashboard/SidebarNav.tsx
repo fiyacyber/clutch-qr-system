@@ -18,6 +18,11 @@ import { useState } from "react";
 
 interface SidebarNavProps {
   isAdmin?: boolean;
+  navLocks?: {
+    qr?: boolean;
+    analytics?: boolean;
+    heatmap?: boolean;
+  };
 }
 
 type NavItem = {
@@ -26,6 +31,7 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   match: (pathname: string, tab: string | null) => boolean;
   adminOnly?: boolean;
+  lockKey?: "qr" | "analytics" | "heatmap";
 };
 
 const navItems: NavItem[] = [
@@ -52,18 +58,21 @@ const navItems: NavItem[] = [
     href: "/portal/qr",
     icon: QrCode,
     match: (pathname) => pathname === "/portal/qr" || pathname.startsWith("/portal/qr/"),
+    lockKey: "qr",
   },
   {
     label: "Analytics",
     href: "/portal/analytics",
     icon: BarChart3,
     match: (pathname) => pathname === "/portal/analytics",
+    lockKey: "analytics",
   },
   {
     label: "Heatmap",
     href: "/portal/heatmap",
     icon: Map,
     match: (pathname) => pathname === "/portal/heatmap",
+    lockKey: "heatmap",
   },
   {
     label: "Admin",
@@ -80,7 +89,15 @@ const navItems: NavItem[] = [
   },
 ];
 
-function SidebarList({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: () => void }) {
+function SidebarList({
+  isAdmin,
+  onNavigate,
+  navLocks,
+}: {
+  isAdmin?: boolean;
+  onNavigate?: () => void;
+  navLocks?: SidebarNavProps["navLocks"];
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
@@ -97,6 +114,7 @@ function SidebarList({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: 
           .map((item) => {
             const active = item.match(pathname, tab);
             const Icon = item.icon;
+            const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
             return (
               <Link
                 key={item.label}
@@ -106,6 +124,7 @@ function SidebarList({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: 
               >
                 <Icon size={16} strokeWidth={1.8} />
                 <span>{item.label}</span>
+                {isLocked ? <small className="ds-nav-lock-pill">Locked</small> : null}
               </Link>
             );
           })}
@@ -121,7 +140,7 @@ function SidebarList({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: 
   );
 }
 
-export default function SidebarNav({ isAdmin }: SidebarNavProps) {
+export default function SidebarNav({ isAdmin, navLocks }: SidebarNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -136,7 +155,7 @@ export default function SidebarNav({ isAdmin }: SidebarNavProps) {
       </button>
 
       <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
-        <SidebarList isAdmin={isAdmin} />
+        <SidebarList isAdmin={isAdmin} navLocks={navLocks} />
       </aside>
 
       {mobileOpen ? <div className="ds-mobile-backdrop" onClick={() => setMobileOpen(false)} /> : null}
@@ -148,7 +167,7 @@ export default function SidebarNav({ isAdmin }: SidebarNavProps) {
             <X size={16} />
           </button>
         </div>
-        <SidebarList isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
+        <SidebarList isAdmin={isAdmin} navLocks={navLocks} onNavigate={() => setMobileOpen(false)} />
       </aside>
     </>
   );

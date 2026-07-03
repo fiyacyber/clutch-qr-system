@@ -13,6 +13,7 @@ type SocialLink = {
 
 interface ConnectProfileViewProps {
   profile: any;
+  starterLocked?: boolean;
   blocks?: BuilderBlock[];
   sections?: BuilderConfig["sections"];
   forms?: BuilderConfig["forms"];
@@ -169,6 +170,7 @@ function sanitizeForRender(config: BuilderConfig, sections?: BuilderConfig["sect
 
 export default function ConnectProfileView({
   profile,
+  starterLocked = false,
   blocks,
   sections,
   forms,
@@ -212,6 +214,7 @@ export default function ConnectProfileView({
     <BuilderPublicProfile
       config={hydratedConfig}
       profile={profile}
+      starterLocked={starterLocked}
       mode={mode}
       editablePreview={mode === "editor"}
       selectedBlockId={selectedBlockId}

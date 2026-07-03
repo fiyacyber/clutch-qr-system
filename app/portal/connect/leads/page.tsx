@@ -5,6 +5,7 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectLeadsCRM from "@/components/connect/ConnectLeadsCRM";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
+import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 function sourceFromQrType(qrType?: string | null) {
@@ -29,6 +30,19 @@ function normalizeLeadStatus(value?: string | null): LeadCrmStatus {
   return "new";
 }
 
+function getProfileViewLabel(event: any) {
+  const viewKind = event.metadata?.view_kind;
+  if (viewKind === "server_profile_view" || viewKind === "profile_view") {
+    return "Server profile view";
+  }
+  return "Client page view";
+}
+
+function isCountedProfileView(event: any) {
+  if (event.event_type !== "profile_view") return false;
+  return getProfileViewLabel(event) !== "Server profile view";
+}
+
 export default async function PortalConnectLeadsPage() {
   const { user, customer } = await requireCustomer();
 
@@ -44,6 +58,14 @@ export default async function PortalConnectLeadsPage() {
     .maybeSingle();
 
   if (!profile) redirect("/portal/connect");
+
+  const plan = getCustomerPlan(customer);
+  const canUseAdvancedInbox = hasEntitlement(customer, "advancedLeadInbox") || plan.code === "admin";
+  const canUseSourceInsights = hasEntitlement(customer, "sourceTracking") || plan.code === "admin";
+  const canUseCampaignPerformance = hasEntitlement(customer, "campaignAnalytics") || plan.code === "admin";
+  const canUsePdfReports = hasEntitlement(customer, "pdfReports") || plan.code === "admin";
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
 
   const [{ data: leads }, { data: events }, { data: unifiedEvents }, { data: qrCodes }, { data: qrScans }] = await Promise.all([
     admin
@@ -121,7 +143,7 @@ export default async function PortalConnectLeadsPage() {
   });
 
   const scansForProfile = (qrScans || []).filter((scan: any) => linkedQrIds.has(scan.qr_code_id));
-  const profileViews = clickEvents.filter((event: any) => event.event_type === "profile_view").length;
+  const profileViews = clickEvents.filter(isCountedProfileView).length;
   const linkClicks = clickEvents.filter((event: any) => event.event_type === "link_click").length;
   const leadCaptures = leadRows.length;
 
@@ -133,7 +155,7 @@ export default async function PortalConnectLeadsPage() {
         eventType: event.event_type,
         label:
           event.event_type === "profile_view"
-            ? "Profile viewed"
+            ? getProfileViewLabel(event)
             : event.event_type === "link_click"
               ? "Link clicked"
               : "Lead submitted",
@@ -211,7 +233,14 @@ export default async function PortalConnectLeadsPage() {
   };
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
+    >
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect Leads"
@@ -232,6 +261,13 @@ export default async function PortalConnectLeadsPage() {
           timeline={timelineRows}
           campaignRows={campaignRows}
           qrRows={qrPerformanceRows}
+          canUseAdvancedInbox={canUseAdvancedInbox}
+          canUseSourceInsights={canUseSourceInsights}
+          canUseCampaignPerformance={canUseCampaignPerformance}
+          canUsePdfReports={canUsePdfReports}
+          connectPlusCheckoutHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
+          qrProCheckoutHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
+          agencyInquiryHref={PLAN_DEFINITIONS.agency.checkoutUrl}
           funnel={funnel}
         />
       </main>

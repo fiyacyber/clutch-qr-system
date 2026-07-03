@@ -240,8 +240,10 @@
   z-index: 1;
 }
 
-.builder-preview-selectable a,
-.builder-preview-selectable button:not([data-preview-action="remove"]) {
+.builder-public-profile[data-mode="preview"] .builder-preview-selectable a,
+.builder-public-profile[data-mode="preview"] .builder-preview-selectable button:not([data-preview-action="remove"]),
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable a,
+.builder-public-profile[data-mode="editor"] .builder-preview-selectable button:not([data-preview-action="remove"]) {
   pointer-events: none;
 }
 

@@ -204,7 +204,7 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
     showName: true,
     showTitle: true,
     showBio: true,
-    avatarGlowEnabled: true,
+    avatarGlowEnabled: false,
     avatarGlowColor: "#FF6B2C",
     avatarGlowOpacity: 0.35,
     avatarGlowBlur: 18,
@@ -223,7 +223,7 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
     avatarBorderColor: "#FFFFFF",
     avatarBorderWidth: 4,
     avatarBorderRadius: 999,
-    avatarGlowEnabled: true,
+    avatarGlowEnabled: false,
     avatarGlowColor: "#FF6B2C",
     avatarGlowOpacity: 0.35,
     avatarGlowBlur: 18,
@@ -284,7 +284,7 @@ export const defaultBlockSettings: Record<BlockType, Record<string, any>> = {
   "social-media-links": {
     layout: "grid", // grid | row | badges
     showNames: false,
-    iconColorMode: "mono",
+    iconColorMode: "brand",
     links: [],
     alignment: "center",
   },

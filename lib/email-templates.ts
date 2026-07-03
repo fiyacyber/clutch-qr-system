@@ -140,3 +140,56 @@ export function buildOnboardingEmailTemplate({
 
   return { html, text };
 }
+
+export function buildSmartCardSetupEmailTemplate({
+  subject,
+  intro,
+  setupUrl,
+  customerName,
+  orderNumber,
+  businessName,
+}: {
+  subject: string;
+  intro: string;
+  setupUrl: string;
+  customerName?: string | null;
+  orderNumber?: string | null;
+  businessName?: string | null;
+}) {
+  const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
+  const details = [
+    orderNumber ? `<p style=\"margin:0 0 6px 0;\"><strong>Order:</strong> ${escapeHtml(orderNumber)}</p>` : "",
+    businessName ? `<p style=\"margin:0;\"><strong>Business:</strong> ${escapeHtml(businessName)}</p>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const html = renderEmailLayout({
+    preheader: "Your Clutch Connect setup is ready.",
+    eyebrow: "Smart Card setup",
+    title: subject,
+    intro: `${greeting} ${intro}`,
+    detailsHtml: `
+      <p style="margin:0 0 10px 0;">Use the button below to start or continue Guided Setup for your Smart Business Card profile.</p>
+      ${details || ""}
+      <p style="margin:10px 0 0 0;"><strong>Setup link:</strong> <a href="${escapeHtml(setupUrl)}" style="color:#2b5c93;text-decoration:underline;">${escapeHtml(setupUrl)}</a></p>
+    `,
+    ctaLabel: "Start Guided Setup",
+    ctaUrl: setupUrl,
+    helperText: "For security, your account setup link is personalized and should not be shared.",
+  });
+
+  const text = [
+    subject,
+    "",
+    `${greeting} ${intro}`,
+    "",
+    ...(orderNumber ? [`Order: ${orderNumber}`] : []),
+    ...(businessName ? [`Business: ${businessName}`] : []),
+    `Setup link: ${setupUrl}`,
+    "",
+    "Clutch Connect from Clutch Print Shop",
+  ].join("\n");
+
+  return { html, text };
+}

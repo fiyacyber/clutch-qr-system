@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
-import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { resolvePostLoginRedirect } from "@/lib/onboarding-routing";
+import { sanitizeNextPath } from "@/lib/safe-redirect";
 import Link from "next/link";
 import styles from "./login.module.css";
 
@@ -10,9 +12,11 @@ async function handlePasswordSignIn(formData: FormData) {
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") || "").trim();
+  const requestedNext = String(formData.get("next") || "").trim();
 
   if (!email || !password) {
-    redirect("/login?error=missing-credentials");
+    const safeNext = sanitizeNextPath(requestedNext, "");
+    redirect(`/login?error=missing-credentials${safeNext ? `&next=${encodeURIComponent(safeNext)}` : ""}`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -26,21 +30,12 @@ async function handlePasswordSignIn(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  if (data.user) {
-    const admin = createSupabaseAdminClient();
-    const { data: customer, error: customerError } = await admin
-      .from("customers")
-      .select("must_change_password")
-      .eq("auth_user_id", data.user.id)
-      .maybeSingle();
-
-    if (customerError) {
-      console.error("CUSTOMER LOOKUP ERROR:", customerError);
-    }
-
-    if (customer?.must_change_password) {
-      redirect("/change-password");
-    }
+  if (data.user?.id) {
+    const redirectPath = await resolvePostLoginRedirect({
+      authUserId: data.user.id,
+      requestedNext,
+    });
+    redirect(redirectPath);
   }
 
   redirect("/portal");
@@ -52,10 +47,12 @@ export default async function LoginPage({
   searchParams: Promise<{
     error?: string;
     email?: string;
+    next?: string;
   }>;
 }) {
   const params = await searchParams;
   const email = params.email ? decodeURIComponent(params.email) : "";
+  const next = sanitizeNextPath(params.next || "", "");
 
   return (
     <div className={styles.container}>
@@ -76,6 +73,7 @@ export default async function LoginPage({
             ) : null}
 
             <form className={styles.form} action={handlePasswordSignIn}>
+              {next ? <input type="hidden" name="next" value={next} /> : null}
               <div className={styles.formGroup}>
                 <label className={styles.label}>Email Address</label>
                 <input

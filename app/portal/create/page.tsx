@@ -5,13 +5,17 @@ import QRCodeCreateStudioForm from "@/components/QRCodeCreateStudioForm";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import RetryNotice from "@/components/dashboard/RetryNotice";
+import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
+  PLAN_DEFINITIONS,
   getCustomerPlan,
   getEffectiveQrLimit,
   getSubscriptionLockMessage,
+  hasEntitlement,
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
 
@@ -57,11 +61,27 @@ export default async function CreatePortalPage() {
   const used = qrCodesResult.data?.length || 0;
   const limit = getEffectiveQrLimit(customer);
   const plan = getCustomerPlan(customer);
-  const locked = isCustomerSubscriptionLocked(customer);
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const locked = isCustomerSubscriptionLocked(customer) || !hasDynamicQr;
   const lockMessage = getSubscriptionLockMessage(customer);
+  const usageLabel = !hasDynamicQr
+    ? "Dynamic QR campaigns are locked"
+    : plan.code === "agency"
+      ? `${used} / 250+ QR codes used`
+      : plan.code === "admin"
+        ? `${used} / Unlimited QR codes used`
+        : `${used} / ${limit} QR codes used`;
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
+    >
       <main className="container create-studio-shell">
         <DashboardHeader
           title="Create QR"
@@ -74,7 +94,7 @@ export default async function CreatePortalPage() {
               </article>
               <article className="qr-studio-status-card">
                 <span><LayoutGrid size={14} /> QR usage</span>
-                <strong>{used}/{plan.code === "admin" ? "Unlimited" : limit}</strong>
+                <strong>{hasDynamicQr ? `${used}/${plan.code === "admin" ? "Unlimited" : limit}` : "Locked"}</strong>
               </article>
               <article className="qr-studio-status-card">
                 <span><Sparkles size={14} /> Builder</span>
@@ -98,11 +118,58 @@ export default async function CreatePortalPage() {
           />
         ) : null}
 
+        <CurrentPlanBadge
+          planCode={plan.code}
+          planName={plan.name}
+          priceLabel={plan.price}
+          description={plan.description}
+          usageLabel={usageLabel}
+          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
+          trialStatus={String(customer.trial_status || "none")}
+        />
+
+        {!hasDynamicQr ? (
+          <LockedFeatureCard
+            title="Unlock QR Pro"
+            description="Dynamic QR creation starts on QR Pro, including editable destinations and campaign tracking."
+            requiredPlan="QR Pro"
+            requiredPlanPrice="$14.99/mo"
+            ctaLabel="Upgrade for $14.99/mo"
+            ctaHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
+            featureList={[
+              "100 dynamic QR codes",
+              "Editable destinations",
+              "QR custom styles and logos",
+              "Campaign analytics",
+              "Export-ready QR assets",
+            ]}
+            variant="qr_pro"
+          />
+        ) : null}
+
+        {hasDynamicQr && plan.code === "qr_pro" && used >= limit ? (
+          <LockedFeatureCard
+            title="QR Pro limit reached"
+            description="Move to Agency for 250+ campaigns and advanced reporting."
+            requiredPlan="Agency"
+            requiredPlanPrice="Custom"
+            ctaLabel="Request Agency Access"
+            ctaHref={PLAN_DEFINITIONS.agency.checkoutUrl}
+            featureList={[
+              "250+ QR campaigns",
+              "Client reporting",
+              "PDF exports",
+              "Priority support",
+            ]}
+            variant="agency"
+          />
+        ) : null}
+
         <QRCodeCreateStudioForm
           used={used}
-          limit={limit}
+          limit={hasDynamicQr ? limit : 0}
           isLocked={locked}
-          lockMessage={lockMessage}
+          lockMessage={!hasDynamicQr ? "Dynamic QR is included in QR Pro and higher." : lockMessage}
           connectProfiles={(profilesResult.data || []) as any}
         />
       </main>

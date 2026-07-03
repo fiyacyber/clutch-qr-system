@@ -1,0 +1,298 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 2rem;
+}
+
+.searchCard {
+  background: #f8fbff;
+  border: 1px solid #dce6f2;
+  border-radius: 18px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.searchForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid #c7d5ea;
+  border-radius: 12px;
+  padding: 0.62rem 0.72rem;
+  font-size: 0.92rem;
+  color: #14253f;
+  background: #ffffff;
+}
+
+.searchInput:focus {
+  outline: 2px solid rgba(255, 122, 26, 0.45);
+  outline-offset: 1px;
+}
+
+.searchButton {
+  border: 1px solid #ff7a1a;
+  background: #ff7a1a;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0.62rem 0.88rem;
+}
+
+.searchMeta {
+  margin: 0;
+  color: #556a88;
+  font-size: 0.82rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.summaryCard {
+  background: #ffffff;
+  border: 1px solid #dbe5f1;
+  border-radius: 16px;
+  padding: 0.85rem;
+  box-shadow: 0 9px 18px rgba(10, 30, 57, 0.08);
+}
+
+.summaryLabel {
+  display: block;
+  color: #546884;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.35rem;
+  color: #0b2240;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.section {
+  background: #ffffff;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  padding: 0.9rem;
+  box-shadow: 0 9px 20px rgba(10, 30, 57, 0.08);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: #0b2240;
+  font-size: 1.08rem;
+}
+
+.sectionHeader p {
+  margin: 0.35rem 0 0;
+  color: #5a6e8a;
+  font-size: 0.85rem;
+}
+
+.checklistGrid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.checklistCard {
+  border: 1px solid #d8e2f0;
+  border-radius: 15px;
+  background: #fcfdff;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.62rem;
+}
+
+.checklistHeader h3 {
+  margin: 0;
+  color: #0f2a4a;
+  font-size: 0.97rem;
+  line-height: 1.2;
+}
+
+.checklistHeader p {
+  margin: 0.28rem 0 0;
+  color: #607491;
+  font-size: 0.8rem;
+}
+
+.checklistItems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checklistItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  border-top: 1px dashed #dce6f3;
+  padding-top: 0.45rem;
+}
+
+.checkStatusWrap {
+  display: grid;
+  justify-items: end;
+  gap: 0.16rem;
+}
+
+.checkStatusWrap small {
+  font-size: 0.68rem;
+  color: #6f829f;
+  max-width: 12rem;
+  text-align: right;
+}
+
+.statusPill {
+  border-radius: 999px;
+  padding: 0.24rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pass {
+  background: #d8f6e3;
+  color: #12613a;
+}
+
+.warning {
+  background: #fff2d6;
+  color: #865000;
+}
+
+.missing {
+  background: #ffe1de;
+  color: #8e1f1f;
+}
+
+.issueGrid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.issueCard {
+  border: 1px solid #dbe5f2;
+  border-radius: 14px;
+  background: #fbfdff;
+  padding: 0.72rem;
+}
+
+.issueCard h3 {
+  margin: 0;
+  color: #0f2a4a;
+  font-size: 0.9rem;
+}
+
+.issueList {
+  margin: 0.5rem 0 0;
+  padding: 0 0 0 1rem;
+  color: #334b6e;
+  font-size: 0.8rem;
+  display: grid;
+  gap: 0.24rem;
+}
+
+.recordsGrid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.recordsCard {
+  border: 1px solid #dce6f2;
+  border-radius: 14px;
+  padding: 0.75rem;
+  background: #fcfdff;
+}
+
+.recordsCard h3 {
+  margin: 0;
+  color: #102a49;
+  font-size: 0.92rem;
+}
+
+.recordsList {
+  list-style: none;
+  margin: 0.52rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.recordsList li {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.recordsList strong {
+  color: #122a49;
+  font-size: 0.82rem;
+}
+
+.recordsList span {
+  color: #496182;
+  font-size: 0.78rem;
+}
+
+.recordsList small {
+  color: #6a7d99;
+  font-size: 0.72rem;
+}
+
+.emptyState,
+.errorState,
+.notAuthorized {
+  background: #ffffff;
+  border: 1px solid #dbe4f1;
+  border-radius: 18px;
+  padding: 1rem;
+  color: #1f3251;
+}
+
+.errorState {
+  border-left: 6px solid #ff7a1a;
+}
+
+.notAuthorized {
+  border-left: 6px solid #ff7a1a;
+}
+
+.emptyLine {
+  margin: 0.48rem 0 0;
+  color: #5f7390;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 840px) {
+  .summaryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .issueGrid,
+  .recordsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .checklistGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

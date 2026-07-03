@@ -76,9 +76,20 @@ alter table public.qr_codes
   add constraint qr_codes_qr_type_check
   check (qr_type in ('url', 'connect_profile'));
 
-alter table public.qr_codes
-  add constraint qr_codes_profile_id_fkey
-  foreign key (profile_id) references public.profiles(id) on delete set null;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'qr_codes_profile_id_fkey'
+      and conrelid = 'public.qr_codes'::regclass
+  ) then
+    alter table public.qr_codes
+      add constraint qr_codes_profile_id_fkey
+      foreign key (profile_id) references public.profiles(id) on delete set null;
+  end if;
+end
+$$;
 
 create index if not exists profiles_customer_id_idx on public.profiles(customer_id);
 create index if not exists profiles_slug_idx on public.profiles(slug);
@@ -91,6 +102,8 @@ create index if not exists profile_click_events_event_type_idx on public.profile
 create index if not exists profile_click_events_created_at_idx on public.profile_click_events(created_at);
 create index if not exists qr_codes_qr_type_idx on public.qr_codes(qr_type);
 create index if not exists qr_codes_profile_id_idx on public.qr_codes(profile_id);
+
+drop trigger if exists set_profiles_updated_at on public.profiles;
 
 create trigger set_profiles_updated_at
 before update on public.profiles

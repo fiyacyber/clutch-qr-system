@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import PlanLimitFields from "@/components/admin/PlanLimitFields";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { getCustomerPlan, PLAN_DEFINITIONS, type PlanCode } from "@/lib/plans";
+import { getCustomerPlan, normalizePlanCode, PLAN_DEFINITIONS } from "@/lib/plans";
 
 interface AdminPageProps {
   searchParams?: Promise<{ q?: string }>;
@@ -239,12 +240,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <option value={group.id} key={group.id}>{group.name}</option>
                   ))}
                 </select>
-                <select className="input" name="plan_code" defaultValue="qr_pro">
-                  <option value="free_qr">Free QR - {PLAN_DEFINITIONS.free_qr.qrLimit} QR code</option>
-                  <option value="qr_pro">{PLAN_DEFINITIONS.qr_pro.name} - {PLAN_DEFINITIONS.qr_pro.qrLimit} QR codes</option>
-                  <option value="qr_pro_plus">{PLAN_DEFINITIONS.qr_pro_plus.name} - {PLAN_DEFINITIONS.qr_pro_plus.qrLimit} QR codes</option>
-                  <option value="admin">Admin - unlimited QR codes</option>
-                </select>
+                <PlanLimitFields initialPlanCode="connect_basic" initialQrLimit={PLAN_DEFINITIONS.connect_basic.qrLimit} />
                 <select className="input" name="subscription_status" defaultValue="active">
                   {SUBSCRIPTION_STATUSES.map((status) => (
                     <option value={status.value} key={status.value}>{status.label}</option>
@@ -286,7 +282,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <article className="analytics-card">
             <p className="eyebrow">Plans</p>
             <ul className="analytics-list">
-              {(["free_qr", "qr_pro", "qr_pro_plus", "admin"] as PlanCode[]).map((planCode) => (
+              {(["connect_basic", "connect_plus", "qr_pro", "agency", "admin"] as const).map((planCode) => (
                 <li key={planCode}>
                   <span>{PLAN_DEFINITIONS[planCode].name}</span>
                   <strong>{planCounts[planCode] || 0}</strong>
@@ -453,6 +449,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <tbody>
               {customerRows.map((c: any) => {
                 const plan = getCustomerPlan(c);
+                const normalizedStoredPlanCode = normalizePlanCode(String(c.plan_code || c.plan || "connect_basic"));
                 const qrCount = c.qr_codes?.length || 0;
                 const scanCount = (c.qr_codes || []).reduce(
                   (sum: number, qr: any) => sum + (qr.scan_count || 0),
@@ -467,10 +464,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </td>
                     <td>
                       <span className="status-pill">{plan.name}</span>
-                      <span className="admin-cell-subtext">{c.subscription_status || c.plan_status || "active"}</span>
+                      <span className="admin-cell-subtext">Normalized: {plan.code}</span>
+                      <span className="admin-cell-subtext">Stored: {String(c.plan_code || c.plan || "-")}</span>
+                      <span className="admin-cell-subtext">Subscription: {c.subscription_status || c.plan_status || "active"}</span>
                     </td>
                     <td>
-                      <strong>{qrCount}/{c.qr_limit}</strong>
+                      <strong>{qrCount}/{c.qr_limit || 0}</strong>
+                      <span className="admin-cell-subtext">Plan baseline: {normalizedStoredPlanCode === "admin" ? "Unlimited" : PLAN_DEFINITIONS[normalizedStoredPlanCode].qrLimit}</span>
                       <span className="admin-cell-subtext">{scanCount} scans</span>
                     </td>
                     <td>
@@ -487,13 +487,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <form className="admin-account-form" action="/api/admin/customers" method="post">
                         <input type="hidden" name="id" value={c.id} />
                         <input className="input" name="company_name" defaultValue={c.company_name || ""} placeholder="Company" />
-                        <select className="input" name="plan_code" defaultValue={plan.code}>
-                          <option value="free_qr">Free QR</option>
-                          <option value="qr_pro">{PLAN_DEFINITIONS.qr_pro.name}</option>
-                          <option value="qr_pro_plus">{PLAN_DEFINITIONS.qr_pro_plus.name}</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        <input className="input" name="qr_limit" type="number" defaultValue={c.qr_limit} min="1" />
+                        <PlanLimitFields initialPlanCode={plan.code} initialQrLimit={c.qr_limit || PLAN_DEFINITIONS[plan.code].qrLimit} />
                         <select className="input" name="subscription_status" defaultValue={c.subscription_status || c.plan_status || "active"}>
                           {SUBSCRIPTION_STATUSES.map((status) => (
                             <option value={status.value} key={status.value}>{status.label}</option>

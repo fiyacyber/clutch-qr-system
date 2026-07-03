@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useRef, useState } from "react";
 import { BuilderConfig, ProfileSection } from "@/lib/builder-types";
+import { normalizeBeginnerConnectLinkHref } from "@/lib/connect";
 import { getBlockData, normalizeBlockType } from "./builder/blockUtils";
 import {
   ProfileHeroPreview,
@@ -25,6 +26,7 @@ import {
 interface BuilderPublicProfileProps {
   config: BuilderConfig;
   profile: any;
+  starterLocked?: boolean;
   mode?: "public" | "preview" | "editor";
   editablePreview?: boolean;
   selectedBlockId?: string | null;
@@ -106,7 +108,7 @@ function resolveFontFamily(fontFamily?: string) {
   return 'var(--font-exo2), "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
 }
 
-function sectionHeaderStyle(section: ProfileSection): React.CSSProperties {
+function sectionHeaderStyle(section: ProfileSection, starterLocked: boolean): React.CSSProperties {
   const style = section.style;
   const fontSize = clampNumber(style.fontSize, 10, 72, 13);
   const letterSpacing = clampNumber(style.letterSpacing, 0, 16, 2);
@@ -116,6 +118,34 @@ function sectionHeaderStyle(section: ProfileSection): React.CSSProperties {
   const paddingY = clampNumber(style.paddingY, 0, 72, 10);
   const marginTop = clampNumber(style.marginTop, 0, 120, 0);
   const marginBottom = clampNumber(style.marginBottom, 0, 120, 14);
+  if (starterLocked) {
+    const minHeight = paddingY * 2 + fontSize;
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      textAlign: "center",
+      width: "100%",
+      transform: "translateY(1px)",
+      fontFamily: style.fontFamily && style.fontFamily !== "inherit" ? resolveFontFamily(style.fontFamily) : undefined,
+      fontSize: `${fontSize}px`,
+      fontWeight: style.fontWeight,
+      lineHeight: 1,
+      letterSpacing: `${letterSpacing}px`,
+      textTransform: style.textTransform,
+      color: "#111111",
+      backgroundColor: "#FFFFFF",
+      borderColor: "rgba(17, 17, 17, 0.18)",
+      borderWidth: `${borderWidth}px`,
+      borderStyle: borderWidth > 0 ? "solid" : "none",
+      borderRadius: `${borderRadius}px`,
+      minHeight: `${Math.max(40, minHeight)}px`,
+      padding: `0 ${paddingX}px`,
+      marginTop: `${marginTop}px`,
+      marginBottom: `${marginBottom}px`,
+    };
+  }
+
   const rawTextColor = typeof style.textColor === "string" ? style.textColor.trim().toUpperCase() : "";
   const rawBackgroundColor = typeof style.backgroundColor === "string" ? style.backgroundColor.trim().toLowerCase() : "";
   const rawBorderColor = typeof style.borderColor === "string" ? style.borderColor.trim().toLowerCase() : "";
@@ -174,9 +204,31 @@ const PREVIEW_COMPONENTS: Record<string, React.ComponentType<any>> = {
   "image-block": ImageBlockPreview,
 };
 
+function blockHasRenderableContent(block: any, profile: any, mode: "public" | "preview" | "editor") {
+  if (mode === "editor") return true;
+  if (block.visible === false) return false;
+
+  const type = normalizeBlockType(String(block.type));
+  const data = getBlockData(block);
+
+  if (type === "social-media-links" || type === "social-links") {
+    const links = Array.isArray(data.links) ? data.links : [];
+    return links.some((link: any) => link?.visible !== false && normalizeBeginnerConnectLinkHref(link.platform, link.value));
+  }
+
+  if (type === "phone-button") return Boolean(data.phone || data.value || profile?.phone);
+  if (type === "email-button") return Boolean(data.email || data.value || profile?.email);
+  if (type === "website-button") return Boolean(data.website || data.url || profile?.website);
+  if (type === "directions-button") return Boolean(data.address || data.url || profile?.address);
+  if (type === "request-quote-button" || type === "custom-link-button") return Boolean(data.url);
+
+  return true;
+}
+
 export default function BuilderPublicProfile({
   config,
   profile,
+  starterLocked = false,
   mode = "public",
   editablePreview = false,
   selectedBlockId,
@@ -214,8 +266,13 @@ export default function BuilderPublicProfile({
     avatarOverlap: true,
     textAlign: "center",
   };
-  const buttonColor = normalizeHex(buttons.color) || normalizeHex(config.theme.buttonColor) || normalizeHex(config.theme.accentColor) || "#FFA665";
-  const buttonTextColor = normalizeHex(buttons.textColor) || getReadableTextColor(buttonColor);
+  const monochromeStarterView = starterLocked && (mode === "public" || mode === "preview");
+  const buttonColor = monochromeStarterView
+    ? "#FFFFFF"
+    : normalizeHex(buttons.color) || normalizeHex(config.theme.buttonColor) || normalizeHex(config.theme.accentColor) || "#FFA665";
+  const buttonTextColor = monochromeStarterView
+    ? "#111111"
+    : normalizeHex(buttons.textColor) || getReadableTextColor(buttonColor);
   const buttonShape = buttons.style === "pill" || buttons.style === "square" ? buttons.style : "rounded";
   const profileTheme = config.theme.themeMode || (config.theme.darkMode ? "dark" : "light");
   const profileStyleName = config.theme.profileStyle || "clutch";
@@ -230,6 +287,12 @@ export default function BuilderPublicProfile({
       minHeight: `${clampNumber(banner.height, 80, 420, 160)}px`,
       borderRadius: `${clampNumber(banner.borderRadius, 0, 48, 24)}px`,
     };
+    if (monochromeStarterView) {
+      return {
+        ...base,
+        background: "linear-gradient(135deg, #FFFFFF 0%, #F3F3F3 100%)",
+      };
+    }
     const imageUrl = toCssImageUrl(banner.imageUrl);
     if (banner.enabled && banner.type === "image" && imageUrl) {
       return {
@@ -262,6 +325,12 @@ export default function BuilderPublicProfile({
 
   const orderedBlocks = [...(config.blocks || [])].sort((a, b) => a.order - b.order);
   const heroBlocks = orderedBlocks.filter((block) => ["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(String(block.type)));
+  const primaryActionBlocks = orderedBlocks.filter((block) => {
+    const type = String(block.type);
+    const data = getBlockData(block);
+    return (type === "request-quote-button" || type === "custom-link-button") && data.isPrimaryAction === true;
+  });
+  const primaryActionIds = new Set(primaryActionBlocks.map((block) => block.id));
   const sections = [...(config.sections || [])].sort((a, b) => a.order - b.order);
 
   const handleQuickAction = useCallback((action: string) => {
@@ -270,6 +339,8 @@ export default function BuilderPublicProfile({
   }, []);
 
   const renderBlock = (block: any, sectionId?: string) => {
+    if (mode !== "editor" && block.visible === false) return null;
+
     const type = normalizeBlockType(String(block.type));
     const Component = PREVIEW_COMPONENTS[type] || UnknownBlockPreview;
     const data = getBlockData(block);
@@ -323,16 +394,42 @@ export default function BuilderPublicProfile({
       data-style={profileStyleName}
       data-background={background.type || "soft"}
       data-layout={profileLayout}
-      style={profileStyle}
+      data-starter-locked={starterLocked ? "true" : "false"}
+      data-header-align={banner.textAlign || "center"}
+      data-banner-enabled={banner.enabled ? "true" : "false"}
+      data-banner-type={banner.type || "none"}
+      data-banner-image-state={banner.imageUrl ? "set" : "empty"}
+      data-banner-overlap={banner.avatarOverlap !== false ? "true" : "false"}
+      style={{
+        ...profileStyle,
+        ["--builder-banner-height" as any]: `${clampNumber(banner.height, 120, 220, 176)}px`,
+        ["--builder-banner-overlay-opacity" as any]: `${clampNumber(banner.overlayOpacity, 0, 1, 0.22)}`,
+        ["--builder-banner-solid" as any]: banner.backgroundColor || "#f4f6fa",
+        ["--builder-banner-gradient-from" as any]: banner.gradientFrom || "#ffffff",
+        ["--builder-banner-gradient-to" as any]: banner.gradientTo || buttonColor,
+        ["--builder-banner-image" as any]: toCssImageUrl(banner.imageUrl) || "none",
+      }}
     >
       <div className="builder-public-shell">
-        <div className="builder-public-banner" style={bannerStyle} />
-        <div className="builder-public-hero">
+        <div className="builder-global-banner" data-image-position={banner.imagePosition || "center"} style={bannerStyle}>
+          {banner.overlayEnabled ? <span className="builder-global-banner-overlay" /> : null}
+        </div>
+        <div className="builder-public-hero builder-profile-header-stack">
           {heroBlocks.map((block) => renderBlock(block))}
+          {primaryActionBlocks.map((block) => renderBlock(block))}
         </div>
         <div className="builder-public-sections">
           {sections.map((section) => {
-            const sectionBlocks = orderedBlocks.filter((block) => block.sectionId === section.id && !["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(String(block.type)));
+            if (mode !== "editor" && section.visible === false) return null;
+
+            const sectionBlocks = orderedBlocks.filter((block) => {
+              const blockType = String(block.type);
+              if (primaryActionIds.has(block.id)) return false;
+              if (["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(blockType)) return false;
+              return block.sectionId === section.id;
+            });
+            const visibleSectionBlocks = mode === "editor" ? sectionBlocks : sectionBlocks.filter((block) => blockHasRenderableContent(block, profile, mode));
+            if (mode !== "editor" && visibleSectionBlocks.length === 0) return null;
             const canSelectSection = editablePreview && onSelectSection;
             return (
               <section
@@ -356,16 +453,16 @@ export default function BuilderPublicProfile({
                   </div>
                 ) : null}
                 <div className="builder-public-section-stack">
-                  <div className="builder-public-section-title" style={sectionHeaderStyle(section)}>{section.label}</div>
-                  {sectionBlocks.length ? (
+                  <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked)}>{section.label}</div>
+                  {visibleSectionBlocks.length ? (
                     <Fragment>
-                      {sectionBlocks.map((block) => renderBlock(block, section.id))}
+                      {visibleSectionBlocks.map((block) => renderBlock(block, section.id))}
                     </Fragment>
-                  ) : (
+                  ) : mode === "editor" ? (
                     <div className="builder-public-section-empty">
                       {section.label.toLowerCase().includes("social") ? "Add social links to display them here." : "No blocks assigned to this section yet."}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </section>
             );
@@ -383,8 +480,8 @@ export default function BuilderPublicProfile({
             }
           } : undefined}
         >
-          <span>Powered by <strong>Clutch Connect</strong></span>
-          <span>clutchprintshop.com</span>
+          <span className="builder-public-footer-line">Powered by{" "}<strong className="builder-public-footer-brand">Clutch Connect</strong></span>
+          <span className="builder-public-footer-line">clutchprintshop.com</span>
         </div>
       </div>
       {quickActionNotice ? <div className="builder-quick-action-toast">{quickActionNotice}</div> : null}

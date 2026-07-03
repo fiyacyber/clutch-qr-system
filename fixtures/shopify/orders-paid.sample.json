@@ -1,0 +1,54 @@
+{
+  "id": 6200001001,
+  "order_id": 6200001001,
+  "name": "#1001",
+  "order_number": 1001,
+  "email": "jane.owner@example.com",
+  "phone": "+1 555-123-4567",
+  "financial_status": "paid",
+  "total_price": "59.99",
+  "customer": {
+    "id": 99000001,
+    "first_name": "Jane",
+    "last_name": "Owner",
+    "email": "jane.owner@example.com",
+    "phone": "+1 555-123-4567"
+  },
+  "line_items": [
+    {
+      "id": 71000001,
+      "product_id": 88000001,
+      "variant_id": 77000001,
+      "title": "Clutch Smart Business Card",
+      "product_title": "Clutch Smart Business Card",
+      "variant_title": "Black / Standard",
+      "handle": "clutch-connect-card",
+      "properties": [
+        {
+          "name": "Business Name",
+          "value": "Clutch Print Shop"
+        },
+        {
+          "name": "Title",
+          "value": "Founder"
+        },
+        {
+          "name": "Business Phone Number",
+          "value": "+1 555-111-2222"
+        },
+        {
+          "name": "Business Email",
+          "value": "founder@clutchprintshop.com"
+        },
+        {
+          "name": "Custom Details",
+          "value": "Use logo lockup and high-contrast text"
+        },
+        {
+          "name": "Engraving Requested",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}
