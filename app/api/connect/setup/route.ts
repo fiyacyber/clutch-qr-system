@@ -183,26 +183,31 @@ function sanitizeBuilderConfigForSetup(rawConfig: unknown, themeColor?: string) 
 
 function normalizeBannerTheme(value: unknown) {
   const raw = trimText(value).toLowerCase();
-  if (raw === "clutch-navy" || raw === "warm-gradient" || raw === "modern-dark" || raw === "minimal-gray") {
+  if (raw === "clean-studio" || raw === "clutch-navy" || raw === "executive-dark" || raw === "warm-gradient" || raw === "soft-slate" || raw === "orange-edge") {
     return raw;
   }
-  return "clean-light";
+  if (raw === "clean-light" || raw === "minimal-gray") return "clean-studio";
+  if (raw === "modern-dark") return "executive-dark";
+  return "clean-studio";
 }
 
 function getBannerThemeSettings(theme: string) {
+  if (theme === "clean-studio") {
+    return { type: "gradient" as const, backgroundColor: "#edf2f8", gradientFrom: "#ffffff", gradientTo: "#edf2f8", overlayEnabled: false, overlayOpacity: 0 };
+  }
   if (theme === "clutch-navy") {
-    return { type: "solid" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#2f3c53" };
+    return { type: "gradient" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#182638", overlayEnabled: false, overlayOpacity: 0 };
+  }
+  if (theme === "executive-dark") {
+    return { type: "gradient" as const, backgroundColor: "#101827", gradientFrom: "#101827", gradientTo: "#263247", overlayEnabled: true, overlayOpacity: 0.08 };
   }
   if (theme === "warm-gradient") {
-    return { type: "gradient" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#FFA665" };
+    return { type: "gradient" as const, backgroundColor: "#384862", gradientFrom: "#384862", gradientTo: "#ff8a3a", overlayEnabled: false, overlayOpacity: 0 };
   }
-  if (theme === "modern-dark") {
-    return { type: "solid" as const, backgroundColor: "#1d2634", gradientFrom: "#1d2634", gradientTo: "#2a3547" };
+  if (theme === "soft-slate") {
+    return { type: "gradient" as const, backgroundColor: "#d8e1eb", gradientFrom: "#eef3f8", gradientTo: "#c8d3df", overlayEnabled: false, overlayOpacity: 0 };
   }
-  if (theme === "minimal-gray") {
-    return { type: "solid" as const, backgroundColor: "#dfe4eb", gradientFrom: "#dfe4eb", gradientTo: "#cfd6e0" };
-  }
-  return { type: "solid" as const, backgroundColor: "#f4f6fa", gradientFrom: "#ffffff", gradientTo: "#f1f3f7" };
+  return { type: "gradient" as const, backgroundColor: "#ff7a1a", gradientFrom: "#ff7a1a", gradientTo: "#384862", overlayEnabled: false, overlayOpacity: 0 };
 }
 
 export async function POST(req: NextRequest) {
@@ -303,6 +308,7 @@ export async function POST(req: NextRequest) {
     }
     const bannerImageAlt = trimText(profileInput.bannerImageAlt) || "Profile banner";
     const bannerEnabled = profileInput.bannerEnabled !== false;
+    const bannerMode = profileInput.bannerMode === "image" && bannerImageUrl ? "image" : "theme";
     const serviceArea = trimText(profileInput.serviceArea);
     const showPhone = profileInput.showPhone !== false;
     const showEmail = profileInput.showEmail !== false;
@@ -392,14 +398,17 @@ export async function POST(req: NextRequest) {
         banner: {
           ...nextConfig.theme.banner,
           enabled: bannerEnabled,
-          type: bannerImageUrl ? "image" : bannerThemeSettings.type,
-          imageUrl: bannerImageUrl || null,
+          type: bannerMode === "image" ? "image" : bannerThemeSettings.type,
+          imageUrl: bannerMode === "image" ? bannerImageUrl : null,
           backgroundColor: bannerThemeSettings.backgroundColor,
           gradientFrom: bannerThemeSettings.gradientFrom,
           gradientTo: bannerThemeSettings.gradientTo,
+          starterTheme: bannerTheme,
+          sourceMode: bannerMode,
+          uploadedImageUrl: bannerImageUrl || null,
           textAlign: "center",
-          overlayEnabled: Boolean(bannerImageUrl),
-          overlayOpacity: bannerImageUrl ? 0.2 : 0,
+          overlayEnabled: bannerMode === "image" ? true : bannerThemeSettings.overlayEnabled,
+          overlayOpacity: bannerMode === "image" ? 0.2 : bannerThemeSettings.overlayOpacity,
           height: 176,
           avatarOverlap: true,
         },

@@ -62,7 +62,8 @@ type SetupDraft = {
     contactName: string;
     title: string;
     slug: string;
-    bannerTheme: "clean-light" | "clutch-navy" | "warm-gradient" | "modern-dark" | "minimal-gray";
+    bannerTheme: "clean-studio" | "clutch-navy" | "executive-dark" | "warm-gradient" | "soft-slate" | "orange-edge";
+    bannerMode: "theme" | "image";
     bannerImageUrl: string;
     bannerImageAlt: string;
     bannerEnabled: boolean;
@@ -158,12 +159,51 @@ const BANNER_THEME_OPTIONS: Array<{
   value: SetupDraft["basic"]["bannerTheme"];
   label: string;
   preview: string;
+  accent: string;
+  tone: string;
 }> = [
-  { value: "clean-light", label: "Clean Light", preview: "linear-gradient(135deg, #ffffff 0%, #f1f3f7 100%)" },
-  { value: "clutch-navy", label: "Clutch Navy", preview: "linear-gradient(135deg, #384862 0%, #2f3c53 100%)" },
-  { value: "warm-gradient", label: "Warm Gradient", preview: "linear-gradient(135deg, #384862 0%, #FFA665 100%)" },
-  { value: "modern-dark", label: "Modern Dark", preview: "linear-gradient(135deg, #161f2d 0%, #243247 100%)" },
-  { value: "minimal-gray", label: "Minimal Gray", preview: "linear-gradient(135deg, #dfe4eb 0%, #cfd6e0 100%)" },
+  {
+    value: "clean-studio",
+    label: "Clean Studio",
+    preview: "radial-gradient(circle at 15% 20%, rgba(255,166,101,.35), transparent 32%), linear-gradient(135deg, #ffffff 0%, #edf2f8 100%)",
+    accent: "#FFA665",
+    tone: "Light, polished studio backdrop",
+  },
+  {
+    value: "clutch-navy",
+    label: "Clutch Navy",
+    preview: "radial-gradient(circle at 18% 18%, rgba(255,166,101,.3), transparent 34%), linear-gradient(135deg, #384862 0%, #182638 100%)",
+    accent: "#FFA665",
+    tone: "Signature navy with warm highlight",
+  },
+  {
+    value: "executive-dark",
+    label: "Executive Dark",
+    preview: "radial-gradient(circle at 82% 16%, rgba(255,166,101,.2), transparent 30%), linear-gradient(135deg, #101827 0%, #263247 100%)",
+    accent: "#F6B06B",
+    tone: "Premium dark boardroom feel",
+  },
+  {
+    value: "warm-gradient",
+    label: "Warm Gradient",
+    preview: "radial-gradient(circle at 20% 18%, rgba(255,255,255,.45), transparent 28%), linear-gradient(135deg, #384862 0%, #ff8a3a 100%)",
+    accent: "#FF8A3A",
+    tone: "High-contrast Clutch warmth",
+  },
+  {
+    value: "soft-slate",
+    label: "Soft Slate",
+    preview: "radial-gradient(circle at 76% 18%, rgba(255,166,101,.24), transparent 32%), linear-gradient(135deg, #eef3f8 0%, #c8d3df 100%)",
+    accent: "#384862",
+    tone: "Calm slate for clean brands",
+  },
+  {
+    value: "orange-edge",
+    label: "Orange Edge",
+    preview: "radial-gradient(circle at 12% 24%, rgba(255,255,255,.34), transparent 30%), linear-gradient(135deg, #ff7a1a 0%, #384862 88%)",
+    accent: "#FF7A1A",
+    tone: "Bold orange edge with navy depth",
+  },
 ];
 
 const PRIMARY_ACTION_OPTIONS: Array<{ value: SetupDraft["action"]["primaryActionType"]; label: string; defaultLabel: string }> = [
@@ -254,12 +294,12 @@ function getDefaultPrimaryActionLabel(type: SetupDraft["action"]["primaryActionT
 }
 
 function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
-  if (theme === "clean-light") {
+  if (theme === "clean-studio") {
     return {
-      type: "solid" as const,
-      backgroundColor: "#f4f6fa",
+      type: "gradient" as const,
+      backgroundColor: "#edf2f8",
       gradientFrom: "#ffffff",
-      gradientTo: "#f1f3f7",
+      gradientTo: "#edf2f8",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
@@ -267,12 +307,23 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
 
   if (theme === "clutch-navy") {
     return {
-      type: "solid" as const,
+      type: "gradient" as const,
       backgroundColor: "#384862",
       gradientFrom: "#384862",
-      gradientTo: "#2f3c53",
+      gradientTo: "#182638",
       overlayEnabled: false,
       overlayOpacity: 0,
+    };
+  }
+
+  if (theme === "executive-dark") {
+    return {
+      type: "gradient" as const,
+      backgroundColor: "#101827",
+      gradientFrom: "#101827",
+      gradientTo: "#263247",
+      overlayEnabled: true,
+      overlayOpacity: 0.08,
     };
   }
 
@@ -281,31 +332,42 @@ function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
       type: "gradient" as const,
       backgroundColor: "#384862",
       gradientFrom: "#384862",
-      gradientTo: "#FFA665",
+      gradientTo: "#ff8a3a",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
   }
 
-  if (theme === "modern-dark") {
+  if (theme === "soft-slate") {
     return {
-      type: "solid" as const,
-      backgroundColor: "#1d2634",
-      gradientFrom: "#1d2634",
-      gradientTo: "#2a3547",
+      type: "gradient" as const,
+      backgroundColor: "#d8e1eb",
+      gradientFrom: "#eef3f8",
+      gradientTo: "#c8d3df",
       overlayEnabled: false,
       overlayOpacity: 0,
     };
   }
 
   return {
-    type: "solid" as const,
-    backgroundColor: "#dfe4eb",
-    gradientFrom: "#dfe4eb",
-    gradientTo: "#cfd6e0",
+    type: "gradient" as const,
+    backgroundColor: "#ff7a1a",
+    gradientFrom: "#ff7a1a",
+    gradientTo: "#384862",
     overlayEnabled: false,
     overlayOpacity: 0,
   };
+}
+
+function isBannerThemeValue(value: unknown): value is SetupDraft["basic"]["bannerTheme"] {
+  return BANNER_THEME_OPTIONS.some((option) => option.value === value);
+}
+
+function normalizeBannerThemeValue(value: unknown): SetupDraft["basic"]["bannerTheme"] {
+  if (isBannerThemeValue(value)) return value;
+  if (value === "clean-light" || value === "minimal-gray") return "clean-studio";
+  if (value === "modern-dark") return "executive-dark";
+  return "clean-studio";
 }
 
 function getDraftPreviewName(draft: SetupDraft) {
@@ -433,7 +495,8 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
   const previewAvatarUrl = normalizeOptionalHttpUrl(draft.basic.avatarUrl);
   const previewWebsite = normalizeBeginnerConnectLinkHref("website", draft.contact.website);
   const bannerThemeSettings = getBannerThemeSettings(draft.basic.bannerTheme);
-  const hasBannerImage = Boolean(normalizeOptionalHttpUrl(draft.basic.bannerImageUrl));
+  const normalizedBannerImageUrl = normalizeOptionalHttpUrl(draft.basic.bannerImageUrl);
+  const useBannerImage = draft.basic.bannerMode === "image" && Boolean(normalizedBannerImageUrl);
   const primaryActionUrl = draft.action.primaryActionLeadCaptureEnabled
     ? "#lead-form"
     : normalizeOptionalHttpUrl(draft.action.primaryActionUrl);
@@ -583,13 +646,16 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
       banner: {
         ...withContactVisibility.theme.banner,
         enabled: draft.basic.bannerEnabled,
-        type: hasBannerImage ? "image" : bannerThemeSettings.type,
-        imageUrl: hasBannerImage ? normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) : null,
+        type: useBannerImage ? "image" : bannerThemeSettings.type,
+        imageUrl: useBannerImage ? normalizedBannerImageUrl : null,
         backgroundColor: bannerThemeSettings.backgroundColor,
         gradientFrom: bannerThemeSettings.gradientFrom,
         gradientTo: bannerThemeSettings.gradientTo,
-        overlayEnabled: hasBannerImage ? true : bannerThemeSettings.overlayEnabled,
-        overlayOpacity: hasBannerImage ? 0.2 : bannerThemeSettings.overlayOpacity,
+        starterTheme: draft.basic.bannerTheme,
+        sourceMode: draft.basic.bannerMode,
+        uploadedImageUrl: normalizedBannerImageUrl || null,
+        overlayEnabled: useBannerImage ? true : bannerThemeSettings.overlayEnabled,
+        overlayOpacity: useBannerImage ? 0.2 : bannerThemeSettings.overlayOpacity,
         imagePosition: "center",
         height: 176,
         avatarOverlap: true,
@@ -614,17 +680,37 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
   const defaultButtonColor = "#FFFFFF";
 
   const initialBannerTheme: SetupDraft["basic"]["bannerTheme"] = (() => {
-    if (themeBanner.type === "gradient" && safeText(themeBanner.gradientTo).toLowerCase().includes("ffa665")) {
+    const storedTheme = (themeBanner as any).starterTheme || (themeBanner as any).themeKey;
+    if (isBannerThemeValue(storedTheme)) return storedTheme;
+
+    const gradientFrom = safeText(themeBanner.gradientFrom).toLowerCase();
+    const gradientTo = safeText(themeBanner.gradientTo).toLowerCase();
+    const backgroundColor = safeText(themeBanner.backgroundColor).toLowerCase();
+
+    if (gradientFrom === "#ffffff" && (gradientTo === "#edf2f8" || gradientTo === "#f1f3f7")) {
+      return "clean-studio";
+    }
+    if (gradientFrom === "#384862" && (gradientTo === "#182638" || gradientTo === "#2f3c53")) {
+      return "clutch-navy";
+    }
+    if (gradientFrom === "#101827" || gradientFrom === "#1d2634" || backgroundColor === "#1d2634" || backgroundColor === "#161f2d") {
+      return "executive-dark";
+    }
+    if (themeBanner.type === "gradient" && (gradientTo.includes("ffa665") || gradientTo === "#ff8a3a")) {
       return "warm-gradient";
     }
-    if (themeBanner.type === "solid") {
-      const color = safeText(themeBanner.backgroundColor).toLowerCase();
-      if (color === "#384862") return "clutch-navy";
-      if (color === "#1d2634" || color === "#161f2d") return "modern-dark";
-      if (color === "#dfe4eb" || color === "#cfd6e0") return "minimal-gray";
+    if (gradientFrom === "#eef3f8" || backgroundColor === "#d8e1eb" || backgroundColor === "#dfe4eb" || backgroundColor === "#cfd6e0") {
+      return "soft-slate";
     }
-    return "clean-light";
+    if (gradientFrom === "#ff7a1a" || backgroundColor === "#ff7a1a") {
+      return "orange-edge";
+    }
+    return "clean-studio";
   })();
+  const initialBannerImageUrl = safeText((themeBanner as any).uploadedImageUrl || themeBanner.imageUrl || profile?.cover_url || "");
+  const initialBannerMode: SetupDraft["basic"]["bannerMode"] = (themeBanner as any).sourceMode === "image" && initialBannerImageUrl
+    ? "image"
+    : "theme";
 
   const actionType = String(primaryActionData.primaryActionType || "request_quote").toLowerCase() as SetupDraft["action"]["primaryActionType"];
   const actionLabel = safeText(primaryActionData.label || formData.submitText || "") || getDefaultPrimaryActionLabel(actionType);
@@ -648,7 +734,8 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
       title: safeText(profile?.title || ""),
       slug: safeText(profile?.slug || ""),
       bannerTheme: initialBannerTheme,
-      bannerImageUrl: safeText(themeBanner.imageUrl || profile?.cover_url || ""),
+      bannerMode: initialBannerMode,
+      bannerImageUrl: initialBannerImageUrl,
       bannerImageAlt: safeText(primaryActionData.bannerImageAlt || "Profile banner"),
       bannerEnabled: themeBanner.enabled !== false,
     },
@@ -738,9 +825,12 @@ function normalizeRecoveredDraft(rawDraft: unknown, fallbackDraft: SetupDraft): 
       contactName: safeText(rawBasic.contactName || rawBasic.displayName || fallbackName || fallbackDraft.basic.contactName),
       title: safeText(rawBasic.title || rawBasic.role || fallbackDraft.basic.title),
       slug: safeText(rawBasic.slug || fallbackDraft.basic.slug),
-      bannerTheme: rawBasic.bannerTheme === "clean-light" || rawBasic.bannerTheme === "clutch-navy" || rawBasic.bannerTheme === "warm-gradient" || rawBasic.bannerTheme === "modern-dark" || rawBasic.bannerTheme === "minimal-gray"
-        ? rawBasic.bannerTheme
+      bannerTheme: isBannerThemeValue(rawBasic.bannerTheme) || rawBasic.bannerTheme === "clean-light" || rawBasic.bannerTheme === "modern-dark" || rawBasic.bannerTheme === "minimal-gray"
+        ? normalizeBannerThemeValue(rawBasic.bannerTheme)
         : fallbackDraft.basic.bannerTheme,
+      bannerMode: rawBasic.bannerMode === "image" || rawBasic.bannerMode === "theme"
+        ? rawBasic.bannerMode
+        : fallbackDraft.basic.bannerMode,
       bannerImageUrl: safeText(rawBasic.bannerImageUrl || fallbackDraft.basic.bannerImageUrl),
       bannerImageAlt: safeText(rawBasic.bannerImageAlt || fallbackDraft.basic.bannerImageAlt),
       bannerEnabled: rawBasic.bannerEnabled !== false,
@@ -919,7 +1009,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
     website: normalizeBeginnerConnectLinkHref("website", draft.contact.website),
     bio: draft.contact.bio,
     avatar_url: normalizeOptionalHttpUrl(draft.basic.avatarUrl),
-    cover_url: normalizeOptionalHttpUrl(draft.basic.bannerImageUrl),
+    cover_url: draft.basic.bannerMode === "image" ? normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) : null,
     location: draft.contact.serviceArea,
     slug: previewSlug,
     theme_color: draft.advanced.accentColor,
@@ -1036,6 +1126,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
           role: draft.basic.role,
           avatarUrl: draft.basic.avatarUrl,
           bannerTheme: draft.basic.bannerTheme,
+          bannerMode: draft.basic.bannerMode,
           bannerImageUrl: draft.basic.bannerImageUrl,
           bannerImageAlt: draft.basic.bannerImageAlt,
           bannerEnabled: draft.basic.bannerEnabled,
@@ -1218,6 +1309,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
         basic: {
           ...draft.basic,
           bannerImageUrl: safeText(result.imageUrl || ""),
+          bannerMode: "image",
           bannerEnabled: true,
         },
       });
@@ -1380,14 +1472,48 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                         <button
                           key={option.value}
                           type="button"
-                          className={`connect-setup-banner-theme-card${draft.basic.bannerTheme === option.value ? " is-active" : ""}`}
-                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerTheme: option.value, bannerEnabled: true } })}
+                          className={`connect-setup-banner-theme-card${draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? " is-active" : ""}`}
+                          style={{ ["--banner-theme-preview" as any]: option.preview, ["--banner-theme-accent" as any]: option.accent }}
+                          aria-pressed={draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme"}
+                          onClick={() => updateDraft({ basic: { ...draft.basic, bannerTheme: option.value, bannerMode: "theme", bannerEnabled: true } })}
                         >
-                          <span className="connect-setup-banner-theme-preview" style={{ background: option.preview }} />
-                          <strong>{option.label}</strong>
+                          <span className="connect-setup-banner-theme-preview" aria-hidden="true" />
+                          <span className="connect-setup-banner-theme-copy">
+                            <strong>{option.label}</strong>
+                            <small>{option.tone}</small>
+                          </span>
+                          {draft.basic.bannerTheme === option.value && draft.basic.bannerMode === "theme" ? (
+                            <span className="connect-setup-banner-selected-pill"><Check size={12} />Selected</span>
+                          ) : null}
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="label connect-setup-span-2">
+                    Banner source
+                    <div className="connect-setup-banner-mode-toggle" role="group" aria-label="Banner source">
+                      <button
+                        type="button"
+                        className={draft.basic.bannerMode === "theme" ? "is-active" : ""}
+                        aria-pressed={draft.basic.bannerMode === "theme"}
+                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "theme", bannerEnabled: true } })}
+                      >
+                        Use Theme
+                      </button>
+                      <button
+                        type="button"
+                        className={draft.basic.bannerMode === "image" ? "is-active" : ""}
+                        aria-pressed={draft.basic.bannerMode === "image"}
+                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "image", bannerEnabled: true } })}
+                        disabled={!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl)}
+                      >
+                        Use Uploaded Image
+                      </button>
+                    </div>
+                    {!normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) ? (
+                      <span className="helper-text">Upload a banner image to enable image mode.</span>
+                    ) : null}
                   </div>
 
                   <label className="label connect-setup-span-2">
@@ -1406,7 +1532,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       <button
                         type="button"
                         className="btn ghost"
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerImageUrl: "" } })}
+                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerImageUrl: "", bannerMode: "theme", bannerEnabled: true } })}
                         disabled={isUploadingBanner || !draft.basic.bannerImageUrl}
                       >
                         Remove Banner
@@ -1414,12 +1540,12 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       <button
                         type="button"
                         className="btn ghost"
-                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerImageUrl: "", bannerEnabled: true } })}
+                        onClick={() => updateDraft({ basic: { ...draft.basic, bannerMode: "theme", bannerEnabled: true } })}
                       >
                         Use Theme
                       </button>
                     </div>
-                    <span className="helper-text">Upload a wide image for the top of your profile, or use a theme instead.</span>
+                    <span className="helper-text">Upload a wide image for the top of your profile, or switch back to a theme without deleting the upload.</span>
                     {bannerUploadError ? <span className="helper-text connect-setup-error-text">{bannerUploadError}</span> : null}
                     {fieldErrors.bannerImageUrl ? <span className="helper-text connect-setup-error-text">{fieldErrors.bannerImageUrl}</span> : null}
                   </label>

@@ -127,6 +127,9 @@ export interface BuilderBannerSettings {
   borderRadius: number;
   avatarOverlap: boolean;
   textAlign: BuilderTextAlign;
+  starterTheme?: string;
+  sourceMode?: "theme" | "image";
+  uploadedImageUrl?: string | null;
 }
 
 export interface BuilderTheme {

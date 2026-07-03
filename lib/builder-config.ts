@@ -266,6 +266,7 @@ function normalizeBannerSettings(value: unknown): BuilderBannerSettings {
     ? source.type
     : defaults.type;
   const imagePosition = source.imagePosition === "top" || source.imagePosition === "bottom" ? source.imagePosition : defaults.imagePosition;
+  const sourceMode = source.sourceMode === "image" ? "image" : source.sourceMode === "theme" ? "theme" : undefined;
   return {
     enabled: source.enabled === true,
     type,
@@ -280,6 +281,9 @@ function normalizeBannerSettings(value: unknown): BuilderBannerSettings {
     borderRadius: clampNumber(source.borderRadius, 0, 40, defaults.borderRadius),
     avatarOverlap: source.avatarOverlap !== false,
     textAlign: normalizeAlignment(source.textAlign),
+    starterTheme: typeof source.starterTheme === "string" && source.starterTheme.trim() ? source.starterTheme : undefined,
+    sourceMode,
+    uploadedImageUrl: typeof source.uploadedImageUrl === "string" && source.uploadedImageUrl.trim() ? source.uploadedImageUrl : null,
   };
 }
 
