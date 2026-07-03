@@ -260,6 +260,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const profileLinks = links || [];
   const activeLinks = profileLinks.filter((link: any) => link.is_active !== false).length;
   const setupComplete = isConnectSetupComplete(customer, profile, { links: profileLinks, requirePublished: true });
+  const isBasicSetupIncomplete = plan.code === "connect_basic" && !setupComplete;
   const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(
@@ -349,7 +350,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             : "Manage your starter profile basics and view the page your customers see."}
           actions={
             <div className="connect-center-header-actions">
-              <Link className="btn secondary" href="/portal/connect/setup">
+              <Link className={setupComplete ? "btn secondary" : "btn primary"} href="/portal/connect/setup">
                 <Sparkles size={15} />
                 {setupComplete ? "Guided Setup" : "Continue Guided Setup"}
               </Link>
@@ -378,10 +379,67 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           priceLabel={plan.price}
           description={plan.description}
           usageLabel={plan.code === "connect_basic" ? "Basic profile and Lead Inbox active" : "Advanced profile features active"}
-          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
+          subscriptionStatus={isBasicSetupIncomplete ? "setup in progress" : String(customer.subscription_status || customer.plan_status || "active")}
           locked={isCustomerSubscriptionLocked(customer)}
           trialStatus={String(customer.trial_status || "none")}
         />
+
+        {panelIssues.length ? (
+          <RetryNotice
+            title="Some Clutch Connect data is temporarily unavailable"
+            description={panelIssues[0]}
+            details={panelIssues.slice(1)}
+          />
+        ) : null}
+
+        {!setupComplete ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Setup In Progress</p>
+            <h2>Finish your guided setup</h2>
+            <p className="muted">Complete your profile details, contact actions, and public page setup before sharing your smart card.</p>
+            <div className="connect-center-inline-actions">
+              <Link className="btn primary" href="/portal/connect/setup">Continue Guided Setup</Link>
+            </div>
+          </section>
+        ) : null}
+
+        {isBasicSetupIncomplete ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Basic Tools</p>
+            <h2>Your starter profile tools</h2>
+            <div className="connect-center-quick-actions basic-tools">
+              <Link className="connect-center-action" href={publicProfileHref} target={profile.slug ? "_blank" : undefined}>
+                <Globe size={18} />
+                <div>
+                  <strong>View Profile</strong>
+                  <span>Preview the profile connected to your smart card.</span>
+                </div>
+              </Link>
+              <div className="connect-center-action connect-center-action-copy">
+                <Link2 size={18} />
+                <div>
+                  <strong>Copy Profile Link</strong>
+                  <span>Share your public profile URL when setup is ready.</span>
+                </div>
+                {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
+              </div>
+              <Link className="connect-center-action" href="/portal/connect/leads">
+                <MessageSquare size={18} />
+                <div>
+                  <strong>Lead Inbox</strong>
+                  <span>Review basic lead requests from your public page.</span>
+                </div>
+              </Link>
+              <Link className="connect-center-action" href="/portal/analytics?tab=clutch-connect">
+                <QrCode size={18} />
+                <div>
+                  <strong>Basic Analytics</strong>
+                  <span>Check starter profile and card engagement.</span>
+                </div>
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         {plan.code === "connect_basic" ? (
           <LockedFeatureCard
@@ -400,25 +458,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             ]}
             variant="connect_plus"
           />
-        ) : null}
-
-        {panelIssues.length ? (
-          <RetryNotice
-            title="Some Clutch Connect data is temporarily unavailable"
-            description={panelIssues[0]}
-            details={panelIssues.slice(1)}
-          />
-        ) : null}
-
-        {!setupComplete ? (
-          <section className="connect-center-card">
-            <p className="connect-center-kicker">Setup In Progress</p>
-            <h2>Finish your guided setup to unlock full dashboard flow.</h2>
-            <p className="muted">Complete your contact details and at least one visible call-to-action so your public page is ready for real customer traffic.</p>
-            <div className="connect-center-inline-actions">
-              <Link className="btn primary" href="/portal/connect/setup">Continue Guided Setup</Link>
-            </div>
-          </section>
         ) : null}
 
         <section className="connect-center-public-strip" aria-label="Public page status">
@@ -505,70 +544,72 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           <article className="connect-center-card">
             <p className="connect-center-kicker">Wallet Passes</p>
             <h2>Apple + Google Wallet</h2>
+            {!setupComplete ? (
+              <p className="muted connect-center-note">Complete guided setup before creating wallet passes.</p>
+            ) : null}
             <ul className="connect-center-metadata-list">
               <li><span>Apple Wallet saves</span><strong>{appleWalletSaves}</strong></li>
               <li><span>Google Wallet saves</span><strong>{googleWalletSaves}</strong></li>
               <li><span>Wallet save analytics</span><strong>{totalWalletSaves}</strong></li>
             </ul>
             <div className="connect-center-inline-actions">
-              <Link className="btn ghost" href={`/api/wallet/apple/${profile.id}`} target="_blank">Apple Wallet</Link>
-              <Link className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank">Google Wallet</Link>
+              {setupComplete ? (
+                <>
+                  <Link className="btn ghost" href={`/api/wallet/apple/${profile.id}`} target="_blank">Apple Wallet</Link>
+                  <Link className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank">Google Wallet</Link>
+                </>
+              ) : (
+                <>
+                  <button className="btn ghost" type="button" disabled>Apple Wallet</button>
+                  <button className="btn ghost" type="button" disabled>Google Wallet</button>
+                </>
+              )}
             </div>
           </article>
-
-          <article className="connect-center-card">
-            <p className="connect-center-kicker">Card Hardware</p>
-            <h2>NTAG213 Metal Card</h2>
-            <ul className="connect-center-metadata-list">
-              <li><span>NFC chip</span><strong>NTAG213 • 13.56 MHz</strong></li>
-              <li><span>Memory</span><strong>144 bytes • 7-byte UID</strong></li>
-              <li><span>Card size</span><strong>CR80 • 85.5 x 54 x 1.2 mm</strong></li>
-              <li><span>Finish options</span><strong>Matte black, brushed silver, brushed gold</strong></li>
-              <li><span>Build</span><strong>Rigid, water resistant, laser engravable</strong></li>
-            </ul>
-          </article>
         </section>
 
-        <section className="connect-center-card">
-          <p className="connect-center-kicker">Quick Actions</p>
-          <h2>Open Clutch Connect</h2>
-          <div className="connect-center-quick-actions">
-            <Link className="connect-center-action" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
-              <Palette size={18} />
-              <div>
-                <strong>{advancedBuilderUnlocked ? "Profile Builder" : "Guided Setup"}</strong>
-                <span>
-                  {advancedBuilderUnlocked
-                    ? "Edit your new public page, blocks, links, and design."
-                    : "Starter plans manage profile basics in Guided Setup."}
-                </span>
-              </div>
-            </Link>
-            <Link className="connect-center-action" href={`/u/${profile.slug}`} target="_blank">
-              <Globe size={18} />
-              <div>
-                <strong>View Profile</strong>
-                <span>Open the profile customers see from your card and QR links.</span>
-              </div>
-            </Link>
-            <Link className="connect-center-action" href="/portal/analytics?tab=clutch-connect">
-              <QrCode size={18} />
-              <div>
-                <strong>Analytics</strong>
-                <span>Review engagement and scan behavior.</span>
-              </div>
-            </Link>
-            <Link className="connect-center-action" href="/portal/connect/leads">
-              <MessageSquare size={18} />
-              <div>
-                <strong>Lead Inbox</strong>
-                <span>Respond to lead requests quickly.</span>
-              </div>
-            </Link>
-          </div>
-        </section>
+        {!isBasicSetupIncomplete ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Quick Actions</p>
+            <h2>Open Clutch Connect</h2>
+            <div className="connect-center-quick-actions">
+              <Link className="connect-center-action" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
+                <Palette size={18} />
+                <div>
+                  <strong>{advancedBuilderUnlocked ? "Profile Builder" : "Guided Setup"}</strong>
+                  <span>
+                    {advancedBuilderUnlocked
+                      ? "Edit your new public page, blocks, links, and design."
+                      : "Starter plans manage profile basics in Guided Setup."}
+                  </span>
+                </div>
+              </Link>
+              <Link className="connect-center-action" href={`/u/${profile.slug}`} target="_blank">
+                <Globe size={18} />
+                <div>
+                  <strong>View Profile</strong>
+                  <span>Open the profile customers see from your card and QR links.</span>
+                </div>
+              </Link>
+              <Link className="connect-center-action" href="/portal/analytics?tab=clutch-connect">
+                <QrCode size={18} />
+                <div>
+                  <strong>Analytics</strong>
+                  <span>Review engagement and scan behavior.</span>
+                </div>
+              </Link>
+              <Link className="connect-center-action" href="/portal/connect/leads">
+                <MessageSquare size={18} />
+                <div>
+                  <strong>Lead Inbox</strong>
+                  <span>Respond to lead requests quickly.</span>
+                </div>
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
-        {!hasAdvancedLeads || !hasBrandRemoval ? (
+        {!isBasicSetupIncomplete && (!hasAdvancedLeads || !hasBrandRemoval) ? (
           <section className="connect-center-card">
             <p className="connect-center-kicker">Plan Awareness</p>
             <h2>Starter profile access remains fully usable.</h2>
@@ -578,6 +619,22 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             </p>
           </section>
         ) : null}
+
+        <details className="connect-center-card connect-center-details-card">
+          <summary>
+            <span>
+              <span className="connect-center-kicker">Card Details</span>
+              <strong>Smart card hardware</strong>
+            </span>
+          </summary>
+          <ul className="connect-center-metadata-list">
+            <li><span>NFC chip</span><strong>NTAG213 - 13.56 MHz</strong></li>
+            <li><span>Memory</span><strong>144 bytes - 7-byte UID</strong></li>
+            <li><span>Card size</span><strong>CR80 - 85.5 x 54 x 1.2 mm</strong></li>
+            <li><span>Finish options</span><strong>Matte black, brushed silver, brushed gold</strong></li>
+            <li><span>Build</span><strong>Rigid, water resistant, laser engravable</strong></li>
+          </ul>
+        </details>
 
         {advancedBuilderUnlocked ? (
           <section className="connect-center-grid connect-center-builder-grid">
@@ -597,21 +654,23 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           </section>
         ) : null}
 
-        <section className="connect-center-card">
-          <p className="connect-center-kicker">Public Page Improvements</p>
-          <h2>Digital Business Card Enhancements</h2>
-          <div className="connect-center-public-grid">
-            {publicProfileImprovements.map((item) => (
-              <article key={item.label}>
-                <div className="connect-center-public-top">
-                  <span className="connect-center-feature-icon">{item.icon}</span>
-                  <strong>{item.label}</strong>
-                </div>
-                <p>{item.done ? "Configured" : "Needs setup"}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        {!isBasicSetupIncomplete ? (
+          <section className="connect-center-card">
+            <p className="connect-center-kicker">Public Page Improvements</p>
+            <h2>Digital Business Card Enhancements</h2>
+            <div className="connect-center-public-grid">
+              {publicProfileImprovements.map((item) => (
+                <article key={item.label}>
+                  <div className="connect-center-public-top">
+                    <span className="connect-center-feature-icon">{item.icon}</span>
+                    <strong>{item.label}</strong>
+                  </div>
+                  <p>{item.done ? "Configured" : "Needs setup"}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
     </DashboardShell>
   );

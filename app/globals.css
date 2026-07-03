@@ -11044,6 +11044,7 @@ input.saas-font-search:focus-visible {
   border-radius: 14px;
   box-shadow: 0 10px 24px rgba(11, 31, 53, 0.06);
   padding: 16px;
+  min-width: 0;
 }
 
 .connect-center-kicker {
@@ -11131,6 +11132,12 @@ input.saas-font-search:focus-visible {
   align-items: center;
   gap: 8px;
   color: var(--clutch-navy);
+  min-width: 0;
+}
+
+.connect-center-metadata-list li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .connect-center-checklist li svg,
@@ -11143,6 +11150,16 @@ input.saas-font-search:focus-visible {
 .connect-center-metadata-list strong {
   margin-left: auto;
   color: var(--clutch-dark);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.connect-center-note {
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .connect-center-inline-actions {
@@ -11159,6 +11176,10 @@ input.saas-font-search:focus-visible {
   gap: 10px;
 }
 
+.connect-center-quick-actions.basic-tools {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .connect-center-action {
   display: flex;
   align-items: flex-start;
@@ -11167,6 +11188,7 @@ input.saas-font-search:focus-visible {
   border-radius: 10px;
   padding: 12px;
   background: #fff;
+  min-width: 0;
 }
 
 .connect-center-action:hover {
@@ -11183,11 +11205,75 @@ input.saas-font-search:focus-visible {
   display: block;
   color: var(--clutch-dark);
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .connect-center-action span {
   color: var(--clutch-muted);
   font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.connect-center-action-copy {
+  align-items: center;
+}
+
+.connect-center-action-copy > div {
+  min-width: 0;
+}
+
+.connect-center-details-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.connect-center-details-card summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  color: var(--clutch-dark);
+  list-style: none;
+}
+
+.connect-center-details-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.connect-center-details-card summary::after {
+  content: "+";
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--clutch-orange-soft);
+  color: var(--clutch-orange);
+  font-weight: 900;
+}
+
+.connect-center-details-card[open] summary::after {
+  content: "-";
+}
+
+.connect-center-details-card summary > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.connect-center-details-card summary strong {
+  color: var(--clutch-dark);
+  font-size: 1rem;
+}
+
+.connect-center-details-card .connect-center-metadata-list {
+  margin: 0;
+  padding: 0 16px 16px;
 }
 
 .connect-center-builder-strip {
@@ -11345,6 +11431,22 @@ input.saas-font-search:focus-visible {
   .connect-center-public-strip-actions .connect-profile-view-row .btn {
     flex: 1 1 auto;
     width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .connect-center-metadata-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .connect-center-metadata-list strong {
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .connect-center-quick-actions.basic-tools {
+    grid-template-columns: 1fr;
   }
 }
 
