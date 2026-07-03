@@ -5658,15 +5658,6 @@ button:disabled {
   --builder-bg-gradient-to: #f4f4f4;
 }
 
-.connect-setup-preview-stage .builder-global-banner {
-  background: linear-gradient(180deg, #f9fcff 0%, #eef3fb 100%) !important;
-}
-
-.connect-setup-preview-stage .builder-block-hero {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 255, 0.98));
-  border: 1px solid rgba(56, 72, 98, 0.08);
-}
-
 .connect-setup-preview-stage .builder-button,
 .connect-setup-preview-stage .builder-button-social {
   background: rgba(255, 255, 255, 0.98);
