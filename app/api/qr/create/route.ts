@@ -91,7 +91,8 @@ export async function POST(req: NextRequest) {
   const { data: qrCodes } = await admin
     .from("qr_codes")
     .select("id", { count: "exact" })
-    .eq("customer_id", customer.id);
+    .eq("customer_id", customer.id)
+    .neq("is_system", true);
 
   const used = qrCodes?.length || 0;
   const plan = getCustomerPlan(customer);

@@ -50,6 +50,16 @@ function trimText(value: unknown) {
   return String(value || "").trim();
 }
 
+function getAppBaseUrl() {
+  return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
+}
+
+function buildSmartCardDestination(slug?: string | null) {
+  const appBase = getAppBaseUrl();
+  if (slug) return `${appBase}/u/${encodeURIComponent(slug)}`;
+  return `${appBase}/setup/guided`;
+}
+
 function joinName(first: string, last: string) {
   return [first, last].filter(Boolean).join(" ").trim();
 }
@@ -681,6 +691,36 @@ export async function POST(req: NextRequest) {
               console.warn("CONNECT SETUP profile setup_completed update skipped", error.message);
             }
           });
+      }
+
+      const smartCardDestination = buildSmartCardDestination(savedProfile.slug);
+      const primarySmartCardPatch = await admin
+        .from("qr_codes")
+        .update({
+          destination_url: smartCardDestination,
+          profile_id: savedProfile.id,
+          connect_profile_id: savedProfile.id,
+        })
+        .eq("customer_id", customer.id)
+        .eq("is_system", true)
+        .eq("qr_type", "smart_card");
+
+      if (primarySmartCardPatch.error && isMissingColumnError(primarySmartCardPatch.error)) {
+        await admin
+          .from("qr_codes")
+          .update({
+            destination_url: smartCardDestination,
+            profile_id: savedProfile.id,
+          })
+          .eq("customer_id", customer.id)
+          .eq("qr_type", "smart_card")
+          .then(({ error }) => {
+            if (error && !isMissingColumnError(error)) {
+              console.warn("CONNECT SETUP smart card link update skipped", error.message);
+            }
+          });
+      } else if (primarySmartCardPatch.error && !isMissingColumnError(primarySmartCardPatch.error)) {
+        console.warn("CONNECT SETUP smart card link update skipped", primarySmartCardPatch.error.message);
       }
 
       return NextResponse.json({

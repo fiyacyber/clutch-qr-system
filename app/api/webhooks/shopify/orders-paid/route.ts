@@ -411,13 +411,17 @@ async function ensureDraftProfile(
 ) {
   const existing = await admin
     .from("profiles")
-    .select("id, is_active, business_name, contact_name, title, phone, email")
+    .select("id, slug, is_active, business_name, contact_name, title, phone, email")
     .eq("customer_id", customerId)
     .maybeSingle();
 
   if (existing.error) throw existing.error;
   if (existing.data?.id && existing.data.is_active) {
-    return { profileId: existing.data.id as string, created: false };
+    return {
+      profileId: existing.data.id as string,
+      profileSlug: String(existing.data.slug || "") || null,
+      created: false,
+    };
   }
 
   if (existing.data?.id) {
@@ -432,13 +436,18 @@ async function ensureDraftProfile(
       await admin.from("profiles").update(patch).eq("id", existing.data.id);
     }
 
-    return { profileId: existing.data.id as string, created: false };
+    return {
+      profileId: existing.data.id as string,
+      profileSlug: String(existing.data.slug || "") || null,
+      created: false,
+    };
   }
 
   const baseRaw = businessName || customerName || email.split("@")[0] || "clutch-connect";
   const baseSlug = normalizeSlug(baseRaw) || buildDefaultProfileSlug(baseRaw);
 
   let profileId: string | null = null;
+  let profileSlug: string | null = null;
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const suffix = attempt === 0 ? "" : `-${crypto.randomBytes(2).toString("hex")}`;
     const slug = `${baseSlug}${suffix}`.slice(0, 64);
@@ -459,6 +468,7 @@ async function ensureDraftProfile(
 
     if (!error) {
       profileId = data.id as string;
+      profileSlug = slug;
       break;
     }
 
@@ -468,12 +478,13 @@ async function ensureDraftProfile(
   }
 
   if (!profileId) {
-    const lookup = await admin.from("profiles").select("id").eq("customer_id", customerId).maybeSingle();
+    const lookup = await admin.from("profiles").select("id, slug").eq("customer_id", customerId).maybeSingle();
     if (lookup.error) throw lookup.error;
     profileId = (lookup.data?.id as string) || null;
+    profileSlug = String(lookup.data?.slug || "") || null;
   }
 
-  return { profileId, created: Boolean(profileId) };
+  return { profileId, profileSlug, created: Boolean(profileId) };
 }
 
 function toLower(value: unknown): string {
@@ -507,6 +518,216 @@ function normalizeOrderNumber(payload: ShopifyOrderPayload): string | null {
     return String(payload.order_number);
   }
   return null;
+}
+
+function getAppBaseUrl() {
+  return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
+}
+
+function buildSmartCardDestinationUrl(profileSlug?: string | null) {
+  const appBase = getAppBaseUrl();
+  if (profileSlug) {
+    return `${appBase}/u/${encodeURIComponent(profileSlug)}`;
+  }
+  return `${appBase}/setup/guided`;
+}
+
+function toSlugToken(value: string, fallback: string) {
+  const normalized = value
+    .toLowerCase()
+    .replace(/^#+/, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 28);
+
+  return normalized || fallback;
+}
+
+function buildSmartCardSlug(orderNumber?: string | null) {
+  const shortId = crypto.randomBytes(3).toString("hex");
+  const orderToken = toSlugToken(String(orderNumber || ""), "order");
+  return `smart-card-${orderToken}-${shortId}`;
+}
+
+function buildSmartCardPublicUrls(slug?: string | null) {
+  if (!slug) {
+    return {
+      qrUrl: null,
+      qrPngUrl: null,
+      qrSvgUrl: null,
+      nfcUrl: null,
+    };
+  }
+
+  const appBase = getAppBaseUrl();
+  const encodedSlug = encodeURIComponent(slug);
+  const qrUrl = `${appBase}/qr/${encodedSlug}`;
+
+  return {
+    qrUrl,
+    qrPngUrl: `${qrUrl}?format=png`,
+    qrSvgUrl: `${qrUrl}?format=svg`,
+    nfcUrl: qrUrl,
+  };
+}
+
+type SmartCardQrDiagnostics = {
+  created: boolean;
+  reused: boolean;
+  qrCodeId: string | null;
+  slug: string | null;
+  qrUrl: string | null;
+  qrPngUrl: string | null;
+  qrSvgUrl: string | null;
+  nfcUrl: string | null;
+  destinationUrlSet: boolean;
+};
+
+async function ensureSystemSmartCardQr(
+  admin: ReturnType<typeof createWebhookSupabaseClient>,
+  {
+    customerId,
+    cardOrderId,
+    shopifyOrderId,
+    shopifyOrderNumber,
+    profileId,
+    profileSlug,
+  }: {
+    customerId: string;
+    cardOrderId: string | null;
+    shopifyOrderId: string;
+    shopifyOrderNumber: string | null;
+    profileId: string | null;
+    profileSlug: string | null;
+  }
+): Promise<SmartCardQrDiagnostics> {
+  const destinationUrl = buildSmartCardDestinationUrl(profileSlug);
+  let existingQr: any = null;
+
+  if (cardOrderId) {
+    const existingByCardOrder = await admin
+      .from("qr_codes")
+      .select("id, slug, destination_url, profile_id, connect_profile_id, card_order_id, qr_type, is_system, name")
+      .eq("card_order_id", cardOrderId)
+      .maybeSingle();
+
+    if (!existingByCardOrder.error && existingByCardOrder.data) {
+      existingQr = existingByCardOrder.data;
+    }
+  }
+
+  if (!existingQr) {
+    const byOrderId = await admin
+      .from("card_orders")
+      .select("id")
+      .eq("customer_id", customerId)
+      .eq("shopify_order_id", shopifyOrderId)
+      .limit(5);
+
+    let matchingCardOrders = byOrderId.data || [];
+    if (!matchingCardOrders.length && shopifyOrderNumber) {
+      const byOrderNumber = await admin
+        .from("card_orders")
+        .select("id")
+        .eq("customer_id", customerId)
+        .eq("shopify_order_number", shopifyOrderNumber)
+        .limit(5);
+      matchingCardOrders = byOrderNumber.data || [];
+    }
+
+    const cardOrderIds = (matchingCardOrders || []).map((row: any) => row.id).filter(Boolean);
+    if (cardOrderIds.length) {
+      const existingByOrder = await admin
+        .from("qr_codes")
+        .select("id, slug, destination_url, profile_id, connect_profile_id, card_order_id, qr_type, is_system, name")
+        .eq("customer_id", customerId)
+        .eq("qr_type", "smart_card")
+        .in("card_order_id", cardOrderIds)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (!existingByOrder.error && existingByOrder.data) {
+        existingQr = existingByOrder.data;
+      }
+    }
+  }
+
+  if (existingQr?.id) {
+    const patch: Record<string, any> = {};
+    if (existingQr.name !== "Smart Card Profile") patch.name = "Smart Card Profile";
+    if (existingQr.is_system !== true) patch.is_system = true;
+    if (existingQr.qr_type !== "smart_card") patch.qr_type = "smart_card";
+    if (existingQr.destination_url !== destinationUrl) patch.destination_url = destinationUrl;
+    if (!existingQr.card_order_id && cardOrderId) patch.card_order_id = cardOrderId;
+    if (profileId && existingQr.profile_id !== profileId) patch.profile_id = profileId;
+    if (profileId && existingQr.connect_profile_id !== profileId) patch.connect_profile_id = profileId;
+    patch.is_active = true;
+
+    if (Object.keys(patch).length) {
+      await admin.from("qr_codes").update(patch).eq("id", existingQr.id);
+    }
+
+    const urls = buildSmartCardPublicUrls(existingQr.slug || null);
+
+    return {
+      created: false,
+      reused: true,
+      qrCodeId: String(existingQr.id || null),
+      slug: String(existingQr.slug || null),
+      qrUrl: urls.qrUrl,
+      qrPngUrl: urls.qrPngUrl,
+      qrSvgUrl: urls.qrSvgUrl,
+      nfcUrl: urls.nfcUrl,
+      destinationUrlSet: true,
+    };
+  }
+
+  let created: any = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const slug = buildSmartCardSlug(shopifyOrderNumber || shopifyOrderId);
+    const insertPayload: Record<string, any> = {
+      customer_id: customerId,
+      card_order_id: cardOrderId,
+      name: "Smart Card Profile",
+      qr_type: "smart_card",
+      is_system: true,
+      is_active: true,
+      slug,
+      destination_url: destinationUrl,
+      profile_id: profileId,
+      connect_profile_id: profileId,
+    };
+
+    const insertResult = await admin
+      .from("qr_codes")
+      .insert(insertPayload)
+      .select("id, slug")
+      .single();
+
+    if (!insertResult.error) {
+      created = insertResult.data;
+      break;
+    }
+
+    if (insertResult.error.code !== "23505") {
+      throw insertResult.error;
+    }
+  }
+
+  const urls = buildSmartCardPublicUrls(created?.slug || null);
+
+  return {
+    created: Boolean(created?.id),
+    reused: false,
+    qrCodeId: created?.id || null,
+    slug: created?.slug || null,
+    qrUrl: urls.qrUrl,
+    qrPngUrl: urls.qrPngUrl,
+    qrSvgUrl: urls.qrSvgUrl,
+    nfcUrl: urls.nfcUrl,
+    destinationUrlSet: Boolean(created?.id),
+  };
 }
 
 function normalizePropertyMap(
@@ -771,11 +992,17 @@ export async function POST(req: NextRequest) {
   let linkedCustomers = 0;
   let createdAuthUsers = 0;
   let sentWelcomeEmails = 0;
+  let smartCardQrCreated = 0;
+  let smartCardQrReused = 0;
+  let destinationUrlSet = 0;
+  let latestSmartCardQrSlug: string | null = null;
 
   const provisionedByEmail = new Map<string, {
     customerId: string;
     existingCustomer: boolean;
     setupUrl: string;
+    profileId: string | null;
+    profileSlug: string | null;
   }>();
 
   for (const item of matchingLineItems) {
@@ -858,7 +1085,7 @@ export async function POST(req: NextRequest) {
         shopifyOrderId: orderId,
       });
 
-      await ensureDraftProfile(admin, {
+      const profileResult = await ensureDraftProfile(admin, {
         customerId: customerResult.customerId,
         customerName,
         businessName: engravingBusinessName,
@@ -872,6 +1099,8 @@ export async function POST(req: NextRequest) {
         customerId: customerResult.customerId,
         existingCustomer: customerResult.existing,
         setupUrl,
+        profileId: profileResult.profileId || null,
+        profileSlug: profileResult.profileSlug || null,
       };
       provisionedByEmail.set(customerEmail, provisioned);
 
@@ -896,6 +1125,53 @@ export async function POST(req: NextRequest) {
     if (!linkError) {
       linkedCustomers += 1;
     }
+
+    const smartCardQrDiagnostics = await ensureSystemSmartCardQr(admin, {
+      customerId: provisioned.customerId,
+      cardOrderId: insertedCardOrder.id,
+      shopifyOrderId: orderId,
+      shopifyOrderNumber: orderNumber,
+      profileId: provisioned.profileId,
+      profileSlug: provisioned.profileSlug,
+    });
+
+    if (smartCardQrDiagnostics.created) smartCardQrCreated += 1;
+    if (smartCardQrDiagnostics.reused) smartCardQrReused += 1;
+    if (smartCardQrDiagnostics.destinationUrlSet) destinationUrlSet += 1;
+    if (smartCardQrDiagnostics.slug) latestSmartCardQrSlug = smartCardQrDiagnostics.slug;
+
+    const systemQrPatch: Record<string, any> = {
+      system_qr_code_id: smartCardQrDiagnostics.qrCodeId,
+      system_qr_slug: smartCardQrDiagnostics.slug,
+      system_qr_url: smartCardQrDiagnostics.qrUrl,
+      system_qr_png_url: smartCardQrDiagnostics.qrPngUrl,
+      system_qr_svg_url: smartCardQrDiagnostics.qrSvgUrl,
+      nfc_url: smartCardQrDiagnostics.nfcUrl,
+    };
+
+    await admin
+      .from("card_orders")
+      .update(systemQrPatch)
+      .eq("id", insertedCardOrder.id)
+      .then(({ error }) => {
+        if (!error || isColumnMissingError(error)) return;
+        console.warn("orders-paid system QR card_order linkage skipped", {
+          card_order_id: insertedCardOrder.id,
+          code: error.code,
+          message: error.message,
+        });
+      });
+
+    console.info("orders-paid smart card qr diagnostics", {
+      card_order_id: insertedCardOrder.id,
+      customer_id: provisioned.customerId,
+      smart_card_qr_created: smartCardQrDiagnostics.created,
+      smart_card_qr_reused: smartCardQrDiagnostics.reused,
+      system_qr_code_id: smartCardQrDiagnostics.qrCodeId,
+      smart_card_qr_slug: smartCardQrDiagnostics.slug,
+      system_qr_url: smartCardQrDiagnostics.qrUrl,
+      destination_url_set: smartCardQrDiagnostics.destinationUrlSet,
+    });
 
     if (insertedCardOrder.welcome_email_sent_at) {
       continue;
@@ -977,6 +1253,12 @@ export async function POST(req: NextRequest) {
       linked_customers: linkedCustomers,
       created_auth_users: createdAuthUsers,
       sent_welcome_emails: sentWelcomeEmails,
+      smart_card_qr_created: smartCardQrCreated > 0,
+      smart_card_qr_reused: smartCardQrReused > 0,
+      smart_card_qr_slug: latestSmartCardQrSlug,
+      destination_url_set: destinationUrlSet > 0,
+      smart_card_qr_created_count: smartCardQrCreated,
+      smart_card_qr_reused_count: smartCardQrReused,
       topic,
     },
     { status: 200 }

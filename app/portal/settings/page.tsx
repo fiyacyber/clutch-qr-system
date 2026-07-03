@@ -32,11 +32,13 @@ export default async function PortalSettingsPage() {
     admin
       .from("qr_codes")
       .select("id")
-      .eq("customer_id", customer.id),
+      .eq("customer_id", customer.id)
+      .neq("is_system", true),
     admin
       .from("qr_codes")
       .select("name, foreground_color, background_color")
       .eq("customer_id", customer.id)
+      .neq("is_system", true)
       .order("created_at", { ascending: false })
       .limit(1),
   ]);

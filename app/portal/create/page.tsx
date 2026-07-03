@@ -37,7 +37,8 @@ export default async function CreatePortalPage() {
         admin
           .from("qr_codes")
           .select("id")
-          .eq("customer_id", customer.id),
+          .eq("customer_id", customer.id)
+          .neq("is_system", true),
     }),
     runGuardedDashboardTask({
       route: "/portal/create",

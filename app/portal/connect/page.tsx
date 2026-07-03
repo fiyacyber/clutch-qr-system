@@ -193,11 +193,21 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
       route: "/portal/connect",
       endpoint: "supabase:qr_codes.select",
       customerId: customer.id,
-      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; profile_id: string | null; connect_profile_id: string | null }>,
+      fallback: [] as Array<{
+        id: string;
+        name: string;
+        slug: string | null;
+        scan_count: number | null;
+        profile_id: string | null;
+        connect_profile_id: string | null;
+        destination_url: string | null;
+        qr_type: string | null;
+        is_system: boolean | null;
+      }>,
       task: () =>
         admin
           .from("qr_codes")
-          .select("id, name, slug, scan_count, profile_id, connect_profile_id")
+          .select("id, name, slug, scan_count, profile_id, connect_profile_id, destination_url, qr_type, is_system")
           .eq("customer_id", customer.id),
     }),
     runGuardedDashboardTask({
@@ -251,6 +261,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(
+    (row: any) => row.is_system === true && row.qr_type === "smart_card"
+  ) || (qrRows || []).find(
+    (row: any) => row.qr_type === "smart_card"
+  ) || (qrRows || []).find(
     (row: any) => row.connect_profile_id === profile.id || row.profile_id === profile.id
   );
 
@@ -273,6 +287,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const lastScan = lastScanRowsResult.data?.[0]?.created_at || null;
   const totalTaps = linkedQr?.scan_count || 0;
+  const smartCardDestination = linkedQr?.destination_url || (profile.slug ? clutchConnectDisplayUrl(profile.slug) : "Not connected yet");
 
   const completionChecks = [
     { label: "Business name", done: Boolean(profile.business_name) },
@@ -466,12 +481,13 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         <section className="connect-center-grid connect-center-status-grid">
           <article className="connect-center-card">
             <p className="connect-center-kicker">Smart Card Status</p>
-            <h2>NFC + QR Readiness</h2>
+            <h2>Smart Card Link</h2>
             <ul className="connect-center-metadata-list">
-              <li><span>Connected NFC card</span><strong>{linkedQr ? "Connected" : "Not linked"}</strong></li>
-              <li><span>Linked QR code</span><strong>{linkedQr?.name || "No linked QR"}</strong></li>
+              <li><span>Connected</span><strong>{linkedQr ? "Connected" : "Not connected"}</strong></li>
+              <li><span>Linked Smart Card Link</span><strong>{linkedQr?.name || "No Smart Card Link"}</strong></li>
               <li><span>Last scan</span><strong>{formatDate(lastScan)}</strong></li>
               <li><span>Total taps</span><strong>{totalTaps}</strong></li>
+              <li><span>Destination</span><strong>{smartCardDestination}</strong></li>
             </ul>
           </article>
 

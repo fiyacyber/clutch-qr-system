@@ -43,6 +43,7 @@ export default async function StoredQrCodesPage() {
         .from("qr_codes")
         .select("id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color")
         .eq("customer_id", customer.id)
+        .neq("is_system", true)
         .order("created_at", { ascending: false }),
   });
 
