@@ -35,8 +35,7 @@ export function buildSetupForgotPasswordPath({
 
 export function buildPasswordResetRedirectUrl(requestedNext?: string | null) {
   const safeNext = sanitizeNextPath(requestedNext, "/portal");
-  const changePasswordPath = `/change-password?next=${encodeURIComponent(safeNext)}`;
-  return `${getClutchAppBaseUrl()}/auth/callback?next=${encodeURIComponent(changePasswordPath)}`;
+  return `${getClutchAppBaseUrl()}/change-password?next=${safeNext}`;
 }
 
 function isMissingColumnError(error: any) {
