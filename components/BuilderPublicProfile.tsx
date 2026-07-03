@@ -287,12 +287,6 @@ export default function BuilderPublicProfile({
       minHeight: `${clampNumber(banner.height, 80, 420, 160)}px`,
       borderRadius: `${clampNumber(banner.borderRadius, 0, 48, 24)}px`,
     };
-    if (monochromeStarterView) {
-      return {
-        ...base,
-        background: "linear-gradient(135deg, #FFFFFF 0%, #F3F3F3 100%)",
-      };
-    }
     const imageUrl = toCssImageUrl(banner.imageUrl);
     if (banner.enabled && banner.type === "image" && imageUrl) {
       return {
