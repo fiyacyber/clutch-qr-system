@@ -118,7 +118,7 @@ const QUICK_ACTION_STATUSES = [
   "cancelled",
 ] as const;
 
-const STATUS_MAP = new Map(FULFILLMENT_STATUSES.map((status) => [status.value, status.label]));
+const STATUS_MAP = new Map<string, string>(FULFILLMENT_STATUSES.map((status) => [status.value, status.label]));
 const ALLOWED_UPDATE_STATUSES = new Set(FULFILLMENT_STATUSES.map((status) => status.value));
 const FILTER_SET = new Set(FILTER_OPTIONS.map((status) => status.value));
 
