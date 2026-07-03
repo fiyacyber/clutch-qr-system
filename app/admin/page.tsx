@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import AdminDashboardTabs from "@/components/admin/AdminDashboardTabs";
 import PlanLimitFields from "@/components/admin/PlanLimitFields";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -202,6 +203,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </div>
           )}
         />
+
+        <AdminDashboardTabs activeTab="overview" />
 
         <section className="dashboard-grid">
           <div className="metric-card">

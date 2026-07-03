@@ -1,16 +1,17 @@
 .page {
   display: grid;
-  gap: 1rem;
+  gap: 1.02rem;
   padding-bottom: 2rem;
 }
 
 .searchCard {
-  background: #f8fbff;
-  border: 1px solid #dce6f2;
-  border-radius: 18px;
-  padding: 0.9rem;
+  background: linear-gradient(170deg, #fbfdff 0%, #f4f9ff 100%);
+  border: 1px solid #d4e0ef;
+  border-radius: 20px;
+  padding: 0.95rem;
   display: grid;
   gap: 0.55rem;
+  box-shadow: 0 10px 24px rgba(10, 34, 64, 0.08);
 }
 
 .searchForm {
@@ -21,8 +22,8 @@
 
 .searchInput {
   width: 100%;
-  border: 1px solid #c7d5ea;
-  border-radius: 12px;
+  border: 1px solid #c5d5ea;
+  border-radius: 13px;
   padding: 0.62rem 0.72rem;
   font-size: 0.92rem;
   color: #14253f;
@@ -36,9 +37,9 @@
 
 .searchButton {
   border: 1px solid #ff7a1a;
-  background: #ff7a1a;
+  background: linear-gradient(145deg, #ff8b2e 0%, #ff7512 100%);
   color: #ffffff;
-  border-radius: 12px;
+  border-radius: 13px;
   font-size: 0.86rem;
   font-weight: 700;
   padding: 0.62rem 0.88rem;
@@ -57,11 +58,11 @@
 }
 
 .summaryCard {
-  background: #ffffff;
-  border: 1px solid #dbe5f1;
+  background: linear-gradient(150deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #d5e1ef;
   border-radius: 16px;
-  padding: 0.85rem;
-  box-shadow: 0 9px 18px rgba(10, 30, 57, 0.08);
+  padding: 0.88rem;
+  box-shadow: 0 11px 22px rgba(10, 30, 57, 0.09);
 }
 
 .summaryLabel {
@@ -83,11 +84,11 @@
 }
 
 .section {
-  background: #ffffff;
-  border: 1px solid #dbe5f1;
-  border-radius: 18px;
+  background: linear-gradient(165deg, #ffffff 0%, #f9fcff 100%);
+  border: 1px solid #d5e1ef;
+  border-radius: 20px;
   padding: 0.9rem;
-  box-shadow: 0 9px 20px rgba(10, 30, 57, 0.08);
+  box-shadow: 0 11px 24px rgba(10, 30, 57, 0.1);
   display: grid;
   gap: 0.8rem;
 }
@@ -110,12 +111,33 @@
 }
 
 .checklistCard {
-  border: 1px solid #d8e2f0;
-  border-radius: 15px;
+  border: 1px solid #d4e1f0;
+  border-radius: 16px;
   background: #fcfdff;
   padding: 0.75rem;
   display: grid;
   gap: 0.62rem;
+  box-shadow: 0 8px 18px rgba(12, 35, 63, 0.07);
+  animation: qaCardIn 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.checklistGrid > :nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.checklistGrid > :nth-child(3) {
+  animation-delay: 95ms;
+}
+
+@keyframes qaCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .checklistHeader h3 {
@@ -191,8 +213,8 @@
 }
 
 .issueCard {
-  border: 1px solid #dbe5f2;
-  border-radius: 14px;
+  border: 1px solid #d4e1f0;
+  border-radius: 15px;
   background: #fbfdff;
   padding: 0.72rem;
 }
@@ -218,8 +240,8 @@
 }
 
 .recordsCard {
-  border: 1px solid #dce6f2;
-  border-radius: 14px;
+  border: 1px solid #d4e1f0;
+  border-radius: 15px;
   padding: 0.75rem;
   background: #fcfdff;
 }
@@ -294,5 +316,15 @@
 
   .checklistGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .searchForm {
+    grid-template-columns: 1fr;
+  }
+
+  .searchButton {
+    width: 100%;
   }
 }

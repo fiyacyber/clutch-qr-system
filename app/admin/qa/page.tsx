@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import AdminDashboardTabs from "@/components/admin/AdminDashboardTabs";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import styles from "./page.module.css";
@@ -420,6 +421,8 @@ export default async function AdminQaPage({ searchParams }: AdminQaPageProps) {
           title="Smart Card Onboarding QA"
           subtitle="Read-only launch diagnostics for webhook ingestion, customer linking, onboarding email flow, and guided setup completion."
         />
+
+        <AdminDashboardTabs activeTab="qa" />
 
         <section className={styles.searchCard}>
           <form className={styles.searchForm} method="get">

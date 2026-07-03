@@ -13,3 +13,4 @@ tsconfig.tsbuildinfo
 .npm-cache/
 .npm-tmp-cache/
 .npm-tmp-cache-vercel/
+.env*

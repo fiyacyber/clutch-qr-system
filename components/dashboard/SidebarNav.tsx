@@ -12,9 +12,11 @@ import {
   QrCode,
   Settings,
   Shield,
+  Users,
   X,
 } from "lucide-react";
 import { Suspense, useState } from "react";
+import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
 
 interface SidebarNavProps {
   isAdmin?: boolean;
@@ -23,9 +25,12 @@ interface SidebarNavProps {
     analytics?: boolean;
     heatmap?: boolean;
   };
+  navVariant?: DashboardNavVariant;
+  showLeadInbox?: boolean;
 }
 
 type NavItem = {
+  key: "overview" | "campaign-performance" | "connect" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
@@ -36,24 +41,35 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
+    key: "overview",
     label: "Overview",
     href: "/portal",
     icon: LayoutDashboard,
     match: (pathname, tab) => pathname === "/portal" || (pathname === "/portal/analytics" && (!tab || tab === "overview")),
   },
   {
+    key: "campaign-performance",
     label: "Campaign Performance",
     href: "/portal/analytics?tab=campaign-performance",
     icon: QrCode,
     match: (pathname, tab) => pathname === "/portal/analytics" && (tab === "campaign-performance" || tab === "qr-codes"),
   },
   {
+    key: "connect",
     label: "Clutch Connect",
     href: "/portal/connect",
     icon: Link2,
     match: (pathname) => pathname.startsWith("/portal/connect") || pathname.startsWith("/clutch-connect"),
   },
   {
+    key: "lead-inbox",
+    label: "Lead Inbox",
+    href: "/portal/connect/leads",
+    icon: Users,
+    match: (pathname) => pathname.startsWith("/portal/connect/leads"),
+  },
+  {
+    key: "qr",
     label: "QR Codes",
     href: "/portal/qr",
     icon: QrCode,
@@ -61,6 +77,7 @@ const navItems: NavItem[] = [
     lockKey: "qr",
   },
   {
+    key: "analytics",
     label: "Analytics",
     href: "/portal/analytics",
     icon: BarChart3,
@@ -68,6 +85,7 @@ const navItems: NavItem[] = [
     lockKey: "analytics",
   },
   {
+    key: "heatmap",
     label: "Heatmap",
     href: "/portal/heatmap",
     icon: Map,
@@ -75,6 +93,7 @@ const navItems: NavItem[] = [
     lockKey: "heatmap",
   },
   {
+    key: "admin",
     label: "Admin",
     href: "/admin",
     icon: Shield,
@@ -82,6 +101,7 @@ const navItems: NavItem[] = [
     adminOnly: true,
   },
   {
+    key: "settings",
     label: "Settings",
     href: "/portal/settings",
     icon: Settings,
@@ -89,18 +109,80 @@ const navItems: NavItem[] = [
   },
 ];
 
+function itemByKey(key: NavItem["key"]): NavItem {
+  const item = navItems.find((entry) => entry.key === key);
+  if (!item) {
+    throw new Error(`Missing nav item: ${key}`);
+  }
+  return item;
+}
+
+function getNavSections({
+  navVariant,
+  isAdmin,
+  showLeadInbox,
+}: {
+  navVariant: DashboardNavVariant;
+  isAdmin?: boolean;
+  showLeadInbox?: boolean;
+}) {
+  const shouldShowLeadInbox = showLeadInbox !== false;
+  const leadInboxKey: NavItem["key"][] = shouldShowLeadInbox ? ["lead-inbox"] : [];
+  const primaryKeysByVariant: Record<DashboardNavVariant, NavItem["key"][]> = {
+    default: ["overview", "campaign-performance", "connect", "qr", "analytics", "heatmap", "settings"],
+    "connect-basic": ["overview", "connect", ...leadInboxKey, "settings"],
+    onboarding: ["overview", "connect", ...leadInboxKey, "settings"],
+  };
+
+  const primary = primaryKeysByVariant[navVariant].map(itemByKey);
+  if (isAdmin) {
+    primary.splice(primary.length - 1, 0, itemByKey("admin"));
+  }
+
+  const secondaryKeys: NavItem["key"][] = ["campaign-performance", "qr", "analytics", "heatmap"];
+  const secondary = navVariant === "connect-basic"
+    ? secondaryKeys.map(itemByKey)
+    : [];
+
+  return { primary, secondary };
+}
+
 function SidebarListInner({
   isAdmin,
   onNavigate,
   navLocks,
+  navVariant,
+  showLeadInbox,
 }: {
   isAdmin?: boolean;
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
+  navVariant: DashboardNavVariant;
+  showLeadInbox?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
+  const navSections = getNavSections({ navVariant, isAdmin, showLeadInbox });
+
+  function renderItem(item: NavItem, secondary = false) {
+    const active = item.match(pathname, tab);
+    const Icon = item.icon;
+    const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
+
+    return (
+      <Link
+        key={`${secondary ? "secondary" : "primary"}-${item.label}`}
+        href={item.href}
+        className={`ds-nav-item${secondary ? " is-secondary" : ""}${active ? " is-active" : ""}`}
+        onClick={onNavigate}
+      >
+        <Icon size={16} strokeWidth={1.8} />
+        <span>{item.label}</span>
+        {isLocked ? <small className="ds-nav-lock-pill">Locked</small> : null}
+      </Link>
+    );
+  }
 
   return (
     <>
@@ -109,25 +191,14 @@ function SidebarListInner({
       </div>
 
       <nav className="ds-sidebar-nav" aria-label="Primary">
-        {navItems
-          .filter((item) => !item.adminOnly || isAdmin)
-          .map((item) => {
-            const active = item.match(pathname, tab);
-            const Icon = item.icon;
-            const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`ds-nav-item${active ? " is-active" : ""}`}
-                onClick={onNavigate}
-              >
-                <Icon size={16} strokeWidth={1.8} />
-                <span>{item.label}</span>
-                {isLocked ? <small className="ds-nav-lock-pill">Locked</small> : null}
-              </Link>
-            );
-          })}
+        {navSections.primary.map((item) => renderItem(item))}
+
+        {navSections.secondary.length ? (
+          <>
+            <p className="ds-sidebar-section-label">Upgrade tools</p>
+            {navSections.secondary.map((item) => renderItem(item, true))}
+          </>
+        ) : null}
       </nav>
 
       <form action="/auth/signout" method="get" className="ds-logout-wrap">
@@ -144,6 +215,8 @@ function SidebarList(props: {
   isAdmin?: boolean;
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
+  navVariant: DashboardNavVariant;
+  showLeadInbox?: boolean;
 }) {
   return (
     <Suspense fallback={null}>
@@ -152,8 +225,10 @@ function SidebarList(props: {
   );
 }
 
-export default function SidebarNav({ isAdmin, navLocks }: SidebarNavProps) {
+export default function SidebarNav({ isAdmin, navLocks, navVariant, showLeadInbox }: SidebarNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const inferredConnectBasic = !isAdmin && navLocks?.qr === true && navLocks?.analytics === true && navLocks?.heatmap === true;
+  const resolvedVariant: DashboardNavVariant = navVariant || (inferredConnectBasic ? "connect-basic" : "default");
 
   return (
     <>
@@ -167,7 +242,7 @@ export default function SidebarNav({ isAdmin, navLocks }: SidebarNavProps) {
       </button>
 
       <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
-        <SidebarList isAdmin={isAdmin} navLocks={navLocks} />
+        <SidebarList isAdmin={isAdmin} navLocks={navLocks} navVariant={resolvedVariant} showLeadInbox={showLeadInbox} />
       </aside>
 
       {mobileOpen ? <div className="ds-mobile-backdrop" onClick={() => setMobileOpen(false)} /> : null}
@@ -179,7 +254,13 @@ export default function SidebarNav({ isAdmin, navLocks }: SidebarNavProps) {
             <X size={16} />
           </button>
         </div>
-        <SidebarList isAdmin={isAdmin} navLocks={navLocks} onNavigate={() => setMobileOpen(false)} />
+        <SidebarList
+          isAdmin={isAdmin}
+          navLocks={navLocks}
+          navVariant={resolvedVariant}
+          showLeadInbox={showLeadInbox}
+          onNavigate={() => setMobileOpen(false)}
+        />
       </aside>
     </>
   );

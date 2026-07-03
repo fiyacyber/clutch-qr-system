@@ -46,7 +46,11 @@ export default async function ConnectGuidedSetupPage() {
     : createDefaultBuilderConfig("#111111");
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navVariant="onboarding"
+      showLeadInbox={Boolean(profile?.id)}
+    >
       <main className="container connect-setup-page-shell">
         {advancedBuilderUnlocked ? <ConnectTabs active="profile" showBuilder={advancedBuilderUnlocked} /> : null}
 
