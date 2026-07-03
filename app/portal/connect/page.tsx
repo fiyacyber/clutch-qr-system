@@ -259,7 +259,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const profileLinks = links || [];
   const activeLinks = profileLinks.filter((link: any) => link.is_active !== false).length;
-  const setupComplete = isConnectSetupComplete(customer, profile, { links: profileLinks });
+  const setupComplete = isConnectSetupComplete(customer, profile, { links: profileLinks, requirePublished: true });
   const hasCoverPhoto = Boolean((profile as any).cover_url) || hasBuilderBannerImage((profile as any).builder_config);
 
   const linkedQr = (qrRows || []).find(

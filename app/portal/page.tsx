@@ -89,13 +89,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const admin = createSupabaseAdminClient();
   const { data: connectProfile } = await admin
     .from("profiles")
-    .select("id, business_name, contact_name, title, slug, phone, email, website, builder_config, theme_color")
+    .select("id, business_name, contact_name, title, slug, is_active, phone, email, website, builder_config, theme_color")
     .eq("customer_id", customer.id)
     .maybeSingle();
-
-  if (!customer.is_admin && !isConnectSetupComplete(customer, connectProfile || null)) {
-    redirect("/portal/connect/setup");
-  }
 
   const [qrCodesResult, connectProfilesResult] = await Promise.all([
     runGuardedDashboardTask({
@@ -218,7 +214,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const hasConnectProfile = Boolean(connectProfile?.id);
-  const setupComplete = isConnectSetupComplete(customer, connectProfile || null);
+  const setupComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: true });
   const smartCardPrimaryCtaLabel = !hasConnectProfile
     ? "Begin Guided Setup"
     : setupComplete

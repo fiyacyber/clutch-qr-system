@@ -355,6 +355,8 @@ type ConnectSetupProfile = {
   contact_name?: string | null;
   title?: string | null;
   slug?: string | null;
+  is_active?: boolean | null;
+  setup_completed?: boolean | null;
   phone?: string | null;
   email?: string | null;
   website?: string | null;
@@ -421,10 +423,14 @@ function hasVisibleLinks(profile: ConnectSetupProfile | null | undefined, links?
 export function isConnectSetupComplete(
   customer?: ConnectSetupCustomer | null,
   profile?: ConnectSetupProfile | null,
-  options?: { links?: ConnectSetupLink[] }
+  options?: { links?: ConnectSetupLink[]; requirePublished?: boolean }
 ) {
   if (!customer || !profile) return false;
   if (customer.is_admin) return true;
+
+  if (options?.requirePublished && (profile.is_active === false || profile.setup_completed === false)) {
+    return false;
+  }
 
   const slugCheck = validateConnectSlug(String(profile.slug || ""), { allowEmpty: false });
   if (!slugCheck.valid) return false;

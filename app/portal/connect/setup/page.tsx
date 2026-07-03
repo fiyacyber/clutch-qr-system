@@ -36,7 +36,7 @@ export default async function ConnectGuidedSetupPage() {
     : { data: [] as Array<Record<string, any>> };
 
   const currentProfileLinks = links || [];
-  const setupComplete = isConnectSetupComplete(customer, profile || null, { links: currentProfileLinks });
+  const setupComplete = isConnectSetupComplete(customer, profile || null, { links: currentProfileLinks, requirePublished: true });
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
   const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
   const builderConfig = profile?.builder_config
