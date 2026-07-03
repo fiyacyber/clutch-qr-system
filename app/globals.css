@@ -12978,11 +12978,11 @@ input.saas-font-search:focus-visible {
 }
 
 .builder-public-profile[data-banner-type="solid"] .builder-global-banner::before {
-  background: #f3f3f3;
+  background: transparent;
 }
 
 .builder-public-profile[data-banner-type="gradient"] .builder-global-banner::before {
-  background: linear-gradient(135deg, #ffffff, #f2f2f2);
+  background: transparent;
 }
 
 .builder-public-profile[data-banner-type="image"] .builder-global-banner::before {
