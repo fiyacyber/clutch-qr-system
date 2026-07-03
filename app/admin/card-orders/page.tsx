@@ -120,7 +120,7 @@ const QUICK_ACTION_STATUSES = [
 
 const STATUS_MAP = new Map<string, string>(FULFILLMENT_STATUSES.map((status) => [status.value, status.label]));
 const ALLOWED_UPDATE_STATUSES = new Set(FULFILLMENT_STATUSES.map((status) => status.value));
-const FILTER_SET = new Set(FILTER_OPTIONS.map((status) => status.value));
+const FILTER_SET = new Set<string>(FILTER_OPTIONS.map((status) => status.value));
 
 function toStatusLabel(value: string | null | undefined) {
   if (!value) return "Setup Pending";
