@@ -5901,10 +5901,6 @@ button:disabled {
     padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
   }
 
-  .connect-setup-panel {
-    padding-bottom: 84px;
-  }
-
   .connect-setup-layout {
     grid-template-columns: 1fr;
   }
@@ -5938,6 +5934,16 @@ button:disabled {
 
   .connect-setup-panel {
     padding-bottom: 88px;
+  }
+
+  .connect-setup-card[data-current-step="contact"] .connect-setup-panel {
+    padding-bottom: 112px;
+    scroll-padding-bottom: 120px;
+  }
+
+  .connect-setup-card[data-current-step="contact"] .connect-setup-contact-field,
+  .connect-setup-card[data-current-step="contact"] .connect-setup-contact-field .input {
+    scroll-margin-bottom: 120px;
   }
 
   .connect-setup-footer-actions {
