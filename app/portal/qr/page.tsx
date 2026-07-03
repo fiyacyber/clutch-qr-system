@@ -182,13 +182,15 @@ export default async function StoredQrCodesPage() {
           />
         ) : null}
 
-        <StoredQrLibrary
-          items={libraryRows}
-          usage={{
-            used,
-            limit: hasDynamicQr ? (plan.code === "admin" ? null : limit) : 0,
-          }}
-        />
+        {hasDynamicQr ? (
+          <StoredQrLibrary
+            items={libraryRows}
+            usage={{
+              used,
+              limit: plan.code === "admin" ? null : limit,
+            }}
+          />
+        ) : null}
       </main>
     </DashboardShell>
   );

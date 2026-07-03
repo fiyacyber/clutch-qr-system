@@ -10,7 +10,7 @@ import {
   GUIDED_SETUP_ENTRY_PATH,
 } from "@/lib/onboarding-routing";
 import { isConnectSetupComplete } from "@/lib/connect";
-import { getAdvancedBuilderLockMessage, isAdvancedBuilderUnlocked } from "@/lib/plans";
+import { getAdvancedBuilderLockMessage, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createDefaultBuilderConfig, sanitizeBuilderConfig } from "@/lib/builder-config";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -37,6 +37,9 @@ export default async function ConnectGuidedSetupPage() {
 
   const currentProfileLinks = links || [];
   const setupComplete = isConnectSetupComplete(customer, profile || null, { links: currentProfileLinks, requirePublished: true });
+  const plan = getCustomerPlan(customer);
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
   const advancedBuilderLockMessage = getAdvancedBuilderLockMessage(customer);
   const builderConfig = profile?.builder_config
@@ -48,6 +51,11 @@ export default async function ConnectGuidedSetupPage() {
       isAdmin={Boolean(customer.is_admin)}
       navVariant="onboarding"
       showGuidedSetup={!setupComplete}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
     >
       <main className="container connect-setup-page-shell">
         {advancedBuilderUnlocked ? <ConnectTabs active="profile" showBuilder={advancedBuilderUnlocked} /> : null}

@@ -333,7 +333,13 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   return (
     <DashboardShell
       isAdmin={Boolean(customer.is_admin)}
+      navVariant={plan.code === "connect_basic" ? "connect-basic" : "default"}
       showGuidedSetup={!setupComplete}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
     >
       <main className="container connect-center-shell">
         <DashboardHeader

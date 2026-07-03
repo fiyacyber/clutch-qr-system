@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
+import { getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function PortalConnectLinksPage() {
@@ -11,6 +12,12 @@ export default async function PortalConnectLinksPage() {
 
   if (!user) redirect("/login");
   if (!customer) redirect("/portal");
+  if (customer.must_change_password) redirect("/change-password");
+
+  const plan = getCustomerPlan(customer);
+  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
 
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
@@ -20,7 +27,7 @@ export default async function PortalConnectLinksPage() {
     .maybeSingle();
 
   if (!profile) {
-    redirect("/portal/connect/build");
+    redirect(advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup");
   }
 
   const { data: links } = await admin
@@ -30,14 +37,22 @@ export default async function PortalConnectLinksPage() {
     .order("sort_order", { ascending: true });
 
   return (
-    <DashboardShell isAdmin={Boolean(customer.is_admin)}>
+    <DashboardShell
+      isAdmin={Boolean(customer.is_admin)}
+      navVariant={plan.code === "connect_basic" ? "connect-basic" : "default"}
+      navLocks={{
+        qr: !hasDynamicQr,
+        analytics: !hasHeatmap,
+        heatmap: !hasHeatmap,
+      }}
+    >
       <main className="container connect-center-shell">
         <DashboardHeader
           title="Clutch Connect Links"
           subtitle="Review your public action links and jump into the builder for full editing."
           actions={(
             <div className="connect-center-header-actions">
-              <Link className="btn primary" href="/portal/connect/build">Open Builder</Link>
+              {advancedBuilderUnlocked ? <Link className="btn primary" href="/portal/connect/build">Open Builder</Link> : null}
               <Link className="btn secondary" href="/portal/connect">Overview</Link>
             </div>
           )}
@@ -57,7 +72,9 @@ export default async function PortalConnectLinksPage() {
             ))}
           </ul>
           <div className="connect-center-inline-actions">
-            <Link className="btn primary" href="/portal/connect/build">Manage in Builder</Link>
+            <Link className="btn primary" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
+              {advancedBuilderUnlocked ? "Manage in Builder" : "Manage in Guided Setup"}
+            </Link>
             {profile.slug ? <Link className="btn ghost" href={`/u/${profile.slug}`} target="_blank">Open Public Profile</Link> : null}
           </div>
         </section>

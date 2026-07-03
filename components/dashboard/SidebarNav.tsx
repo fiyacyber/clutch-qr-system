@@ -61,7 +61,12 @@ const navItems: NavItem[] = [
     label: "Clutch Connect",
     href: "/portal/connect",
     icon: Link2,
-    match: (pathname) => pathname.startsWith("/portal/connect") || pathname.startsWith("/clutch-connect"),
+    match: (pathname) =>
+      pathname === "/portal/connect" ||
+      pathname === "/portal/connect/build" ||
+      pathname === "/portal/connect/edit" ||
+      pathname === "/portal/connect/links" ||
+      pathname.startsWith("/clutch-connect"),
   },
   {
     key: "guided-setup",
@@ -231,6 +236,7 @@ function SidebarList(props: {
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
   navVariant: DashboardNavVariant;
+  showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
 }) {
   return (
@@ -240,7 +246,7 @@ function SidebarList(props: {
   );
 }
 
-export default function SidebarNav({ isAdmin, navLocks, navVariant, showLeadInbox }: SidebarNavProps) {
+export default function SidebarNav({ isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox }: SidebarNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const inferredConnectBasic = !isAdmin && navLocks?.qr === true && navLocks?.analytics === true && navLocks?.heatmap === true;
   const resolvedVariant: DashboardNavVariant = navVariant || (inferredConnectBasic ? "connect-basic" : "default");
@@ -257,7 +263,13 @@ export default function SidebarNav({ isAdmin, navLocks, navVariant, showLeadInbo
       </button>
 
       <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
-        <SidebarList isAdmin={isAdmin} navLocks={navLocks} navVariant={resolvedVariant} showLeadInbox={showLeadInbox} />
+        <SidebarList
+          isAdmin={isAdmin}
+          navLocks={navLocks}
+          navVariant={resolvedVariant}
+          showGuidedSetup={showGuidedSetup}
+          showLeadInbox={showLeadInbox}
+        />
       </aside>
 
       {mobileOpen ? <div className="ds-mobile-backdrop" onClick={() => setMobileOpen(false)} /> : null}
@@ -273,6 +285,7 @@ export default function SidebarNav({ isAdmin, navLocks, navVariant, showLeadInbo
           isAdmin={isAdmin}
           navLocks={navLocks}
           navVariant={resolvedVariant}
+          showGuidedSetup={showGuidedSetup}
           showLeadInbox={showLeadInbox}
           onNavigate={() => setMobileOpen(false)}
         />
