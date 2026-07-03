@@ -524,12 +524,20 @@ function getAppBaseUrl() {
   return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
 }
 
+function getClutchConnectPublicBaseUrl() {
+  return (
+    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    "https://clutchconnect.link"
+  ).replace(/\/$/, "");
+}
+
 function buildSmartCardDestinationUrl(profileSlug?: string | null) {
-  const appBase = getAppBaseUrl();
+  const connectBase = getClutchConnectPublicBaseUrl();
   if (profileSlug) {
-    return `${appBase}/u/${encodeURIComponent(profileSlug)}`;
+    return `${connectBase}/${encodeURIComponent(profileSlug)}`;
   }
-  return `${appBase}/setup/guided`;
+  return `${connectBase}/setup/guided`;
 }
 
 function toSlugToken(value: string, fallback: string) {

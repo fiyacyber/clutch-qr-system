@@ -54,10 +54,18 @@ function getAppBaseUrl() {
   return (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
 }
 
+function getClutchConnectPublicBaseUrl() {
+  return (
+    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    "https://clutchconnect.link"
+  ).replace(/\/$/, "");
+}
+
 function buildSmartCardDestination(slug?: string | null) {
-  const appBase = getAppBaseUrl();
-  if (slug) return `${appBase}/u/${encodeURIComponent(slug)}`;
-  return `${appBase}/setup/guided`;
+  const connectBase = getClutchConnectPublicBaseUrl();
+  if (slug) return `${connectBase}/${encodeURIComponent(slug)}`;
+  return `${connectBase}/setup/guided`;
 }
 
 function joinName(first: string, last: string) {

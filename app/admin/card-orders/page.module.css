@@ -322,6 +322,55 @@
   gap: 0.6rem;
 }
 
+.smartCardLinksSection {
+  border: 1px solid #dbe6f2;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.smartCardLinksGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.linkValueWrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.linkValueWrap button {
+  border: 1px solid #0b2240;
+  background: #0b2240;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 0.54rem 0.72rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.linkValueWrap button:disabled {
+  opacity: 0.45;
+}
+
+.smartCardWarning {
+  color: #825000;
+  font-weight: 700;
+}
+
+.smartCardRepairWrap {
+  border: 1px solid #ffd8a6;
+  background: #fff8ee;
+  border-radius: 11px;
+  padding: 0.58rem 0.65rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
 .handoffTitle {
   margin: 0;
   color: #0f2a4a;
@@ -510,6 +559,11 @@
 
   .handoffGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .smartCardLinksGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
   }
 
   .handoffGrid > :nth-child(3) {

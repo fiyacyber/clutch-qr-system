@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import CopyTextButton from "@/components/admin/CopyTextButton";
+import AdminDashboardTabs from "@/components/admin/AdminDashboardTabs";
 import { requireCustomer } from "@/lib/auth";
 import { sendTransactionalEmail } from "@/lib/email";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -28,6 +29,12 @@ interface CardOrdersPageProps {
 type CardOrderRow = {
   id: string;
   customer_id: string | null;
+  system_qr_code_id: string | null;
+  system_qr_slug: string | null;
+  system_qr_url: string | null;
+  system_qr_png_url: string | null;
+  system_qr_svg_url: string | null;
+  nfc_url: string | null;
   shopify_order_number: string | null;
   customer_name: string | null;
   customer_email: string | null;
@@ -75,7 +82,15 @@ type CustomerSetupRow = {
 
 type ProfileSetupRow = {
   customer_id: string;
+  slug: string | null;
   setup_completed?: boolean | null;
+};
+
+type SmartCardQrRow = {
+  id: string;
+  card_order_id: string | null;
+  slug: string | null;
+  destination_url: string | null;
 };
 
 const FULFILLMENT_STATUSES = [
@@ -202,6 +217,24 @@ function toInternalUrl(value: string | null) {
   }
 }
 
+function getClutchConnectPublicBaseUrl() {
+  return (
+    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    "https://clutchconnect.link"
+  ).replace(/\/$/, "");
+}
+
+function buildBusinessProfileLink(profileSlug: string | null | undefined) {
+  const slug = String(profileSlug || "").trim();
+  if (!slug) return null;
+  return `${getClutchConnectPublicBaseUrl()}/${encodeURIComponent(slug)}`;
+}
+
+function normalizeUrlForComparison(value: string | null | undefined) {
+  return String(value || "").trim().replace(/\/$/, "");
+}
+
 function isInternalHandlerEmail(email: string) {
   return email.toLowerCase().endsWith("@clutchprintshop.com");
 }
@@ -234,6 +267,10 @@ function buildHandlerEmailText(
     supplierOrderId: string | null;
     proofUrl: string | null;
     internalNotes: string | null;
+    businessProfileLink: string | null;
+    cardTapLink: string | null;
+    qrPngUrl: string | null;
+    qrSvgUrl: string | null;
     isInternalHandler: boolean;
     adminBaseUrl: string;
   }
@@ -259,6 +296,10 @@ function buildHandlerEmailText(
     `Business Email: ${order.engraving_email || "N/A"}`,
     `Custom Details: ${order.custom_details || "N/A"}`,
     `Proof URL: ${params.proofUrl || "N/A"}`,
+    `Business Profile Link: ${params.businessProfileLink || "N/A"}`,
+    `Card Tap Link: ${params.cardTapLink || "N/A"}`,
+    `QR PNG URL: ${params.qrPngUrl || "N/A"}`,
+    `QR SVG URL: ${params.qrSvgUrl || "N/A"}`,
     `Internal Notes: ${params.internalNotes || "N/A"}`,
     `Fulfillment Notes: ${params.fulfillmentNotes || "N/A"}`,
     `Supplier Order ID: ${params.supplierOrderId || "N/A"}`,
@@ -352,7 +393,7 @@ async function loadProfileSetupRows(admin: ReturnType<typeof createSupabaseAdmin
 
   const withSetupCompleted = await admin
     .from("profiles")
-    .select("customer_id, setup_completed")
+    .select("customer_id, slug, setup_completed")
     .in("customer_id", customerIds);
 
   if (!withSetupCompleted.error) {
@@ -365,7 +406,7 @@ async function loadProfileSetupRows(admin: ReturnType<typeof createSupabaseAdmin
 
   const fallback = await admin
     .from("profiles")
-    .select("customer_id")
+    .select("customer_id, slug")
     .in("customer_id", customerIds);
 
   if (fallback.error) {
@@ -373,6 +414,44 @@ async function loadProfileSetupRows(admin: ReturnType<typeof createSupabaseAdmin
   }
 
   return (fallback.data || []) as ProfileSetupRow[];
+}
+
+async function loadSmartCardQrRows(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  qrCodeIds: string[],
+  cardOrderIds: string[]
+) {
+  const rows: SmartCardQrRow[] = [];
+
+  if (qrCodeIds.length) {
+    const byIds = await admin
+      .from("qr_codes")
+      .select("id, card_order_id, slug, destination_url")
+      .in("id", qrCodeIds);
+
+    if (byIds.error) {
+      throw byIds.error;
+    }
+
+    rows.push(...((byIds.data || []) as SmartCardQrRow[]));
+  }
+
+  if (cardOrderIds.length) {
+    const byOrderIds = await admin
+      .from("qr_codes")
+      .select("id, card_order_id, slug, destination_url")
+      .eq("is_system", true)
+      .eq("qr_type", "smart_card")
+      .in("card_order_id", cardOrderIds);
+
+    if (byOrderIds.error) {
+      throw byOrderIds.error;
+    }
+
+    rows.push(...((byOrderIds.data || []) as SmartCardQrRow[]));
+  }
+
+  return rows;
 }
 
 function hasMissingEngravingDetails(order: CardOrderRow) {
@@ -616,7 +695,7 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
       const { data: row, error: rowError } = await admin
         .from("card_orders")
         .select(
-          "id, shopify_order_number, customer_name, customer_email, customer_phone, product_title, variant_title, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, custom_details, internal_notes, proof_url, supplier_order_id, fulfillment_notes, raw_order_payload"
+          "id, customer_id, system_qr_slug, system_qr_url, system_qr_png_url, system_qr_svg_url, nfc_url, shopify_order_number, customer_name, customer_email, customer_phone, product_title, variant_title, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, custom_details, internal_notes, proof_url, supplier_order_id, fulfillment_notes, raw_order_payload"
         )
         .eq("id", cardOrderId)
         .maybeSingle();
@@ -629,6 +708,23 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
 
       const appBaseUrl = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
       const internalHandler = isInternalHandlerEmail(handlerEmail);
+      const profileSlugResult = row.customer_id
+        ? await admin
+            .from("profiles")
+            .select("slug")
+            .eq("customer_id", row.customer_id)
+            .maybeSingle()
+        : { data: null as any };
+      const businessProfileLink = buildBusinessProfileLink(profileSlugResult.data?.slug || null);
+      const cardTapLink =
+        String(row.nfc_url || row.system_qr_url || "").trim() ||
+        (row.system_qr_slug ? `${appBaseUrl}/qr/${encodeURIComponent(row.system_qr_slug)}` : null);
+      const qrPngUrl =
+        String(row.system_qr_png_url || "").trim() ||
+        (row.system_qr_slug ? `${appBaseUrl}/qr/${encodeURIComponent(row.system_qr_slug)}?format=png` : null);
+      const qrSvgUrl =
+        String(row.system_qr_svg_url || "").trim() ||
+        (row.system_qr_slug ? `${appBaseUrl}/qr/${encodeURIComponent(row.system_qr_slug)}?format=svg` : null);
       const mergedOrder = {
         ...(row as any),
         internal_notes: basePatch.internal_notes,
@@ -645,6 +741,10 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
         supplierOrderId: basePatch.supplier_order_id,
         proofUrl: basePatch.proof_url,
         internalNotes: basePatch.internal_notes,
+        businessProfileLink,
+        cardTapLink,
+        qrPngUrl,
+        qrSvgUrl,
         isInternalHandler: internalHandler,
         adminBaseUrl: appBaseUrl,
       });
@@ -702,11 +802,201 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
     }
   }
 
+  async function repairSmartCardDestination(formData: FormData) {
+    "use server";
+
+    const { user: actionUser, customer: actionCustomer } = await requireCustomer();
+    if (!actionUser || !actionCustomer?.is_admin) return;
+
+    const cardOrderId = String(formData.get("card_order_id") || "").trim();
+    if (!cardOrderId) return;
+
+    const redirectQuery = String(formData.get("redirect_q") || "").trim();
+    const redirectStatus = String(formData.get("redirect_status") || "all").trim().toLowerCase();
+    const redirectParams = new URLSearchParams();
+    if (redirectQuery) redirectParams.set("q", redirectQuery);
+    if (redirectStatus && redirectStatus !== "all") redirectParams.set("status", redirectStatus);
+
+    const actionAdmin = createSupabaseAdminClient();
+    const { data: orderRow } = await actionAdmin
+      .from("card_orders")
+      .select("id, customer_id, system_qr_code_id")
+      .eq("id", cardOrderId)
+      .maybeSingle();
+
+    if (!orderRow?.customer_id) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const { data: profileRow } = await actionAdmin
+      .from("profiles")
+      .select("slug")
+      .eq("customer_id", orderRow.customer_id)
+      .maybeSingle();
+
+    const profileSlug = String(profileRow?.slug || "").trim();
+    if (!profileSlug) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const desiredDestination = `${getClutchConnectPublicBaseUrl()}/${encodeURIComponent(profileSlug)}`;
+    let targetQrId = String(orderRow.system_qr_code_id || "").trim();
+
+    if (!targetQrId) {
+      const { data: qrByOrder } = await actionAdmin
+        .from("qr_codes")
+        .select("id")
+        .eq("card_order_id", cardOrderId)
+        .eq("is_system", true)
+        .eq("qr_type", "smart_card")
+        .maybeSingle();
+      targetQrId = String(qrByOrder?.id || "").trim();
+    }
+
+    if (targetQrId) {
+      await actionAdmin
+        .from("qr_codes")
+        .update({ destination_url: desiredDestination })
+        .eq("id", targetQrId);
+    }
+
+    revalidatePath("/admin/card-orders");
+    redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+  }
+
+  async function repairMissingSmartCardQr(formData: FormData) {
+    "use server";
+
+    const { user: actionUser, customer: actionCustomer } = await requireCustomer();
+    if (!actionUser || !actionCustomer?.is_admin) return;
+
+    const cardOrderId = String(formData.get("card_order_id") || "").trim();
+    if (!cardOrderId) return;
+
+    const redirectQuery = String(formData.get("redirect_q") || "").trim();
+    const redirectStatus = String(formData.get("redirect_status") || "all").trim().toLowerCase();
+    const redirectParams = new URLSearchParams();
+    if (redirectQuery) redirectParams.set("q", redirectQuery);
+    if (redirectStatus && redirectStatus !== "all") redirectParams.set("status", redirectStatus);
+
+    const actionAdmin = createSupabaseAdminClient();
+    const appBase = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
+
+    const { data: orderRow } = await actionAdmin
+      .from("card_orders")
+      .select("id, customer_id, system_qr_code_id, system_qr_slug, system_qr_url, system_qr_png_url, system_qr_svg_url, nfc_url")
+      .eq("id", cardOrderId)
+      .maybeSingle();
+
+    if (!orderRow?.customer_id) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const existingQrByOrder = await actionAdmin
+      .from("qr_codes")
+      .select("id")
+      .eq("card_order_id", cardOrderId)
+      .eq("is_system", true)
+      .eq("qr_type", "smart_card")
+      .maybeSingle();
+
+    if (existingQrByOrder.data?.id || orderRow.system_qr_code_id) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const trackingSlug = String(orderRow.system_qr_slug || "").trim();
+    if (!trackingSlug) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const { data: profileRow } = await actionAdmin
+      .from("profiles")
+      .select("id, slug")
+      .eq("customer_id", orderRow.customer_id)
+      .maybeSingle();
+
+    const profileSlug = String(profileRow?.slug || "").trim();
+    if (!profileSlug) {
+      revalidatePath("/admin/card-orders");
+      redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+    }
+
+    const destination = `${getClutchConnectPublicBaseUrl()}/${encodeURIComponent(profileSlug)}`;
+    const qrUrl = `${appBase}/qr/${encodeURIComponent(trackingSlug)}`;
+    const qrPngUrl = `${qrUrl}?format=png`;
+    const qrSvgUrl = `${qrUrl}?format=svg`;
+
+    const existingBySlug = await actionAdmin
+      .from("qr_codes")
+      .select("id")
+      .eq("slug", trackingSlug)
+      .maybeSingle();
+
+    let qrCodeId = String(existingBySlug.data?.id || "").trim();
+
+    if (qrCodeId) {
+      await actionAdmin
+        .from("qr_codes")
+        .update({
+          customer_id: orderRow.customer_id,
+          card_order_id: cardOrderId,
+          name: "Smart Card Profile",
+          qr_type: "smart_card",
+          is_system: true,
+          is_active: true,
+          destination_url: destination,
+          profile_id: profileRow?.id || null,
+          connect_profile_id: profileRow?.id || null,
+        })
+        .eq("id", qrCodeId);
+    } else {
+      const insert = await actionAdmin
+        .from("qr_codes")
+        .insert({
+          customer_id: orderRow.customer_id,
+          card_order_id: cardOrderId,
+          name: "Smart Card Profile",
+          qr_type: "smart_card",
+          is_system: true,
+          is_active: true,
+          slug: trackingSlug,
+          destination_url: destination,
+          profile_id: profileRow?.id || null,
+          connect_profile_id: profileRow?.id || null,
+        })
+        .select("id")
+        .single();
+
+      qrCodeId = String(insert.data?.id || "").trim();
+    }
+
+    if (qrCodeId) {
+      await actionAdmin
+        .from("card_orders")
+        .update({
+          system_qr_code_id: qrCodeId,
+          system_qr_url: String(orderRow.system_qr_url || "").trim() || qrUrl,
+          nfc_url: String(orderRow.nfc_url || "").trim() || qrUrl,
+          system_qr_png_url: String(orderRow.system_qr_png_url || "").trim() || qrPngUrl,
+          system_qr_svg_url: String(orderRow.system_qr_svg_url || "").trim() || qrSvgUrl,
+        })
+        .eq("id", cardOrderId);
+    }
+
+    revalidatePath("/admin/card-orders");
+    redirect(`/admin/card-orders${redirectParams.toString() ? `?${redirectParams.toString()}` : ""}`);
+  }
+
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("card_orders")
     .select(
-      "id, customer_id, shopify_order_number, customer_name, customer_email, customer_phone, product_title, variant_title, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, custom_details, internal_notes, proof_url, proof_token, approver_name, approver_email, proof_sent_at, proof_viewed_at, customer_approved_at, changes_requested_at, approval_notes, approval_status, supplier_ordered_at, tracking_number, tracking_url, fulfilled_at, setup_completed_at, fulfillment_handler_email, fulfillment_sent_at, fulfillment_status, fulfillment_notes, supplier_order_id, raw_order_payload, created_at, updated_at, status"
+      "id, customer_id, system_qr_code_id, system_qr_slug, system_qr_url, system_qr_png_url, system_qr_svg_url, nfc_url, shopify_order_number, customer_name, customer_email, customer_phone, product_title, variant_title, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, custom_details, internal_notes, proof_url, proof_token, approver_name, approver_email, proof_sent_at, proof_viewed_at, customer_approved_at, changes_requested_at, approval_notes, approval_status, supplier_ordered_at, tracking_number, tracking_url, fulfilled_at, setup_completed_at, fulfillment_handler_email, fulfillment_sent_at, fulfillment_status, fulfillment_notes, supplier_order_id, raw_order_payload, created_at, updated_at, status"
     )
     .order("created_at", { ascending: false })
     .limit(600);
@@ -730,16 +1020,23 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
 
   const allOrders = (data || []) as CardOrderRow[];
   const uniqueCustomerIds = Array.from(new Set(allOrders.map((order) => order.customer_id).filter(Boolean) as string[]));
+  const uniqueQrCodeIds = Array.from(new Set(allOrders.map((order) => order.system_qr_code_id).filter(Boolean) as string[]));
+  const uniqueCardOrderIds = allOrders.map((order) => order.id);
 
-  const [customerRows, profileRows] = await Promise.all([
+  const [customerRows, profileRows, smartCardQrRows] = await Promise.all([
     loadCustomerSetupRows(admin, uniqueCustomerIds),
     loadProfileSetupRows(admin, uniqueCustomerIds),
+    loadSmartCardQrRows(admin, uniqueQrCodeIds, uniqueCardOrderIds),
   ]);
 
   const appBaseUrl = (process.env.CLUTCH_APP_BASE_URL || "https://qr.clutchprintshop.com").replace(/\/$/, "");
 
   const customerMap = new Map(customerRows.map((row) => [row.id, row]));
   const profileMap = new Map(profileRows.map((row) => [row.customer_id, row]));
+  const smartCardQrById = new Map(smartCardQrRows.map((row) => [row.id, row]));
+  const smartCardQrByOrderId = new Map(
+    smartCardQrRows.filter((row) => row.card_order_id).map((row) => [String(row.card_order_id), row])
+  );
 
   const summary = {
     setupPending: allOrders.filter((row) => row.status === "setup_pending").length,
@@ -772,6 +1069,8 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
           title="Smart Card Orders"
           subtitle="Internal fulfillment workflow for engraving review, proofing, supplier ordering, tracking, delivery, and proof approval."
         />
+
+        <AdminDashboardTabs activeTab="card-orders" />
 
         {diagnostics.hasHandlerAttempt ? (
           <section className={`${styles.handoffDiagnostic} ${diagnostics.sentToHandler ? styles.handoffSuccess : styles.handoffFailure}`}>
@@ -858,6 +1157,33 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
             {filteredOrders.map((order) => {
               const { warnings, setupState } = getWarningLabels(order, customerMap, profileMap);
               const proofLink = order.proof_token ? `${appBaseUrl}/proof/card-order/${encodeURIComponent(order.proof_token)}` : "";
+              const profileRow = order.customer_id ? profileMap.get(order.customer_id) : null;
+              const businessProfileSlug = String(profileRow?.slug || "").trim() || null;
+              const businessProfileLink = buildBusinessProfileLink(businessProfileSlug);
+              const smartCardQr =
+                (order.system_qr_code_id ? smartCardQrById.get(order.system_qr_code_id) : null) ||
+                smartCardQrByOrderId.get(order.id) ||
+                null;
+              const qrTrackingSlug = order.system_qr_slug || smartCardQr?.slug || null;
+              const cardTapLink =
+                order.nfc_url ||
+                order.system_qr_url ||
+                (qrTrackingSlug ? `${appBaseUrl}/qr/${encodeURIComponent(qrTrackingSlug)}` : null);
+              const qrDestination = smartCardQr?.destination_url || null;
+              const qrPngUrl =
+                order.system_qr_png_url ||
+                (qrTrackingSlug ? `${appBaseUrl}/qr/${encodeURIComponent(qrTrackingSlug)}?format=png` : null);
+              const qrSvgUrl =
+                order.system_qr_svg_url ||
+                (qrTrackingSlug ? `${appBaseUrl}/qr/${encodeURIComponent(qrTrackingSlug)}?format=svg` : null);
+              const hasSmartCardQr = Boolean(smartCardQr?.id);
+              const destinationMatchesProfile =
+                Boolean(businessProfileLink) &&
+                Boolean(qrDestination) &&
+                normalizeUrlForComparison(businessProfileLink) === normalizeUrlForComparison(qrDestination);
+              const profileSlugMissingWarning =
+                "Profile slug not set yet — customer has not completed Guided Setup.";
+              const smartCardQrMissingWarning = "Smart Card QR has not been created yet.";
 
               return (
                 <article key={order.id} className={styles.orderCard}>
@@ -906,6 +1232,119 @@ export default async function CardOrdersPage({ searchParams }: CardOrdersPagePro
                     <div className={styles.infoRow}><p className={styles.infoLabel}>Fulfilled</p><p className={styles.infoValue}>{formatDate(order.fulfilled_at)}</p></div>
                     <div className={styles.infoRow}><p className={styles.infoLabel}>Setup Completed At</p><p className={styles.infoValue}>{formatDate(order.setup_completed_at)}</p></div>
                   </div>
+
+                  <section className={styles.smartCardLinksSection}>
+                    <h3 className={styles.handoffTitle}>Smart Card Links</h3>
+                    <div className={styles.smartCardLinksGrid}>
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>Business Profile Slug</p>
+                        <p className={styles.infoValue}>
+                          {businessProfileSlug || <span className={styles.smartCardWarning}>{profileSlugMissingWarning}</span>}
+                        </p>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>Business Profile Link</p>
+                        <div className={styles.linkValueWrap}>
+                          <p className={styles.infoValue}>
+                            {businessProfileLink ? (
+                              <a href={businessProfileLink} target="_blank" rel="noreferrer">{businessProfileLink}</a>
+                            ) : (
+                              <span className={styles.smartCardWarning}>{profileSlugMissingWarning}</span>
+                            )}
+                          </p>
+                          <CopyTextButton value={businessProfileLink || ""} label="Copy link" />
+                        </div>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>Card Tap Link</p>
+                        <div className={styles.linkValueWrap}>
+                          <p className={styles.infoValue}>
+                            {cardTapLink ? (
+                              <a href={cardTapLink} target="_blank" rel="noreferrer">{cardTapLink}</a>
+                            ) : (
+                              "-"
+                            )}
+                          </p>
+                          <CopyTextButton value={cardTapLink || ""} label="Copy link" />
+                        </div>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>QR Tracking Slug</p>
+                        <p className={styles.infoValue}>{qrTrackingSlug || "-"}</p>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>QR Destination</p>
+                        <p className={styles.infoValue}>
+                          {qrDestination ? (
+                            <a href={qrDestination} target="_blank" rel="noreferrer">{qrDestination}</a>
+                          ) : (
+                            "-"
+                          )}
+                        </p>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>QR PNG</p>
+                        <div className={styles.linkValueWrap}>
+                          <p className={styles.infoValue}>
+                            {qrPngUrl ? <a href={qrPngUrl} target="_blank" rel="noreferrer">{qrPngUrl}</a> : "-"}
+                          </p>
+                          <CopyTextButton value={qrPngUrl || ""} label="Copy link" />
+                        </div>
+                      </div>
+
+                      <div className={styles.infoRow}>
+                        <p className={styles.infoLabel}>QR SVG</p>
+                        <div className={styles.linkValueWrap}>
+                          <p className={styles.infoValue}>
+                            {qrSvgUrl ? <a href={qrSvgUrl} target="_blank" rel="noreferrer">{qrSvgUrl}</a> : "-"}
+                          </p>
+                          <CopyTextButton value={qrSvgUrl || ""} label="Copy link" />
+                        </div>
+                      </div>
+
+                      {businessProfileLink && qrDestination ? (
+                        <div className={styles.infoRow}>
+                          <p className={styles.infoLabel}>Destination Match</p>
+                          <p className={styles.infoValue}>
+                            {destinationMatchesProfile ? "Matches current Business Profile Link" : "Needs update"}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {!hasSmartCardQr ? (
+                      <div className={styles.smartCardRepairWrap}>
+                        <p className={styles.smartCardWarning}>{smartCardQrMissingWarning}</p>
+                        {businessProfileLink && qrTrackingSlug ? (
+                          <form action={repairMissingSmartCardQr}>
+                            <input type="hidden" name="card_order_id" value={order.id} />
+                            <input type="hidden" name="redirect_q" value={queryText} />
+                            <input type="hidden" name="redirect_status" value={activeStatus} />
+                            <button type="submit" className={styles.handoffButton}>Repair missing Smart Card QR</button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {businessProfileLink && qrDestination && !destinationMatchesProfile ? (
+                      <div className={styles.smartCardRepairWrap}>
+                        <p className={styles.smartCardWarning}>
+                          QR destination is out of sync with the current profile link.
+                        </p>
+                        <form action={repairSmartCardDestination}>
+                          <input type="hidden" name="card_order_id" value={order.id} />
+                          <input type="hidden" name="redirect_q" value={queryText} />
+                          <input type="hidden" name="redirect_status" value={activeStatus} />
+                          <button type="submit" className={styles.handoffButton}>Update QR destination to current Business Profile Link</button>
+                        </form>
+                      </div>
+                    ) : null}
+                  </section>
 
                   <form action={updateFulfillment} className={styles.editorForm}>
                     <input type="hidden" name="card_order_id" value={order.id} />
