@@ -1201,9 +1201,12 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (nextRoute === "complete") {
+        console.error("Guided setup publish failed", payload);
+      }
       setSaveState("error");
       setFieldErrors(payload.fieldErrors || {});
-      setSaveMessage(payload.error || "We could not save the draft.");
+      setSaveMessage(payload.detail || payload.error || "We could not save the draft.");
       return false;
     }
 
@@ -1609,7 +1612,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                     <label className="label connect-setup-span-2">
                       Custom slug
                       <div className="connect-setup-slug-row">
-                        <span>clutchconnect.link/u/</span>
+                        <span>clutchconnect.link/</span>
                         <input
                           className="input"
                           value={draft.basic.slug}

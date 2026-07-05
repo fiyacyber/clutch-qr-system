@@ -31,6 +31,14 @@ type SetupPayload = {
 
 const MAX_BEGINNER_LINKS = 6;
 const isDev = process.env.NODE_ENV !== "production";
+const OPTIONAL_PROFILE_COLUMNS = [
+  "cover_url",
+  "layout",
+  "show_card_showcase",
+  "show_lead_form",
+  "setup_completed_at",
+  "setup_completed",
+] as const;
 
 function isMissingColumnError(error: any) {
   const message = `${error?.message || ""} ${error?.details || ""}`.toLowerCase();
@@ -41,12 +49,58 @@ function isCheckConstraintError(error: any) {
   return String(error?.code || "") === "23514";
 }
 
+function shouldExposeDebugDetail(req: NextRequest) {
+  return isDev || req.headers.get("x-clutch-fetch") === "true";
+}
+
+function serializeSupabaseError(error: any) {
+  return {
+    message: error?.message || null,
+    code: error?.code || null,
+    details: error?.details || null,
+    hint: error?.hint || null,
+  };
+}
+
 function withDevDetail(body: Record<string, unknown>, detail?: unknown) {
   if (!isDev || detail == null) return body;
   return {
     ...body,
     detail: typeof detail === "string" ? detail : JSON.stringify(detail),
   };
+}
+
+function stripOptionalProfileColumns(payload: Record<string, unknown>) {
+  const nextPayload = { ...payload };
+  for (const key of OPTIONAL_PROFILE_COLUMNS) {
+    delete nextPayload[key];
+  }
+  return nextPayload;
+}
+
+function logProfileSaveFailure(step: "update" | "insert", error: any, payload: Record<string, unknown>) {
+  const serialized = serializeSupabaseError(error);
+  console.error("CONNECT SETUP profile save failed", {
+    step,
+    ...serialized,
+    attemptedKeys: Object.keys(payload),
+  });
+}
+
+function profileSaveErrorResponse(message: string, error: any, keys: string[], includeDetail: boolean) {
+  const serialized = serializeSupabaseError(error);
+  const body: Record<string, unknown> = {
+    error: message,
+  };
+
+  if (includeDetail) {
+    body.detail = serialized.message || serialized.details || serialized.hint || "Unknown Supabase error";
+    body.code = serialized.code;
+    body.keys = keys;
+    body.supabase = serialized;
+  }
+
+  return NextResponse.json(body, { status: 500 });
 }
 
 function isRecord(value: unknown): value is Record<string, any> {
@@ -213,6 +267,7 @@ function getBannerThemeSettings(theme: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const includeDebugDetail = shouldExposeDebugDetail(req);
     const { user, customer } = await requireCustomer();
     if (!user || !customer) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -653,10 +708,11 @@ export async function POST(req: NextRequest) {
         .select("*")
         .maybeSingle();
 
-      if (updateError && shouldPublish && isMissingColumnError(updateError)) {
-        const fallbackPayload = { ...profilePayload };
-        delete fallbackPayload.setup_completed;
-        delete fallbackPayload.setup_completed_at;
+      if (updateError && isMissingColumnError(updateError)) {
+        const fallbackPayload = stripOptionalProfileColumns(profilePayload);
+        console.warn("CONNECT SETUP profile update retrying without optional columns", {
+          removedKeys: OPTIONAL_PROFILE_COLUMNS,
+        });
         const retry = await admin
           .from("profiles")
           .update(fallbackPayload)
@@ -669,7 +725,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (updateError) {
-        return NextResponse.json(withDevDetail({ error: "Failed to save your setup draft." }, updateError.message), { status: 500 });
+        logProfileSaveFailure("update", updateError, profilePayload);
+        return profileSaveErrorResponse(
+          "Failed to save your setup draft.",
+          updateError,
+          Object.keys(profilePayload),
+          includeDebugDetail
+        );
       }
 
       savedProfile = updatedProfile || existingProfile;
@@ -683,10 +745,11 @@ export async function POST(req: NextRequest) {
         .select("*")
         .maybeSingle();
 
-      if (insertError && shouldPublish && isMissingColumnError(insertError)) {
-        const fallbackPayload = { ...profilePayload };
-        delete fallbackPayload.setup_completed;
-        delete fallbackPayload.setup_completed_at;
+      if (insertError && isMissingColumnError(insertError)) {
+        const fallbackPayload = stripOptionalProfileColumns(profilePayload);
+        console.warn("CONNECT SETUP profile insert retrying without optional columns", {
+          removedKeys: OPTIONAL_PROFILE_COLUMNS,
+        });
         const retry = await admin
           .from("profiles")
           .insert({
@@ -700,9 +763,22 @@ export async function POST(req: NextRequest) {
       }
 
       if (insertError || !insertedProfile) {
-        return NextResponse.json(
-          withDevDetail({ error: "Failed to create your setup draft." }, insertError?.message || "No profile inserted."),
-          { status: 500 }
+        if (insertError) {
+          logProfileSaveFailure("insert", insertError, { ...profilePayload, created_at: nowIso });
+        } else {
+          console.error("CONNECT SETUP profile insert failed", {
+            step: "insert",
+            message: "No profile inserted.",
+            code: null,
+            details: null,
+            attemptedKeys: Object.keys({ ...profilePayload, created_at: nowIso }),
+          });
+        }
+        return profileSaveErrorResponse(
+          "Failed to create your setup draft.",
+          insertError || { message: "No profile inserted." },
+          Object.keys({ ...profilePayload, created_at: nowIso }),
+          includeDebugDetail
         );
       }
 
@@ -792,27 +868,25 @@ export async function POST(req: NextRequest) {
             }
           });
 
-        if (!("setup_completed" in profilePayload) || !("setup_completed_at" in profilePayload)) {
-          await admin
-            .from("profiles")
-            .update({ setup_completed: true, setup_completed_at: nowIso })
-            .eq("id", savedProfile.id)
-            .then(({ error }) => {
-              if (error && isMissingColumnError(error)) {
-                admin
-                  .from("profiles")
-                  .update({ setup_completed: true })
-                  .eq("id", savedProfile.id)
-                  .then(({ error: fallbackError }) => {
-                    if (fallbackError && !isMissingColumnError(fallbackError)) {
-                      console.warn("CONNECT SETUP profile setup_completed update skipped", fallbackError.message);
-                    }
-                  });
-              } else if (error) {
-                console.warn("CONNECT SETUP profile setup_completed update skipped", error.message);
-              }
-            });
-        }
+        await admin
+          .from("profiles")
+          .update({ setup_completed: true, setup_completed_at: nowIso })
+          .eq("id", savedProfile.id)
+          .then(({ error }) => {
+            if (error && isMissingColumnError(error)) {
+              admin
+                .from("profiles")
+                .update({ setup_completed: true })
+                .eq("id", savedProfile.id)
+                .then(({ error: fallbackError }) => {
+                  if (fallbackError && !isMissingColumnError(fallbackError)) {
+                    console.warn("CONNECT SETUP profile setup_completed update skipped", fallbackError.message);
+                  }
+                });
+            } else if (error) {
+              console.warn("CONNECT SETUP profile setup_completed update skipped", error.message);
+            }
+          });
 
         await admin
           .from("card_orders")
@@ -905,11 +979,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("CONNECT SETUP SAVE ERROR", error);
+    const genericErrorBody: Record<string, unknown> = { error: "Failed to save setup draft." };
+    if (shouldExposeDebugDetail(req)) {
+      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      genericErrorBody.detail = detail;
+    }
     return NextResponse.json(
-      withDevDetail(
-        { error: "Failed to save setup draft." },
-        error instanceof Error ? `${error.name}: ${error.message}` : String(error)
-      ),
+      genericErrorBody,
       { status: 500 }
     );
   }

@@ -307,8 +307,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
 
   const missingItems = completionChecks.filter((item) => !item.done);
   const editProfileHref = advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup";
-  const publicProfileFullUrl = profilePublished && profile.slug ? clutchConnectProfileUrl(profile.slug) : null;
+  const hasLivePublicProfile = profilePublished && Boolean(profile.slug);
+  const publicProfileFullUrl = hasLivePublicProfile ? clutchConnectProfileUrl(profile.slug) : null;
   const publicProfileHref = publicProfileFullUrl || "/portal/connect/setup";
+  const publicProfileActionLabel = hasLivePublicProfile ? "View Profile" : "Finish Setup";
   const publicProfileUrl = profilePublished && profile.slug
     ? clutchConnectDisplayUrl(profile.slug)
     : "Publish your profile to generate a live public page";
@@ -363,9 +365,9 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
                 </Link>
               ) : null}
               <div className="connect-profile-view-row">
-                <Link className="btn secondary" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
+                <Link className="btn secondary" href={publicProfileHref} target={hasLivePublicProfile ? "_blank" : undefined}>
                   <Globe size={15} />
-                  View Profile
+                  {publicProfileActionLabel}
                 </Link>
                 {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
               </div>
@@ -412,11 +414,11 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <p className="connect-center-kicker">Basic Tools</p>
             <h2>Your starter profile tools</h2>
             <div className="connect-center-quick-actions basic-tools">
-              <Link className="connect-center-action" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
+              <Link className="connect-center-action" href={publicProfileHref} target={hasLivePublicProfile ? "_blank" : undefined}>
                 <Globe size={18} />
                 <div>
-                  <strong>View Profile</strong>
-                  <span>Preview the profile connected to your smart card.</span>
+                  <strong>{publicProfileActionLabel}</strong>
+                  <span>{hasLivePublicProfile ? "Open the profile connected to your smart card." : "Complete setup to publish your live public profile."}</span>
                 </div>
               </Link>
               <div className="connect-center-action connect-center-action-copy">
@@ -467,15 +469,15 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         <section className="connect-center-public-strip" aria-label="Public page status">
           <div>
             <span className={profilePublished ? "is-live" : "is-draft"}>
-              {profilePublished ? "Live" : "Draft"}
+              {profilePublished ? "LIVE" : "DRAFT"}
             </span>
             <strong>{publicProfileUrl}</strong>
           </div>
           <div className="connect-center-public-strip-actions">
             <Link className="btn ghost" href="/portal/connect/leads">Leads CRM</Link>
             <div className="connect-profile-view-row">
-              <Link className="btn secondary" href={publicProfileHref} target={profilePublished && profile.slug ? "_blank" : undefined}>
-                View Profile
+              <Link className="btn secondary" href={publicProfileHref} target={hasLivePublicProfile ? "_blank" : undefined}>
+                {publicProfileActionLabel}
               </Link>
               {publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
             </div>
