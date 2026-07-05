@@ -20,14 +20,37 @@ const RESERVED_CONNECT_SLUGS = new Set([
 ]);
 
 function getPublicConnectHost() {
-  const baseUrl = process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL;
+  const baseUrl =
+    process.env.CLUTCH_CONNECT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL;
   if (!baseUrl) return "";
 
+  const normalized = String(baseUrl)
+    .trim()
+    .replace(/clutchonnect\.link/gi, "clutchconnect.link")
+    .replace(/\/+$/, "");
+
   try {
-    return new URL(baseUrl).host.toLowerCase();
+    const parsed = new URL(/^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`);
+    return parsed.host.toLowerCase();
   } catch {
     return "";
   }
+}
+
+function normalizeHost(host: string) {
+  return host.toLowerCase().replace(/:\d+$/, "").trim();
+}
+
+function getAllowedPublicConnectHosts(publicHost: string) {
+  const host = normalizeHost(publicHost);
+  if (!host) return new Set<string>();
+
+  if (host.startsWith("www.")) {
+    return new Set([host, host.slice(4)]);
+  }
+
+  return new Set([host, `www.${host}`]);
 }
 
 export function proxy(req: NextRequest) {
@@ -38,13 +61,14 @@ export function proxy(req: NextRequest) {
   }
 
   const publicConnectHost = getPublicConnectHost();
-  const requestHost = req.headers.get("host")?.toLowerCase() || "";
+  const allowedHosts = getAllowedPublicConnectHosts(publicConnectHost);
+  const requestHost = normalizeHost(req.headers.get("host") || "");
   const pathSegments = req.nextUrl.pathname.split("/").filter(Boolean);
 
   if (
     (req.method === "GET" || req.method === "HEAD") &&
-    publicConnectHost &&
-    requestHost === publicConnectHost &&
+    allowedHosts.size > 0 &&
+    allowedHosts.has(requestHost) &&
     pathSegments.length === 1
   ) {
     const [slug] = pathSegments;
