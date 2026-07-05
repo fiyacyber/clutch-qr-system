@@ -30,7 +30,7 @@ export function getConnectPublicBaseUrl() {
 
 export function buildConnectPublicProfileUrl(slug: string) {
   const safeSlug = normalizeSlugSegment(slug);
-  return `${getConnectPublicBaseUrl()}/u/${encodeURIComponent(safeSlug)}`;
+  return `${getConnectPublicBaseUrl()}/${encodeURIComponent(safeSlug)}`;
 }
 
 export function buildAppQrUrl(qrSlug: string) {

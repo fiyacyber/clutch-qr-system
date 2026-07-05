@@ -120,7 +120,7 @@ Everything is deployed and ready to use. Test the following to verify everything
 
 ### Test the Public Profile
 
-1. Get your public profile URL (e.g., `http://localhost:3000/u/your-slug`)
+1. Get your public profile URL (e.g., `http://localhost:3000/your-slug`)
 2. View different layouts:
    - With `layout: grid` → should display as 2-column grid on desktop, 1-column on mobile
    - With `layout: stack` → should display as vertical list

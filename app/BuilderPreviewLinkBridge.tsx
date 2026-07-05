@@ -7,9 +7,7 @@ function resolveProfileUrl(slug: string) {
   if (!cleanSlug) return null;
 
   const base = (process.env.NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL || "https://clutchconnect.link").replace(/\/+$/, "");
-  const path = `u/${encodeURIComponent(cleanSlug)}`;
-
-  return `${base}/${path}`;
+  return `${base}/${encodeURIComponent(cleanSlug)}`;
 }
 
 function isBuilderPreviewButton(target: EventTarget | null) {

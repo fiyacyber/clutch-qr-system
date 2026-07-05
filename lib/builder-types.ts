@@ -139,6 +139,9 @@ export interface BuilderTheme {
   textColor: string;
   themeMode: "light" | "dark" | "system";
   profileStyle: "clutch" | "minimal" | "executive" | "glass";
+  globalAlignment?: BuilderTextAlign;
+  textAlign?: BuilderTextAlign;
+  alignment?: BuilderTextAlign;
   fontFamily:
     | "exo2"
     | "sans"

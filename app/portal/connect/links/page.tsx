@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 import { getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 

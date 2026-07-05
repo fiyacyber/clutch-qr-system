@@ -5,6 +5,7 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectLeadsCRM from "@/components/connect/ConnectLeadsCRM";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
+import { clutchConnectProfileUrl } from "@/lib/qr";
 import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 

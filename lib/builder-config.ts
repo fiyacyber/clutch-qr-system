@@ -161,6 +161,10 @@ function normalizeAlignment(value: unknown): "left" | "center" | "right" {
   return value === "left" || value === "right" ? value : "center";
 }
 
+function normalizeThemeAlignment(theme: Record<string, any>, fallback: "left" | "center" | "right") {
+  return normalizeAlignment(theme.globalAlignment ?? theme.textAlign ?? theme.alignment ?? fallback);
+}
+
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -340,6 +344,9 @@ export function createDefaultTheme(accentColor?: string): BuilderTheme {
     textColor: "#111111",
     themeMode: "light",
     profileStyle: "minimal",
+    globalAlignment: "center",
+    textAlign: "center",
+    alignment: "center",
     fontFamily: "exo2",
     fontScale: "normal",
     layout: "default",
@@ -511,6 +518,7 @@ export function sanitizeBuilderConfig(config: unknown): BuilderConfig {
     ? (rawTheme.fontFamily as BuilderTheme["fontFamily"])
     : "exo2";
   const safeFontScale = rawTheme.fontScale === "large" ? "large" : "normal";
+  const safeThemeAlignment = normalizeThemeAlignment(rawTheme, defaultTheme.globalAlignment || "center");
   const safeShowSaveShareSection = rawTheme.showSaveShareSection !== false;
   const safeSaveSharePosition = rawTheme.saveSharePosition === "top" ? "top" : "bottom";
   const safeSaveShareAlignment = normalizeAlignment(rawTheme.saveShareAlignment);
@@ -717,6 +725,9 @@ export function sanitizeBuilderConfig(config: unknown): BuilderConfig {
       textColor: safeTextColor,
       themeMode: safeThemeMode,
       profileStyle: safeProfileStyle,
+      globalAlignment: safeThemeAlignment,
+      textAlign: safeThemeAlignment,
+      alignment: safeThemeAlignment,
       fontFamily: safeFontFamily,
       fontScale: safeFontScale,
       showSaveShareSection: safeShowSaveShareSection,

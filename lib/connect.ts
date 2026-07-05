@@ -339,7 +339,7 @@ export function buildConnectSlugPreview(slug: string) {
   const base = getConnectPublicBaseUrl().replace(/^https?:\/\//, "");
   return cleanSlug
     ? buildConnectPublicProfileUrl(cleanSlug).replace(/^https?:\/\//, "")
-    : `${base}/u/your-slug`;
+    : `${base}/your-slug`;
 }
 
 export function buildDefaultProfileSlug(value: string) {

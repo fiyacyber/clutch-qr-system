@@ -150,13 +150,13 @@ The most serious blockers are the Create QR flow missing a usable submit surface
 - Guided Setup did not expose a clear saving/error state.
 - Fix: the submit button now shows `Saving...` during submission, and setup redirects back with a safe error message if the profile update/insert fails.
 - Public profile URL support only emitted `/u/[slug]`.
-- Fix: when `NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL` is configured, profile links emit `base/[slug]`; fallback QR-domain links continue to emit `base/u/[slug]`.
+- Fix: when `NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL` is configured, profile links emit `base/[slug]` and the internal `/u/[slug]` render route remains available behind the proxy.
 - Fix: `proxy.ts` now rewrites `clutchconnect.link/[slug]`-style one-segment paths to `/u/[slug]` only on the configured public Connect host, with reserved paths protected.
 
 ### Current Public URL Format
 
 - If `NEXT_PUBLIC_CLUTCH_CONNECT_PUBLIC_BASE_URL` is set, the supported customer-facing format is `clutchconnect.link/[slug]`.
-- If it is not set, the supported fallback format remains `qr.clutchprintshop.com/u/[slug]`.
+- If it is not set, the internal render route still lives at `qr.clutchprintshop.com/u/[slug]`, but the public helper still emits the public base URL format when configured.
 - Existing `/u/[slug]` links continue to work.
 
 ### Remaining For Phase 4.7
