@@ -1627,7 +1627,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                       <h4>Profile Link</h4>
                     </div>
                     <label className="label connect-setup-span-2">
-                      Custom slug
+                      Your Link
                       <div className="connect-setup-slug-row">
                         <span>clutchconnect.link/</span>
                         <input
@@ -1640,10 +1640,10 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                           spellCheck={false}
                         />
                       </div>
-                      <span className="helper-text">Leave this blank and we will auto-generate a clean slug for you.</span>
-                      {!fieldErrors.slug ? <span className="helper-text">System and brand words like clutchprintshop are reserved and cannot be claimed.</span> : null}
+                      <span className="helper-text">This is the public link people will use to view your profile.</span>
+                      <span className="helper-text">Leave this blank and we’ll create one for you automatically.</span>
                       {fieldErrors.slug ? <span className="helper-text connect-setup-error-text">{fieldErrors.slug}</span> : null}
-                      {!fieldErrors.slug ? <span className="helper-text">Preview: {buildConnectSlugPreview(previewSlug)}</span> : null}
+                      {!fieldErrors.slug ? <span className="helper-text">Your link: {buildConnectSlugPreview(previewSlug)}</span> : null}
                     </label>
                   </section>
                 </div>

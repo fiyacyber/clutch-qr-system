@@ -5908,6 +5908,10 @@ button:disabled {
   cursor: default;
 }
 
+.connect-setup-preview-stage .builder-public-profile[data-mode="preview"] .builder-public-section-label {
+  display: none;
+}
+
 .connect-setup-preview-stage .builder-public-profile[data-mode="preview"] .builder-preview-selectable::after {
   display: none !important;
 }

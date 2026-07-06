@@ -307,7 +307,7 @@ export function validateConnectSlug(input: string, options?: { allowEmpty?: bool
     return {
       slug: "",
       valid: Boolean(options?.allowEmpty),
-      message: options?.allowEmpty ? "" : "Choose a public slug.",
+      message: options?.allowEmpty ? "" : "Choose a public link.",
     };
   }
 
@@ -323,7 +323,7 @@ export function validateConnectSlug(input: string, options?: { allowEmpty?: bool
     return {
       slug,
       valid: false,
-      message: "That slug is reserved. Pick a different one.",
+      message: "That link is reserved. Pick a different one.",
     };
   }
 
@@ -339,7 +339,7 @@ export function buildConnectSlugPreview(slug: string) {
   const base = getConnectPublicBaseUrl().replace(/^https?:\/\//, "");
   return cleanSlug
     ? buildConnectPublicProfileUrl(cleanSlug).replace(/^https?:\/\//, "")
-    : `${base}/your-slug`;
+    : `${base}/your-link`;
 }
 
 export function buildDefaultProfileSlug(value: string) {
