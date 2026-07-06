@@ -137,7 +137,7 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           .from("profile_leads")
           .select("id", { count: "exact", head: true })
           .eq("profile_id", profile.id),
-      mapResult: (result: any) => ({ data: result?.count || 0, error: result?.error }),
+      mapResult: (result: any) => result?.count || 0,
     }),
     runGuardedDashboardTask({
       route: "/portal/connect",
