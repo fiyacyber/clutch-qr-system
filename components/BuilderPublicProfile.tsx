@@ -261,6 +261,9 @@ function blockHasRenderableContent(block: any, profile: any, mode: "public" | "p
 
   if (type === "social-media-links" || type === "social-links") {
     const links = Array.isArray(data.links) ? data.links : [];
+    if (mode === "preview") {
+      return links.some((link: any) => link?.visible !== false && String(link?.label || "").trim());
+    }
     return links.some((link: any) => link?.visible !== false && normalizeBeginnerConnectLinkHref(link.platform, link.value));
   }
 
@@ -268,7 +271,15 @@ function blockHasRenderableContent(block: any, profile: any, mode: "public" | "p
   if (type === "email-button") return Boolean(data.email || data.value || profile?.email);
   if (type === "website-button") return Boolean(data.website || data.url || profile?.website);
   if (type === "directions-button") return Boolean(data.address || data.url || profile?.address);
-  if (type === "request-quote-button" || type === "custom-link-button") return Boolean(data.url);
+  if (type === "request-quote-button" || type === "custom-link-button") {
+    if (mode === "preview") {
+      if (data.isPrimaryAction === true) {
+        return Boolean(String(data.label || "").trim());
+      }
+      return Boolean(String(data.url || "").trim());
+    }
+    return Boolean(String(data.url || "").trim());
+  }
 
   return true;
 }

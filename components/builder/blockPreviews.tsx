@@ -761,10 +761,13 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   );
 }
 
-export function BookingBlockPreview({ block }: BlockPreviewProps) {
+export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProps) {
   const data = getBlockData(block);
   const type = normalizeBlockType(String((block as any).type));
   const isPrimaryAction = data.isPrimaryAction === true;
+  const url = String(data.url || "").trim();
+  const label = String(data.label || "").trim();
+  const isPreviewMode = mode === "preview" || mode === "editor";
   const resolvedIconName =
     type === "directions-button"
       ? "directions"
@@ -779,31 +782,46 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
     type === "directions-button" ? "Directions" :
     type === "custom-link-button" ? "Custom Link" :
     "Request / Book";
-  const subtitle = data.description || data.url || undefined;
-  if (!data.url) return null;
+  const subtitle = data.description || url || undefined;
+
+  if (!url && !(isPreviewMode && isPrimaryAction && label)) {
+    return null;
+  }
 
   return (
     <div className="builder-block">
       <ActionCard
         icon={icon as any}
-        title={data.label || defaultTitle}
+        title={label || defaultTitle}
         subtitle={subtitle}
-        href={data.url || undefined}
-        external={Boolean(data.url)}
-        placeholder={!data.url}
+        href={url || undefined}
+        external={Boolean(url)}
+        placeholder={!url}
         className={isPrimaryAction ? "builder-primary-cta-card" : undefined}
       />
     </div>
   );
 }
 
-export function SocialLinksPreview({ block }: BlockPreviewProps) {
+export function SocialLinksPreview({ block, mode = "public" }: BlockPreviewProps) {
   const data = getBlockData(block);
+  const isPreviewMode = mode === "preview" || mode === "editor";
   const links = Array.isArray(data.links)
     ? data.links
         .filter((link: any) => link.visible !== false)
-        .map((link: any) => ({ ...link, href: resolveSocialHref(link.platform, link.value) }))
-        .filter((link: any) => Boolean(link.href))
+        .map((link: any) => {
+          const title = String(link.label || link.platform || "Social").trim();
+          const rawValue = String(link.value || "").trim();
+          const href = resolveSocialHref(link.platform, rawValue);
+          const previewOnly = link.previewOnly === true;
+          return { ...link, title, rawValue, href, previewOnly };
+        })
+        .filter((link: any) => {
+          if (isPreviewMode) {
+            return Boolean(link.title);
+          }
+          return Boolean(link.href);
+        })
         .slice(0, 6)
     : [];
   const iconColorMode = data.iconColorMode || "brand";
@@ -815,27 +833,19 @@ export function SocialLinksPreview({ block }: BlockPreviewProps) {
     <div className="builder-block builder-block-social">
       {links.map((link: any, idx: number) => {
         const treatment = link.iconTreatment === "brand" || link.iconTreatment === "mono" ? link.iconTreatment : iconColorMode;
-        const title = link.label || link.platform || "Social";
+        const subtitle = link.rawValue || (isPreviewMode ? "Add destination URL" : "");
+
         return (
-          <a
+          <ActionCard
             key={link.id || idx}
-            href={link.href}
-            className="builder-button builder-action-card builder-button-social"
-            target="_blank"
-            rel="noreferrer"
-            title={title}
-          >
-            <span className="builder-action-icon" aria-hidden="true">
-              <span style={{ color: getSocialIconColor(link.platform, treatment) }}>
-                <SocialGlyph platform={link.platform} />
-              </span>
-            </span>
-            <span className="builder-action-content">
-              <span className="builder-action-title">{title}</span>
-              {link.value ? <span className="builder-action-subtitle">{link.value}</span> : null}
-            </span>
-            <ActionChevron />
-          </a>
+            icon={<span style={{ color: getSocialIconColor(link.platform, treatment) }}><SocialGlyph platform={link.platform} /></span>}
+            title={link.title}
+            subtitle={subtitle || undefined}
+            href={link.href || undefined}
+            external={Boolean(link.href)}
+            placeholder={!link.href}
+            className="builder-button-social"
+          />
         );
       })}
     </div>

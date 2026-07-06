@@ -515,28 +515,30 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
   const useBannerImage = draft.basic.bannerMode === "image" && Boolean(normalizedBannerImageUrl);
   const primaryActionUrl = draft.action.primaryActionLeadCaptureEnabled
     ? "#lead-form"
-    : normalizeOptionalHttpUrl(draft.action.primaryActionUrl);
+    : safeText(draft.action.primaryActionUrl);
   const linkData = draft.links
     .filter((link) => link.visible !== false)
     .map((link, index) => {
-      const normalizedLink = normalizeBeginnerConnectLinkDraft(link, { index });
-      if (!normalizedLink.link) return null;
+      const type = normalizeBeginnerConnectLinkType(link.type);
+      const rawLabel = safeText(link.label);
+      const label = rawLabel || getBeginnerConnectLinkSpec(type).label;
+      const rawValue = safeText(link.value);
+      const href = normalizeBeginnerConnectLinkHref(type, rawValue);
 
       return {
-        id: normalizedLink.link.id,
-        label: normalizedLink.link.label,
-        platform: normalizedLink.link.type,
-        value: formatPreviewLinkDisplayValue(
-          normalizedLink.link.type,
-          normalizedLink.link.value,
-          normalizedLink.link.href
-        ),
+        id: link.id,
+        label,
+        platform: type,
+        value: rawValue
+          ? formatPreviewLinkDisplayValue(type, rawValue, href || rawValue)
+          : "",
+        url: href || "",
         iconTreatment: "brand",
-        visible: normalizedLink.link.visible,
+        visible: link.visible !== false,
         order: index,
+        previewOnly: !rawValue || !href,
       };
-    })
-    .filter((link): link is NonNullable<typeof link> => Boolean(link));
+    });
 
   const updatedConfig = updateBlockData(nextConfig, "avatar-block", (data) => ({
     ...data,
@@ -987,22 +989,6 @@ function makePublishErrors(draft: SetupDraft) {
   };
 }
 
-function useDebouncedValue<T>(value: T, delayMs = 160) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedValue(value);
-    }, delayMs);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [delayMs, value]);
-
-  return debouncedValue;
-}
-
 export default function ConnectSetupWizard({ customer, profile, links, builderConfig, starterLocked = false }: SetupWizardProps) {
   const router = useRouter();
   const storageKey = `${STORAGE_PREFIX}:${profile?.id || customer.id}`;
@@ -1018,8 +1004,6 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
-  const debouncedPreviewDraft = useDebouncedValue(draft, 160);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -1050,27 +1034,27 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
     }
   }, [draft, hydratedFromStorage, storageKey]);
 
-  const previewSlug = useMemo(() => toPreviewSlug(debouncedPreviewDraft, profile, customer), [debouncedPreviewDraft, profile, customer]);
-  const previewHasContent = useMemo(() => hasPreviewContent(debouncedPreviewDraft), [debouncedPreviewDraft]);
+  const previewSlug = useMemo(() => toPreviewSlug(draft, profile, customer), [draft, profile, customer]);
+  const previewHasContent = useMemo(() => hasPreviewContent(draft), [draft]);
   const previewProfile = useMemo(() => ({
     ...profile,
-    business_name: getDraftPreviewOrganization(debouncedPreviewDraft),
-    contact_name: getDraftPreviewName(debouncedPreviewDraft),
-    title: getDraftPreviewRole(debouncedPreviewDraft),
-    phone: debouncedPreviewDraft.contact.phone,
-    email: debouncedPreviewDraft.contact.email,
-    website: normalizeBeginnerConnectLinkHref("website", debouncedPreviewDraft.contact.website),
-    bio: debouncedPreviewDraft.contact.bio,
-    avatar_url: normalizeOptionalHttpUrl(debouncedPreviewDraft.basic.avatarUrl),
-    cover_url: debouncedPreviewDraft.basic.bannerMode === "image" ? normalizeOptionalHttpUrl(debouncedPreviewDraft.basic.bannerImageUrl) : null,
-    location: debouncedPreviewDraft.contact.serviceArea,
+    business_name: getDraftPreviewOrganization(draft),
+    contact_name: getDraftPreviewName(draft),
+    title: getDraftPreviewRole(draft),
+    phone: draft.contact.phone,
+    email: draft.contact.email,
+    website: normalizeBeginnerConnectLinkHref("website", draft.contact.website),
+    bio: draft.contact.bio,
+    avatar_url: normalizeOptionalHttpUrl(draft.basic.avatarUrl),
+    cover_url: draft.basic.bannerMode === "image" ? normalizeOptionalHttpUrl(draft.basic.bannerImageUrl) : null,
+    location: draft.contact.serviceArea,
     slug: previewSlug,
-    theme_color: debouncedPreviewDraft.advanced.accentColor,
-    builder_config: buildPreviewConfig(debouncedPreviewDraft, builderConfig),
+    theme_color: draft.advanced.accentColor,
+    builder_config: buildPreviewConfig(draft, builderConfig),
     is_active: profile?.is_active ?? true,
-  }), [builderConfig, debouncedPreviewDraft, previewSlug, profile]);
+  }), [builderConfig, draft, previewSlug, profile]);
 
-  const previewConfig = useMemo(() => buildPreviewConfig(debouncedPreviewDraft, builderConfig), [builderConfig, debouncedPreviewDraft]);
+  const previewConfig = useMemo(() => buildPreviewConfig(draft, builderConfig), [builderConfig, draft]);
 
   const currentStepIndex = STEP_ORDER.findIndex((step) => step.id === currentStep);
   const progress = Math.round(((currentStepIndex + 1) / STEP_ORDER.length) * 100);
