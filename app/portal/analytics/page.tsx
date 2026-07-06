@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireCustomer } from "@/lib/auth";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement } from "@/lib/plans";
@@ -72,6 +73,12 @@ export default async function AnalyticsPage({
   const plan = getCustomerPlan(customer as any);
   const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
   const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
+  const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
+  const isCampaignUnlocked = isCampaignTab && hasDynamicQr;
+  const isAnalyticsUnlocked = !isCampaignTab && hasHeatmap;
+  const showLockedCampaign = isCampaignTab && !hasDynamicQr;
+  const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
+  const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
   const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true);
   const qrUsageUsed = campaignQrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
@@ -300,16 +307,44 @@ export default async function AnalyticsPage({
         </main>
       ) : null}
       <main className="container" style={{ marginBottom: 16 }}>
+        {showLockedCampaign || showLockedAnalytics ? (
+          <DashboardHeader
+            title={isCampaignTab ? "Campaign Performance" : "Analytics"}
+            subtitle={
+              isCampaignTab
+                ? "Compare QR campaigns, scan activity, and marketing performance."
+                : "Understand profile engagement, device activity, and visitor behavior."
+            }
+          />
+        ) : null}
         <CurrentPlanBadge
           planCode={plan.code}
           planName={plan.name}
           priceLabel={plan.price}
           description={plan.description}
-          usageLabel={hasHeatmap ? "Analytics dashboard unlocked" : "Analytics dashboard locked"}
+          usageLabel={isCampaignTab ? (hasDynamicQr ? "Campaign analytics unlocked" : "Campaign analytics locked") : (hasHeatmap ? "Analytics dashboard unlocked" : "Analytics dashboard locked")}
           subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
           trialStatus={String(customer.trial_status || "none")}
         />
-        {!hasHeatmap ? (
+        {showLockedCampaign ? (
+          <LockedFeatureCard
+            title="Upgrade Available"
+            description="Compare campaign performance and optimize top-performing QR destinations."
+            requiredPlan="QR Pro"
+            requiredPlanPrice="$14.99/mo"
+            ctaLabel="Upgrade to QR Pro"
+            ctaHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
+            featureList={[
+              "Campaign comparison",
+              "Best-performing QR codes",
+              "Scan trends",
+              "Source-aware reporting",
+              "Conversion tracking",
+            ]}
+            variant="qr_pro"
+          />
+        ) : null}
+        {showLockedAnalytics ? (
           <LockedFeatureCard
             title="Upgrade Available"
             description="Advanced analytics and heatmaps are available on Clutch Connect+ and higher tiers."
@@ -318,20 +353,21 @@ export default async function AnalyticsPage({
             ctaLabel="Try Connect+"
             ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
             featureList={[
-              "Engagement dashboard",
-              "Geography and device analytics",
-              "Heatmap command center",
+              "Profile engagement analytics",
+              "Device and browser breakdown",
+              "Visitor behavior insights",
+              "Geography and heatmap reporting",
             ]}
             variant="connect_plus"
           />
         ) : null}
-        {!hasHeatmap ? (
+        {showLockedAnalytics ? (
           <p className="muted" style={{ margin: "8px 4px 0", fontSize: "0.82rem", fontWeight: 700 }}>
             14 Day Free Trial · Cancel Anytime
           </p>
         ) : null}
       </main>
-      {hasHeatmap ? (
+      {shouldRenderAnalyticsDashboard ? (
         <AnalyticsDashboard
           activeTab={activeTab}
           accountName={fullName}

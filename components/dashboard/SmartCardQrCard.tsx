@@ -556,25 +556,61 @@ export default function SmartCardQrCard({
                 <article className="smart-card-qr-control-group">
                   <h4>Colors</h4>
 
-                  <label>
-                    QR color
-                    <input type="color" value={foregroundColor} onChange={(event) => setForegroundColor(event.target.value)} />
-                  </label>
+                  <div className="smart-card-qr-color-row">
+                    <div>
+                      <span className="smart-card-qr-control-label">QR color</span>
+                      <small>{foregroundColor.toUpperCase()}</small>
+                    </div>
+                    <input
+                      className="smart-card-qr-color-input"
+                      type="color"
+                      value={foregroundColor}
+                      onChange={(event) => setForegroundColor(event.target.value)}
+                      aria-label="QR color"
+                    />
+                  </div>
 
-                  <label>
-                    Background color
-                    <input type="color" value={backgroundColor} onChange={(event) => setBackgroundColor(event.target.value)} />
-                  </label>
+                  <div className="smart-card-qr-color-row">
+                    <div>
+                      <span className="smart-card-qr-control-label">Background color</span>
+                      <small>{backgroundColor.toUpperCase()}</small>
+                    </div>
+                    <input
+                      className="smart-card-qr-color-input"
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(event) => setBackgroundColor(event.target.value)}
+                      aria-label="Background color"
+                    />
+                  </div>
 
-                  <label>
-                    Frame color
-                    <input type="color" value={frameColor} onChange={(event) => setFrameColor(event.target.value)} />
-                  </label>
+                  <div className="smart-card-qr-color-row">
+                    <div>
+                      <span className="smart-card-qr-control-label">Frame color</span>
+                      <small>{frameColor.toUpperCase()}</small>
+                    </div>
+                    <input
+                      className="smart-card-qr-color-input"
+                      type="color"
+                      value={frameColor}
+                      onChange={(event) => setFrameColor(event.target.value)}
+                      aria-label="Frame color"
+                    />
+                  </div>
 
-                  <label>
-                    Accent color
-                    <input type="color" value={accentColor} onChange={(event) => setAccentColor(event.target.value)} />
-                  </label>
+                  <div className="smart-card-qr-color-row">
+                    <div>
+                      <span className="smart-card-qr-control-label">Accent color</span>
+                      <small>{accentColor.toUpperCase()}</small>
+                    </div>
+                    <input
+                      className="smart-card-qr-color-input"
+                      type="color"
+                      value={accentColor}
+                      onChange={(event) => setAccentColor(event.target.value)}
+                      aria-label="Accent color"
+                    />
+                  </div>
                 </article>
 
                 <article className="smart-card-qr-control-group">

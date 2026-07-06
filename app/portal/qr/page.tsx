@@ -124,12 +124,12 @@ export default async function StoredQrCodesPage() {
         ) : null}
 
         <DashboardHeader
-          title="Stored QR Codes"
-          subtitle="Search, filter, and manage all saved QR campaigns from one mobile-first library."
+          title="QR Codes"
+          subtitle="Create, manage, and analyze your QR campaign library."
           actions={(
             <div className="qr-studio-top-actions">
               <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
-              <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link>
+              {hasHeatmap ? <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link> : null}
               {hasDynamicQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} />Create QR</Link> : null}
             </div>
           )}
@@ -151,7 +151,7 @@ export default async function StoredQrCodesPage() {
             description="Create dynamic QR campaigns with editable destinations and analytics."
             requiredPlan="QR Pro"
             requiredPlanPrice="$14.99/mo"
-            ctaLabel="Upgrade for $14.99/mo"
+            ctaLabel="Upgrade to QR Pro"
             ctaHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
             featureList={[
               "100 dynamic QR codes",

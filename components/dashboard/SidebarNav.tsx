@@ -47,14 +47,14 @@ const navItems: NavItem[] = [
     label: "Overview",
     href: "/portal",
     icon: LayoutDashboard,
-    match: (pathname, tab) => pathname === "/portal" || (pathname === "/portal/analytics" && (!tab || tab === "overview")),
+    match: (pathname) => pathname === "/portal",
   },
   {
     key: "campaign-performance",
     label: "Campaign Performance",
     href: "/portal/analytics?tab=campaign-performance",
     icon: QrCode,
-    match: (pathname, tab) => pathname === "/portal/analytics" && (tab === "campaign-performance" || tab === "qr-codes"),
+    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "campaign-performance",
   },
   {
     key: "connect",
@@ -95,7 +95,7 @@ const navItems: NavItem[] = [
     label: "Analytics",
     href: "/portal/analytics",
     icon: BarChart3,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab !== "clutch-connect",
+    match: (pathname, tab) => pathname === "/portal/analytics" && (!tab || tab === "analytics" || tab === "overview"),
     lockKey: "analytics",
   },
   {
@@ -184,9 +184,11 @@ function SidebarListInner({
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
   const navSections = getNavSections({ navVariant, isAdmin, showGuidedSetup, showLeadInbox });
+  const orderedVisibleItems = [...navSections.primary, ...navSections.secondary];
+  const activeKey = orderedVisibleItems.find((item) => item.match(pathname, tab))?.key || null;
 
   function renderItem(item: NavItem, secondary = false) {
-    const active = item.match(pathname, tab);
+    const active = item.key === activeKey;
     const Icon = item.icon;
     const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
 

@@ -59,8 +59,8 @@ export default async function HeatmapCommandCenterPage() {
     >
       <main className="container portal-heatmap-shell">
         <DashboardHeader
-          title="Heatmap Command Center"
-          subtitle="See where your print campaigns, smart cards, and QR codes are generating engagement."
+          title="Heatmap"
+          subtitle="See where profile visits, scans, and engagement are happening."
           actions={<Link className="btn secondary" href="/portal/analytics?tab=geography">Geography Insights</Link>}
         />
 
@@ -80,7 +80,7 @@ export default async function HeatmapCommandCenterPage() {
             description="Visualize where scans and engagement are happening with location-level heatmaps."
             requiredPlan="Clutch Connect+"
             requiredPlanPrice="$9.99/mo"
-            ctaLabel="Upgrade for $9.99/mo"
+            ctaLabel="Try Connect+"
             ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
             featureList={[
               "Location heatmaps",
