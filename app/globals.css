@@ -14329,6 +14329,19 @@ input.saas-font-search:focus-visible {
   margin-top: 18px;
 }
 
+.builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"] .builder-global-banner {
+  margin-bottom: -20px;
+}
+
+.builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"] .builder-profile-header-stack {
+  background: transparent;
+  border: 0;
+}
+
+.builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"][data-banner-enabled="true"][data-banner-overlap="true"] .builder-profile-header-stack .builder-hero-avatar-wrap {
+  margin-top: -44px;
+}
+
 .builder-public-profile[data-header-align="left"] .builder-profile-header-stack .builder-hero-avatar-wrap {
   margin-left: 0;
   margin-right: auto;
