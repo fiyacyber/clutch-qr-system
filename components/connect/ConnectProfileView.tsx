@@ -212,7 +212,7 @@ function ConnectProfileView({
     forms: Array.isArray(forms)
       ? forms
       : (Array.isArray(profile?.builder_config?.forms) ? profile.builder_config.forms : []),
-  }), [forms, profile?.builder_config?.forms, profile?.builder_config?.sections, profile?.builder_config?.version, resolvedBlocks, resolvedTheme, sections]);
+  }), [forms, profile, resolvedBlocks, resolvedTheme, sections]);
 
   const hydratedConfig = useMemo(() => sanitizeForRender(config, config.sections), [config]);
 
