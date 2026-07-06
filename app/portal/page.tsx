@@ -71,6 +71,19 @@ function formatLabel(value?: string | null, fallback = "Pending") {
   return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function firstNameFromValue(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const normalized = raw
+    .replace(/^['"\s]+|['"\s]+$/g, "")
+    .replace(/[._-]+/g, " ");
+  const token = normalized.split(/\s+/).find(Boolean) || "";
+
+  if (!token) return "";
+  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+}
+
 export default async function PortalPage({ searchParams }: PortalPageProps) {
   const { user, customer } = await requireCustomer();
 
@@ -241,6 +254,15 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const smartCardPrimaryCtaHref = hasPublicProfile ? "/portal/connect" : "/portal/connect/setup";
   const connectProfileId = connectProfile?.id ? String(connectProfile.id) : "";
   const publicProfileUrl = hasPublicProfile ? clutchConnectProfileUrl(String(connectProfile?.slug || "")) : "";
+  const welcomeFirstName =
+    firstNameFromValue((connectProfile as any)?.customer_name) ||
+    firstNameFromValue((connectProfile as any)?.name) ||
+    firstNameFromValue((customer as any)?.name) ||
+    firstNameFromValue(String(user.email || "").split("@")[0]) ||
+    "there";
+  const smartCardSubtitle = hasPublicProfile && setupChecklistComplete
+    ? "Your profile is live. Manage your smart card, profile, leads, and order status."
+    : "Let’s finish setting up your smart card profile before your card goes live.";
 
   function summarizeRows(values: Array<string | null | undefined>) {
     return Object.entries(values.reduce<Record<string, number>>((acc, value) => {
@@ -433,12 +455,11 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         ) : null}
 
         <DashboardHeader
+          pretitle={isConnectBasicPlan ? `Welcome, ${welcomeFirstName}` : undefined}
           title={isConnectBasicPlan ? "Smart Business Card Dashboard" : "Clutch Connect Platform"}
           subtitle={
             isConnectBasicPlan
-              ? hasPublicProfile
-                ? "Your profile is live. Manage your smart card, profile, leads, and order status."
-                : "Finish guided setup to publish your smart card profile."
+              ? smartCardSubtitle
               : "Launch campaigns, track scans, capture leads, and see where your marketing works."
           }
           actions={(

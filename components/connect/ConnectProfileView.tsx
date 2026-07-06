@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import BuilderPublicProfile from "@/components/BuilderPublicProfile";
 import { BuilderBlock, BuilderConfig, BuilderTheme } from "@/lib/builder-types";
 import { createDefaultTheme, sanitizeBuilderConfig } from "@/lib/builder-config";
@@ -168,7 +169,7 @@ function sanitizeForRender(config: BuilderConfig, sections?: BuilderConfig["sect
   return hydrated;
 }
 
-export default function ConnectProfileView({
+function ConnectProfileView({
   profile,
   starterLocked = false,
   blocks,
@@ -184,19 +185,24 @@ export default function ConnectProfileView({
   onRemoveBlock,
   onRemoveSection,
 }: ConnectProfileViewProps) {
-  const resolvedBlocks = toBuilderBlocks(profile, blocks, socialLinks)
-    .map((block, index) => ({ ...block, order: typeof block.order === "number" ? block.order : index }))
-    .sort((a, b) => a.order - b.order)
-    .map((block, index) => ({ ...block, order: index }));
+  const resolvedBlocks = useMemo(
+    () => toBuilderBlocks(profile, blocks, socialLinks)
+      .map((block, index) => ({ ...block, order: typeof block.order === "number" ? block.order : index }))
+      .sort((a, b) => a.order - b.order)
+      .map((block, index) => ({ ...block, order: index })),
+    [blocks, profile, socialLinks]
+  );
 
-  const existingTheme = profile?.builder_config?.theme;
-  const resolvedTheme = {
-    ...createDefaultTheme(profile?.theme_color || "#FFA665"),
-    ...(existingTheme || {}),
-    ...(themeOverrides || {}),
-  };
+  const resolvedTheme = useMemo(() => {
+    const existingTheme = profile?.builder_config?.theme;
+    return {
+      ...createDefaultTheme(profile?.theme_color || "#FFA665"),
+      ...(existingTheme || {}),
+      ...(themeOverrides || {}),
+    };
+  }, [profile?.builder_config?.theme, profile?.theme_color, themeOverrides]);
 
-  const config: BuilderConfig = {
+  const config: BuilderConfig = useMemo(() => ({
     version: Number(profile?.builder_config?.version || 1),
     theme: resolvedTheme,
     sections: Array.isArray(sections)
@@ -206,9 +212,9 @@ export default function ConnectProfileView({
     forms: Array.isArray(forms)
       ? forms
       : (Array.isArray(profile?.builder_config?.forms) ? profile.builder_config.forms : []),
-  };
+  }), [forms, profile?.builder_config?.forms, profile?.builder_config?.sections, profile?.builder_config?.version, resolvedBlocks, resolvedTheme, sections]);
 
-  const hydratedConfig = sanitizeForRender(config, config.sections);
+  const hydratedConfig = useMemo(() => sanitizeForRender(config, config.sections), [config]);
 
   return (
     <BuilderPublicProfile
@@ -226,3 +232,5 @@ export default function ConnectProfileView({
     />
   );
 }
+
+export default memo(ConnectProfileView);

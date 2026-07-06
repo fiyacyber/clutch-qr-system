@@ -355,14 +355,16 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         {setupMessage === "complete" ? <div className="success-message">Profile published. Your public page is now live.</div> : null}
 
         <section className="connect-center-public-strip" aria-label="Public page status">
-          <div>
+          <div className="connect-center-public-strip-main">
             <span className={profilePublished ? "is-live" : "is-draft"}>
               {profilePublished ? "LIVE" : "DRAFT"}
             </span>
-            <strong>{publicProfileUrl}</strong>
+            <div className="connect-center-public-strip-url-row">
+              <strong>{publicProfileUrl}</strong>
+              {hasLivePublicProfile && publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
+            </div>
           </div>
           <div className="connect-center-public-strip-actions">
-            {hasLivePublicProfile && publicProfileFullUrl ? <CopyPublicProfileButton url={publicProfileFullUrl} /> : null}
             {!hasLivePublicProfile ? <Link className="btn secondary" href="/portal/connect/setup">Continue Guided Setup</Link> : null}
           </div>
         </section>

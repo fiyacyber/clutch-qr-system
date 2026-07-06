@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import {
   BadgeCheck,
   ArrowUpRight,
@@ -258,8 +259,7 @@ function HeroAvatar({
     [data.businessName, profile.business_name, profile.email]
   );
 
-  const haloOpacity = glowEnabled ? Math.max(0, Math.min(1, Number(glowOpacity) || 0)) : 0;
-  const avatarShadow = `0 18px 40px rgba(0,0,0,0.18), 0 0 0 10px rgba(255, 107, 44, ${0.09 * haloOpacity})`;
+  const avatarShadow = "0 18px 36px rgba(11, 31, 53, 0.18)";
   const borderEnabled = data.avatarBorderEnabled === true;
   const borderWidth = Number.isFinite(Number(data.avatarBorderWidth)) ? Math.max(0, Math.min(8, Number(data.avatarBorderWidth))) : 4;
   const borderRadius = Number.isFinite(Number(data.avatarBorderRadius)) ? Math.max(0, Math.min(999, Number(data.avatarBorderRadius))) : 999;
@@ -278,11 +278,16 @@ function HeroAvatar({
   }
 
   return (
-    <img
+    <Image
       src={resolvedAvatarUrl}
       alt={data.businessName || profile.business_name || "Profile"}
+      width={132}
+      height={132}
       className="builder-hero-avatar"
       style={avatarStyle}
+      unoptimized
+      sizes="132px"
+      loading="eager"
       onError={() => setFailed(true)}
     />
   );
@@ -813,7 +818,17 @@ export function ImageBlockPreview({ block, profileId }: BlockPreviewProps) {
   const [failed, setFailed] = useState(false);
   
   const content = data.imageUrl && !failed ? (
-    <img src={data.imageUrl} alt={data.altText || "Image"} className="builder-image" onError={() => setFailed(true)} />
+    <Image
+      src={data.imageUrl}
+      alt={data.altText || "Image"}
+      width={1280}
+      height={720}
+      className="builder-image"
+      unoptimized
+      loading="lazy"
+      sizes="(max-width: 768px) 100vw, 520px"
+      onError={() => setFailed(true)}
+    />
   ) : (
     <div className="builder-image-placeholder" title="Tap to add image">
       <svg viewBox="0 0 24 24" className="builder-image-icon">

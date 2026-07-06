@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuilderConfig, ProfileSection } from "@/lib/builder-types";
 import { normalizeBeginnerConnectLinkHref } from "@/lib/connect";
 import { getBlockData, normalizeBlockType } from "./builder/blockUtils";
@@ -287,6 +287,7 @@ export default function BuilderPublicProfile({
   onRemoveSection,
 }: BuilderPublicProfileProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const quickActionTimeoutRef = useRef<number | null>(null);
   const [quickActionNotice, setQuickActionNotice] = useState<string | null>(null);
   const background = config.theme.background || {
     type: "soft",
@@ -373,41 +374,127 @@ export default function BuilderPublicProfile({
     ["--builder-bg-gradient-to" as any]: background.gradientTo || "#FFF4EC",
   };
 
-  const orderedBlocks = [...(config.blocks || [])].sort((a, b) => a.order - b.order);
-  const heroBlocks = orderedBlocks.filter((block) => ["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(String(block.type)));
-  const primaryActionBlocks = orderedBlocks.filter((block) => {
-    const type = String(block.type);
-    const data = getBlockData(block);
-    return (type === "request-quote-button" || type === "custom-link-button") && data.isPrimaryAction === true;
-  });
-  const primaryActionIds = new Set(primaryActionBlocks.map((block) => block.id));
-  const guidedLeadFormBlocks = orderedBlocks.filter((block) => {
-    if (String(block.type) !== "form-block") return false;
-    const data = getBlockData(block);
-    return data.source === "clutch_connect_profile" && data.leadCaptureEnabled !== false;
-  });
-  const guidedLeadFormIds = new Set(guidedLeadFormBlocks.map((block) => block.id));
-  const sections = [...(config.sections || [])].sort((a, b) => a.order - b.order);
+  const orderedBlocks = useMemo(
+    () => [...(config.blocks || [])].sort((a, b) => a.order - b.order),
+    [config.blocks]
+  );
+  const heroBlocks = useMemo(
+    () => orderedBlocks.filter((block) => ["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(String(block.type))),
+    [orderedBlocks]
+  );
+  const primaryActionBlocks = useMemo(
+    () => orderedBlocks.filter((block) => {
+      const type = String(block.type);
+      const data = getBlockData(block);
+      return (type === "request-quote-button" || type === "custom-link-button") && data.isPrimaryAction === true;
+    }),
+    [orderedBlocks]
+  );
+  const primaryActionIds = useMemo(() => new Set(primaryActionBlocks.map((block) => block.id)), [primaryActionBlocks]);
+  const guidedLeadFormBlocks = useMemo(
+    () => orderedBlocks.filter((block) => {
+      if (String(block.type) !== "form-block") return false;
+      const data = getBlockData(block);
+      return data.source === "clutch_connect_profile" && data.leadCaptureEnabled !== false;
+    }),
+    [orderedBlocks]
+  );
+  const guidedLeadFormIds = useMemo(() => new Set(guidedLeadFormBlocks.map((block) => block.id)), [guidedLeadFormBlocks]);
+  const sections = useMemo(
+    () => [...(config.sections || [])].sort((a, b) => a.order - b.order),
+    [config.sections]
+  );
 
-  const handleQuickAction = useCallback((action: string) => {
-    setQuickActionNotice(action);
-    window.setTimeout(() => setQuickActionNotice(null), 1400);
+  const profileAvatarUrl = (() => {
+    const raw = typeof profile?.avatar_url === "string" ? profile.avatar_url.trim() : "";
+    if (!raw || !/^https?:\/\//i.test(raw)) return "";
+    return raw;
+  })();
+  const bannerImageUrl = (() => {
+    const raw = typeof banner.imageUrl === "string" ? banner.imageUrl.trim() : "";
+    if (!raw || !banner.enabled || banner.type !== "image") return "";
+    return raw;
+  })();
+  const [initialDelayComplete, setInitialDelayComplete] = useState(false);
+  const [avatarAssetReady, setAvatarAssetReady] = useState(!profileAvatarUrl);
+  const [bannerAssetReady, setBannerAssetReady] = useState(!bannerImageUrl);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setInitialDelayComplete(true), 150);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  const renderBlock = (block: any, sectionId?: string) => {
+  useEffect(() => {
+    if (!profileAvatarUrl) {
+      setAvatarAssetReady(true);
+      return;
+    }
+    setAvatarAssetReady(false);
+    const image = new Image();
+    image.onload = () => setAvatarAssetReady(true);
+    image.onerror = () => setAvatarAssetReady(true);
+    image.src = profileAvatarUrl;
+  }, [profileAvatarUrl]);
+
+  useEffect(() => {
+    if (!bannerImageUrl) {
+      setBannerAssetReady(true);
+      return;
+    }
+    setBannerAssetReady(false);
+    const image = new Image();
+    image.onload = () => setBannerAssetReady(true);
+    image.onerror = () => setBannerAssetReady(true);
+    image.src = bannerImageUrl;
+  }, [bannerImageUrl]);
+
+  const previewReady = initialDelayComplete && avatarAssetReady && bannerAssetReady;
+
+  const handleQuickAction = useCallback((action: string) => {
+    if (quickActionTimeoutRef.current) {
+      window.clearTimeout(quickActionTimeoutRef.current);
+    }
+    setQuickActionNotice(action);
+    quickActionTimeoutRef.current = window.setTimeout(() => setQuickActionNotice(null), 1400);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (quickActionTimeoutRef.current) {
+        window.clearTimeout(quickActionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const sectionBlocksById = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const section of sections) {
+      const sectionBlocks = orderedBlocks.filter((block) => {
+        const blockType = String(block.type);
+        if (primaryActionIds.has(block.id)) return false;
+        if (guidedLeadFormIds.has(block.id)) return false;
+        if (["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(blockType)) return false;
+        return block.sectionId === section.id;
+      });
+      map.set(section.id, sectionBlocks);
+    }
+    return map;
+  }, [guidedLeadFormIds, orderedBlocks, primaryActionIds, sections]);
+
+  const ProfileBlock = useCallback((block: any, sectionId?: string, index = 0) => {
     if (mode !== "editor" && block.visible === false) return null;
 
     const type = normalizeBlockType(String(block.type));
     const Component = PREVIEW_COMPONENTS[type] || UnknownBlockPreview;
-    const data = getBlockData(block);
     const isSelected = selectedBlockId === block.id;
     const canEdit = editablePreview && onSelectBlock;
 
     return (
       <div
         key={block.id}
-        className={`builder-public-section-block builder-preview-selectable${isSelected ? " selected" : ""}${block.visible === false ? " builder-preview-hidden-block" : ""}`}
+        className={`builder-public-section-block builder-preview-selectable builder-block-enter${isSelected ? " selected" : ""}${block.visible === false ? " builder-preview-hidden-block" : ""}`}
         data-builder-block-id={block.id}
+        style={{ ["--builder-block-index" as any]: index }}
       >
         {canEdit ? (
           <div className="builder-preview-toolbar">
@@ -427,7 +514,7 @@ export default function BuilderPublicProfile({
           } : undefined}
         >
           <Component
-            block={{ ...block, data, settings: data }}
+            block={block}
             profile={profile}
             buttonColor={buttonColor}
             buttonTextColor={buttonTextColor}
@@ -439,7 +526,93 @@ export default function BuilderPublicProfile({
         </div>
       </div>
     );
-  };
+  }, [buttonColor, buttonShape, buttonTextColor, editablePreview, mode, onRemoveBlock, onSelectBlock, profile, selectedBlockId, handleQuickAction]);
+
+  const ProfileHeader = useMemo(() => (
+    <div className="builder-public-hero builder-profile-header-stack">
+      {heroBlocks.map((block, index) => ProfileBlock(block, undefined, index))}
+      {primaryActionBlocks.map((block, index) => ProfileBlock(block, undefined, heroBlocks.length + index))}
+    </div>
+  ), [ProfileBlock, heroBlocks, primaryActionBlocks]);
+
+  const ProfileBlocks = useMemo(() => (
+    <div className="builder-public-sections">
+      {sections.map((section, sectionIndex) => {
+        if (mode !== "editor" && section.visible === false) return null;
+
+        const sectionBlocks = sectionBlocksById.get(section.id) || [];
+        const visibleSectionBlocks = mode === "editor" ? sectionBlocks : sectionBlocks.filter((block) => blockHasRenderableContent(block, profile, mode));
+        if (mode !== "editor" && visibleSectionBlocks.length === 0) return null;
+        const canSelectSection = editablePreview && onSelectSection;
+
+        return (
+          <section
+            key={section.id}
+            className={`builder-public-section builder-preview-selectable${section.visible === false ? " builder-preview-hidden-block" : ""}`}
+            data-builder-section-id={section.id}
+            role={canSelectSection ? "button" : undefined}
+            tabIndex={canSelectSection ? 0 : undefined}
+            onClick={canSelectSection ? () => onSelectSection?.(section.id) : undefined}
+            onKeyDown={canSelectSection ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelectSection?.(section.id);
+              }
+            } : undefined}
+          >
+            {editablePreview && onRemoveSection ? (
+              <div className="builder-preview-toolbar section-toolbar">
+                <button type="button" onClick={(event) => { event.stopPropagation(); onSelectSection?.(section.id); }}>Edit</button>
+                <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveSection(section.id); }}>Remove</button>
+              </div>
+            ) : null}
+            <div className="builder-public-section-stack">
+              <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
+              {visibleSectionBlocks.length ? (
+                <Fragment>
+                  {visibleSectionBlocks.map((block, index) => ProfileBlock(block, section.id, sectionIndex * 20 + index + 1))}
+                </Fragment>
+              ) : mode === "editor" ? (
+                <div className="builder-public-section-empty">
+                  {section.label.toLowerCase().includes("social") ? "Add social links to display them here." : "No blocks assigned to this section yet."}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  ), [ProfileBlock, editablePreview, globalAlignment, mode, onRemoveSection, onSelectSection, profile, sectionBlocksById, sections, starterLocked]);
+
+  const ProfilePreviewContent = useMemo(() => (
+    <div className="builder-public-shell">
+      <div className="builder-global-banner" data-image-position={banner.imagePosition || "center"} style={bannerStyle}>
+        {banner.overlayEnabled ? <span className="builder-global-banner-overlay" /> : null}
+      </div>
+      {ProfileHeader}
+      {ProfileBlocks}
+      {guidedLeadFormBlocks.length ? (
+        <div className="builder-guided-lead-slot" data-guided-lead-state="collapsed">
+          {guidedLeadFormBlocks.map((block, index) => ProfileBlock(block, undefined, 400 + index))}
+        </div>
+      ) : null}
+      <div
+        className="builder-public-footer builder-preview-selectable"
+        role={editablePreview && onSelectSaveShare ? "button" : undefined}
+        tabIndex={editablePreview && onSelectSaveShare ? 0 : undefined}
+        onClick={editablePreview && onSelectSaveShare ? () => onSelectSaveShare() : undefined}
+        onKeyDown={editablePreview && onSelectSaveShare ? (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelectSaveShare();
+          }
+        } : undefined}
+      >
+        <span className="builder-public-footer-line">Powered by{" "}<strong className="builder-public-footer-brand">Clutch Connect</strong></span>
+        <span className="builder-public-footer-line">clutchprintshop.com</span>
+      </div>
+    </div>
+  ), [ProfileBlocks, ProfileHeader, ProfileBlock, banner.imagePosition, banner.overlayEnabled, bannerStyle, editablePreview, guidedLeadFormBlocks, onSelectSaveShare]);
 
   return (
     <div
@@ -468,85 +641,19 @@ export default function BuilderPublicProfile({
         ["--builder-banner-image" as any]: toCssImageUrl(banner.imageUrl) || "none",
       }}
     >
-      <div className="builder-public-shell">
-        <div className="builder-global-banner" data-image-position={banner.imagePosition || "center"} style={bannerStyle}>
-          {banner.overlayEnabled ? <span className="builder-global-banner-overlay" /> : null}
+      {!previewReady ? (
+        <div className="builder-preview-skeleton" aria-hidden="true">
+          <div className="builder-preview-skeleton-banner" />
+          <div className="builder-preview-skeleton-avatar" />
+          <div className="builder-preview-skeleton-title" />
+          <div className="builder-preview-skeleton-subtitle" />
+          <div className="builder-preview-skeleton-card" />
+          <div className="builder-preview-skeleton-card" />
+          <div className="builder-preview-skeleton-card" />
         </div>
-        <div className="builder-public-hero builder-profile-header-stack">
-          {heroBlocks.map((block) => renderBlock(block))}
-          {primaryActionBlocks.map((block) => renderBlock(block))}
-        </div>
-        <div className="builder-public-sections">
-          {sections.map((section) => {
-            if (mode !== "editor" && section.visible === false) return null;
-
-            const sectionBlocks = orderedBlocks.filter((block) => {
-              const blockType = String(block.type);
-              if (primaryActionIds.has(block.id)) return false;
-              if (guidedLeadFormIds.has(block.id)) return false;
-              if (["profile-hero", "avatar-block", "business-name-block", "subheader-block"].includes(blockType)) return false;
-              return block.sectionId === section.id;
-            });
-            const visibleSectionBlocks = mode === "editor" ? sectionBlocks : sectionBlocks.filter((block) => blockHasRenderableContent(block, profile, mode));
-            if (mode !== "editor" && visibleSectionBlocks.length === 0) return null;
-            const canSelectSection = editablePreview && onSelectSection;
-            return (
-              <section
-                key={section.id}
-                className={`builder-public-section builder-preview-selectable${section.visible === false ? " builder-preview-hidden-block" : ""}`}
-                data-builder-section-id={section.id}
-                role={canSelectSection ? "button" : undefined}
-                tabIndex={canSelectSection ? 0 : undefined}
-                onClick={canSelectSection ? () => onSelectSection?.(section.id) : undefined}
-                onKeyDown={canSelectSection ? (event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onSelectSection?.(section.id);
-                  }
-                } : undefined}
-              >
-                {editablePreview && onRemoveSection ? (
-                  <div className="builder-preview-toolbar section-toolbar">
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onSelectSection?.(section.id); }}>Edit</button>
-                    <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveSection(section.id); }}>Remove</button>
-                  </div>
-                ) : null}
-                <div className="builder-public-section-stack">
-                  <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
-                  {visibleSectionBlocks.length ? (
-                    <Fragment>
-                      {visibleSectionBlocks.map((block) => renderBlock(block, section.id))}
-                    </Fragment>
-                  ) : mode === "editor" ? (
-                    <div className="builder-public-section-empty">
-                      {section.label.toLowerCase().includes("social") ? "Add social links to display them here." : "No blocks assigned to this section yet."}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-        {guidedLeadFormBlocks.length ? (
-          <div className="builder-guided-lead-slot" data-guided-lead-state="collapsed">
-            {guidedLeadFormBlocks.map((block) => renderBlock(block))}
-          </div>
-        ) : null}
-        <div
-          className="builder-public-footer builder-preview-selectable"
-          role={editablePreview && onSelectSaveShare ? "button" : undefined}
-          tabIndex={editablePreview && onSelectSaveShare ? 0 : undefined}
-          onClick={editablePreview && onSelectSaveShare ? () => onSelectSaveShare() : undefined}
-          onKeyDown={editablePreview && onSelectSaveShare ? (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              onSelectSaveShare();
-            }
-          } : undefined}
-        >
-          <span className="builder-public-footer-line">Powered by{" "}<strong className="builder-public-footer-brand">Clutch Connect</strong></span>
-          <span className="builder-public-footer-line">clutchprintshop.com</span>
-        </div>
+      ) : null}
+      <div className={`builder-preview-content${previewReady ? " is-ready" : ""}`}>
+        {ProfilePreviewContent}
       </div>
       {quickActionNotice ? <div className="builder-quick-action-toast">{quickActionNotice}</div> : null}
     </div>
