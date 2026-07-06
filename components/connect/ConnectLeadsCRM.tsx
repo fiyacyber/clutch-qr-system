@@ -12,7 +12,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import styles from "./ConnectLeadsCRM.module.css";
-import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import CopyValueButton from "@/components/dashboard/CopyValueButton";
 import { clutchConnectProfileUrl } from "@/lib/qr";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "closed" | "archived";
@@ -64,6 +64,7 @@ type QrPerformanceRow = {
 
 interface ConnectLeadsCRMProps {
   profileSlug: string;
+  isBasicPlan?: boolean;
   leads: LeadRow[];
   timeline: TimelineRow[];
   campaignRows: CampaignRow[];
@@ -73,8 +74,6 @@ interface ConnectLeadsCRMProps {
   canUseCampaignPerformance?: boolean;
   canUsePdfReports?: boolean;
   connectPlusCheckoutHref?: string;
-  qrProCheckoutHref?: string;
-  agencyInquiryHref?: string;
   funnel: {
     profileViews: number;
     qrScans: number;
@@ -152,6 +151,7 @@ function mergeUpdatedLead(current: LeadRow, updated: any): LeadRow {
 
 export default function ConnectLeadsCRM({
   profileSlug,
+  isBasicPlan = false,
   leads,
   timeline,
   campaignRows,
@@ -161,8 +161,6 @@ export default function ConnectLeadsCRM({
   canUseCampaignPerformance = false,
   canUsePdfReports = false,
   connectPlusCheckoutHref = "/portal/settings",
-  qrProCheckoutHref = "/portal/settings",
-  agencyInquiryHref = "/portal/settings",
   funnel,
 }: ConnectLeadsCRMProps) {
   const [leadRows, setLeadRows] = useState<LeadRow[]>(() => leads.map(normalizeLead));
@@ -267,6 +265,8 @@ export default function ConnectLeadsCRM({
       { label: "Leads Captured", value: funnel.leadCaptures },
     ].map((row) => ({ ...row, pct: Math.round((row.value / total) * 100) }));
   }, [funnel]);
+
+  const profileUrl = clutchConnectProfileUrl(profileSlug);
 
   async function patchLead(
     leadId: string,
@@ -397,34 +397,33 @@ export default function ConnectLeadsCRM({
         <article className={styles.summaryCard}>
           <span>Total Leads</span>
           <strong>{summary.total}</strong>
-          <p>+12.4% vs prior period</p>
+          <p>{summary.total ? `${summary.total} total submissions` : "No submissions yet"}</p>
         </article>
         <article className={styles.summaryCard}>
           <span>New Leads</span>
           <strong>{summary.newLeads}</strong>
-          <p>Priority follow-up queue</p>
+          <p>{summary.newLeads ? "Ready for first response" : "Waiting for first lead"}</p>
         </article>
         <article className={styles.summaryCard}>
           <span>Contacted</span>
           <strong>{summary.contacted}</strong>
-          <p>Outreach in progress</p>
+          <p>{summary.contacted ? "Follow-up in progress" : "No follow-ups yet"}</p>
         </article>
         <article className={styles.summaryCard}>
           <span>Converted</span>
           <strong>{summary.converted}</strong>
-          <p>Won opportunities</p>
+          <p>{summary.converted ? "Converted opportunities" : "No converted leads yet"}</p>
         </article>
       </section>
 
       {!leadRows.length ? (
         <section className={styles.emptyState}>
           <div className={styles.emptyIllustration}><Share2 size={28} /></div>
-          <h3>No leads yet.</h3>
-          <p>Share your digital business card and QR campaigns to start capturing contact requests.</p>
+          <h3>No leads yet</h3>
+          <p>Leads will appear here when someone submits the contact form on your Clutch Connect profile.</p>
           <div className={styles.emptyActions}>
-            <a className="btn secondary" href={clutchConnectProfileUrl(profileSlug)} target="_blank" rel="noreferrer">Open Public Profile</a>
-            <a className="btn ghost" href="/portal/connect">Share Profile</a>
-            <a className="btn primary" href="/portal/create">Generate QR Code</a>
+            <a className="btn secondary" href={profileUrl} target="_blank" rel="noreferrer">View Public Profile</a>
+            <CopyValueButton value={profileUrl} label="Copy Profile Link" className="btn ghost" />
           </div>
         </section>
       ) : (
@@ -517,7 +516,7 @@ export default function ConnectLeadsCRM({
               <aside className={styles.drawer}>
                 {selectedLead ? (
                   <>
-                    <h3>Lead Detail</h3>
+                    <h3>Lead Details</h3>
                     <dl className={styles.detailList}>
                       <div><dt>Name</dt><dd>{selectedLead.name || "-"}</dd></div>
                       <div><dt>Email</dt><dd>{selectedLead.email || "-"}</dd></div>
@@ -534,7 +533,7 @@ export default function ConnectLeadsCRM({
                       {selectedLead.archivedAt ? <div><dt>Archived</dt><dd>{formatDate(selectedLead.archivedAt)}</dd></div> : null}
                     </dl>
                     <div className={styles.notesBox}>
-                      <label htmlFor={`lead-notes-${selectedLead.id}`}>CRM Notes</label>
+                      <label htmlFor={`lead-notes-${selectedLead.id}`}>Follow-up Notes</label>
                       <textarea
                         id={`lead-notes-${selectedLead.id}`}
                         value={selectedLeadNotes}
@@ -592,7 +591,7 @@ export default function ConnectLeadsCRM({
                             disabled={isLeadSaving(selectedLead.id)}
                             onClick={() => patchLead(selectedLead.id, { status: "closed" }, "Saved")}
                           >
-                            {pendingAction === `${selectedLead.id}:closed` ? "Saving..." : "Close"}
+                            {pendingAction === `${selectedLead.id}:closed` ? "Saving..." : "Mark Closed"}
                           </button>
                           {selectedLead.status === "archived" || selectedLead.archivedAt ? (
                             <button
@@ -653,24 +652,7 @@ export default function ConnectLeadsCRM({
                 </ul>
               </article>
             </section>
-          ) : (
-            <LockedFeatureCard
-              title="Unlock Clutch Connect+"
-              description="Advanced Lead Inbox controls, source tracking, and conversion funnel insights."
-              requiredPlan="Clutch Connect+"
-              requiredPlanPrice="$9.99/mo"
-              ctaLabel="Upgrade for $9.99/mo"
-              ctaHref={connectPlusCheckoutHref}
-              featureList={[
-                "Lead statuses and notes",
-                "Advanced filters and search",
-                "Source breakdown",
-                "Conversion funnel",
-                "CSV export",
-              ]}
-              variant="connect_plus"
-            />
-          )}
+          ) : null}
 
           <section className={styles.twoCol}>
             <article className={styles.card}>
@@ -706,7 +688,8 @@ export default function ConnectLeadsCRM({
           </section>
 
           {canUseCampaignPerformance ? (
-            <>
+            <details className={styles.advancedReporting}>
+              <summary>Advanced reporting</summary>
               <section className={styles.card}>
                 <h3>Campaign Performance</h3>
                 <div className={styles.tableWrap}>
@@ -762,36 +745,39 @@ export default function ConnectLeadsCRM({
                   </table>
                 </div>
               </section>
-            </>
-          ) : (
-            <LockedFeatureCard
-              title="Unlock QR Pro"
-              description="Create and track up to 100 dynamic QR campaigns with campaign and QR performance reporting."
-              requiredPlan="QR Pro"
-              requiredPlanPrice="$14.99/mo"
-              ctaLabel="Upgrade for $14.99/mo"
-              ctaHref={qrProCheckoutHref}
-              featureList={[
-                "Campaign analytics",
-                "Top QR performance",
-                "Destination analytics",
-                "Source-aware conversion tracking",
-              ]}
-              variant="qr_pro"
-            />
-          )}
+            </details>
+          ) : null}
 
-          {!canUsePdfReports && canUseCampaignPerformance ? (
-            <LockedFeatureCard
-              title="Need richer reporting?"
-              description="Agency unlocks PDF and client reporting for high-volume teams."
-              requiredPlan="Agency"
-              requiredPlanPrice="Custom"
-              ctaLabel="Request Agency Access"
-              ctaHref={agencyInquiryHref}
-              featureList={["PDF reporting", "Client reporting", "High-volume reporting tools"]}
-              variant="agency"
-            />
+          <section className={styles.card}>
+            <h3>Lead Capture Settings</h3>
+            <ul className={styles.settingsList}>
+              <li><span>Form</span><strong>Active</strong></li>
+              <li><span>Delivery</span><strong>Lead Inbox</strong></li>
+              <li><span>Source tracking</span><strong>Active</strong></li>
+              <li><span>Notifications</span><strong>Not configured</strong></li>
+              {!canUseAdvancedInbox ? (
+                <>
+                  <li className={styles.settingsLocked}><span>Custom fields</span><strong>Connect+ Locked</strong></li>
+                  <li className={styles.settingsLocked}><span>Auto-reply</span><strong>Connect+ Locked</strong></li>
+                  <li className={styles.settingsLocked}><span>Webhook/Zapier</span><strong>Connect+ Locked</strong></li>
+                  <li className={styles.settingsLocked}><span>CRM integrations</span><strong>Connect+ Locked</strong></li>
+                </>
+              ) : null}
+            </ul>
+            <div className={styles.settingsActions}>
+              <a className="btn secondary" href="/portal/connect/setup">Edit Lead Form</a>
+            </div>
+          </section>
+
+          {isBasicPlan ? (
+            <section className={`${styles.card} ${styles.upgradeCard}`}>
+              <h3>Upgrade to Clutch Connect+</h3>
+              <p>Unlock advanced lead statuses, notes, source tracking, exports, and follow-up tools.</p>
+              <div className={styles.upgradeActions}>
+                <a className="btn ghost" href={connectPlusCheckoutHref}>Try Connect+</a>
+                <span>14 Day Free Trial · Cancel Anytime</span>
+              </div>
+            </section>
           ) : null}
         </>
       )}

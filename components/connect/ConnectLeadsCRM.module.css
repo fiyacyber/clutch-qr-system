@@ -36,7 +36,7 @@
 
 .summaryCard p {
   margin: 8px 0 0;
-  color: #168a4e;
+  color: #6b7a8d;
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -418,7 +418,7 @@
   justify-items: center;
   text-align: center;
   gap: 10px;
-  padding: 28px 14px;
+  padding: 20px 14px;
 }
 
 .emptyIllustration {
@@ -443,6 +443,115 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+}
+
+.emptyActions :global(.btn) {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 0.78rem;
+}
+
+.advancedReporting {
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.advancedReporting > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 12px;
+  color: #0b1f35;
+  font-size: 0.86rem;
+  font-weight: 800;
+  border-bottom: 1px solid #eef2f8;
+}
+
+.advancedReporting > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advancedReporting > summary::after {
+  content: "+";
+  float: right;
+  color: #6b7a8d;
+}
+
+.advancedReporting[open] > summary::after {
+  content: "-";
+}
+
+.advancedReporting .card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.settingsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.settingsList li {
+  border: 1px solid #eef2f8;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #384862;
+  font-size: 0.82rem;
+}
+
+.settingsList li strong {
+  color: #0b1f35;
+  font-size: 0.78rem;
+}
+
+.settingsLocked {
+  background: #fafbfd;
+}
+
+.settingsLocked strong {
+  color: #8a96a8;
+}
+
+.settingsActions {
+  margin-top: 10px;
+}
+
+.settingsActions :global(.btn) {
+  min-height: 36px;
+}
+
+.upgradeCard {
+  background: linear-gradient(180deg, #fff, #fffcf7);
+  border-color: rgba(255, 166, 101, 0.4);
+}
+
+.upgradeCard p {
+  margin: 8px 0 0;
+  color: #6b7a8d;
+  font-size: 0.84rem;
+}
+
+.upgradeActions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.upgradeActions span {
+  color: #6b7a8d;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 @media (max-width: 1180px) {
@@ -475,6 +584,11 @@
   .drawerActions > * {
     width: 100%;
     justify-content: center;
+  }
+
+  .settingsList li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

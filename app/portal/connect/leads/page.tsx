@@ -4,9 +4,10 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectLeadsCRM from "@/components/connect/ConnectLeadsCRM";
 import ConnectTabs from "@/components/connect/ConnectTabs";
+import CopyValueButton from "@/components/dashboard/CopyValueButton";
 import { requireCustomer } from "@/lib/auth";
 import { clutchConnectProfileUrl } from "@/lib/qr";
-import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 function sourceFromQrType(qrType?: string | null) {
@@ -65,8 +66,10 @@ export default async function PortalConnectLeadsPage() {
   const canUseSourceInsights = hasEntitlement(customer, "sourceTracking") || plan.code === "admin";
   const canUseCampaignPerformance = hasEntitlement(customer, "campaignAnalytics") || plan.code === "admin";
   const canUsePdfReports = hasEntitlement(customer, "pdfReports") || plan.code === "admin";
+  const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
   const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const publicProfileUrl = clutchConnectProfileUrl(profile.slug);
 
   const [{ data: leads }, { data: events }, { data: unifiedEvents }, { data: qrCodes }, { data: qrScans }] = await Promise.all([
     admin
@@ -244,20 +247,26 @@ export default async function PortalConnectLeadsPage() {
     >
       <main className="container connect-center-shell">
         <DashboardHeader
-          title="Clutch Connect Leads"
-          subtitle="CRM-style inbox for digital business card leads, sources, and conversion analytics."
+          title="Lead Inbox"
+          subtitle="Review contact requests from your Clutch Connect profile and smart card."
           actions={
             <div className="connect-center-header-actions">
-              <Link className="btn primary" href={clutchConnectProfileUrl(profile.slug)} target="_blank">Open Public Profile</Link>
-              <Link className="btn secondary" href="/portal/create">Generate QR Code</Link>
+              <Link className="btn primary" href={publicProfileUrl} target="_blank">View Public Profile</Link>
+              <CopyValueButton value={publicProfileUrl} label="Copy Profile Link" className="btn secondary" />
             </div>
           }
         />
 
-        <ConnectTabs active="leads" />
+        <ConnectTabs
+          active="leads"
+          showBuilder={advancedBuilderUnlocked}
+          analyticsLocked={!hasHeatmap}
+          analyticsLockedMode="inline"
+        />
 
         <ConnectLeadsCRM
           profileSlug={profile.slug}
+          isBasicPlan={plan.code === "connect_basic"}
           leads={leadRows}
           timeline={timelineRows}
           campaignRows={campaignRows}
@@ -267,8 +276,6 @@ export default async function PortalConnectLeadsPage() {
           canUseCampaignPerformance={canUseCampaignPerformance}
           canUsePdfReports={canUsePdfReports}
           connectPlusCheckoutHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
-          qrProCheckoutHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
-          agencyInquiryHref={PLAN_DEFINITIONS.agency.checkoutUrl}
           funnel={funnel}
         />
       </main>

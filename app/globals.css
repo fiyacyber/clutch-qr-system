@@ -11979,6 +11979,18 @@ input.saas-font-search:focus-visible {
   color: var(--clutch-dark);
 }
 
+.connect-tab.locked {
+  border-style: dashed;
+  border-color: rgba(138, 150, 168, 0.55);
+  background: #fafbfd;
+  color: #6b7a8d;
+}
+
+.connect-tab.locked.active {
+  border-color: rgba(255, 166, 101, 0.5);
+  background: #fff8f1;
+}
+
 @media (max-width: 768px) {
   .btn,
   .connect-tab,
