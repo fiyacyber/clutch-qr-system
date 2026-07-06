@@ -5,6 +5,7 @@ type ConnectTabKey = "builder" | "profile" | "leads" | "analytics";
 interface ConnectTabsProps {
   active: ConnectTabKey;
   showBuilder?: boolean;
+  analyticsLocked?: boolean;
 }
 
 const TABS: Array<{ key: ConnectTabKey; label: string; href: string }> = [
@@ -14,7 +15,7 @@ const TABS: Array<{ key: ConnectTabKey; label: string; href: string }> = [
   { key: "analytics", label: "Analytics", href: "/portal/analytics?tab=clutch-connect" },
 ];
 
-export default function ConnectTabs({ active, showBuilder = true }: ConnectTabsProps) {
+export default function ConnectTabs({ active, showBuilder = true, analyticsLocked = false }: ConnectTabsProps) {
   const visibleTabs = showBuilder ? TABS : TABS.filter((tab) => tab.key !== "builder");
 
   return (
@@ -22,6 +23,7 @@ export default function ConnectTabs({ active, showBuilder = true }: ConnectTabsP
       {visibleTabs.map((tab) => (
         <Link key={tab.key} href={tab.href} className={`connect-tab${active === tab.key ? " active" : ""}`}>
           {tab.label}
+          {tab.key === "analytics" && analyticsLocked ? <span className="connect-tab-lock">Connect+</span> : null}
         </Link>
       ))}
     </nav>

@@ -393,9 +393,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
       })
     : "";
   const smartCardQrDate = selectedSmartCardQr?.updated_at || selectedSmartCardQr?.created_at || null;
-  const smartCardPublicProfileHref = hasPublicProfile && connectProfile?.slug
-    ? clutchConnectProfileUrl(String(connectProfile.slug))
-    : "/portal/connect/setup";
   const shopifyOrderStatusUrlById = new Map(
     (shopifyOrdersResult.data || []).map((order) => [
       String(order.shopify_order_id),
@@ -513,6 +510,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
         {!isConnectBasicPlan && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
 
+        {!isConnectBasicPlan ? (
         <AnalyticsCard title="Recent Order Status">
           {visibleCardOrders.length ? (
             <ul className="portal-overview-order-list">
@@ -573,6 +571,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             </details>
           ) : null}
         </AnalyticsCard>
+        ) : null}
 
         {subscriptionLocked ? (
           <section className="locked-upgrade-card">
@@ -606,26 +605,126 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               </div>
             </section>
 
+            <AnalyticsCard className="portal-overview-smart-qr-card">
+              <div className="portal-overview-section-head">
+                <h2>Your Smart Card QR</h2>
+                <p>This QR/NFC link was created for your smart card order.</p>
+              </div>
+
+              {selectedSmartCardQr?.slug ? (
+                <div className="portal-overview-smart-qr-grid">
+                  <div className="portal-overview-smart-qr-preview-wrap">
+                    <img
+                      src={smartCardQrPreview}
+                      alt="Smart card QR preview"
+                      className="portal-overview-smart-qr-preview"
+                    />
+                  </div>
+
+                  <div className="portal-overview-smart-qr-details">
+                    <div className="portal-overview-smart-qr-meta">
+                      <p><strong>Scan/tracking URL:</strong> <span>{smartCardScanUrlDisplay}</span></p>
+                      <p><strong>Destination URL:</strong> <span>{smartCardDestinationDisplay}</span></p>
+                      <p><strong>Connected profile:</strong> <span>{hasPublicProfile ? "Connected to your live profile" : "Finish setup to connect this QR to your live profile"}</span></p>
+                      <p><strong>Order association:</strong> <span>{associatedCardOrder?.shopify_order_number || associatedCardOrder?.id || "Not linked to a specific order"}</span></p>
+                      <p><strong>Last updated:</strong> <span>{formatDateTime(smartCardQrDate)}</span></p>
+                    </div>
+
+                    <div className="portal-overview-smart-qr-actions">
+                      <CopyValueButton value={smartCardScanUrl} label="Copy Scan Link" className="btn ghost portal-overview-card-btn" />
+                      <a className="btn secondary" href={smartCardQrDownload} target="_blank" rel="noreferrer" download>
+                        Download QR PNG
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="portal-overview-smart-empty">
+                  <QrCode size={22} />
+                  <h3>Smart card QR not ready yet</h3>
+                  <p>Your smart card QR will appear here after your order is created.</p>
+                </div>
+              )}
+            </AnalyticsCard>
+
+            <AnalyticsCard title="Recent Order Status">
+              {visibleCardOrders.length ? (
+                <ul className="portal-overview-order-list">
+                  {visibleCardOrders.map((order) => {
+                    const shopifyStatusUrl = order.shopify_order_id
+                      ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
+                      : null;
+                    const engravingDetails = order.engraving_requested
+                      ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
+                        ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
+                            .filter(Boolean)
+                            .join(" • ")
+                        : "Requested"
+                      : "Not requested";
+
+                    return (
+                      <li key={order.id} className="portal-overview-order-row">
+                        <div className="portal-overview-order-row-head">
+                          <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                          <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                        </div>
+                        <div className="portal-overview-order-row-grid">
+                          <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                          <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                          <p><strong>Engraving:</strong> {engravingDetails}</p>
+                          <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
+                          <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
+                          <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
+                        </div>
+
+                        <div className="portal-overview-order-row-actions">
+                          {shopifyStatusUrl ? <Link className="btn ghost portal-overview-card-btn" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
+              )}
+              {overflowCardOrders.length ? (
+                <details className="portal-overview-order-more">
+                  <summary>View all orders</summary>
+                  <ul className="portal-overview-order-list portal-overview-order-list-more">
+                    {overflowCardOrders.map((order) => (
+                      <li key={order.id} className="portal-overview-order-row">
+                        <div className="portal-overview-order-row-head">
+                          <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                          <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                        </div>
+                        <div className="portal-overview-order-row-grid">
+                          <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                          <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </AnalyticsCard>
+
             <section className="ds-stat-grid">
               <StatCard
                 label="Profile Views"
                 value={profileViewCount.toLocaleString()}
-                description="Profile engagement"
               />
               <StatCard
                 label="Card Taps"
                 value={smartCardTotalTaps.toLocaleString()}
-                description={smartCardLastTap ? `Last ${formatDate(smartCardLastTap)}` : "No taps yet"}
               />
               <StatCard
                 label="Leads"
                 value={leadInboxCount.toLocaleString()}
-                description="Lead Inbox"
               />
               <StatCard
                 label="Order Status"
                 value={latestOrderStatus}
-                description={latestCardOrder?.shopify_order_number ? String(latestCardOrder.shopify_order_number) : "No active order"}
+                description={latestCardOrder?.shopify_order_number ? String(latestCardOrder.shopify_order_number) : undefined}
               />
             </section>
 
@@ -657,53 +756,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               ) : (
                 <div className="portal-overview-smart-empty">
                   <QrCode size={22} />
-                  <h3>No card taps yet</h3>
                   <p>No card taps yet. Taps will appear after your smart card is scanned.</p>
-                </div>
-              )}
-            </AnalyticsCard>
-
-            <AnalyticsCard className="portal-overview-smart-qr-card">
-              <div className="portal-overview-section-head">
-                <h2>Your Smart Card QR</h2>
-                <p>This is the QR/NFC link created for your smart card order.</p>
-              </div>
-
-              {selectedSmartCardQr?.slug ? (
-                <div className="portal-overview-smart-qr-grid">
-                  <div className="portal-overview-smart-qr-preview-wrap">
-                    <img
-                      src={smartCardQrPreview}
-                      alt="Smart card QR preview"
-                      className="portal-overview-smart-qr-preview"
-                    />
-                  </div>
-
-                  <div className="portal-overview-smart-qr-details">
-                    <div className="portal-overview-smart-qr-meta">
-                      <p><strong>Scan/tracking URL:</strong> <span>{smartCardScanUrlDisplay}</span></p>
-                      <p><strong>Destination URL:</strong> <span>{smartCardDestinationDisplay}</span></p>
-                      <p><strong>Connected profile:</strong> <span>{hasPublicProfile ? "Connected to your live Clutch Connect profile." : "QR created. Finish setup to connect it to your live profile."}</span></p>
-                      <p><strong>Order association:</strong> <span>{associatedCardOrder?.shopify_order_number || associatedCardOrder?.id || "Not linked to a specific order"}</span></p>
-                      <p><strong>Last updated:</strong> <span>{formatDateTime(smartCardQrDate)}</span></p>
-                    </div>
-
-                    <div className="portal-overview-smart-qr-actions">
-                      <CopyValueButton value={smartCardScanUrl} label="Copy Scan Link" />
-                      <a className="btn secondary" href={smartCardQrDownload} target="_blank" rel="noreferrer" download>
-                        Download QR PNG
-                      </a>
-                      <Link className="btn ghost" href={smartCardPublicProfileHref} target={hasPublicProfile ? "_blank" : undefined} rel={hasPublicProfile ? "noreferrer" : undefined}>
-                        View Public Profile
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="portal-overview-smart-empty">
-                  <QrCode size={22} />
-                  <h3>Smart card QR not ready yet</h3>
-                  <p>Your smart card QR will appear here after your order is created.</p>
                 </div>
               )}
             </AnalyticsCard>
@@ -729,7 +782,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                       <CopyPublicProfileButton url={publicProfileUrl} />
                     </div>
                   ) : null}
-                  <Link className="btn secondary" href={hasPublicProfile ? "/portal/connect" : "/portal/connect/setup"}>
+                  <Link className={hasPublicProfile ? "btn ghost portal-overview-card-btn" : "btn primary portal-overview-card-btn"} href={hasPublicProfile ? "/portal/connect" : "/portal/connect/setup"}>
                     {hasPublicProfile ? "Edit Profile" : "Continue Guided Setup"}
                   </Link>
                 </article>
@@ -742,7 +795,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                       ? `${leadInboxCount} leads captured so far.`
                       : "Your Lead Inbox will populate when someone submits your profile form."}
                   </p>
-                  <Link className="btn ghost" href="/portal/connect/leads">Open Inbox</Link>
+                  <Link className="btn ghost portal-overview-card-btn" href="/portal/connect/leads">Open Inbox</Link>
                 </article>
 
                 <article className="portal-overview-action-item">
@@ -751,8 +804,8 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   <p>Save your contact card to Apple Wallet or Google Wallet for fast sharing.</p>
                   {hasConnectProfile && connectProfileId ? (
                     <div className="portal-overview-wallet-actions">
-                      <Link className="btn ghost" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</Link>
-                      <Link className="btn ghost" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</Link>
+                      <Link className="btn ghost portal-overview-card-btn" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</Link>
+                      <Link className="btn ghost portal-overview-card-btn" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</Link>
                     </div>
                   ) : (
                     <p className="portal-overview-inline-note">Finish Guided Setup to enable wallet cards.</p>
@@ -763,7 +816,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   <div className="portal-overview-action-icon"><CheckCircle2 size={17} /></div>
                   <h3>Support</h3>
                   <p>Need help with setup or publishing? Our team is ready to help.</p>
-                  <Link className="btn ghost" href="mailto:support@clutchprintshop.com">Contact Support</Link>
+                  <Link className="btn ghost portal-overview-card-btn" href="mailto:support@clutchprintshop.com">Contact Support</Link>
                 </article>
               </div>
             </AnalyticsCard>
@@ -783,7 +836,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               <AnalyticsCard title="Upgrade to Clutch Connect+" className="portal-overview-upgrade-card">
                 <div className="portal-overview-brand-card">
                   <p>Unlock advanced profile customization, deeper engagement analytics, enhanced lead tools, and premium profile sections.</p>
-                  <Link className="btn ghost" href="/portal/settings">Try Connect+</Link>
+                  <Link className="btn ghost portal-overview-card-btn" href="/portal/settings">Try Connect+</Link>
                   <span className="portal-overview-inline-note">14 Day Free Trial · Cancel Anytime</span>
                 </div>
               </AnalyticsCard>
