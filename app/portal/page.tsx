@@ -14,12 +14,12 @@ import {
 } from "lucide-react";
 import CustomerLogoUpload from "@/components/CustomerLogoUpload";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import CopyValueButton from "@/components/dashboard/CopyValueButton";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
+import SmartCardQrCard from "@/components/dashboard/SmartCardQrCard";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
@@ -34,7 +34,7 @@ import {
   getSubscriptionLockMessage,
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
-import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrServerImageUrl, qrUrl } from "@/lib/qr";
+import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface PortalPageProps {
@@ -114,11 +114,11 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
       route: "/portal",
       endpoint: "supabase:qr_codes.select",
       customerId: customer.id,
-      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; updated_at: string | null; is_active: boolean | null; is_system?: boolean | null; qr_type?: string | null; card_order_id?: string | null; destination_url?: string | null; profile_id?: string | null; connect_profile_id?: string | null }>,
+      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; updated_at: string | null; is_active: boolean | null; is_system?: boolean | null; qr_type?: string | null; card_order_id?: string | null; destination_url?: string | null; profile_id?: string | null; connect_profile_id?: string | null; foreground_color?: string | null; background_color?: string | null; style_config?: Record<string, unknown> | null }>,
       task: () =>
         admin
           .from("qr_codes")
-          .select("id, name, slug, scan_count, created_at, updated_at, is_active, is_system, qr_type, card_order_id, destination_url, profile_id, connect_profile_id")
+          .select("id, name, slug, scan_count, created_at, updated_at, is_active, is_system, qr_type, card_order_id, destination_url, profile_id, connect_profile_id, foreground_color, background_color, style_config")
           .eq("customer_id", customer.id)
           .order("created_at", { ascending: false }),
     }),
@@ -370,18 +370,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     : hasPublicProfile && connectProfile?.slug
       ? clutchConnectDisplayUrl(String(connectProfile.slug))
       : "Not connected yet";
-  const smartCardQrPreview = smartCardScanUrl
-    ? qrServerImageUrl({
-        url: smartCardScanUrl,
-        size: 260,
-      })
-    : "";
-  const smartCardQrDownload = smartCardScanUrl
-    ? qrServerImageUrl({
-        url: smartCardScanUrl,
-        size: 1200,
-      })
-    : "";
   const smartCardQrDate = selectedSmartCardQr?.updated_at || selectedSmartCardQr?.created_at || null;
   const shopifyOrderStatusUrlById = new Map(
     (shopifyOrdersResult.data || []).map((order) => [
@@ -597,35 +585,19 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               </div>
 
               {selectedSmartCardQr?.slug ? (
-                <div className="portal-overview-smart-qr-grid">
-                  <div className="portal-overview-smart-qr-preview-wrap">
-                    <div className="portal-overview-smart-qr-circle">
-                      <img
-                        src={smartCardQrPreview}
-                        alt="Smart card QR preview"
-                        className="portal-overview-smart-qr-preview"
-                      />
-                    </div>
-                    <p className="portal-overview-smart-qr-helper">Circular preview shown for display. Download includes the full scan-safe QR.</p>
-                  </div>
-
-                  <div className="portal-overview-smart-qr-details">
-                    <div className="portal-overview-smart-qr-meta">
-                      <p><strong>Scan/tracking URL:</strong> <span>{smartCardScanUrlDisplay}</span></p>
-                      <p><strong>Destination URL:</strong> <span>{smartCardDestinationDisplay}</span></p>
-                      <p><strong>Connected profile:</strong> <span>{hasPublicProfile ? "Connected to your live profile" : "Finish setup to connect this QR to your live profile"}</span></p>
-                      <p><strong>Order association:</strong> <span>{associatedCardOrder?.shopify_order_number || associatedCardOrder?.id || "Not linked to a specific order"}</span></p>
-                      <p><strong>Last updated:</strong> <span>{formatDateTime(smartCardQrDate)}</span></p>
-                    </div>
-
-                    <div className="portal-overview-smart-qr-actions">
-                      <CopyValueButton value={smartCardScanUrl} label="Copy Scan Link" className="btn ghost portal-overview-card-btn" />
-                      <a className="btn secondary" href={smartCardQrDownload} target="_blank" rel="noreferrer" download>
-                        Download QR PNG
-                      </a>
-                    </div>
-                  </div>
-                </div>
+                <SmartCardQrCard
+                  qrId={String(selectedSmartCardQr.id)}
+                  slug={String(selectedSmartCardQr.slug)}
+                  scanUrl={smartCardScanUrl}
+                  scanUrlDisplay={smartCardScanUrlDisplay}
+                  destinationDisplay={smartCardDestinationDisplay}
+                  connectedProfileText={hasPublicProfile ? "Connected to your live profile" : "Finish setup to connect this QR to your live profile"}
+                  orderAssociation={associatedCardOrder?.shopify_order_number || associatedCardOrder?.id || "Not linked to a specific order"}
+                  lastUpdated={formatDateTime(smartCardQrDate)}
+                  initialForegroundColor={selectedSmartCardQr.foreground_color || "#384862"}
+                  initialBackgroundColor={selectedSmartCardQr.background_color || "#ffffff"}
+                  initialStyleConfig={(selectedSmartCardQr as any).style_config || {}}
+                />
               ) : (
                 <div className="portal-overview-smart-empty">
                   <QrCode size={22} />

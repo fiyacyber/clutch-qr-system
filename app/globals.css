@@ -11289,6 +11289,23 @@ input.saas-font-search:focus-visible {
   box-shadow: 0 14px 30px rgba(11, 31, 53, 0.14);
 }
 
+.portal-overview-smart-qr-circle.premium {
+  border-width: 7px;
+}
+
+.portal-overview-smart-qr-circle .styled-qr-wrap,
+.portal-overview-smart-qr-circle .qr-preview {
+  width: 100%;
+  max-width: 210px;
+  height: auto;
+}
+
+.portal-overview-smart-qr-circle .qr-preview canvas,
+.portal-overview-smart-qr-circle .qr-preview svg {
+  width: 100% !important;
+  height: auto !important;
+}
+
 .portal-overview-smart-qr-preview {
   width: 100%;
   max-width: 210px;
@@ -11305,6 +11322,22 @@ input.saas-font-search:focus-visible {
   font-size: 0.78rem;
   line-height: 1.35;
   text-align: center;
+}
+
+.portal-overview-smart-qr-feedback {
+  margin: 0;
+  font-size: 0.77rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.portal-overview-smart-qr-feedback.success {
+  color: #118347;
+}
+
+.portal-overview-smart-qr-feedback.error,
+.portal-overview-smart-qr-feedback.warning {
+  color: #b54708;
 }
 
 .portal-overview-smart-qr-details {
@@ -11336,6 +11369,11 @@ input.saas-font-search:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.portal-overview-smart-qr-note {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
 .portal-overview-smart-qr-actions {
   display: flex;
   align-items: center;
@@ -11345,6 +11383,109 @@ input.saas-font-search:focus-visible {
 
 .portal-overview-smart-qr-actions .btn {
   min-height: 34px;
+}
+
+.smart-card-qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(11, 31, 53, 0.58);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.smart-card-qr-modal {
+  width: min(1040px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--clutch-border);
+  border-radius: 16px;
+  box-shadow: 0 22px 40px rgba(11, 31, 53, 0.26);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.smart-card-qr-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.smart-card-qr-modal-head h3 {
+  margin: 0;
+  color: var(--clutch-dark);
+}
+
+.smart-card-qr-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.45fr) minmax(0, 0.55fr);
+  gap: 14px;
+}
+
+.smart-card-qr-preview-panel {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.smart-card-qr-controls {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.smart-card-qr-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--clutch-dark);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.smart-card-qr-controls input,
+.smart-card-qr-controls select {
+  min-height: 36px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--clutch-dark);
+  padding: 7px 10px;
+}
+
+.smart-card-qr-controls input[type="color"] {
+  padding: 2px;
+}
+
+.smart-card-qr-controls input[type="range"] {
+  padding: 0;
+}
+
+.smart-card-qr-checkbox-row {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.smart-card-qr-checkbox-row input {
+  min-height: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.smart-card-qr-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .portal-overview-action-item {
@@ -11764,6 +11905,19 @@ input.saas-font-search:focus-visible {
     width: min(280px, 100%);
     height: auto;
     aspect-ratio: 1 / 1;
+  }
+
+  .smart-card-qr-modal {
+    width: min(94vw, 1040px);
+    max-height: 94vh;
+  }
+
+  .smart-card-qr-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-card-qr-modal-actions .btn {
+    width: 100%;
   }
 
   .portal-overview-live-strip-actions .btn,
