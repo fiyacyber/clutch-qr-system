@@ -47,6 +47,18 @@ const DEFAULT_FOREGROUND = "#384862";
 const DEFAULT_BACKGROUND = "#ffffff";
 const DEFAULT_FRAME = "#0b1f35";
 const DEFAULT_ACCENT = "#ffa665";
+const DOT_STYLE_VALUES: DotStyle[] = ["square", "rounded", "dots", "classy", "classy-rounded", "extra-rounded"];
+const CORNER_STYLE_VALUES: CornerStyle[] = ["square", "dot", "extra-rounded"];
+const FINDER_EYE_VALUES: FinderEyes[] = ["square", "rounded", "circle"];
+const FRAME_STYLE_VALUES: FrameStyle[] = ["none", "circular", "premium_circle"];
+
+function pickEnumValue<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T {
+  return typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback;
+}
 
 function sanitizeHex(value: string, fallback: string) {
   const normalized = String(value || "").trim();
@@ -145,16 +157,20 @@ export default function SmartCardQrCard({
     sanitizeHex(startingConfig.accentColor || DEFAULT_ACCENT, DEFAULT_ACCENT)
   );
   const [dotStyle, setDotStyle] = useState<DotStyle>(
-    (startingConfig.dotStyle as DotStyle) || "square"
+    pickEnumValue(startingConfig.dotStyle, DOT_STYLE_VALUES, "square")
   );
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>(
-    (startingConfig.cornerStyle as CornerStyle) || "square"
+    pickEnumValue(startingConfig.cornerStyle, CORNER_STYLE_VALUES, "square")
   );
   const [finderEyes, setFinderEyes] = useState<FinderEyes>(
-    (startingConfig.finderEyes as FinderEyes) || mapCornerToFinder((startingConfig.cornerStyle as CornerStyle) || "square")
+    pickEnumValue(
+      startingConfig.finderEyes,
+      FINDER_EYE_VALUES,
+      mapCornerToFinder(pickEnumValue(startingConfig.cornerStyle, CORNER_STYLE_VALUES, "square"))
+    )
   );
   const [frameStyle, setFrameStyle] = useState<FrameStyle>(
-    (startingConfig.frameStyle as FrameStyle) || "circular"
+    pickEnumValue(startingConfig.frameStyle, FRAME_STYLE_VALUES, "circular")
   );
   const [preset, setPreset] = useState(startingConfig.preset || "clutch_default");
   const [logoUrl, setLogoUrl] = useState<string | null>(startingConfig.logoUrl || null);
@@ -302,10 +318,13 @@ export default function SmartCardQrCard({
 
       const nextConfig = (payload.qr?.style_config || styleConfig) as SmartCardStyleConfig;
       setPreset(nextConfig.preset || preset);
-      setDotStyle((nextConfig.dotStyle as DotStyle) || dotStyle);
-      setCornerStyle((nextConfig.cornerStyle as CornerStyle) || cornerStyle);
-      setFinderEyes((nextConfig.finderEyes as FinderEyes) || mapCornerToFinder((nextConfig.cornerStyle as CornerStyle) || cornerStyle));
-      setFrameStyle((nextConfig.frameStyle as FrameStyle) || frameStyle);
+      const nextCornerStyle = pickEnumValue(nextConfig.cornerStyle, CORNER_STYLE_VALUES, cornerStyle);
+      setDotStyle(pickEnumValue(nextConfig.dotStyle, DOT_STYLE_VALUES, dotStyle));
+      setCornerStyle(nextCornerStyle);
+      setFinderEyes(
+        pickEnumValue(nextConfig.finderEyes, FINDER_EYE_VALUES, mapCornerToFinder(nextCornerStyle))
+      );
+      setFrameStyle(pickEnumValue(nextConfig.frameStyle, FRAME_STYLE_VALUES, frameStyle));
       setFrameColor(sanitizeHex(nextConfig.frameColor || frameColor, frameColor));
       setAccentColor(sanitizeHex(nextConfig.accentColor || accentColor, accentColor));
       setLogoUrl(nextConfig.logoUrl || null);

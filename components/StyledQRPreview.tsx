@@ -46,45 +46,53 @@ export default function StyledQRPreview({
     container.innerHTML = "";
 
     async function renderQr() {
-      const QRCodeStyling = (await import("qr-code-styling")).default;
+      try {
+        const QRCodeStyling = (await import("qr-code-styling")).default;
 
-      if (!isMounted || !container) return;
+        if (!isMounted || !container) return;
 
-      container.innerHTML = "";
+        container.innerHTML = "";
 
-      const qrCode = new QRCodeStyling({
-        width: 280,
-        height: 280,
-        type: "svg",
-        data: url,
-        image: logoUrl || undefined,
-        margin: 8,
-        qrOptions: {
-          errorCorrectionLevel: "H",
-        },
-        dotsOptions: {
-          color: foregroundColor,
-          type: dotStyle,
-        },
-        backgroundOptions: {
-          color: backgroundColor,
-        },
-        cornersSquareOptions: {
-          color: foregroundColor,
-          type: cornerStyle,
-        },
-        cornersDotOptions: {
-          color: foregroundColor,
-          type: cornerStyle === "square" ? "square" : "dot",
-        },
-        imageOptions: {
-          crossOrigin: "anonymous",
-          margin: 6,
-          imageSize: 0.28,
-        },
-      });
+        const qrCode = new QRCodeStyling({
+          width: 280,
+          height: 280,
+          type: "svg",
+          data: url,
+          image: logoUrl || undefined,
+          margin: 8,
+          qrOptions: {
+            errorCorrectionLevel: "H",
+          },
+          dotsOptions: {
+            color: foregroundColor,
+            type: dotStyle,
+          },
+          backgroundOptions: {
+            color: backgroundColor,
+          },
+          cornersSquareOptions: {
+            color: foregroundColor,
+            type: cornerStyle,
+          },
+          cornersDotOptions: {
+            color: foregroundColor,
+            type: cornerStyle === "square" ? "square" : "dot",
+          },
+          imageOptions: {
+            crossOrigin: "anonymous",
+            margin: 6,
+            imageSize: 0.28,
+          },
+        });
 
-      qrCode.append(container);
+        qrCode.append(container);
+      } catch (error) {
+        // Keep the page functional even if saved style values are invalid.
+        if (isMounted && container) {
+          container.textContent = "QR preview unavailable";
+        }
+        console.error("[StyledQRPreview] Failed to render QR preview", error);
+      }
     }
 
     renderQr();

@@ -44,15 +44,21 @@ interface PortalPageProps {
 function formatDate(value?: string | null) {
   if (!value) return "Just now";
 
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Just now";
+
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(parsed);
 }
 
 function formatDateTime(value?: string | null) {
   if (!value) return "No taps yet";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "No taps yet";
 
   return new Intl.DateTimeFormat("en", {
     month: "short",
@@ -60,7 +66,7 @@ function formatDateTime(value?: string | null) {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(parsed);
 }
 
 function formatLabel(value?: string | null, fallback = "Pending") {
