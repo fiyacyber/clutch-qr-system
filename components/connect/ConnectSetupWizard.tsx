@@ -37,6 +37,7 @@ import {
   buildConnectSlugPreview,
   buildDefaultProfileSlug,
   getBeginnerConnectLinkSpec,
+  normalizeActionUrl,
   normalizeBeginnerConnectLinkHref,
   normalizeBeginnerConnectLinkDraft,
   normalizeBeginnerConnectLinkType,
@@ -301,6 +302,24 @@ function joinName(firstName: string, lastName: string) {
 
 function getDefaultPrimaryActionLabel(type: SetupDraft["action"]["primaryActionType"]) {
   return PRIMARY_ACTION_OPTIONS.find((option) => option.value === type)?.defaultLabel || "Request a Quote";
+}
+
+function getIconForLinkType(type: BeginnerConnectLinkType): string {
+  const iconMap: Record<BeginnerConnectLinkType, string> = {
+    website: "🌐",
+    facebook: "f",
+    instagram: "📷",
+    linkedin: "in",
+    tiktok: "♪",
+    youtube: "▶️",
+    google_business: "G",
+    yelp: "Y",
+    booking: "📅",
+    email: "✉️",
+    phone: "☎️",
+    custom: "🔗",
+  };
+  return iconMap[type] || "🔗";
 }
 
 function getBannerThemeSettings(theme: SetupDraft["basic"]["bannerTheme"]) {
@@ -611,9 +630,11 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
     label: data.label || "Website",
   }));
 
+  // Don't populate social-media-links with draft.links to avoid duplication
+  // Additional Links will be rendered as separate custom-link-button blocks below
   const withLinks = updateBlockData(withWebsite, "social-media-links", (data) => ({
     ...data,
-    links: linkData,
+    links: [],
     iconColorMode: "brand",
   }));
 
@@ -642,16 +663,51 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
     }),
   };
 
-  const guidedBlocks = withContactVisibility.blocks.filter((block) => guidedPreviewBlockTypes.has(String(block.type)));
+  // Create custom-link-button blocks for each visible Additional Link
+  const additionalLinkBlocks = draft.links
+    .filter((link) => link.visible !== false && String(link.label || "").trim())
+    .map((link, index) => {
+      const type = normalizeBeginnerConnectLinkType(link.type);
+      const label = String(link.label || "").trim();
+      const rawValue = safeText(link.value);
+      const href = normalizeBeginnerConnectLinkHref(type, rawValue);
+      
+      return {
+        id: `additional-link-${link.id}`,
+        type: "custom-link-button",
+        order: 100 + index, // Place after primary action and form
+        visible: true,
+        data: {
+          label,
+          url: href || "",
+          icon: getIconForLinkType(type),
+          description: type !== "custom" ? formatPreviewLinkDisplayValue(type, rawValue, href || rawValue) : undefined,
+        },
+      };
+    });
+
+  const withContactVisibilityAndLinks = {
+    ...withContactVisibility,
+    blocks: [...withContactVisibility.blocks, ...additionalLinkBlocks],
+  };
+
+  const guidedBlocks = withContactVisibilityAndLinks.blocks.filter((block) => {
+    const blockType = String(block.type);
+    // Include additional link blocks in the preview
+    if (blockType === "custom-link-button" && block.id?.startsWith("additional-link-")) {
+      return true;
+    }
+    return guidedPreviewBlockTypes.has(blockType);
+  });
   const guidedBlockIds = new Set(guidedBlocks.map((block) => block.id));
 
-  const guidedSections = withContactVisibility.sections.map((section) => ({
+  const guidedSections = withContactVisibilityAndLinks.sections.map((section) => ({
     ...section,
     blockIds: section.blockIds.filter((id) => guidedBlockIds.has(id)),
   }));
 
   return sanitizeBuilderConfig({
-    ...withContactVisibility,
+    ...withContactVisibilityAndLinks,
     blocks: guidedBlocks,
     sections: guidedSections,
     theme: {
@@ -951,7 +1007,7 @@ function makeStepErrors(step: WizardStepId, draft: SetupDraft) {
       errors.primaryActionLabel = "Add a primary action button label.";
     }
 
-    if (!draft.action.primaryActionLeadCaptureEnabled && draft.action.primaryActionUrl.trim() && !isValidOptionalHttpUrl(draft.action.primaryActionUrl)) {
+    if (!draft.action.primaryActionLeadCaptureEnabled && draft.action.primaryActionUrl.trim() && !normalizeActionUrl(draft.action.primaryActionUrl)) {
       errors.primaryActionUrl = "Use a valid action URL.";
     }
 
@@ -1056,6 +1112,29 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
 
   const previewConfig = useMemo(() => buildPreviewConfig(draft, builderConfig), [builderConfig, draft]);
 
+  const focusPrimaryActionUrlField = () => {
+    if (typeof window === "undefined") return;
+
+    window.requestAnimationFrame(() => {
+      const field = document.querySelector<HTMLInputElement>('[data-field="primaryActionUrl"]');
+      if (!field) return;
+      field.scrollIntoView({ behavior: "smooth", block: "center" });
+      field.focus();
+    });
+  };
+
+  const handleBlockingFieldErrors = (errors: Record<string, string>) => {
+    if (!errors.primaryActionUrl) return;
+    setCurrentStep("links");
+    setSaveMessage("Fix the CTA URL in Actions & Links before publishing.");
+    focusPrimaryActionUrlField();
+  };
+
+  useEffect(() => {
+    if (!fieldErrors.primaryActionUrl || currentStep !== "links") return;
+    focusPrimaryActionUrlField();
+  }, [currentStep, fieldErrors.primaryActionUrl]);
+
   const currentStepIndex = STEP_ORDER.findIndex((step) => step.id === currentStep);
   const progress = Math.round(((currentStepIndex + 1) / STEP_ORDER.length) * 100);
 
@@ -1132,6 +1211,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
     if (Object.keys(stepErrors).length) {
       setSaveState("error");
       setSaveMessage("Please fix the highlighted fields before continuing.");
+      handleBlockingFieldErrors(stepErrors);
       return false;
     }
 
@@ -1183,7 +1263,9 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
           primaryActionLabel: draft.action.primaryActionLabel,
           primaryActionLeadCaptureEnabled: draft.action.primaryActionLeadCaptureEnabled,
           primaryActionFormType: draft.action.primaryActionFormType,
-          primaryActionUrl: draft.action.primaryActionUrl,
+          primaryActionUrl: draft.action.primaryActionLeadCaptureEnabled
+            ? ""
+            : normalizeActionUrl(draft.action.primaryActionUrl) || draft.action.primaryActionUrl,
         },
         advanced: {
           ...draft.advanced,
@@ -1207,6 +1289,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
       setSaveState("error");
       setFieldErrors(payload.fieldErrors || {});
       setSaveMessage(payload.detail || payload.error || "We could not save the draft.");
+      handleBlockingFieldErrors(payload.fieldErrors || {});
       return false;
     }
 
@@ -1809,6 +1892,7 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                     <label className="label">
                       CTA URL
                       <input
+                        data-field="primaryActionUrl"
                         className="input"
                         value={draft.action.primaryActionUrl}
                         onChange={(event) => updateDraft({ action: { ...draft.action, primaryActionUrl: event.target.value } })}

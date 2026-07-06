@@ -130,6 +130,60 @@ function normalizeWebsiteLikeHref(rawValue: string) {
   }
 }
 
+export function ctaRequiresLeadCapture(
+  ctaType: string | undefined,
+  ctaUrl?: string | undefined
+): boolean {
+  const type = String(ctaType || "").trim().toLowerCase();
+  const url = String(ctaUrl || "").trim().toLowerCase();
+
+  // Check if URL is a lead-form anchor
+  if (url === "#lead-form") return true;
+
+  // These CTA types are inherently lead-capture-dependent
+  const leadFormTypes = [
+    "request_quote",
+    "get_estimate",
+    "book_appointment",
+    "schedule_consultation",
+    "request_info",
+    "contact_me",
+    "lead_form",
+    "general_inquiry",
+    "place_order",
+  ];
+
+  return leadFormTypes.includes(type);
+}
+
+export function normalizeActionUrl(rawValue: string) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "";
+  if (/^(javascript|data|vbscript):/i.test(raw)) return "";
+
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/\//, "")}`;
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    if (!url.hostname) return "";
+
+    const host = url.hostname.toLowerCase();
+    if (host.startsWith(".") || host.endsWith(".")) return "";
+
+    const isLocalhost = host === "localhost";
+    const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    const hasDomainDot = host.includes(".");
+
+    // Reject single-label hosts like "google" while allowing real domains, localhost, and IPs.
+    if (!isLocalhost && !isIp && !hasDomainDot) return "";
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
 function normalizeFacebookHref(rawValue: string) {
   const trimmed = rawValue.trim();
   if (!trimmed) return "";

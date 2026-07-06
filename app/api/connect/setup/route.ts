@@ -8,6 +8,7 @@ import {
   getBeginnerConnectLinkSpec,
   isConnectProfilePublished,
   isConnectSetupComplete,
+  normalizeActionUrl,
   normalizeBeginnerConnectLinkDraft,
   normalizeBeginnerConnectLinkType,
   normalizeSlug,
@@ -15,7 +16,6 @@ import {
   RESERVED_CONNECT_SLUGS,
 } from "@/lib/connect";
 import { buildConnectPublicProfileUrl, getAppBaseUrl } from "@/lib/connect-urls";
-import { normalizeUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 type SetupPayload = {
@@ -125,7 +125,7 @@ function safeHttpUrl(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
   if (/^(javascript|data|vbscript):/i.test(trimmed)) return "";
-  const normalized = normalizeUrl(trimmed);
+  const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/\//, "")}`;
 
   try {
     const url = new URL(normalized);
@@ -381,7 +381,7 @@ export async function POST(req: NextRequest) {
     const primaryActionLeadCaptureEnabled = profileInput.primaryActionLeadCaptureEnabled !== false;
     const primaryActionFormType = trimText(profileInput.primaryActionFormType) || "quote_request";
     const requestedPrimaryActionUrl = trimText(profileInput.primaryActionUrl);
-    const primaryActionUrl = requestedPrimaryActionUrl ? safeHttpUrl(requestedPrimaryActionUrl) : "";
+    const primaryActionUrl = requestedPrimaryActionUrl ? normalizeActionUrl(requestedPrimaryActionUrl) : "";
     if (!primaryActionLeadCaptureEnabled && requestedPrimaryActionUrl && !primaryActionUrl) {
       return NextResponse.json(
         { error: "Use a valid action URL.", fieldErrors: { primaryActionUrl: "Use a valid action URL." } },

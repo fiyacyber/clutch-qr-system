@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuilderConfig, ProfileSection } from "@/lib/builder-types";
-import { normalizeBeginnerConnectLinkHref } from "@/lib/connect";
+import { normalizeBeginnerConnectLinkHref, ctaRequiresLeadCapture } from "@/lib/connect";
 import { getBlockData, normalizeBlockType } from "./builder/blockUtils";
 import {
   ProfileHeroPreview,
@@ -272,6 +272,14 @@ function blockHasRenderableContent(block: any, profile: any, mode: "public" | "p
   if (type === "website-button") return Boolean(data.website || data.url || profile?.website);
   if (type === "directions-button") return Boolean(data.address || data.url || profile?.address);
   if (type === "request-quote-button" || type === "custom-link-button") {
+    // Hide CTA if it requires lead capture but lead capture is disabled
+    if (data.isPrimaryAction === true) {
+      const url = String(data.url || "").trim();
+      if (ctaRequiresLeadCapture(data.primaryActionType, url) && data.primaryActionLeadCaptureEnabled === false) {
+        return false;
+      }
+    }
+    
     if (mode === "preview") {
       if (data.isPrimaryAction === true) {
         return Boolean(String(data.label || "").trim());

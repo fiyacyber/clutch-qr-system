@@ -43,7 +43,7 @@ import {
   FaYelp,
 } from "react-icons/fa";
 import { BuilderBlock } from "@/lib/builder-types";
-import { formatPhoneDisplay, normalizeBeginnerConnectLinkHref } from "@/lib/connect";
+import { formatPhoneDisplay, normalizeBeginnerConnectLinkHref, ctaRequiresLeadCapture } from "@/lib/connect";
 import { trackBlockEvent } from "@/lib/builder-analytics";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 
@@ -768,6 +768,12 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
   const url = String(data.url || "").trim();
   const label = String(data.label || "").trim();
   const isPreviewMode = mode === "preview" || mode === "editor";
+  
+  // Check if CTA requires lead capture but it's disabled
+  const requiresLeadCapture = isPrimaryAction && ctaRequiresLeadCapture(data.primaryActionType, url);
+  const leadCaptureDisabled = isPrimaryAction && data.primaryActionLeadCaptureEnabled === false;
+  const shouldHideDueToLeadCapture = requiresLeadCapture && leadCaptureDisabled;
+
   const resolvedIconName =
     type === "directions-button"
       ? "directions"
@@ -783,6 +789,11 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
     type === "custom-link-button" ? "Custom Link" :
     "Request / Book";
   const subtitle = data.description || url || undefined;
+
+  // Hide CTA if it requires lead capture but lead capture is disabled
+  if (shouldHideDueToLeadCapture) {
+    return null;
+  }
 
   if (!url && !(isPreviewMode && isPrimaryAction && label)) {
     return null;
