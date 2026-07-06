@@ -1,22 +1,7 @@
 "use client";
 
 import styles from "./ConnectLinkCard.module.css";
-import {
-  FaInstagram,
-  FaFacebook,
-  FaYoutube,
-  FaLinkedin,
-  FaTiktok,
-  FaGoogle,
-  FaYelp,
-  FaCalendarAlt,
-  FaEnvelope,
-  FaPhone,
-  FaGlobe,
-  FaLink,
-} from "react-icons/fa";
-
-import { FaXTwitter } from "react-icons/fa6";
+import ProfileLinkIcon from "@/components/profile/ProfileLinkIcon";
 
 type IconStyle = "emoji" | "solid" | "outline" | "none";
 type Platform =
@@ -58,44 +43,6 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   other: "#FFA665",
 };
 
-function getPlatformIcon(platform?: Platform | null, size = 20) {
-  const commonProps = { size, "aria-hidden": true as const };
-  const value = String(platform || "").toLowerCase();
-
-  switch (value) {
-    case "instagram":
-      return <FaInstagram {...commonProps} />;
-    case "facebook":
-      return <FaFacebook {...commonProps} />;
-    case "youtube":
-      return <FaYoutube {...commonProps} />;
-    case "linkedin":
-      return <FaLinkedin {...commonProps} />;
-    case "tiktok":
-      return <FaTiktok {...commonProps} />;
-    case "twitter":
-    case "x":
-      return <FaXTwitter {...commonProps} />;
-    case "google":
-    case "google_business":
-      return <FaGoogle {...commonProps} />;
-    case "yelp":
-      return <FaYelp {...commonProps} />;
-    case "booking":
-      return <FaCalendarAlt {...commonProps} />;
-    case "email":
-      return <FaEnvelope {...commonProps} />;
-    case "phone":
-      return <FaPhone {...commonProps} />;
-    case "website":
-      return <FaGlobe {...commonProps} />;
-    case "custom":
-      return <FaLink {...commonProps} />;
-    default:
-      return <FaLink {...commonProps} />;
-  }
-}
-
 const PLATFORM_EMOJIS: Record<Platform, string> = {
   instagram: "📷",
   facebook: "f",
@@ -123,7 +70,9 @@ export default function ConnectLinkCard({
 }: ConnectLinkCardProps) {
   const bgColor = customColor || (platform ? PLATFORM_COLORS[platform as Platform] : "#FFA665");
   const displayIcon = icon || (platform ? PLATFORM_EMOJIS[platform as Platform] : "🔗");
-  const renderedIcon = platform ? getPlatformIcon(platform as Platform) : <span aria-hidden="true">{displayIcon}</span>;
+  const renderedIcon = platform || label
+    ? <ProfileLinkIcon type={platform} label={label} size={20} colorMode="mono" />
+    : <span aria-hidden="true">{displayIcon}</span>;
 
   const handleClick = () => {
     if (onClick) {

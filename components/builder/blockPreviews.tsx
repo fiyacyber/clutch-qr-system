@@ -17,7 +17,6 @@ import {
   Medal,
   ShoppingBag,
   ShoppingCart,
-  AtSign,
   Bolt,
   MessageCircleMore,
   PhoneCall,
@@ -26,23 +25,9 @@ import {
 } from "lucide-react";
 import {
   FaApple,
-  FaFacebook,
-  FaInstagram,
-  FaLinkedin,
-  FaTiktok,
-  FaYoutube,
-  FaXTwitter,
   FaGooglePay,
 } from "react-icons/fa6";
-import {
-  FaCalendarAlt,
-  FaEnvelope,
-  FaGlobe,
-  FaGoogle,
-  FaLink,
-  FaPhone,
-  FaYelp,
-} from "react-icons/fa";
+import ProfileLinkIcon from "@/components/profile/ProfileLinkIcon";
 import { BuilderBlock } from "@/lib/builder-types";
 import { formatPhoneDisplay, normalizeBeginnerConnectLinkHref, ctaRequiresLeadCapture } from "@/lib/connect";
 import { trackBlockEvent } from "@/lib/builder-analytics";
@@ -97,53 +82,6 @@ function getPrimaryActionIconName(primaryActionType?: string, fallbackIcon?: str
     default:
       return fallbackIcon || "message";
   }
-}
-
-function getProfileLinkIcon(linkType?: string | null, label?: string | null): React.ReactNode {
-  const type = String(linkType || "").toLowerCase();
-  const labelLower = String(label || "").toLowerCase();
-  const color = (() => {
-    if (type === "instagram" || labelLower.includes("instagram")) return "#E4405F";
-    if (type === "facebook" || labelLower.includes("facebook")) return "#1877F2";
-    if (type === "youtube" || labelLower.includes("youtube")) return "#FF0000";
-    if (type === "linkedin" || labelLower.includes("linkedin")) return "#0A66C2";
-    if (type === "tiktok" || labelLower.includes("tiktok")) return "#111111";
-    if (type === "x" || type === "twitter" || labelLower.includes("twitter") || /(^|\s)x(\s|$)/.test(labelLower)) return "#111827";
-    if (type === "google_business" || type === "google" || labelLower.includes("google")) return "#4285F4";
-    if (type === "yelp" || labelLower.includes("yelp")) return "#D32323";
-    if (type === "booking" || labelLower.includes("book")) return "#0EA5E9";
-    if (type === "email" || labelLower.includes("email")) return "#EA4335";
-    if (type === "phone" || labelLower.includes("phone")) return "#22C55E";
-    if (type === "website" || labelLower.includes("website")) return "#2563EB";
-    if (labelLower.includes("quote")) return "#475569";
-    return "#7C3AED";
-  })();
-  const commonProps = { size: 16, color, "aria-hidden": true as const };
-
-  if (type === "instagram") return <FaInstagram {...commonProps} />;
-  if (type === "facebook") return <FaFacebook {...commonProps} />;
-  if (type === "youtube") return <FaYoutube {...commonProps} />;
-  if (type === "linkedin") return <FaLinkedin {...commonProps} />;
-  if (type === "tiktok") return <FaTiktok {...commonProps} />;
-  if (type === "x" || type === "twitter") return <FaXTwitter {...commonProps} />;
-  if (type === "google_business" || type === "google") return <FaGoogle {...commonProps} />;
-  if (type === "yelp") return <FaYelp {...commonProps} />;
-  if (type === "booking") return <FaCalendarAlt {...commonProps} />;
-  if (type === "email") return <FaEnvelope {...commonProps} />;
-  if (type === "phone") return <FaPhone {...commonProps} />;
-  if (type === "website") return <FaGlobe {...commonProps} />;
-
-  if (labelLower.includes("instagram")) return <FaInstagram {...commonProps} />;
-  if (labelLower.includes("facebook")) return <FaFacebook {...commonProps} />;
-  if (labelLower.includes("youtube")) return <FaYoutube {...commonProps} />;
-  if (labelLower.includes("linkedin")) return <FaLinkedin {...commonProps} />;
-  if (labelLower.includes("tiktok")) return <FaTiktok {...commonProps} />;
-  if (labelLower.includes("twitter") || labelLower.includes(" x ")) return <FaXTwitter {...commonProps} />;
-  if (labelLower.includes("website")) return <FaGlobe {...commonProps} />;
-  if (labelLower.includes("book")) return <FaCalendarAlt {...commonProps} />;
-  if (labelLower.includes("quote")) return <ClipboardList {...commonProps} />;
-
-  return <FaLink {...commonProps} />;
 }
 
 function ActionGlyph({ name }: { name: string }) {
@@ -205,63 +143,12 @@ function ActionGlyph({ name }: { name: string }) {
   }
 }
 
-function SocialGlyph({ platform }: { platform?: string | null }) {
-  const value = String(platform || "").toLowerCase();
-  const commonProps = { size: 16, "aria-hidden": true as const };
-
-  switch (value) {
-    case "instagram":
-      return <FaInstagram {...commonProps} />;
-    case "facebook":
-      return <FaFacebook {...commonProps} />;
-    case "youtube":
-      return <FaYoutube {...commonProps} />;
-    case "linkedin":
-      return <FaLinkedin {...commonProps} />;
-    case "tiktok":
-      return <FaTiktok {...commonProps} />;
-    case "google_business":
-    case "google":
-      return <FaGoogle {...commonProps} />;
-    case "yelp":
-      return <FaYelp {...commonProps} />;
-    case "booking":
-      return <FaCalendarAlt {...commonProps} />;
-    case "email":
-      return <FaEnvelope {...commonProps} />;
-    case "phone":
-      return <FaPhone {...commonProps} />;
-    case "website":
-      return <FaGlobe {...commonProps} />;
-    case "custom":
-      return <FaLink {...commonProps} />;
-    default:
-      return <AtSign {...commonProps} />;
-  }
-}
-
 function WalletGlyph({ type }: { type?: string | null }) {
   const value = String(type || "").toLowerCase();
   const commonProps = { size: 18, "aria-hidden": true as const };
 
   if (value.includes("google")) return <FaGooglePay {...commonProps} />;
   return <FaApple {...commonProps} />;
-}
-
-function getSocialIconColor(platform?: string | null, iconColorMode?: string | null) {
-  if (iconColorMode !== "brand") return "currentColor";
-
-  const value = String(platform || "").toLowerCase();
-  if (value === "website") return "#2563EB";
-  if (value === "instagram") return "#E1306C";
-  if (value === "facebook") return "#1877F2";
-  if (value === "youtube") return "#FF0000";
-  if (value === "linkedin") return "#0A66C2";
-  if (value === "google_business") return "#34A853";
-  if (value === "yelp") return "#D32323";
-  if (value === "x" || value === "twitter") return "#111827";
-  if (value === "tiktok") return "#000000";
-  return "#384862";
 }
 
 function resolveSocialHref(platform?: string | null, value?: string | null) {
@@ -863,7 +750,7 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
   // Use brand icons for additional links (custom-link-button with linkType), ActionGlyph for other action buttons
   const isAdditionalLink = type === "custom-link-button" && !isPrimaryAction && data.linkType;
   const icon = isAdditionalLink
-    ? getProfileLinkIcon(data.linkType, label)
+    ? <ProfileLinkIcon type={data.linkType} label={label} size={16} colorMode="mono" />
     : <ActionGlyph name={resolvedIconName} />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
@@ -930,7 +817,7 @@ export function SocialLinksPreview({ block, mode = "public" }: BlockPreviewProps
         return (
           <ActionCard
             key={link.id || idx}
-            icon={<span style={{ color: getSocialIconColor(link.platform, treatment) }}><SocialGlyph platform={link.platform} /></span>}
+            icon={<ProfileLinkIcon type={link.platform} label={link.title} size={16} colorMode={treatment === "brand" ? "brand" : "mono"} />}
             title={link.title}
             subtitle={subtitle || undefined}
             href={link.href || undefined}
