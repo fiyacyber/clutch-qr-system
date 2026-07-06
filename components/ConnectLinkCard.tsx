@@ -71,7 +71,7 @@ export default function ConnectLinkCard({
   const bgColor = customColor || (platform ? PLATFORM_COLORS[platform as Platform] : "#FFA665");
   const displayIcon = icon || (platform ? PLATFORM_EMOJIS[platform as Platform] : "🔗");
   const renderedIcon = platform || label
-    ? <ProfileLinkIcon type={platform} label={label} size={20} colorMode="mono" />
+    ? <ProfileLinkIcon type={platform} label={label} size={20} colorMode="brand" />
     : <span aria-hidden="true">{displayIcon}</span>;
 
   const handleClick = () => {

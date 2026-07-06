@@ -39,6 +39,44 @@ function cloneBuilderBlocks(blocks?: BuilderBlock[]): BuilderBlock[] {
     : [];
 }
 
+function normalizeLegacyGuidedSocialIconModes(blocks: BuilderBlock[], starterLocked: boolean): BuilderBlock[] {
+  if (!starterLocked) {
+    return blocks;
+  }
+
+  return blocks.map((block) => {
+    if (block.type !== "social-media-links") {
+      return block;
+    }
+
+    const data = (block.data || {}) as Record<string, any>;
+    const links = Array.isArray(data.links) ? data.links : [];
+    if (links.length === 0) {
+      return block;
+    }
+
+    const hasMonoDefaults = data.iconColorMode === "mono" && links.every((link) => {
+      return !link?.iconTreatment || link.iconTreatment === "mono";
+    });
+
+    if (!hasMonoDefaults) {
+      return block;
+    }
+
+    return {
+      ...block,
+      data: {
+        ...data,
+        iconColorMode: "brand",
+        links: links.map((link) => ({
+          ...link,
+          iconTreatment: link?.iconTreatment === "mono" ? "brand" : link?.iconTreatment || "brand",
+        })),
+      },
+    };
+  });
+}
+
 function createLegacyFallbackBlocks(profile: any, socialLinks?: SocialLink[]): BuilderBlock[] {
   const generated: BuilderBlock[] = [
     {
@@ -123,7 +161,7 @@ function createLegacyFallbackBlocks(profile: any, socialLinks?: SocialLink[]): B
       visible: true,
       data: {
         links: mappedSocialLinks,
-        iconColorMode: "mono",
+        iconColorMode: "brand",
       },
     });
     order += 1;
@@ -145,8 +183,8 @@ function createLegacyFallbackBlocks(profile: any, socialLinks?: SocialLink[]): B
   return generated;
 }
 
-function toBuilderBlocks(profile: any, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
-  const customBlocks = cloneBuilderBlocks(blocks);
+function toBuilderBlocks(profile: any, starterLocked: boolean, blocks?: BuilderBlock[], socialLinks?: SocialLink[]): BuilderBlock[] {
+  const customBlocks = normalizeLegacyGuidedSocialIconModes(cloneBuilderBlocks(blocks), starterLocked);
 
   if (Array.isArray(blocks)) {
     return customBlocks;
@@ -186,11 +224,11 @@ function ConnectProfileView({
   onRemoveSection,
 }: ConnectProfileViewProps) {
   const resolvedBlocks = useMemo(
-    () => toBuilderBlocks(profile, blocks, socialLinks)
-      .map((block, index) => ({ ...block, order: typeof block.order === "number" ? block.order : index }))
-      .sort((a, b) => a.order - b.order)
-      .map((block, index) => ({ ...block, order: index })),
-    [blocks, profile, socialLinks]
+    () =>
+      toBuilderBlocks(profile, starterLocked, blocks, socialLinks)
+        .sort((a, b) => a.order - b.order)
+        .map((block, index) => ({ ...block, order: index })),
+    [blocks, profile, socialLinks, starterLocked]
   );
 
   const resolvedTheme = useMemo(() => {

@@ -628,10 +628,10 @@ export async function POST(req: NextRequest) {
         label: link.label,
         platform: link.type,
         value: link.value,
-        iconTreatment: "mono",
+        iconTreatment: "brand",
         visible: link.visible,
       })),
-      iconColorMode: "mono",
+      iconColorMode: "brand",
     }), "more");
 
     const cleanedConfig = sanitizeBuilderConfigForSetup(nextConfig, themeColor);

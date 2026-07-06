@@ -749,8 +749,9 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
 
   // Use brand icons for additional links (custom-link-button with linkType), ActionGlyph for other action buttons
   const isAdditionalLink = type === "custom-link-button" && !isPrimaryAction && data.linkType;
+  const additionalLinkIconColorMode = data.iconColorMode === "mono" ? "mono" : "brand";
   const icon = isAdditionalLink
-    ? <ProfileLinkIcon type={data.linkType} label={label} size={16} colorMode="mono" />
+    ? <ProfileLinkIcon type={data.linkType} label={label} size={16} colorMode={additionalLinkIconColorMode} />
     : <ActionGlyph name={resolvedIconName} />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
