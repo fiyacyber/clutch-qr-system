@@ -9893,11 +9893,27 @@ input.saas-font-search:focus-visible {
 }
 
 .builder-action-card {
-  --builder-action-side-size: 34px;
+  --builder-action-side-size: 44px;
+  width: 100%;
+  min-height: 68px;
   display: grid;
-  grid-template-columns: var(--builder-action-side-size) minmax(0, 1fr) var(--builder-action-side-size);
-  column-gap: 10px;
+  grid-template-columns: var(--builder-action-side-size) minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: center;
+  padding: 12px 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+}
+
+.builder-action-card:hover,
+.builder-action-card:focus-visible {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
+  border-color: rgba(17, 24, 39, 0.2);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .builder-action-pill {
@@ -9917,32 +9933,35 @@ input.saas-font-search:focus-visible {
 }
 
 .builder-action-icon {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 1rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--builder-button-color, var(--builder-accent, #FF6B2C)) 24%, transparent);
+  background: #f1f3f5;
 }
 
 .builder-action-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  text-align: center;
+  display: grid;
   gap: 2px;
+  min-width: 0;
+  justify-items: center;
+  text-align: center;
 }
 
 .builder-action-title {
-  font-size: 0.86rem;
-  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.97rem;
+  font-weight: 800;
   color: color-mix(in srgb, var(--builder-button-text, #0F172A) 94%, #0F172A);
-  line-height: 1.2;
+  line-height: 1.16;
 }
 
 .builder-action-subtitle {
@@ -9956,13 +9975,14 @@ input.saas-font-search:focus-visible {
 }
 
 .builder-action-chevron {
-  margin-left: 0;
-  width: var(--builder-action-side-size, 34px);
+  margin-left: auto;
+  width: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--builder-button-text, #0F172A) 54%, #94A3B8);
-  font-size: 1rem;
+  color: #111827;
+  opacity: 0.9;
+  font-size: 28px;
   line-height: 1;
 }
 
@@ -9980,34 +10000,56 @@ input.saas-font-search:focus-visible {
   justify-content: center;
 }
 
+.builder-public-profile[data-mode="public"] .builder-action-card,
+.builder-public-profile[data-mode="preview"] .builder-action-card {
+  width: 100%;
+  min-height: 68px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+}
+
 .builder-public-profile[data-mode="public"] .builder-action-card {
-  --builder-action-side-size: 32px;
+  --builder-action-side-size: 44px;
 }
 
 .builder-public-profile[data-mode="public"] .builder-action-icon {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  font-size: 0.88rem;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  font-size: 1rem;
 }
 
 .builder-public-profile[data-mode="public"] .builder-action-content {
   gap: 1px;
+  min-width: 0;
 }
 
 .builder-public-profile[data-mode="public"] .builder-action-title {
-  font-size: 0.84rem;
+  font-size: 0.97rem;
   line-height: 1.16;
 }
 
 .builder-public-profile[data-mode="public"] .builder-action-subtitle {
-  font-size: 0.7rem;
+  font-size: 0.73rem;
   line-height: 1.18;
 }
 
 .builder-public-profile[data-mode="public"] .builder-action-pill {
   min-height: 48px;
   padding: 8px 10px;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section-stack,
+.builder-public-profile[data-mode="preview"] .builder-public-section-stack {
+  min-width: 0;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section-block,
+.builder-public-profile[data-mode="preview"] .builder-public-section-block {
+  width: 100%;
+  min-width: 0;
 }
 
 .builder-public-profile[data-global-align="left"] .builder-hero-text,
@@ -10088,6 +10130,16 @@ input.saas-font-search:focus-visible {
 
 .builder-public-profile[data-mode="public"] .builder-public-section-stack {
   gap: 10px;
+}
+
+.builder-public-profile[data-mode="public"] .builder-action-title,
+.builder-public-profile[data-mode="public"] .builder-action-subtitle,
+.builder-public-profile[data-mode="preview"] .builder-action-title,
+.builder-public-profile[data-mode="preview"] .builder-action-subtitle {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .builder-public-profile .builder-button:hover {
@@ -10522,6 +10574,28 @@ input.saas-font-search:focus-visible {
 
   .builder-hero-name {
     font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .builder-action-card {
+    min-height: 66px;
+    padding: 11px 16px;
+    grid-template-columns: 42px minmax(0, 1fr) 18px;
+  }
+
+  .builder-action-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+  }
+
+  .builder-action-title {
+    font-size: 1rem;
+  }
+
+  .builder-action-subtitle {
+    font-size: 0.88rem;
   }
 }
 
@@ -14322,6 +14396,38 @@ input.saas-font-search:focus-visible {
   background: #FFFFFF;
   border-color: rgba(17, 17, 17, 0.18);
   color: #111111;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section,
+.builder-public-profile[data-mode="preview"] .builder-public-section {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+  margin: 0;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section-stack,
+.builder-public-profile[data-mode="preview"] .builder-public-section-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section-label,
+.builder-public-profile[data-mode="preview"] .builder-public-section-label {
+  display: none;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-section-block,
+.builder-public-profile[data-mode="preview"] .builder-public-section-block {
+  width: 100%;
+  min-width: 0;
+}
+
+.builder-public-profile[data-mode="public"] .builder-public-sections,
+.builder-public-profile[data-mode="preview"] .builder-public-sections {
+  gap: 12px;
 }
 
 .saas-preview-center {

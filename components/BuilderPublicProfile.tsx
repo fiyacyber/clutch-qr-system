@@ -404,6 +404,7 @@ export default function BuilderPublicProfile({
     () => [...(config.sections || [])].sort((a, b) => a.order - b.order),
     [config.sections]
   );
+  const showSectionLabel = mode === "editor";
 
   const profileAvatarUrl = (() => {
     const raw = typeof profile?.avatar_url === "string" ? profile.avatar_url.trim() : "";
@@ -567,7 +568,9 @@ export default function BuilderPublicProfile({
               </div>
             ) : null}
             <div className="builder-public-section-stack">
-              <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
+              {showSectionLabel ? (
+                <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
+              ) : null}
               {visibleSectionBlocks.length ? (
                 <Fragment>
                   {visibleSectionBlocks.map((block, index) => ProfileBlock(block, section.id, sectionIndex * 20 + index + 1))}
@@ -582,7 +585,7 @@ export default function BuilderPublicProfile({
         );
       })}
     </div>
-  ), [ProfileBlock, editablePreview, globalAlignment, mode, onRemoveSection, onSelectSection, profile, sectionBlocksById, sections, starterLocked]);
+  ), [ProfileBlock, editablePreview, globalAlignment, mode, onRemoveSection, onSelectSection, profile, sectionBlocksById, sections, showSectionLabel, starterLocked]);
 
   const ProfilePreviewContent = useMemo(() => (
     <div className="builder-public-shell">
