@@ -773,8 +773,8 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   <p>Save your contact card to Apple Wallet or Google Wallet for fast sharing.</p>
                   {hasConnectProfile && connectProfileId ? (
                     <div className="portal-overview-wallet-actions">
-                      <Link className="btn ghost portal-overview-card-btn" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</Link>
-                      <Link className="btn ghost portal-overview-card-btn" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</Link>
+                      <a className="btn ghost portal-overview-card-btn" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</a>
+                      <a className="btn ghost portal-overview-card-btn" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</a>
                     </div>
                   ) : (
                     <p className="portal-overview-inline-note">Finish Guided Setup to enable wallet cards.</p>

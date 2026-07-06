@@ -469,8 +469,8 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
             <div className="connect-center-inline-actions connect-center-inline-actions-compact">
               {profilePublished ? (
                 <>
-                  <Link className="btn ghost" href={`/api/wallet/apple/${profile.id}`} target="_blank">Apple Wallet</Link>
-                  <Link className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank">Google Wallet</Link>
+                  <a className="btn ghost" href={`/api/wallet/apple/${profile.id}`} target="_blank" rel="noreferrer">Apple Wallet</a>
+                  <a className="btn ghost" href={`/api/wallet/google/${profile.id}`} target="_blank" rel="noreferrer">Google Wallet</a>
                 </>
               ) : (
                 <>
