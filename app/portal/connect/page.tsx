@@ -5,7 +5,6 @@ import {
   Circle,
   Globe,
   Link2,
-  MessageSquare,
   QrCode,
   Sparkles,
 } from "lucide-react";
@@ -14,12 +13,11 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
-import CopyValueButton from "@/components/dashboard/CopyValueButton";
 import { requireCustomer } from "@/lib/auth";
 import { isConnectProfilePublished } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
-import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrServerImageUrl, qrUrl } from "@/lib/qr";
+import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 interface ConnectPageProps {
@@ -33,18 +31,6 @@ function formatDate(value?: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "No scans yet";
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -292,16 +278,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
   const totalTaps = linkedQr?.scan_count || 0;
   const smartCardDestination = linkedQr?.destination_url || (profile.slug ? clutchConnectDisplayUrl(profile.slug) : "Not connected yet");
 
-  const completionChecks = [
-    { label: "Business name", done: Boolean(profile.business_name) },
-    { label: "Contact details", done: Boolean(profile.contact_name && profile.email && profile.phone) },
-    { label: "Avatar uploaded", done: Boolean(profile.avatar_url) },
-    { label: "Cover photo added", done: hasCoverPhoto },
-    { label: "At least one active link", done: activeLinks > 0 },
-    { label: "Public page published", done: profilePublished && Boolean(profile.slug) },
-  ];
-
-  const missingItems = completionChecks.filter((item) => !item.done);
   const profileHealthChecks = [
     { label: "Add avatar", done: Boolean(profile.avatar_url) },
     { label: "Add cover photo", done: hasCoverPhoto },
@@ -319,14 +295,13 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
     : "Publish your profile to generate a live public page";
   const smartCardScanUrl = linkedQr?.slug ? qrUrl(String(linkedQr.slug)) : "";
   const smartCardScanDisplay = linkedQr?.slug ? smartCardScanUrl.replace(/^https?:\/\//, "") : "Not available";
-  const smartCardQrPreview = smartCardScanUrl ? qrServerImageUrl({ url: smartCardScanUrl, size: 260 }) : "";
-  const smartCardQrDownload = smartCardScanUrl ? qrServerImageUrl({ url: smartCardScanUrl, size: 1200 }) : "";
   const smartCardDestinationUrl = hasLivePublicProfile && profile.slug
     ? clutchConnectProfileUrl(String(profile.slug))
     : String(linkedQr?.destination_url || "");
   const smartCardDestinationDisplay = smartCardDestinationUrl
     ? smartCardDestinationUrl.replace(/^https?:\/\//, "")
     : "Not connected yet";
+  const lastLeadCapture = connectRows.find((event: any) => event.event_type === "lead_submit")?.created_at || null;
 
   return (
     <DashboardShell
@@ -351,9 +326,6 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
               </Link>
               <Link className="btn secondary" href={setupComplete ? editProfileHref : "/portal/connect/setup"}>
                 Edit Profile
-              </Link>
-              <Link className="btn ghost" href="/portal/connect/leads">
-                Lead Inbox
               </Link>
             </div>
           }
@@ -437,33 +409,28 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           </article>
         </section>
 
+        <section className="connect-center-card connect-center-smart-status">
+          <p className="connect-center-kicker">Smart Card Connected</p>
+          <h2>Smart card connection status</h2>
+          <ul className="connect-center-metadata-list">
+            <li><span>Status</span><strong>{linkedQr?.slug && hasLivePublicProfile ? "Connected" : "Not connected"}</strong></li>
+            <li><span>Scan link</span><strong>{smartCardScanDisplay}</strong></li>
+            <li><span>Destination</span><strong>{smartCardDestinationDisplay}</strong></li>
+            <li><span>Last scan</span><strong>{formatDate(lastScan)}</strong></li>
+            <li><span>Total taps</span><strong>{totalTaps}</strong></li>
+          </ul>
+        </section>
+
         <section className="connect-center-grid connect-center-status-grid">
           <article className="connect-center-card">
-            <p className="connect-center-kicker">Smart Card QR</p>
-            <h2>This is the QR/NFC link connected to your smart card.</h2>
-            {linkedQr?.slug ? (
-              <div className="connect-center-qr-preview-wrap">
-                <img
-                  src={smartCardQrPreview}
-                  alt="Smart card QR preview"
-                  className="connect-center-qr-preview"
-                />
-              </div>
-            ) : null}
+            <p className="connect-center-kicker">Lead Inbox</p>
+            <h2>{totalLeads} captured leads</h2>
             <ul className="connect-center-metadata-list">
-              <li><span>Status</span><strong>{hasLivePublicProfile ? "Connected" : "Not connected"}</strong></li>
-              <li><span>Scan Link</span><strong>{smartCardScanDisplay}</strong></li>
-              <li><span>Destination</span><strong>{smartCardDestinationDisplay}</strong></li>
-              <li><span>Last scan</span><strong>{formatDate(lastScan)}</strong></li>
-              <li><span>Total taps</span><strong>{totalTaps}</strong></li>
+              <li><span>Total leads</span><strong>{totalLeads}</strong></li>
+              <li><span>Last lead</span><strong>{lastLeadCapture ? formatDate(lastLeadCapture) : "No leads yet"}</strong></li>
             </ul>
             <div className="connect-center-inline-actions connect-center-inline-actions-compact">
-              <CopyValueButton value={smartCardScanUrl} label="Copy Scan Link" className="btn ghost" />
-              {linkedQr?.slug ? (
-                <a className="btn ghost" href={smartCardQrDownload} target="_blank" rel="noreferrer" download>
-                  Download QR PNG
-                </a>
-              ) : null}
+              <Link className="btn ghost" href="/portal/connect/leads">Open Lead Inbox</Link>
             </div>
           </article>
 
@@ -495,35 +462,28 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
         </section>
 
         <section className="connect-center-card">
-          <p className="connect-center-kicker">Quick Actions</p>
+          <p className="connect-center-kicker">Profile Actions</p>
           <h2>Quick Actions</h2>
           <div className="connect-center-quick-actions connect-center-quick-actions-compact">
-            <Link className="connect-center-action" href={editProfileHref}>
+            <Link className="connect-center-action" href={advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup"}>
               <Sparkles size={16} />
               <div>
-                <strong>Edit Profile</strong>
-                <span>Update your public profile details.</span>
+                <strong>{advancedBuilderUnlocked ? "Profile Builder" : "Guided Setup"}</strong>
+                <span>{advancedBuilderUnlocked ? "Customize layout and profile blocks." : "Edit profile details and publish settings."}</span>
               </div>
             </Link>
-            <Link className="connect-center-action" href={publicProfileHref} target={hasLivePublicProfile ? "_blank" : undefined}>
-              <Globe size={16} />
-              <div>
-                <strong>{hasLivePublicProfile ? "View Profile" : "Continue Guided Setup"}</strong>
-                <span>{hasLivePublicProfile ? "Open your live public profile." : "Publish your profile to go live."}</span>
-              </div>
-            </Link>
-            <Link className="connect-center-action" href="/portal/connect/leads">
-              <MessageSquare size={16} />
-              <div>
-                <strong>Lead Inbox</strong>
-                <span>Review and respond to incoming leads.</span>
-              </div>
-            </Link>
-            <Link className="connect-center-action" href={profilePublished ? `/api/wallet/apple/${profile.id}` : "/portal/connect/setup"} target={profilePublished ? "_blank" : undefined}>
+            <Link className="connect-center-action" href="/portal/connect/links">
               <Link2 size={16} />
               <div>
-                <strong>Wallet</strong>
-                <span>{profilePublished ? "Open wallet card options." : "Finish setup to enable wallet cards."}</span>
+                <strong>Manage Links</strong>
+                <span>Update links and contact actions on your profile.</span>
+              </div>
+            </Link>
+            <Link className="connect-center-action" href="/portal/analytics?tab=clutch-connect">
+              <QrCode size={16} />
+              <div>
+                <strong>Analytics</strong>
+                <span>Review profile engagement and traffic trends.</span>
               </div>
             </Link>
           </div>

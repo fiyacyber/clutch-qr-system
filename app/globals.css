@@ -11117,6 +11117,14 @@ input.saas-font-search:focus-visible {
   align-items: stretch;
 }
 
+.portal-overview-actions-grid-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#recent-order-status {
+  scroll-margin-top: 84px;
+}
+
 .portal-overview-smart-metrics {
   margin-top: 16px;
   display: grid;
@@ -11653,6 +11661,10 @@ input.saas-font-search:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .portal-overview-actions-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .portal-overview-smart-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -11702,6 +11714,10 @@ input.saas-font-search:focus-visible {
   }
 
   .portal-overview-actions-grid-smart {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-overview-actions-grid-compact {
     grid-template-columns: 1fr;
   }
 

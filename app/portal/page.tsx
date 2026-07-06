@@ -238,16 +238,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const setupChecklistComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: false });
   const hasPublicProfile = isConnectProfilePublished(connectProfile || null) && Boolean(connectProfile?.slug);
   const setupComplete = hasPublicProfile;
-  const smartCardPrimaryCtaLabel = !hasConnectProfile
-    ? "Begin Guided Setup"
-    : setupComplete
-      ? "Edit Profile"
-      : "Continue Guided Setup";
-  const smartCardHeaderCtaLabel = !hasConnectProfile
-    ? "Begin Guided Setup"
-    : setupComplete
-      ? "Edit Clutch Connect Profile"
-      : "Continue Guided Setup";
   const smartCardPrimaryCtaHref = hasPublicProfile ? "/portal/connect" : "/portal/connect/setup";
   const connectProfileId = connectProfile?.id ? String(connectProfile.id) : "";
   const publicProfileUrl = hasPublicProfile ? clutchConnectProfileUrl(String(connectProfile?.slug || "")) : "";
@@ -467,11 +457,6 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             <div className="portal-overview-header-actions">
               {isConnectBasicPlan ? (
                 <>
-                  {hasPublicProfile ? (
-                    <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">
-                      View Public Profile
-                    </Link>
-                  ) : null}
                   <Link className="btn secondary" href={smartCardPrimaryCtaHref}>
                     Edit Profile
                   </Link>
@@ -511,66 +496,66 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         {!isConnectBasicPlan && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
 
         {!isConnectBasicPlan ? (
-        <AnalyticsCard title="Recent Order Status">
-          {visibleCardOrders.length ? (
-            <ul className="portal-overview-order-list">
-              {visibleCardOrders.map((order) => {
-                const shopifyStatusUrl = order.shopify_order_id
-                  ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
-                  : null;
-                const engravingDetails = order.engraving_requested
-                  ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
-                    ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
-                        .filter(Boolean)
-                        .join(" • ")
-                    : "Requested"
-                  : "Not requested";
+          <AnalyticsCard title="Recent Order Status">
+            {visibleCardOrders.length ? (
+              <ul className="portal-overview-order-list">
+                {visibleCardOrders.map((order) => {
+                  const shopifyStatusUrl = order.shopify_order_id
+                    ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
+                    : null;
+                  const engravingDetails = order.engraving_requested
+                    ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
+                      ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
+                          .filter(Boolean)
+                          .join(" • ")
+                      : "Requested"
+                    : "Not requested";
 
-                return (
-                  <li key={order.id} className="portal-overview-order-row">
-                    <div className="portal-overview-order-row-head">
-                      <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                      <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                    </div>
-                    <div className="portal-overview-order-row-grid">
-                      <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                      <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                      <p><strong>Engraving:</strong> {engravingDetails}</p>
-                      <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
-                      <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
-                      <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
-                    </div>
+                  return (
+                    <li key={order.id} className="portal-overview-order-row">
+                      <div className="portal-overview-order-row-head">
+                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                        <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                      </div>
+                      <div className="portal-overview-order-row-grid">
+                        <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                        <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                        <p><strong>Engraving:</strong> {engravingDetails}</p>
+                        <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
+                        <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
+                        <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
+                      </div>
 
-                    <div className="portal-overview-order-row-actions">
-                      {shopifyStatusUrl ? <Link className="btn ghost" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
-          )}
-          {overflowCardOrders.length ? (
-            <details className="portal-overview-order-more">
-              <summary>View all orders</summary>
-              <ul className="portal-overview-order-list portal-overview-order-list-more">
-                {overflowCardOrders.map((order) => (
-                  <li key={order.id} className="portal-overview-order-row">
-                    <div className="portal-overview-order-row-head">
-                      <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                      <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                    </div>
-                    <div className="portal-overview-order-row-grid">
-                      <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                      <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                    </div>
-                  </li>
-                ))}
+                      <div className="portal-overview-order-row-actions">
+                        {shopifyStatusUrl ? <Link className="btn ghost" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
-            </details>
-          ) : null}
-        </AnalyticsCard>
+            ) : (
+              <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
+            )}
+            {overflowCardOrders.length ? (
+              <details className="portal-overview-order-more">
+                <summary>View all orders</summary>
+                <ul className="portal-overview-order-list portal-overview-order-list-more">
+                  {overflowCardOrders.map((order) => (
+                    <li key={order.id} className="portal-overview-order-row">
+                      <div className="portal-overview-order-row-head">
+                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                        <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                      </div>
+                      <div className="portal-overview-order-row-grid">
+                        <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                        <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </AnalyticsCard>
         ) : null}
 
         {subscriptionLocked ? (
@@ -647,8 +632,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               )}
             </AnalyticsCard>
 
-            <AnalyticsCard title="Recent Order Status">
-              {visibleCardOrders.length ? (
+            <section id="recent-order-status">
+              <AnalyticsCard title="Recent Order Status">
+                {visibleCardOrders.length ? (
                 <ul className="portal-overview-order-list">
                   {visibleCardOrders.map((order) => {
                     const shopifyStatusUrl = order.shopify_order_id
@@ -687,7 +673,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               ) : (
                 <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
               )}
-              {overflowCardOrders.length ? (
+                {overflowCardOrders.length ? (
                 <details className="portal-overview-order-more">
                   <summary>View all orders</summary>
                   <ul className="portal-overview-order-list portal-overview-order-list-more">
@@ -705,8 +691,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                     ))}
                   </ul>
                 </details>
-              ) : null}
-            </AnalyticsCard>
+                ) : null}
+              </AnalyticsCard>
+            </section>
 
             <section className="ds-stat-grid">
               <StatCard
@@ -764,40 +751,10 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             <AnalyticsCard className="portal-overview-actions-card">
               <div className="portal-overview-section-head">
                 <h2>Quick Actions</h2>
-                <p>Manage your profile, leads, wallet cards, and support from one place.</p>
+                <p>Secondary tools for wallet cards, order tracking, and support.</p>
               </div>
 
-              <div className="portal-overview-actions-grid portal-overview-actions-grid-smart">
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Link2 size={17} /></div>
-                  <h3>Profile</h3>
-                  <p>
-                    {hasPublicProfile
-                      ? "Your profile is live and ready to share."
-                      : "Finish Guided Setup to publish your smart card profile."}
-                  </p>
-                  {hasPublicProfile ? (
-                    <div className="portal-overview-inline-actions">
-                      <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">View Profile</Link>
-                      <CopyPublicProfileButton url={publicProfileUrl} />
-                    </div>
-                  ) : null}
-                  <Link className={hasPublicProfile ? "btn ghost portal-overview-card-btn" : "btn primary portal-overview-card-btn"} href={hasPublicProfile ? "/portal/connect" : "/portal/connect/setup"}>
-                    {hasPublicProfile ? "Edit Profile" : "Continue Guided Setup"}
-                  </Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Users size={17} /></div>
-                  <h3>Leads</h3>
-                  <p>
-                    {leadInboxCount > 0
-                      ? `${leadInboxCount} leads captured so far.`
-                      : "Your Lead Inbox will populate when someone submits your profile form."}
-                  </p>
-                  <Link className="btn ghost portal-overview-card-btn" href="/portal/connect/leads">Open Inbox</Link>
-                </article>
-
+              <div className="portal-overview-actions-grid portal-overview-actions-grid-smart portal-overview-actions-grid-compact">
                 <article className="portal-overview-action-item">
                   <div className="portal-overview-action-icon"><Sparkles size={17} /></div>
                   <h3>Wallet Card</h3>
@@ -810,6 +767,13 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   ) : (
                     <p className="portal-overview-inline-note">Finish Guided Setup to enable wallet cards.</p>
                   )}
+                </article>
+
+                <article className="portal-overview-action-item">
+                  <div className="portal-overview-action-icon"><Link2 size={17} /></div>
+                  <h3>Order Tracking</h3>
+                  <p>Review order proof, fulfillment status, and shipment updates.</p>
+                  <a className="btn ghost portal-overview-card-btn" href="#recent-order-status">Jump to Orders</a>
                 </article>
 
                 <article className="portal-overview-action-item">
