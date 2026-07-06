@@ -6,11 +6,19 @@ import Image from "next/image";
 import {
   BadgeCheck,
   ArrowUpRight,
+  CalendarDays,
+  Calculator,
+  ClipboardList,
+  FileText,
   Globe,
+  Link as LinkIcon,
   Mail,
   MapPin,
   Medal,
+  ShoppingBag,
+  ShoppingCart,
   AtSign,
+  Bolt,
   MessageCircleMore,
   PhoneCall,
   ShieldCheck,
@@ -65,6 +73,31 @@ function ActionChevron() {
   );
 }
 
+function getPrimaryActionIconName(primaryActionType?: string, fallbackIcon?: string) {
+  const actionType = String(primaryActionType || "").trim().toLowerCase();
+
+  switch (actionType) {
+    case "request_quote":
+      return "clipboard";
+    case "get_estimate":
+      return "calculator";
+    case "book_appointment":
+      return "calendar";
+    case "schedule_consultation":
+      return "calendar";
+    case "request_info":
+      return "message";
+    case "contact_me":
+      return "message";
+    case "place_order":
+      return "shopping-bag";
+    case "custom":
+      return "link";
+    default:
+      return fallbackIcon || "message";
+  }
+}
+
 function ActionGlyph({ name }: { name: string }) {
   const iconName = name.toLowerCase();
   const actionIconColor = (() => {
@@ -72,6 +105,11 @@ function ActionGlyph({ name }: { name: string }) {
     if (iconName === "mail" || iconName === "email") return "#EF4444";
     if (iconName === "globe" || iconName === "website") return "#2563EB";
     if (iconName === "map-pin" || iconName === "directions" || iconName === "address") return "#0EA5E9";
+    if (iconName === "calendar") return "#0EA5E9";
+    if (iconName === "calculator") return "#2563EB";
+    if (iconName === "clipboard" || iconName === "file-text") return "#475569";
+    if (iconName === "shopping-bag" || iconName === "cart" || iconName === "shopping-cart") return "#7C3AED";
+    if (iconName === "bolt") return "#EA580C";
     if (iconName === "message" || iconName === "sms" || iconName === "text") return "#22C55E";
     if (iconName === "link") return "#7C3AED";
     return "currentColor";
@@ -92,10 +130,28 @@ function ActionGlyph({ name }: { name: string }) {
     case "directions":
     case "address":
       return <MapPin {...commonProps} />;
+    case "calendar":
+      return <CalendarDays {...commonProps} />;
+    case "calculator":
+      return <Calculator {...commonProps} />;
+    case "clipboard":
+    case "clipboard-list":
+      return <ClipboardList {...commonProps} />;
+    case "file-text":
+      return <FileText {...commonProps} />;
+    case "shopping-bag":
+      return <ShoppingBag {...commonProps} />;
+    case "cart":
+    case "shopping-cart":
+      return <ShoppingCart {...commonProps} />;
+    case "bolt":
+      return <Bolt {...commonProps} />;
     case "message":
     case "sms":
     case "text":
       return <MessageCircleMore {...commonProps} />;
+    case "link":
+      return <LinkIcon {...commonProps} />;
     default:
       return <ArrowUpRight {...commonProps} />;
   }
@@ -708,11 +764,17 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
 export function BookingBlockPreview({ block }: BlockPreviewProps) {
   const data = getBlockData(block);
   const type = normalizeBlockType(String((block as any).type));
+  const isPrimaryAction = data.isPrimaryAction === true;
+  const resolvedIconName =
+    type === "directions-button"
+      ? "directions"
+      : type === "custom-link-button" && !isPrimaryAction
+        ? "link"
+        : type === "request-quote-button" || isPrimaryAction
+          ? getPrimaryActionIconName(data.primaryActionType, data.icon)
+          : data.icon || "calendar";
 
-  const icon =
-    type === "directions-button" ? <ActionGlyph name="directions" /> :
-    type === "custom-link-button" ? <ActionGlyph name="link" /> :
-    <ActionGlyph name="phone" />;
+  const icon = <ActionGlyph name={resolvedIconName} />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
     type === "custom-link-button" ? "Custom Link" :
@@ -729,6 +791,7 @@ export function BookingBlockPreview({ block }: BlockPreviewProps) {
         href={data.url || undefined}
         external={Boolean(data.url)}
         placeholder={!data.url}
+        className={isPrimaryAction ? "builder-primary-cta-card" : undefined}
       />
     </div>
   );

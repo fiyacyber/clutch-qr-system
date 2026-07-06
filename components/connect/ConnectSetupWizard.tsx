@@ -567,7 +567,6 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
     description: draft.action.primaryActionLeadCaptureEnabled
       ? "Tell us what you need"
       : "Opens your custom action URL.",
-    icon: "bolt",
     isPrimaryAction: true,
     primaryActionType: draft.action.primaryActionType,
     primaryActionFormType: draft.action.primaryActionFormType,

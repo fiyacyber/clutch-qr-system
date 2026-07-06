@@ -482,6 +482,23 @@ export default function BuilderPublicProfile({
     return map;
   }, [guidedLeadFormIds, orderedBlocks, primaryActionIds, sections]);
 
+  const publicStackBlocks = useMemo(() => {
+    const flattened: any[] = [];
+
+    for (const section of sections) {
+      if (section.visible === false) continue;
+
+      const sectionBlocks = sectionBlocksById.get(section.id) || [];
+      for (const block of sectionBlocks) {
+        if (block.visible === false) continue;
+        if (!blockHasRenderableContent(block, profile, mode)) continue;
+        flattened.push(block);
+      }
+    }
+
+    return flattened;
+  }, [mode, profile, sectionBlocksById, sections]);
+
   const ProfileBlock = useCallback((block: any, sectionId?: string, index = 0) => {
     if (mode !== "editor" && block.visible === false) return null;
 
@@ -536,56 +553,64 @@ export default function BuilderPublicProfile({
     </div>
   ), [ProfileBlock, heroBlocks, primaryActionBlocks]);
 
-  const ProfileBlocks = useMemo(() => (
-    <div className="builder-public-sections">
-      {sections.map((section, sectionIndex) => {
-        if (mode !== "editor" && section.visible === false) return null;
+  const ProfileBlocks = useMemo(() => {
+    if (mode !== "editor") {
+      return (
+        <div className="builder-public-sections builder-public-sections-flat">
+          <div className="builder-public-flat-stack">
+            {publicStackBlocks.map((block, index) => ProfileBlock(block, undefined, index + 1))}
+          </div>
+        </div>
+      );
+    }
 
-        const sectionBlocks = sectionBlocksById.get(section.id) || [];
-        const visibleSectionBlocks = mode === "editor" ? sectionBlocks : sectionBlocks.filter((block) => blockHasRenderableContent(block, profile, mode));
-        if (mode !== "editor" && visibleSectionBlocks.length === 0) return null;
-        const canSelectSection = editablePreview && onSelectSection;
+    return (
+      <div className="builder-public-sections">
+        {sections.map((section, sectionIndex) => {
+          const sectionBlocks = sectionBlocksById.get(section.id) || [];
+          const canSelectSection = editablePreview && onSelectSection;
 
-        return (
-          <section
-            key={section.id}
-            className={`builder-public-section builder-preview-selectable${section.visible === false ? " builder-preview-hidden-block" : ""}`}
-            data-builder-section-id={section.id}
-            role={canSelectSection ? "button" : undefined}
-            tabIndex={canSelectSection ? 0 : undefined}
-            onClick={canSelectSection ? () => onSelectSection?.(section.id) : undefined}
-            onKeyDown={canSelectSection ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onSelectSection?.(section.id);
-              }
-            } : undefined}
-          >
-            {editablePreview && onRemoveSection ? (
-              <div className="builder-preview-toolbar section-toolbar">
-                <button type="button" onClick={(event) => { event.stopPropagation(); onSelectSection?.(section.id); }}>Edit</button>
-                <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveSection(section.id); }}>Remove</button>
-              </div>
-            ) : null}
-            <div className="builder-public-section-stack">
-              {showSectionLabel ? (
-                <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
-              ) : null}
-              {visibleSectionBlocks.length ? (
-                <Fragment>
-                  {visibleSectionBlocks.map((block, index) => ProfileBlock(block, section.id, sectionIndex * 20 + index + 1))}
-                </Fragment>
-              ) : mode === "editor" ? (
-                <div className="builder-public-section-empty">
-                  {section.label.toLowerCase().includes("social") ? "Add social links to display them here." : "No blocks assigned to this section yet."}
+          return (
+            <section
+              key={section.id}
+              className={`builder-public-section builder-preview-selectable${section.visible === false ? " builder-preview-hidden-block" : ""}`}
+              data-builder-section-id={section.id}
+              role={canSelectSection ? "button" : undefined}
+              tabIndex={canSelectSection ? 0 : undefined}
+              onClick={canSelectSection ? () => onSelectSection?.(section.id) : undefined}
+              onKeyDown={canSelectSection ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectSection?.(section.id);
+                }
+              } : undefined}
+            >
+              {editablePreview && onRemoveSection ? (
+                <div className="builder-preview-toolbar section-toolbar">
+                  <button type="button" onClick={(event) => { event.stopPropagation(); onSelectSection?.(section.id); }}>Edit</button>
+                  <button type="button" className="danger" onClick={(event) => { event.stopPropagation(); onRemoveSection(section.id); }}>Remove</button>
                 </div>
               ) : null}
-            </div>
-          </section>
-        );
-      })}
-    </div>
-  ), [ProfileBlock, editablePreview, globalAlignment, mode, onRemoveSection, onSelectSection, profile, sectionBlocksById, sections, showSectionLabel, starterLocked]);
+              <div className="builder-public-section-stack">
+                {showSectionLabel ? (
+                  <div className="builder-public-section-title builder-public-section-label" style={sectionHeaderStyle(section, starterLocked, globalAlignment)}>{section.label}</div>
+                ) : null}
+                {sectionBlocks.length ? (
+                  <Fragment>
+                    {sectionBlocks.map((block, index) => ProfileBlock(block, section.id, sectionIndex * 20 + index + 1))}
+                  </Fragment>
+                ) : (
+                  <div className="builder-public-section-empty">
+                    {section.label.toLowerCase().includes("social") ? "Add social links to display them here." : "No blocks assigned to this section yet."}
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    );
+  }, [ProfileBlock, editablePreview, globalAlignment, mode, onRemoveSection, onSelectSection, publicStackBlocks, sectionBlocksById, sections, showSectionLabel, starterLocked]);
 
   const ProfilePreviewContent = useMemo(() => (
     <div className="builder-public-shell">
@@ -620,7 +645,7 @@ export default function BuilderPublicProfile({
   return (
     <div
       ref={rootRef}
-      className={`builder-public-profile builder-profile-style-${profileStyleName}`}
+      className={`builder-public-profile builder-profile-style-${profileStyleName}${mode === "editor" ? " builder-public-profile-editor" : ""}`}
       data-mode={mode}
       data-theme={profileTheme}
       data-style={profileStyleName}

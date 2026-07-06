@@ -10052,6 +10052,30 @@ input.saas-font-search:focus-visible {
   min-width: 0;
 }
 
+.builder-public-sections-flat {
+  display: block;
+  width: 100%;
+}
+
+.builder-public-flat-stack {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.builder-public-section-block {
+  width: 100%;
+  min-width: 0;
+}
+
+.builder-public-profile:not(.builder-public-profile-editor) .builder-public-section,
+.builder-public-profile:not(.builder-public-profile-editor) .builder-public-section-stack {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .builder-public-profile[data-global-align="left"] .builder-hero-text,
 .builder-public-profile[data-global-align="left"] .builder-hero-kicker,
 .builder-public-profile[data-global-align="left"] .builder-hero-name,
@@ -10101,18 +10125,18 @@ input.saas-font-search:focus-visible {
 }
 
 .builder-public-profile[data-global-align="left"] .builder-action-content {
-  align-items: flex-start;
   text-align: left;
+  justify-items: start;
 }
 
 .builder-public-profile[data-global-align="center"] .builder-action-content {
-  align-items: center;
   text-align: center;
+  justify-items: center;
 }
 
 .builder-public-profile[data-global-align="right"] .builder-action-content {
-  align-items: flex-end;
   text-align: right;
+  justify-items: end;
 }
 
 .builder-guided-lead-slot {
@@ -10145,6 +10169,11 @@ input.saas-font-search:focus-visible {
 .builder-public-profile .builder-button:hover {
   background-color: #f7f7f7 !important;
   border-color: rgba(17, 17, 17, 0.34) !important;
+}
+
+.builder-public-profile .builder-primary-cta-card {
+  border-color: rgba(17, 17, 17, 0.24);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .builder-public-profile .builder-action-icon {
