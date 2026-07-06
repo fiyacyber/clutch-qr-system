@@ -4,6 +4,7 @@ import { BarChart3 } from "lucide-react";
 import QRCodeEditForm from "@/components/QRCodeEditForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import { requireCustomer } from "@/lib/auth";
 import { getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -13,10 +14,17 @@ export default async function EditQrCodePage({
 }: {
   params: Promise<{ qrId: string }>;
 }) {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const plan = getCustomerPlan(customer);
@@ -27,7 +35,7 @@ export default async function EditQrCodePage({
   const { qrId } = await params;
   const admin = createSupabaseAdminClient();
 
-  const [{ data: code }, { data: profiles }] = await Promise.all([
+  const [{ data: code, error: codeError }, { data: profiles, error: profilesError }] = await Promise.all([
     admin
       .from("qr_codes")
       .select("id, name, destination_url, slug, qr_type, profile_id, scan_count, updated_at, foreground_color, background_color, dot_style, corner_style, logo_url")
@@ -41,6 +49,28 @@ export default async function EditQrCodePage({
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
   ]);
+
+  if (codeError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/qr/[qrId]/edit",
+      endpoint: "supabase:qr_codes.maybeSingle",
+      code: codeError.code ?? null,
+      message: codeError.message ?? "Unknown error",
+      details: codeError.details ?? null,
+      hint: codeError.hint ?? null,
+    });
+  }
+
+  if (profilesError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/qr/[qrId]/edit",
+      endpoint: "supabase:profiles.select",
+      code: profilesError.code ?? null,
+      message: profilesError.message ?? "Unknown error",
+      details: profilesError.details ?? null,
+      hint: profilesError.hint ?? null,
+    });
+  }
 
   if (!code) {
     redirect("/portal/qr");

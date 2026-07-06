@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import ConnectLeadsCRM from "@/components/connect/ConnectLeadsCRM";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyValueButton from "@/components/dashboard/CopyValueButton";
@@ -46,18 +47,36 @@ function isCountedProfileView(event: any) {
 }
 
 export default async function PortalConnectLeadsPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
 
   const admin = createSupabaseAdminClient();
 
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("id, slug, business_name, contact_name, is_active")
     .eq("customer_id", customer.id)
     .maybeSingle();
+
+  if (profileError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:profiles.maybeSingle",
+      code: profileError.code ?? null,
+      message: profileError.message ?? "Unknown error",
+      details: profileError.details ?? null,
+      hint: profileError.hint ?? null,
+    });
+  }
 
   if (!profile) redirect("/portal/connect");
 
@@ -71,7 +90,7 @@ export default async function PortalConnectLeadsPage() {
   const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
   const publicProfileUrl = clutchConnectProfileUrl(profile.slug);
 
-  const [{ data: leads }, { data: events }, { data: unifiedEvents }, { data: qrCodes }, { data: qrScans }] = await Promise.all([
+  const [leadsResult, eventsResult, unifiedEventsResult, qrCodesResult, qrScansResult] = await Promise.all([
     admin
       .from("profile_leads")
       .select("*")
@@ -100,6 +119,63 @@ export default async function PortalConnectLeadsPage() {
       .order("created_at", { ascending: false })
       .limit(4000),
   ]);
+
+  if (leadsResult.error) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:profile_leads.select",
+      code: leadsResult.error.code ?? null,
+      message: leadsResult.error.message ?? "Unknown error",
+      details: leadsResult.error.details ?? null,
+      hint: leadsResult.error.hint ?? null,
+    });
+  }
+  if (eventsResult.error) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:profile_click_events.select",
+      code: eventsResult.error.code ?? null,
+      message: eventsResult.error.message ?? "Unknown error",
+      details: eventsResult.error.details ?? null,
+      hint: eventsResult.error.hint ?? null,
+    });
+  }
+  if (unifiedEventsResult.error) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:connect_events.select",
+      code: unifiedEventsResult.error.code ?? null,
+      message: unifiedEventsResult.error.message ?? "Unknown error",
+      details: unifiedEventsResult.error.details ?? null,
+      hint: unifiedEventsResult.error.hint ?? null,
+    });
+  }
+  if (qrCodesResult.error) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:qr_codes.select",
+      code: qrCodesResult.error.code ?? null,
+      message: qrCodesResult.error.message ?? "Unknown error",
+      details: qrCodesResult.error.details ?? null,
+      hint: qrCodesResult.error.hint ?? null,
+    });
+  }
+  if (qrScansResult.error) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/leads",
+      endpoint: "supabase:qr_scans.select",
+      code: qrScansResult.error.code ?? null,
+      message: qrScansResult.error.message ?? "Unknown error",
+      details: qrScansResult.error.details ?? null,
+      hint: qrScansResult.error.hint ?? null,
+    });
+  }
+
+  const leads = leadsResult.data || [];
+  const events = eventsResult.data || [];
+  const unifiedEvents = unifiedEventsResult.data || [];
+  const qrCodes = qrCodesResult.data || [];
+  const qrScans = qrScansResult.data || [];
 
   const rows = leads || [];
   const clickEvents = events || [];

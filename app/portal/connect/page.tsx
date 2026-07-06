@@ -11,6 +11,7 @@ import {
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
 import { requireCustomer } from "@/lib/auth";
@@ -54,10 +55,17 @@ function hasBuilderBannerImage(builderConfig: unknown) {
 export default async function PortalConnectPage({ searchParams }: ConnectPageProps) {
   const params = (await searchParams) || {};
   const setupMessage = typeof params.setup === "string" ? params.setup : "";
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const plan = getCustomerPlan(customer);
@@ -140,7 +148,10 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           .from("profile_leads")
           .select("id", { count: "exact", head: true })
           .eq("profile_id", profile.id),
-      mapResult: (result: any) => result?.count || 0,
+      mapResult: (result: any) => ({
+        data: result?.count ?? 0,
+        error: result?.error,
+      }),
     }),
     runGuardedDashboardTask({
       route: "/portal/connect",

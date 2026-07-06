@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import ConnectTabs from "@/components/connect/ConnectTabs";
 import { requireCustomer } from "@/lib/auth";
 import { clutchConnectProfileUrl } from "@/lib/qr";
@@ -9,10 +10,17 @@ import { getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/li
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function PortalConnectLinksPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const plan = getCustomerPlan(customer);
@@ -21,21 +29,43 @@ export default async function PortalConnectLinksPage() {
   const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
 
   const admin = createSupabaseAdminClient();
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("id, slug, business_name, contact_name")
     .eq("customer_id", customer.id)
     .maybeSingle();
 
+  if (profileError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/links",
+      endpoint: "supabase:profiles.maybeSingle",
+      code: profileError.code ?? null,
+      message: profileError.message ?? "Unknown error",
+      details: profileError.details ?? null,
+      hint: profileError.hint ?? null,
+    });
+  }
+
   if (!profile) {
     redirect(advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect/setup");
   }
 
-  const { data: links } = await admin
+  const { data: links, error: linksError } = await admin
     .from("profile_links")
     .select("id, label, url, is_active, sort_order")
     .eq("profile_id", profile.id)
     .order("sort_order", { ascending: true });
+
+  if (linksError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/links",
+      endpoint: "supabase:profile_links.select",
+      code: linksError.code ?? null,
+      message: linksError.message ?? "Unknown error",
+      details: linksError.details ?? null,
+      hint: linksError.hint ?? null,
+    });
+  }
 
   return (
     <DashboardShell

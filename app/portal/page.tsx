@@ -17,6 +17,7 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
 import SmartCardQrCard from "@/components/dashboard/SmartCardQrCard";
@@ -91,9 +92,17 @@ function firstNameFromValue(value?: string | null) {
 }
 
 export default async function PortalPage({ searchParams }: PortalPageProps) {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
+
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const errorMessage = Array.isArray(resolvedSearchParams?.error)
@@ -104,17 +113,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     : resolvedSearchParams?.setup;
 
   if (!customer) {
-    return (
-      <main className="container">
-        <div className="card">
-          <h1>Account not active yet</h1>
-          <p className="muted">
-            Use the same email from your Clutch Connect checkout. If you just purchased,
-            wait a minute and refresh.
-          </p>
-        </div>
-      </main>
-    );
+    return <PortalAccountNotActive />;
   }
 
   if (customer.must_change_password) {
@@ -122,11 +121,22 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   }
 
   const admin = createSupabaseAdminClient();
-  const { data: connectProfile } = await admin
+  const { data: connectProfile, error: connectProfileError } = await admin
     .from("profiles")
     .select("id, business_name, contact_name, title, slug, is_active, phone, email, website, builder_config, theme_color")
     .eq("customer_id", customer.id)
     .maybeSingle();
+
+  if (connectProfileError) {
+    console.error("[portal-data-error]", {
+      route: "/portal",
+      endpoint: "supabase:profiles.maybeSingle",
+      code: connectProfileError.code ?? null,
+      message: connectProfileError.message ?? "Unknown error",
+      details: connectProfileError.details ?? null,
+      hint: connectProfileError.hint ?? null,
+    });
+  }
 
   const [qrCodesResult, connectProfilesResult] = await Promise.all([
     runGuardedDashboardTask({

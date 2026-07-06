@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
@@ -21,14 +22,22 @@ function formatDate(value?: string | null) {
 }
 
 export default async function PortalSettingsPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
-  if (!user || !customer) redirect("/login");
+  if (!user) redirect("/login");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
 
   const admin = createSupabaseAdminClient();
   const plan = getCustomerPlan(customer as any);
 
-  const [{ data: qrRows }, { data: latestQrRows }] = await Promise.all([
+  const [{ data: qrRows, error: qrRowsError }, { data: latestQrRows, error: latestQrRowsError }] = await Promise.all([
     admin
       .from("qr_codes")
       .select("id")
@@ -42,6 +51,28 @@ export default async function PortalSettingsPage() {
       .order("created_at", { ascending: false })
       .limit(1),
   ]);
+
+  if (qrRowsError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/settings",
+      endpoint: "supabase:qr_codes.select",
+      code: qrRowsError.code ?? null,
+      message: qrRowsError.message ?? "Unknown error",
+      details: qrRowsError.details ?? null,
+      hint: qrRowsError.hint ?? null,
+    });
+  }
+
+  if (latestQrRowsError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/settings",
+      endpoint: "supabase:qr_codes.latest_select",
+      code: latestQrRowsError.code ?? null,
+      message: latestQrRowsError.message ?? "Unknown error",
+      details: latestQrRowsError.details ?? null,
+      hint: latestQrRowsError.hint ?? null,
+    });
+  }
 
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
   const latestQr = latestQrRows?.[0] || null;

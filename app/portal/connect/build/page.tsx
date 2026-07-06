@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import BuilderEditor from "@/components/BuilderEditor";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import { createDefaultBuilderConfig } from "@/lib/builder-config";
 import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
 import { requireCustomer } from "@/lib/auth";
@@ -7,20 +9,38 @@ import { isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function BuilderPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
   if (!isAdvancedBuilderUnlocked(customer)) redirect("/portal/connect?builder=locked");
 
   const admin = createSupabaseAdminClient();
 
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("*")
     .eq("customer_id", customer.id)
     .maybeSingle();
+
+  if (profileError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/connect/build",
+      endpoint: "supabase:profiles.maybeSingle",
+      code: profileError.code ?? null,
+      message: profileError.message ?? "Unknown error",
+      details: profileError.details ?? null,
+      hint: profileError.hint ?? null,
+    });
+  }
 
   let builderProfile = profile;
 
@@ -54,7 +74,14 @@ export default async function BuilderPage() {
       .single();
 
     if (error || !createdProfile) {
-      console.error("CONNECT BUILDER PROFILE CREATE ERROR", error);
+      console.error("[portal-data-error]", {
+        route: "/portal/connect/build",
+        endpoint: "supabase:profiles.insert",
+        code: error?.code ?? null,
+        message: error?.message ?? "Unknown error",
+        details: error?.details ?? null,
+        hint: error?.hint ?? null,
+      });
       redirect("/portal/connect?error=profile-create-failed");
     }
 

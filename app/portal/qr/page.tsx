@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BarChart3, PlusCircle } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
@@ -14,10 +15,17 @@ import StoredQrLibrary from "./stored-qr-library";
 import type { StoredQrItem } from "./stored-qr-library";
 
 export default async function StoredQrCodesPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();

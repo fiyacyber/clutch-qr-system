@@ -4,6 +4,7 @@ import { BarChart3, LayoutGrid, ShieldCheck, Sparkles } from "lucide-react";
 import QRCodeCreateStudioForm from "@/components/QRCodeCreateStudioForm";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
@@ -20,10 +21,17 @@ import {
 } from "@/lib/plans";
 
 export default async function CreatePortalPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
 
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();

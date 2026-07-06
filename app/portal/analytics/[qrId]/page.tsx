@@ -12,6 +12,8 @@ import {
   QRAnalyticsScan,
   QRAnalyticsCode,
 } from "@/lib/analytics";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
@@ -23,8 +25,16 @@ export default async function QRAnalyticsPage({
   params: Promise<{ qrId: string }>;
 }) {
   const { qrId } = await params;
-  const { user, customer } = await requireCustomer();
-  if (!user || !customer) redirect("/login");
+  const { user, customer, customerLookupError } = await requireCustomer();
+  if (!user) redirect("/login");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
 
   const admin = createSupabaseAdminClient();
 
@@ -37,6 +47,16 @@ export default async function QRAnalyticsPage({
     .single();
 
   if (codeError || !code) {
+    if (codeError) {
+      console.error("[portal-data-error]", {
+        route: "/portal/analytics/[qrId]",
+        endpoint: "supabase:qr_codes.single",
+        code: codeError.code ?? null,
+        message: codeError.message ?? "Unknown error",
+        details: codeError.details ?? null,
+        hint: codeError.hint ?? null,
+      });
+    }
     return <div className="analytics-error">QR code not found</div>;
   }
 
@@ -48,6 +68,14 @@ export default async function QRAnalyticsPage({
     .order("created_at", { ascending: false });
 
   if (scansError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/analytics/[qrId]",
+      endpoint: "supabase:qr_scans.select",
+      code: scansError.code ?? null,
+      message: scansError.message ?? "Unknown error",
+      details: scansError.details ?? null,
+      hint: scansError.hint ?? null,
+    });
     return <div className="analytics-error">Failed to load analytics</div>;
   }
 

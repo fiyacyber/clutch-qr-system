@@ -16,6 +16,7 @@ import {
 import { parseCoordinate } from "@/lib/analytics";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
@@ -43,8 +44,16 @@ export default async function AnalyticsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { user, customer } = await requireCustomer();
-  if (!user || !customer) redirect("/login");
+  const { user, customer, customerLookupError } = await requireCustomer();
+  if (!user) redirect("/login");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
 
   const params = (await searchParams) || {};
   const tab = String(params.tab || "analytics").toLowerCase();

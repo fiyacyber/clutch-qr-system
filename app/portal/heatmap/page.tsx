@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import LocationHeatmapClient from "@/components/dashboard/LocationHeatmapClient";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
@@ -11,9 +12,16 @@ import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 export default async function HeatmapCommandCenterPage() {
-  const { user, customer } = await requireCustomer();
+  const { user, customer, customerLookupError } = await requireCustomer();
   if (!user) redirect("/login");
-  if (!customer) redirect("/portal");
+  if (customerLookupError) {
+    return (
+      <DashboardShell>
+        <PortalCustomerLookupUnavailable />
+      </DashboardShell>
+    );
+  }
+  if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const plan = getCustomerPlan(customer);
@@ -27,7 +35,14 @@ export default async function HeatmapCommandCenterPage() {
     .eq("customer_id", customer.id);
 
   if (qrError) {
-    console.error("HEATMAP QR LOAD ERROR", qrError);
+    console.error("[portal-data-error]", {
+      route: "/portal/heatmap",
+      endpoint: "supabase:qr_codes.select",
+      code: qrError.code ?? null,
+      message: qrError.message ?? "Unknown error",
+      details: qrError.details ?? null,
+      hint: qrError.hint ?? null,
+    });
   }
 
   const codes = qrCodes || [];
@@ -42,7 +57,14 @@ export default async function HeatmapCommandCenterPage() {
     : { data: [], error: null };
 
   if (scanError) {
-    console.error("HEATMAP SCAN LOAD ERROR", scanError);
+    console.error("[portal-data-error]", {
+      route: "/portal/heatmap",
+      endpoint: "supabase:qr_scans.select",
+      code: scanError.code ?? null,
+      message: scanError.message ?? "Unknown error",
+      details: scanError.details ?? null,
+      hint: scanError.hint ?? null,
+    });
   }
 
   const scans = scanRows || [];

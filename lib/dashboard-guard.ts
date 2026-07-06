@@ -16,6 +16,28 @@ interface GuardedTaskResult<T> {
   failed: boolean;
 }
 
+function parseErrorInfo(error: unknown) {
+  const baseError = (error as {
+    code?: string | number;
+    message?: string;
+    details?: string;
+    hint?: string;
+    cause?: {
+      code?: string | number;
+      message?: string;
+      details?: string;
+      hint?: string;
+    };
+  } | null);
+
+  return {
+    code: baseError?.code ?? baseError?.cause?.code ?? null,
+    message: baseError?.message ?? baseError?.cause?.message ?? String(error || "Unknown error"),
+    details: baseError?.details ?? baseError?.cause?.details ?? null,
+    hint: baseError?.hint ?? baseError?.cause?.hint ?? null,
+  };
+}
+
 function hashCustomerId(customerId?: string | null) {
   if (!customerId) return null;
   return createHash("sha256").update(customerId).digest("hex").slice(0, 12);
@@ -81,6 +103,25 @@ function logDashboard5xx(params: {
   });
 }
 
+function logPortalDataError(params: {
+  route: DashboardRoute;
+  endpoint: string;
+  customerId?: string | null;
+  error: unknown;
+}) {
+  const info = parseErrorInfo(params.error);
+
+  console.error("[portal-data-error]", {
+    route: params.route,
+    endpoint: params.endpoint,
+    code: info.code,
+    message: info.message,
+    details: info.details,
+    hint: info.hint,
+    customerHash: hashCustomerId(params.customerId),
+  });
+}
+
 export async function runGuardedDashboardTask<T, R>(
   options: GuardedTaskOptions<T, R>
 ): Promise<GuardedTaskResult<T>> {
@@ -94,6 +135,13 @@ export async function runGuardedDashboardTask<T, R>(
         };
 
     if (mapped.error) {
+      logPortalDataError({
+        route: options.route,
+        endpoint: options.endpoint,
+        customerId: options.customerId,
+        error: mapped.error,
+      });
+
       logDashboard5xx({
         route: options.route,
         endpoint: options.endpoint,
@@ -112,6 +160,13 @@ export async function runGuardedDashboardTask<T, R>(
       failed: false,
     };
   } catch (error) {
+    logPortalDataError({
+      route: options.route,
+      endpoint: options.endpoint,
+      customerId: options.customerId,
+      error,
+    });
+
     logDashboard5xx({
       route: options.route,
       endpoint: options.endpoint,
