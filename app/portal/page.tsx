@@ -415,6 +415,16 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     { label: "Share your profile link from this dashboard.", done: hasPublicProfile },
     { label: "Lead Inbox is ready for customer submissions.", done: setupChecklistComplete },
   ];
+  const visibleCardOrders = cardOrders.slice(0, 3);
+  const overflowCardOrders = cardOrders.slice(3);
+  const latestOrderStatus = formatLabel(latestCardOrder?.status, "Setup Pending");
+  const smartCardLaunchChecklistItems = [
+    { label: "Profile published", done: hasPublicProfile },
+    { label: "Lead Inbox active", done: setupChecklistComplete },
+    { label: "Smart card QR connected", done: Boolean(selectedSmartCardQr?.slug) },
+    { label: "Profile link ready", done: hasPublicProfile },
+  ];
+  const smartCardLaunchChecklistComplete = smartCardLaunchChecklistItems.every((item) => item.done);
 
   return (
     <DashboardShell
@@ -451,17 +461,24 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           title={isConnectBasicPlan ? "Smart Business Card Dashboard" : "Clutch Connect Platform"}
           subtitle={
             isConnectBasicPlan
-              ? "Set up, publish, and share your smart card profile. Lead Inbox is included, and QR Pro is optional."
+              ? hasPublicProfile
+                ? "Your profile is live. Manage your smart card, profile, leads, and order status."
+                : "Finish guided setup to publish your smart card profile."
               : "Launch campaigns, track scans, capture leads, and see where your marketing works."
           }
           actions={(
             <div className="portal-overview-header-actions">
               {isConnectBasicPlan ? (
                 <>
-                  <Link className="btn primary" href={smartCardPrimaryCtaHref}>
-                    {smartCardHeaderCtaLabel}
+                  {hasPublicProfile ? (
+                    <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">
+                      View Public Profile
+                    </Link>
+                  ) : null}
+                  <Link className="btn secondary" href={smartCardPrimaryCtaHref}>
+                    Edit Profile
                   </Link>
-                  {setupComplete ? <Link className="btn secondary" href="/portal/connect/leads">Lead Inbox</Link> : null}
+                  <Link className="btn ghost" href="/portal/connect/leads">Lead Inbox</Link>
                 </>
               ) : (
                 <>
@@ -475,23 +492,31 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           )}
         />
 
-        <CurrentPlanBadge
-          planCode={plan.code}
-          planName={plan.name}
-          priceLabel={plan.price}
-          description={plan.description}
-          usageLabel={usageLabel}
-          subscriptionStatus={subscriptionStatus}
-          locked={subscriptionLocked}
-          trialStatus={String(customer.trial_status || "none")}
-        />
+        {isConnectBasicPlan ? (
+          <section className="portal-overview-plan-mini">
+            <strong>Plan: Basic</strong>
+            <span>Free</span>
+            <span>{subscriptionStatus}</span>
+          </section>
+        ) : (
+          <CurrentPlanBadge
+            planCode={plan.code}
+            planName={plan.name}
+            priceLabel={plan.price}
+            description={plan.description}
+            usageLabel={usageLabel}
+            subscriptionStatus={subscriptionStatus}
+            locked={subscriptionLocked}
+            trialStatus={String(customer.trial_status || "none")}
+          />
+        )}
 
         {!isConnectBasicPlan && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
 
-        <AnalyticsCard title="Your Orders">
-          {cardOrders.length ? (
+        <AnalyticsCard title="Recent Order Status">
+          {visibleCardOrders.length ? (
             <ul className="portal-overview-order-list">
-              {cardOrders.map((order) => {
+              {visibleCardOrders.map((order) => {
                 const shopifyStatusUrl = order.shopify_order_id
                   ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
                   : null;
@@ -504,52 +529,22 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   : "Not requested";
 
                 return (
-                  <li key={order.id} className="portal-overview-order-card">
-                    <div className="portal-overview-order-top">
-                      <div className="portal-overview-order-heading">
-                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                        <span className="portal-overview-order-date">Placed {formatDate(order.created_at)}</span>
-                      </div>
+                  <li key={order.id} className="portal-overview-order-row">
+                    <div className="portal-overview-order-row-head">
+                      <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
                       <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
                     </div>
-
-                    <div className="portal-overview-order-meta-grid">
-                      <p className="portal-overview-order-line">
-                        <strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}
-                        {order.variant_title ? ` (${order.variant_title})` : ""}
-                      </p>
-                      <p className="portal-overview-order-line">
-                        <strong>Engraving:</strong> {engravingDetails}
-                      </p>
-                      {order.tracking_number ? (
-                        <p className="portal-overview-order-line"><strong>Tracking #:</strong> {order.tracking_number}</p>
-                      ) : null}
+                    <div className="portal-overview-order-row-grid">
+                      <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                      <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                      <p><strong>Engraving:</strong> {engravingDetails}</p>
+                      <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
+                      <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
+                      <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
                     </div>
 
-                    <div className="portal-overview-order-chips">
-                      <span className="portal-overview-order-chip">Fulfillment: {formatLabel(order.fulfillment_status, "Not Sent")}</span>
-                      <span className="portal-overview-order-chip">Proof: {formatLabel(order.approval_status, "Not Ready")}</span>
-                    </div>
-
-                    <div className="portal-overview-order-actions">
-                      {shopifyStatusUrl ? (
-                        <Link className="btn primary" href={shopifyStatusUrl} target="_blank" rel="noreferrer">
-                          Track Shopify Order
-                        </Link>
-                      ) : null}
-                      {order.proof_url ? (
-                        <Link className="btn secondary" href={order.proof_url} target="_blank" rel="noreferrer">
-                          View Proof
-                        </Link>
-                      ) : null}
-                      {order.tracking_url ? (
-                        <Link className="btn secondary" href={order.tracking_url} target="_blank" rel="noreferrer">
-                          Track Shipment
-                        </Link>
-                      ) : null}
-                      {!shopifyStatusUrl && !order.proof_url && !order.tracking_url ? (
-                        <span className="portal-overview-inline-note">Updates will appear here as your order moves forward.</span>
-                      ) : null}
+                    <div className="portal-overview-order-row-actions">
+                      {shopifyStatusUrl ? <Link className="btn ghost" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
                     </div>
                   </li>
                 );
@@ -558,6 +553,25 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           ) : (
             <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
           )}
+          {overflowCardOrders.length ? (
+            <details className="portal-overview-order-more">
+              <summary>View all orders</summary>
+              <ul className="portal-overview-order-list portal-overview-order-list-more">
+                {overflowCardOrders.map((order) => (
+                  <li key={order.id} className="portal-overview-order-row">
+                    <div className="portal-overview-order-row-head">
+                      <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
+                      <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
+                    </div>
+                    <div className="portal-overview-order-row-grid">
+                      <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
+                      <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </AnalyticsCard>
 
         {subscriptionLocked ? (
@@ -575,105 +589,76 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
         {isConnectBasicPlan ? (
           <>
+            <section className="portal-overview-live-strip">
+              <div>
+                <span className={hasPublicProfile ? "is-live" : "is-draft"}>{hasPublicProfile ? "LIVE" : "DRAFT"}</span>
+                <strong>{hasPublicProfile ? clutchConnectDisplayUrl(String(connectProfile?.slug || "")) : "Finish setup to publish your profile."}</strong>
+              </div>
+              <div className="portal-overview-live-strip-actions">
+                {hasPublicProfile ? (
+                  <>
+                    <CopyPublicProfileButton url={publicProfileUrl} />
+                    <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">View Public Profile</Link>
+                  </>
+                ) : (
+                  <Link className="btn secondary" href="/portal/connect/setup">Continue Guided Setup</Link>
+                )}
+              </div>
+            </section>
+
             <section className="ds-stat-grid">
               <StatCard
-                label="Profile Status"
-                value={hasPublicProfile ? "Live" : "Draft"}
-                description={hasPublicProfile ? "Your smart card profile is published." : "Finish Guided Setup to publish your smart card profile."}
-              />
-              <StatCard
-                label="Lead Inbox"
-                value={leadInboxCount.toLocaleString()}
-                description={leadInboxCount > 0 ? "New leads captured from your profile." : "Your Lead Inbox will populate when someone submits your profile form."}
+                label="Profile Views"
+                value={profileViewCount.toLocaleString()}
+                description="Profile engagement"
               />
               <StatCard
                 label="Card Taps"
                 value={smartCardTotalTaps.toLocaleString()}
-                description={smartCardLastTap ? `Last tap ${formatDate(smartCardLastTap)}.` : "Taps appear after your smart card is scanned."}
+                description={smartCardLastTap ? `Last ${formatDate(smartCardLastTap)}` : "No taps yet"}
               />
               <StatCard
-                label="Account Plan"
-                value={plan.shortName}
-                description={`${plan.name} • ${subscriptionStatus}`}
+                label="Leads"
+                value={leadInboxCount.toLocaleString()}
+                description="Lead Inbox"
+              />
+              <StatCard
+                label="Order Status"
+                value={latestOrderStatus}
+                description={latestCardOrder?.shopify_order_number ? String(latestCardOrder.shopify_order_number) : "No active order"}
               />
             </section>
 
             <AnalyticsCard className="portal-overview-smart-card-activity-card">
               <div className="portal-overview-section-head">
                 <h2>Smart Card Activity</h2>
-                <p>Your smart card QR is automatically connected to your Clutch Connect profile. You do not need to create a QR code.</p>
-              </div>
-
-              <div className="portal-overview-smart-metrics">
-                <article>
-                  <span>Total card taps</span>
-                  <strong>{smartCardTotalTaps.toLocaleString()}</strong>
-                  <p>{smartCardTotalTaps ? "Scans from your system-managed smart card QR." : "No card taps yet."}</p>
-                </article>
-                <article>
-                  <span>Last tap</span>
-                  <strong>{formatDateTime(smartCardLastTap)}</strong>
-                  <p>Taps will appear here after your smart card is scanned.</p>
-                </article>
-                <article>
-                  <span>Profile views</span>
-                  <strong>{profileViewCount.toLocaleString()}</strong>
-                  <p>Public profile views connected to your smart card experience.</p>
-                </article>
-                <article>
-                  <span>Leads</span>
-                  <strong>{leadInboxCount.toLocaleString()}</strong>
-                  <p>Lead form submissions captured from your profile.</p>
-                </article>
+                <p>Latest smart card taps and profile activity.</p>
               </div>
 
               {smartCardTotalTaps ? (
-                <div className="portal-overview-smart-activity-grid">
-                  <div className="portal-overview-smart-panel">
-                    <div className="portal-overview-smart-panel-head"><Clock3 size={16} /><h3>Recent card activity</h3></div>
-                    <ul className="portal-overview-activity-list">
-                      {smartCardRecentActivity.map((item) => (
+                <div className="portal-overview-smart-panel portal-overview-smart-panel-compact">
+                  <div className="portal-overview-smart-panel-head"><Clock3 size={16} /><h3>Recent taps</h3></div>
+                  <ul className="portal-overview-activity-list">
+                    {smartCardRecentActivity.slice(0, 6).map((item) => {
+                      const scan = smartCardScans.find((row) => row.id === item.id);
+                      const device = scan?.device_type ? formatLabel(scan.device_type, "Unknown") : "Unknown device";
+                      return (
                         <li key={item.id}>
                           <div>
                             <strong>{item.title}</strong>
-                            <p>{item.location}</p>
+                            <p>{device} • {item.location}</p>
                           </div>
                           <span>{item.date}</span>
                         </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="portal-overview-smart-panel">
-                    <div className="portal-overview-smart-panel-head"><Globe2 size={16} /><h3>Breakdowns</h3></div>
-                    <div className="portal-overview-smart-breakdowns">
-                      {[
-                        { title: "Devices", rows: smartCardDeviceRows },
-                        { title: "Browsers", rows: smartCardBrowserRows },
-                        { title: "Operating systems", rows: smartCardOsRows },
-                        { title: "Top locations", rows: smartCardLocationRows },
-                      ].map((group) => (
-                        <div key={group.title} className="portal-overview-smart-breakdown-group">
-                          <h4>{group.title}</h4>
-                          {group.rows.length ? (
-                            <ul>
-                              {group.rows.map((row) => (
-                                <li key={row.label}><span>{row.label}</span><strong>{row.value}</strong></li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>No data yet</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                      );
+                    })}
+                  </ul>
                 </div>
               ) : (
                 <div className="portal-overview-smart-empty">
                   <QrCode size={22} />
                   <h3>No card taps yet</h3>
-                  <p>Taps will appear here after your smart card is scanned.</p>
+                  <p>No card taps yet. Taps will appear after your smart card is scanned.</p>
                 </div>
               )}
             </AnalyticsCard>
@@ -725,14 +710,14 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
             <AnalyticsCard className="portal-overview-actions-card">
               <div className="portal-overview-section-head">
-                <h2>Your Smart Card Setup</h2>
-                <p>Set up your digital profile, share it, and manage leads from one simple dashboard.</p>
+                <h2>Quick Actions</h2>
+                <p>Manage your profile, leads, wallet cards, and support from one place.</p>
               </div>
 
               <div className="portal-overview-actions-grid portal-overview-actions-grid-smart">
                 <article className="portal-overview-action-item">
                   <div className="portal-overview-action-icon"><Link2 size={17} /></div>
-                  <h3>Clutch Connect Profile</h3>
+                  <h3>Profile</h3>
                   <p>
                     {hasPublicProfile
                       ? "Your profile is live and ready to share."
@@ -740,34 +725,34 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   </p>
                   {hasPublicProfile ? (
                     <div className="portal-overview-inline-actions">
-                      <Link className="btn secondary" href={publicProfileUrl} target="_blank" rel="noreferrer">View Public Profile</Link>
+                      <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">View Profile</Link>
                       <CopyPublicProfileButton url={publicProfileUrl} />
                     </div>
                   ) : null}
-                  <Link className="btn primary" href={smartCardPrimaryCtaHref}>
-                    {smartCardPrimaryCtaLabel}
+                  <Link className="btn secondary" href={hasPublicProfile ? "/portal/connect" : "/portal/connect/setup"}>
+                    {hasPublicProfile ? "Edit Profile" : "Continue Guided Setup"}
                   </Link>
                 </article>
 
                 <article className="portal-overview-action-item">
                   <div className="portal-overview-action-icon"><Users size={17} /></div>
-                  <h3>Lead Inbox</h3>
+                  <h3>Leads</h3>
                   <p>
                     {leadInboxCount > 0
                       ? `${leadInboxCount} leads captured so far.`
                       : "Your Lead Inbox will populate when someone submits your profile form."}
                   </p>
-                  <Link className="btn secondary" href="/portal/connect/leads">Open Lead Inbox</Link>
+                  <Link className="btn ghost" href="/portal/connect/leads">Open Inbox</Link>
                 </article>
 
                 <article className="portal-overview-action-item">
                   <div className="portal-overview-action-icon"><Sparkles size={17} /></div>
-                  <h3>Wallet Contact Card</h3>
+                  <h3>Wallet Card</h3>
                   <p>Save your contact card to Apple Wallet or Google Wallet for fast sharing.</p>
                   {hasConnectProfile && connectProfileId ? (
                     <div className="portal-overview-wallet-actions">
-                      <Link className="btn secondary" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</Link>
-                      <Link className="btn secondary" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</Link>
+                      <Link className="btn ghost" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</Link>
+                      <Link className="btn ghost" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</Link>
                     </div>
                   ) : (
                     <p className="portal-overview-inline-note">Finish Guided Setup to enable wallet cards.</p>
@@ -776,24 +761,17 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
                 <article className="portal-overview-action-item">
                   <div className="portal-overview-action-icon"><CheckCircle2 size={17} /></div>
-                  <h3>Guided Setup</h3>
-                  <p>Guided setup is included with your smart card.</p>
-                  <Link className="btn secondary" href="/portal/connect/setup">Open Guided Setup</Link>
-                </article>
-
-                <article className="portal-overview-action-item portal-overview-upsell-item">
-                  <div className="portal-overview-action-icon"><QrCode size={17} /></div>
-                  <h3>Optional QR Pro Upgrade</h3>
-                  <p>QR Pro is optional and not required for your smart card.</p>
-                  <Link className="btn ghost" href="/portal/settings">See Upgrade Options</Link>
+                  <h3>Support</h3>
+                  <p>Need help with setup or publishing? Our team is ready to help.</p>
+                  <Link className="btn ghost" href="mailto:support@clutchprintshop.com">Contact Support</Link>
                 </article>
               </div>
             </AnalyticsCard>
 
             <section className="portal-overview-lower-grid">
-              <AnalyticsCard title="Setup Checklist">
-                <ul className="portal-overview-checklist">
-                  {smartCardChecklistItems.map((item) => (
+              <AnalyticsCard title={smartCardLaunchChecklistComplete ? "Setup Complete" : "Setup Checklist"}>
+                <ul className="portal-overview-checklist portal-overview-checklist-compact">
+                  {smartCardLaunchChecklistItems.map((item) => (
                     <li key={item.label} className={item.done ? "done" : "pending"}>
                       {item.done ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                       <span>{item.label}</span>
@@ -802,14 +780,11 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                 </ul>
               </AnalyticsCard>
 
-              <AnalyticsCard title="Support">
+              <AnalyticsCard title="Upgrade to Clutch Connect+" className="portal-overview-upgrade-card">
                 <div className="portal-overview-brand-card">
-                  <div className="portal-overview-brand-title">
-                    <Sparkles size={15} />
-                    <h3>Need Help With Setup?</h3>
-                  </div>
-                  <p>Guided setup is included with your smart card. Our team can help you publish quickly.</p>
-                  <Link className="btn secondary" href="mailto:support@clutchprintshop.com">Contact Support</Link>
+                  <p>Unlock advanced profile customization, deeper engagement analytics, enhanced lead tools, and premium profile sections.</p>
+                  <Link className="btn ghost" href="/portal/settings">Try Connect+</Link>
+                  <span className="portal-overview-inline-note">14 Day Free Trial · Cancel Anytime</span>
                 </div>
               </AnalyticsCard>
             </section>

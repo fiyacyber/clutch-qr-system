@@ -10985,6 +10985,86 @@ input.saas-font-search:focus-visible {
   flex-wrap: wrap;
 }
 
+.portal-overview-header-actions .btn,
+.portal-overview-live-strip .btn,
+.portal-overview-order-row-actions .btn,
+.portal-overview-smart-qr-actions .btn,
+.portal-overview-actions-card .btn {
+  min-height: 38px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 760;
+}
+
+.portal-overview-plan-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 72, 98, 0.18);
+  background: #fff;
+  color: var(--clutch-navy);
+  font-size: 0.82rem;
+}
+
+.portal-overview-plan-mini strong {
+  color: var(--clutch-dark);
+}
+
+.portal-overview-live-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(12, 34, 64, 0.05);
+  padding: 14px;
+}
+
+.portal-overview-live-strip > div {
+  display: grid;
+  gap: 6px;
+}
+
+.portal-overview-live-strip strong {
+  color: var(--clutch-dark);
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.portal-overview-live-strip span {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+
+.portal-overview-live-strip .is-live {
+  color: #1f7a3f;
+  border: 1px solid rgba(31, 122, 63, 0.26);
+  background: rgba(66, 185, 110, 0.12);
+}
+
+.portal-overview-live-strip .is-draft {
+  color: #8a5a00;
+  border: 1px solid rgba(170, 126, 45, 0.28);
+  background: rgba(242, 188, 88, 0.18);
+}
+
+.portal-overview-live-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .portal-overview-limit-value {
   font-size: clamp(1rem, 2vw, 1.65rem);
   line-height: 1.05;
@@ -11349,6 +11429,55 @@ input.saas-font-search:focus-visible {
   box-shadow: 0 8px 20px rgba(18, 34, 56, 0.05);
 }
 
+.portal-overview-order-row {
+  box-shadow: none;
+}
+
+.portal-overview-order-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.portal-overview-order-row-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.portal-overview-order-row-grid p {
+  margin: 0;
+  color: var(--clutch-muted);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.portal-overview-order-row-grid strong {
+  color: var(--clutch-dark);
+}
+
+.portal-overview-order-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.portal-overview-order-more {
+  margin-top: 10px;
+}
+
+.portal-overview-order-more summary {
+  cursor: pointer;
+  color: var(--clutch-navy);
+  font-weight: 700;
+}
+
+.portal-overview-order-list-more {
+  margin-top: 10px;
+}
+
 .portal-overview-order-top {
   display: flex;
   align-items: flex-start;
@@ -11453,6 +11582,15 @@ input.saas-font-search:focus-visible {
   color: var(--clutch-navy);
 }
 
+.portal-overview-checklist-compact {
+  gap: 6px;
+}
+
+.portal-overview-checklist-compact li {
+  padding: 9px 10px;
+  font-size: 0.86rem;
+}
+
 .portal-overview-brand-card {
   margin-top: 12px;
   border: 1px solid var(--clutch-border);
@@ -11479,6 +11617,15 @@ input.saas-font-search:focus-visible {
   font-size: 0.86rem;
 }
 
+.portal-overview-upgrade-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fffaf5 100%);
+}
+
+.portal-overview-upgrade-card .portal-overview-brand-card {
+  margin-top: 0;
+  border-style: dashed;
+}
+
 @media (max-width: 1180px) {
   .portal-overview-actions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11503,6 +11650,10 @@ input.saas-font-search:focus-visible {
   .portal-overview-lower-grid {
     grid-template-columns: 1fr;
   }
+
+  .portal-overview-order-row-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -11513,6 +11664,15 @@ input.saas-font-search:focus-visible {
   .portal-overview-order-top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .portal-overview-live-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .portal-overview-live-strip-actions {
+    width: 100%;
   }
 
   .portal-overview-order-actions .btn {
@@ -11538,6 +11698,11 @@ input.saas-font-search:focus-visible {
   }
 
   .portal-overview-smart-qr-actions .btn {
+    width: 100%;
+  }
+
+  .portal-overview-live-strip-actions .btn,
+  .portal-overview-order-row-actions .btn {
     width: 100%;
   }
 }
