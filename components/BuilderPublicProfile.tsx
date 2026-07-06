@@ -525,11 +525,20 @@ export default function BuilderPublicProfile({
     const Component = PREVIEW_COMPONENTS[type] || UnknownBlockPreview;
     const isSelected = selectedBlockId === block.id;
     const canEdit = editablePreview && onSelectBlock;
+    const blockClassName = [
+      "builder-public-section-block",
+      canEdit ? "builder-preview-selectable" : "",
+      "builder-block-enter",
+      canEdit && isSelected ? "selected" : "",
+      block.visible === false ? "builder-preview-hidden-block" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return (
       <div
         key={block.id}
-        className={`builder-public-section-block builder-preview-selectable builder-block-enter${isSelected ? " selected" : ""}${block.visible === false ? " builder-preview-hidden-block" : ""}`}
+        className={blockClassName}
         data-builder-block-id={block.id}
         data-builder-block-type={type}
         style={{ ["--builder-block-index" as any]: index }}
