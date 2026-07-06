@@ -11152,6 +11152,75 @@ input.saas-font-search:focus-visible {
   color: var(--clutch-dark);
 }
 
+.portal-overview-smart-qr-card {
+  padding: 20px;
+}
+
+.portal-overview-smart-qr-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(190px, 0.38fr) minmax(0, 0.62fr);
+  gap: 14px;
+}
+
+.portal-overview-smart-qr-preview-wrap {
+  border: 1px solid var(--clutch-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(12, 34, 64, 0.06);
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+
+.portal-overview-smart-qr-preview {
+  width: min(100%, 260px);
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 72, 98, 0.12);
+  background: #fff;
+}
+
+.portal-overview-smart-qr-details {
+  border: 1px solid var(--clutch-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.portal-overview-smart-qr-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.portal-overview-smart-qr-meta p {
+  margin: 0;
+  color: var(--clutch-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.portal-overview-smart-qr-meta strong {
+  color: var(--clutch-dark);
+}
+
+.portal-overview-smart-qr-meta span {
+  overflow-wrap: anywhere;
+}
+
+.portal-overview-smart-qr-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.portal-overview-smart-qr-actions .btn {
+  min-height: 40px;
+}
+
 .portal-overview-action-item {
   border: 1px solid var(--clutch-border);
   border-radius: 12px;
@@ -11427,6 +11496,10 @@ input.saas-font-search:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .portal-overview-smart-qr-grid {
+    grid-template-columns: 1fr;
+  }
+
   .portal-overview-lower-grid {
     grid-template-columns: 1fr;
   }
@@ -11457,6 +11530,15 @@ input.saas-font-search:focus-visible {
   .portal-overview-smart-metrics,
   .portal-overview-smart-breakdowns {
     grid-template-columns: 1fr;
+  }
+
+  .portal-overview-smart-qr-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .portal-overview-smart-qr-actions .btn {
+    width: 100%;
   }
 }
 
