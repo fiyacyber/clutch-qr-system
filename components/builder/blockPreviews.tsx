@@ -102,7 +102,23 @@ function getPrimaryActionIconName(primaryActionType?: string, fallbackIcon?: str
 function getProfileLinkIcon(linkType?: string | null, label?: string | null): React.ReactNode {
   const type = String(linkType || "").toLowerCase();
   const labelLower = String(label || "").toLowerCase();
-  const commonProps = { size: 16, "aria-hidden": true as const };
+  const color = (() => {
+    if (type === "instagram" || labelLower.includes("instagram")) return "#E4405F";
+    if (type === "facebook" || labelLower.includes("facebook")) return "#1877F2";
+    if (type === "youtube" || labelLower.includes("youtube")) return "#FF0000";
+    if (type === "linkedin" || labelLower.includes("linkedin")) return "#0A66C2";
+    if (type === "tiktok" || labelLower.includes("tiktok")) return "#111111";
+    if (type === "x" || type === "twitter" || labelLower.includes("twitter") || /(^|\s)x(\s|$)/.test(labelLower)) return "#111827";
+    if (type === "google_business" || type === "google" || labelLower.includes("google")) return "#4285F4";
+    if (type === "yelp" || labelLower.includes("yelp")) return "#D32323";
+    if (type === "booking" || labelLower.includes("book")) return "#0EA5E9";
+    if (type === "email" || labelLower.includes("email")) return "#EA4335";
+    if (type === "phone" || labelLower.includes("phone")) return "#22C55E";
+    if (type === "website" || labelLower.includes("website")) return "#2563EB";
+    if (labelLower.includes("quote")) return "#475569";
+    return "#7C3AED";
+  })();
+  const commonProps = { size: 16, color, "aria-hidden": true as const };
 
   if (type === "instagram") return <FaInstagram {...commonProps} />;
   if (type === "facebook") return <FaFacebook {...commonProps} />;
