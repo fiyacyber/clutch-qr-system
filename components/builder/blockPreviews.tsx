@@ -272,6 +272,35 @@ function formatActionSubtitle(value: string) {
   return String(value || "").trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
 }
 
+function getLeadFormTitle(primaryActionType?: string | null, fallbackLabel?: string | null) {
+  const type = String(primaryActionType || "").toLowerCase();
+  if (type === "schedule_consultation" || type === "book_appointment") return "Schedule a Consultation";
+  if (type === "request_quote" || type === "get_estimate") return "Request a Quote";
+  if (type === "request_info" || type === "contact_me" || type === "general_inquiry") return "General Inquiry";
+  if (type === "place_order") return "Place an Order";
+  return String(fallbackLabel || "").trim() || "Contact Form";
+}
+
+function getLeadFormSubtitle(formType?: string | null, fallbackText?: string | null) {
+  const fallback = String(fallbackText || "").trim();
+  if (fallback) return fallback;
+
+  const type = String(formType || "").toLowerCase();
+  if (type === "appointment_request") return "Tell us what you need";
+  if (type === "quote_request") return "Tell us what you need";
+  if (type === "general_inquiry") return "Tell us what you need";
+  if (type === "basic_contact") return "Tell us what you need";
+  return "Tell us what you need";
+}
+
+function getLeadSubmitLabel(primaryActionType?: string | null, fallbackText?: string | null) {
+  const type = String(primaryActionType || "").toLowerCase();
+  if (type === "schedule_consultation" || type === "book_appointment") return "Request Consultation";
+  if (type === "request_quote" || type === "get_estimate") return "Request Quote";
+  if (type === "request_info" || type === "contact_me" || type === "general_inquiry") return "Send Request";
+  return String(fallbackText || "").trim() || "Submit";
+}
+
 type ActionCardProps = {
   icon: ReactNode;
   title: string;
@@ -831,11 +860,11 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
           ? getPrimaryActionIconName(data.primaryActionType, data.icon)
           : data.icon || "calendar";
 
-    // Use brand icons for additional links (custom-link-button with linkType), ActionGlyph for other action buttons
-    const isAdditionalLink = type === "custom-link-button" && !isPrimaryAction && data.linkType;
-    const icon = isAdditionalLink 
-      ? getProfileLinkIcon(data.linkType, label)
-      : <ActionGlyph name={resolvedIconName} />;
+  // Use brand icons for additional links (custom-link-button with linkType), ActionGlyph for other action buttons
+  const isAdditionalLink = type === "custom-link-button" && !isPrimaryAction && data.linkType;
+  const icon = isAdditionalLink
+    ? getProfileLinkIcon(data.linkType, label)
+    : <ActionGlyph name={resolvedIconName} />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
     type === "custom-link-button" ? "Custom Link" :
@@ -860,7 +889,7 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
         href={url || undefined}
         external={Boolean(url)}
         placeholder={!url}
-        className={isPrimaryAction ? "builder-primary-cta-card" : undefined}
+        className={isPrimaryAction ? "builder-primary-cta-card" : isAdditionalLink ? "builder-button-social builder-additional-link-card" : undefined}
       />
     </div>
   );
@@ -1028,6 +1057,9 @@ export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
   const sent = profile?._leadSent === true;
   const rateLimited = profile?._leadRateLimited === true;
   const submitError = profile?._leadError === true;
+  const formTitle = getLeadFormTitle(data.primaryActionType, data.formLabel);
+  const formSubtitle = getLeadFormSubtitle(data.formType, data.description);
+  const submitLabel = getLeadSubmitLabel(data.primaryActionType, data.submitText);
 
   if (!leadCaptureEnabled && mode !== "editor") {
     return null;
@@ -1054,10 +1086,10 @@ export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
   }
 
   return (
-    <div className="builder-block builder-block-form">
-      <h3 className="builder-form-title" id="lead-form">{data.formLabel || "Contact Form"}</h3>
+    <div className="builder-block builder-block-form connect-guided-lead-card">
+      <h3 className="builder-form-title" id="lead-form">{formTitle}</h3>
       <p className="builder-form-description">
-        {data.description || "Use this form to collect lead details from visitors."}
+        {formSubtitle}
       </p>
 
       {sent ? <div className="connect-success">Thanks! Your request was sent.</div> : null}
@@ -1088,7 +1120,7 @@ export function FormBlockPreview({ block, profile, mode }: BlockPreviewProps) {
         />
 
         <button className="connect-submit" type="submit">
-          {data.submitText || "Send"}
+          {submitLabel}
         </button>
       </form>
     </div>

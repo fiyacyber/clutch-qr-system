@@ -531,6 +531,7 @@ export default function BuilderPublicProfile({
         key={block.id}
         className={`builder-public-section-block builder-preview-selectable builder-block-enter${isSelected ? " selected" : ""}${block.visible === false ? " builder-preview-hidden-block" : ""}`}
         data-builder-block-id={block.id}
+        data-builder-block-type={type}
         style={{ ["--builder-block-index" as any]: index }}
       >
         {canEdit ? (
