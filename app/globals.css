@@ -14308,6 +14308,14 @@ input.saas-font-search:focus-visible {
   isolation: isolate;
 }
 
+.builder-public-profile[data-banner-overlap="true"] .builder-global-banner {
+  margin-bottom: -18px;
+}
+
+.builder-public-profile[data-banner-overlap="false"] .builder-global-banner {
+  margin-bottom: 10px;
+}
+
 .builder-public-profile[data-banner-type="image"][data-banner-image-state="empty"] .builder-global-banner {
   height: min(var(--builder-banner-height, 150px), 150px);
   max-height: 150px;
