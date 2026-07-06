@@ -260,6 +260,7 @@ export default async function PortalConnectLeadsPage() {
         <ConnectTabs
           active="leads"
           showBuilder={advancedBuilderUnlocked}
+          showAnalytics={hasHeatmap}
           analyticsLocked={!hasHeatmap}
           analyticsLockedMode="inline"
         />

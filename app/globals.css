@@ -11273,14 +11273,38 @@ input.saas-font-search:focus-visible {
   display: grid;
   place-items: center;
   padding: 14px;
+  gap: 10px;
+}
+
+.portal-overview-smart-qr-circle {
+  width: 280px;
+  height: 280px;
+  border-radius: 999px;
+  border: 6px solid var(--clutch-navy);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  box-sizing: border-box;
+  box-shadow: 0 14px 30px rgba(11, 31, 53, 0.14);
 }
 
 .portal-overview-smart-qr-preview {
-  width: min(100%, 260px);
+  width: 100%;
+  max-width: 210px;
   height: auto;
-  border-radius: 12px;
-  border: 1px solid rgba(56, 72, 98, 0.12);
+  border-radius: 0;
+  border: 0;
   background: #fff;
+  object-fit: contain;
+}
+
+.portal-overview-smart-qr-helper {
+  margin: 0;
+  color: var(--clutch-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .portal-overview-smart-qr-details {
@@ -11733,6 +11757,13 @@ input.saas-font-search:focus-visible {
 
   .portal-overview-smart-qr-actions .btn {
     width: 100%;
+  }
+
+  .portal-overview-smart-qr-circle,
+  .connect-center-qr-circle {
+    width: min(280px, 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
   }
 
   .portal-overview-live-strip-actions .btn,
@@ -12265,13 +12296,27 @@ input.saas-font-search:focus-visible {
   justify-content: center;
 }
 
-.connect-center-qr-preview {
-  width: min(240px, 100%);
-  height: auto;
-  border-radius: 12px;
-  border: 1px solid var(--clutch-border);
+.connect-center-qr-circle {
+  width: 280px;
+  height: 280px;
+  border-radius: 999px;
+  border: 6px solid var(--clutch-navy);
   background: #fff;
-  padding: 8px;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  box-sizing: border-box;
+  box-shadow: 0 14px 30px rgba(11, 31, 53, 0.14);
+}
+
+.connect-center-qr-preview {
+  width: 100%;
+  max-width: 210px;
+  height: auto;
+  border-radius: 0;
+  border: 0;
+  background: #fff;
+  object-fit: contain;
 }
 
 .connect-center-action-copy {

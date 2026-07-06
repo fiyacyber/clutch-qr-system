@@ -331,7 +331,12 @@ export default async function PortalConnectPage({ searchParams }: ConnectPagePro
           }
         />
 
-        <ConnectTabs active="profile" showBuilder={advancedBuilderUnlocked} analyticsLocked={!hasHeatmap} />
+        <ConnectTabs
+          active="profile"
+          showBuilder={advancedBuilderUnlocked}
+          showAnalytics={hasHeatmap}
+          analyticsLocked={!hasHeatmap}
+        />
 
         <section className="connect-center-plan-mini">
           <strong>Plan: {plan.code === "connect_basic" ? "Basic" : plan.shortName}</strong>

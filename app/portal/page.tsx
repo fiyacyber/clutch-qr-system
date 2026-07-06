@@ -599,11 +599,14 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               {selectedSmartCardQr?.slug ? (
                 <div className="portal-overview-smart-qr-grid">
                   <div className="portal-overview-smart-qr-preview-wrap">
-                    <img
-                      src={smartCardQrPreview}
-                      alt="Smart card QR preview"
-                      className="portal-overview-smart-qr-preview"
-                    />
+                    <div className="portal-overview-smart-qr-circle">
+                      <img
+                        src={smartCardQrPreview}
+                        alt="Smart card QR preview"
+                        className="portal-overview-smart-qr-preview"
+                      />
+                    </div>
+                    <p className="portal-overview-smart-qr-helper">Circular preview shown for display. Download includes the full scan-safe QR.</p>
                   </div>
 
                   <div className="portal-overview-smart-qr-details">

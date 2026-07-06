@@ -5,6 +5,7 @@ type ConnectTabKey = "builder" | "profile" | "leads" | "analytics";
 interface ConnectTabsProps {
   active: ConnectTabKey;
   showBuilder?: boolean;
+  showAnalytics?: boolean;
   analyticsLocked?: boolean;
   analyticsLockedMode?: "badge" | "inline" | "hide";
 }
@@ -19,10 +20,12 @@ const TABS: Array<{ key: ConnectTabKey; label: string; href: string }> = [
 export default function ConnectTabs({
   active,
   showBuilder = true,
+  showAnalytics = true,
   analyticsLocked = false,
   analyticsLockedMode = "badge",
 }: ConnectTabsProps) {
   const visibleTabs = (showBuilder ? TABS : TABS.filter((tab) => tab.key !== "builder")).filter((tab) => {
+    if (tab.key === "analytics" && !showAnalytics) return false;
     if (tab.key === "analytics" && analyticsLocked && analyticsLockedMode === "hide") return false;
     return true;
   });
