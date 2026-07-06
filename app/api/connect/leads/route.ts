@@ -4,8 +4,27 @@ import { extractIpHash } from "@/lib/connect";
 import { getBrowser, getDeviceType, getOperatingSystem, getReferrerSource } from "@/lib/analytics";
 import { buildConnectPublicProfileUrl } from "@/lib/connect-urls";
 
-function leadRedirect(slug: string, state: "sent" | "rate_limited" | "error") {
-  const url = new URL(buildConnectPublicProfileUrl(slug));
+function leadRedirect(req: NextRequest, slug: string, state: "sent" | "rate_limited" | "error") {
+  const referrer = req.headers.get("referer");
+  const fallbackUrl = buildConnectPublicProfileUrl(slug);
+  let redirectUrl = fallbackUrl;
+
+  if (referrer) {
+    try {
+      const referrerUrl = new URL(referrer);
+      const expectedPath = `/u/${encodeURIComponent(slug)}`;
+
+      if (referrerUrl.pathname === expectedPath) {
+        referrerUrl.search = "";
+        referrerUrl.hash = "";
+        redirectUrl = referrerUrl.toString();
+      }
+    } catch {
+      redirectUrl = fallbackUrl;
+    }
+  }
+
+  const url = new URL(redirectUrl);
   url.searchParams.set(state, "1");
   return url;
 }
@@ -44,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   // Honeypot: silently succeed for bots.
   if (honeypot) {
-    return NextResponse.redirect(leadRedirect(slug, "sent"));
+    return NextResponse.redirect(leadRedirect(req, slug, "sent"));
   }
 
   const ip_hash = extractIpHash(req.headers);
@@ -59,7 +78,7 @@ export async function POST(req: NextRequest) {
     .gte("created_at", oneMinuteAgo);
 
   if ((recentCount || 0) >= 5) {
-    return NextResponse.redirect(leadRedirect(slug, "rate_limited"));
+    return NextResponse.redirect(leadRedirect(req, slug, "rate_limited"));
   }
 
   const { error: insertError } = await admin.from("profile_leads").insert({
@@ -75,7 +94,7 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     console.error("CONNECT LEAD INSERT ERROR", insertError);
-    return NextResponse.redirect(leadRedirect(slug, "error"));
+    return NextResponse.redirect(leadRedirect(req, slug, "error"));
   }
 
   await admin.from("profile_click_events").insert({
@@ -117,5 +136,5 @@ export async function POST(req: NextRequest) {
     referrer: getReferrerSource(req.headers.get("referer")) || source,
   });
 
-  return NextResponse.redirect(leadRedirect(slug, "sent"));
+  return NextResponse.redirect(leadRedirect(req, slug, "sent"));
 }
