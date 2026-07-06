@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
     href: "/portal/analytics?tab=campaign-performance",
     icon: QrCode,
     match: (pathname, tab) => pathname === "/portal/analytics" && tab === "campaign-performance",
+    lockKey: "qr",
   },
   {
     key: "connect",
