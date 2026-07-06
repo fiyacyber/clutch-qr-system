@@ -681,6 +681,7 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
           label,
           url: href || "",
           icon: getIconForLinkType(type),
+           linkType: type, // Store the link type for brand icon rendering
           description: type !== "custom" ? formatPreviewLinkDisplayValue(type, rawValue, href || rawValue) : undefined,
         },
       };

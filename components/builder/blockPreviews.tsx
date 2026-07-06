@@ -31,6 +31,7 @@ import {
   FaLinkedin,
   FaTiktok,
   FaYoutube,
+  FaXTwitter,
   FaGooglePay,
 } from "react-icons/fa6";
 import {
@@ -98,6 +99,37 @@ function getPrimaryActionIconName(primaryActionType?: string, fallbackIcon?: str
   }
 }
 
+function getProfileLinkIcon(linkType?: string | null, label?: string | null): React.ReactNode {
+  const type = String(linkType || "").toLowerCase();
+  const labelLower = String(label || "").toLowerCase();
+  const commonProps = { size: 16, "aria-hidden": true as const };
+
+  if (type === "instagram") return <FaInstagram {...commonProps} />;
+  if (type === "facebook") return <FaFacebook {...commonProps} />;
+  if (type === "youtube") return <FaYoutube {...commonProps} />;
+  if (type === "linkedin") return <FaLinkedin {...commonProps} />;
+  if (type === "tiktok") return <FaTiktok {...commonProps} />;
+  if (type === "x" || type === "twitter") return <FaXTwitter {...commonProps} />;
+  if (type === "google_business" || type === "google") return <FaGoogle {...commonProps} />;
+  if (type === "yelp") return <FaYelp {...commonProps} />;
+  if (type === "booking") return <FaCalendarAlt {...commonProps} />;
+  if (type === "email") return <FaEnvelope {...commonProps} />;
+  if (type === "phone") return <FaPhone {...commonProps} />;
+  if (type === "website") return <FaGlobe {...commonProps} />;
+
+  if (labelLower.includes("instagram")) return <FaInstagram {...commonProps} />;
+  if (labelLower.includes("facebook")) return <FaFacebook {...commonProps} />;
+  if (labelLower.includes("youtube")) return <FaYoutube {...commonProps} />;
+  if (labelLower.includes("linkedin")) return <FaLinkedin {...commonProps} />;
+  if (labelLower.includes("tiktok")) return <FaTiktok {...commonProps} />;
+  if (labelLower.includes("twitter") || labelLower.includes(" x ")) return <FaXTwitter {...commonProps} />;
+  if (labelLower.includes("website")) return <FaGlobe {...commonProps} />;
+  if (labelLower.includes("book")) return <FaCalendarAlt {...commonProps} />;
+  if (labelLower.includes("quote")) return <ClipboardList {...commonProps} />;
+
+  return <FaLink {...commonProps} />;
+}
+
 function ActionGlyph({ name }: { name: string }) {
   const iconName = name.toLowerCase();
   const actionIconColor = (() => {
@@ -146,9 +178,9 @@ function ActionGlyph({ name }: { name: string }) {
       return <ShoppingCart {...commonProps} />;
     case "bolt":
       return <Bolt {...commonProps} />;
+    case "text":
     case "message":
     case "sms":
-    case "text":
       return <MessageCircleMore {...commonProps} />;
     case "link":
       return <LinkIcon {...commonProps} />;
@@ -783,7 +815,11 @@ export function BookingBlockPreview({ block, mode = "public" }: BlockPreviewProp
           ? getPrimaryActionIconName(data.primaryActionType, data.icon)
           : data.icon || "calendar";
 
-  const icon = <ActionGlyph name={resolvedIconName} />;
+    // Use brand icons for additional links (custom-link-button with linkType), ActionGlyph for other action buttons
+    const isAdditionalLink = type === "custom-link-button" && !isPrimaryAction && data.linkType;
+    const icon = isAdditionalLink 
+      ? getProfileLinkIcon(data.linkType, label)
+      : <ActionGlyph name={resolvedIconName} />;
   const defaultTitle =
     type === "directions-button" ? "Directions" :
     type === "custom-link-button" ? "Custom Link" :

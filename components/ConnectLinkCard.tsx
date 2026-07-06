@@ -1,6 +1,22 @@
 "use client";
 
 import styles from "./ConnectLinkCard.module.css";
+import {
+  FaInstagram,
+  FaFacebook,
+  FaYoutube,
+  FaLinkedin,
+  FaTiktok,
+  FaGoogle,
+  FaYelp,
+  FaCalendarAlt,
+  FaEnvelope,
+  FaPhone,
+  FaGlobe,
+  FaLink,
+} from "react-icons/fa";
+
+import { FaXTwitter } from "react-icons/fa6";
 
 type IconStyle = "emoji" | "solid" | "outline" | "none";
 type Platform =
@@ -8,6 +24,7 @@ type Platform =
   | "facebook"
   | "tiktok"
   | "twitter"
+  | "x"
   | "linkedin"
   | "youtube"
   | "website"
@@ -32,6 +49,7 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   facebook: "#1877F2",
   tiktok: "#000000",
   twitter: "#1DA1F2",
+  x: "#111827",
   linkedin: "#0A66C2",
   youtube: "#FF0000",
   website: "#384862",
@@ -40,11 +58,50 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   other: "#FFA665",
 };
 
+function getPlatformIcon(platform?: Platform | null, size = 20) {
+  const commonProps = { size, "aria-hidden": true as const };
+  const value = String(platform || "").toLowerCase();
+
+  switch (value) {
+    case "instagram":
+      return <FaInstagram {...commonProps} />;
+    case "facebook":
+      return <FaFacebook {...commonProps} />;
+    case "youtube":
+      return <FaYoutube {...commonProps} />;
+    case "linkedin":
+      return <FaLinkedin {...commonProps} />;
+    case "tiktok":
+      return <FaTiktok {...commonProps} />;
+    case "twitter":
+    case "x":
+      return <FaXTwitter {...commonProps} />;
+    case "google":
+    case "google_business":
+      return <FaGoogle {...commonProps} />;
+    case "yelp":
+      return <FaYelp {...commonProps} />;
+    case "booking":
+      return <FaCalendarAlt {...commonProps} />;
+    case "email":
+      return <FaEnvelope {...commonProps} />;
+    case "phone":
+      return <FaPhone {...commonProps} />;
+    case "website":
+      return <FaGlobe {...commonProps} />;
+    case "custom":
+      return <FaLink {...commonProps} />;
+    default:
+      return <FaLink {...commonProps} />;
+  }
+}
+
 const PLATFORM_EMOJIS: Record<Platform, string> = {
   instagram: "📷",
   facebook: "f",
   tiktok: "♪",
   twitter: "𝕏",
+  x: "𝕏",
   linkedin: "in",
   youtube: "▶️",
   website: "🌐",
@@ -66,8 +123,9 @@ export default function ConnectLinkCard({
 }: ConnectLinkCardProps) {
   const bgColor = customColor || (platform ? PLATFORM_COLORS[platform as Platform] : "#FFA665");
   const displayIcon = icon || (platform ? PLATFORM_EMOJIS[platform as Platform] : "🔗");
+  const renderedIcon = platform ? getPlatformIcon(platform as Platform) : <span aria-hidden="true">{displayIcon}</span>;
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = () => {
     if (onClick) {
       onClick();
     }
@@ -87,34 +145,20 @@ export default function ConnectLinkCard({
     >
       {iconStyle !== "none" && (
         <div className={styles.icon}>
-          {iconStyle === "emoji" ? displayIcon : null}
+          {iconStyle === "emoji" && (
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+              {renderedIcon}
+            </span>
+          )}
           {iconStyle === "solid" && (
-            <svg
-              className={styles.iconSolid}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              {/* Platform-specific SVG would go here - for now using emoji fallback */}
-              <text x="12" y="12" textAnchor="middle" dy=".3em">
-                {displayIcon}
-              </text>
-            </svg>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+              {renderedIcon}
+            </span>
           )}
           {iconStyle === "outline" && (
-            <svg
-              className={styles.iconOutline}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              {/* Platform-specific SVG would go here - for now using emoji fallback */}
-              <text x="12" y="12" textAnchor="middle" dy=".3em">
-                {displayIcon}
-              </text>
-            </svg>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
+              {renderedIcon}
+            </span>
           )}
         </div>
       )}
