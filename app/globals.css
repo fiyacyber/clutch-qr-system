@@ -1811,6 +1811,13 @@ button:disabled {
   gap: 14px;
 }
 
+.styled-qr-wrap.embedded {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  gap: 0;
+}
+
 .qr-preview {
   display: flex;
   align-items: center;
@@ -1822,6 +1829,17 @@ button:disabled {
     linear-gradient(135deg, rgba(255, 166, 101, 0.8), rgba(56, 72, 98, 0.18)) border-box;
   border: 1px solid transparent;
   border-radius: 20px;
+}
+
+.qr-preview.embedded {
+  width: 100%;
+  max-width: 260px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  aspect-ratio: 1 / 1;
 }
 
 .scan-summary {
@@ -11296,7 +11314,7 @@ input.saas-font-search:focus-visible {
 .portal-overview-smart-qr-circle .styled-qr-wrap,
 .portal-overview-smart-qr-circle .qr-preview {
   width: 100%;
-  max-width: 210px;
+  max-width: 220px;
   height: auto;
 }
 
@@ -11304,6 +11322,7 @@ input.saas-font-search:focus-visible {
 .portal-overview-smart-qr-circle .qr-preview svg {
   width: 100% !important;
   height: auto !important;
+  display: block;
 }
 
 .portal-overview-smart-qr-preview {
@@ -11415,6 +11434,12 @@ input.saas-font-search:focus-visible {
   gap: 10px;
 }
 
+.smart-card-qr-close-btn {
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+}
+
 .smart-card-qr-modal-head h3 {
   margin: 0;
   color: var(--clutch-dark);
@@ -11439,8 +11464,26 @@ input.saas-font-search:focus-visible {
 
 .smart-card-qr-controls {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   align-content: start;
+  min-width: 0;
+}
+
+.smart-card-qr-control-group {
+  border: 1px solid var(--clutch-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 9px;
+}
+
+.smart-card-qr-control-group h4 {
+  margin: 0;
+  color: var(--clutch-dark);
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .smart-card-qr-controls label {
@@ -11467,6 +11510,41 @@ input.saas-font-search:focus-visible {
 
 .smart-card-qr-controls input[type="range"] {
   padding: 0;
+}
+
+.smart-card-qr-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smart-card-qr-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.smart-card-qr-upload-btn {
+  min-height: 34px;
+  padding: 7px 11px;
+}
+
+.smart-card-qr-file-name {
+  color: var(--clutch-muted);
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.smart-card-qr-upload-helper {
+  margin: 0;
+  color: var(--clutch-muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
 }
 
 .smart-card-qr-checkbox-row {
@@ -11910,10 +11988,20 @@ input.saas-font-search:focus-visible {
   .smart-card-qr-modal {
     width: min(94vw, 1040px);
     max-height: 94vh;
+    padding: 12px;
   }
 
   .smart-card-qr-modal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .smart-card-qr-controls {
+    min-width: 0;
+  }
+
+  .smart-card-qr-upload-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .smart-card-qr-modal-actions .btn {

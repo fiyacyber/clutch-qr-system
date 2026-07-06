@@ -193,6 +193,7 @@ export default function SmartCardQrCard({
   const showContrastWarning = contrast < 3.1;
 
   const frameClass = frameStyle === "premium_circle" ? "premium" : "";
+  const logoFileName = logoFile?.name || (logoUrl ? "Current logo" : "No file chosen");
 
   function applyPreset(nextPreset: string) {
     setPreset(nextPreset);
@@ -240,6 +241,7 @@ export default function SmartCardQrCard({
         setBackgroundColor(DEFAULT_BACKGROUND);
         setFrameStyle("circular");
         setFrameColor(DEFAULT_FRAME);
+        setAccentColor(DEFAULT_ACCENT);
         break;
     }
   }
@@ -447,6 +449,7 @@ export default function SmartCardQrCard({
               cornerStyle={cornerStyle}
               logoUrl={removeLogo ? null : previewLogoUrl}
               showExportMenu={false}
+              embedded
             />
           </div>
           <p className="portal-overview-smart-qr-helper">Circular preview shown for display. Download includes the full scan-safe QR.</p>
@@ -481,7 +484,7 @@ export default function SmartCardQrCard({
           <div className="smart-card-qr-modal" role="dialog" aria-modal="true" aria-label="Customize Smart Card QR" onClick={(event) => event.stopPropagation()}>
             <div className="smart-card-qr-modal-head">
               <h3>Customize Smart Card QR</h3>
-              <button className="btn ghost" type="button" onClick={() => setIsOpen(false)} disabled={isSaving}>
+              <button className="btn ghost smart-card-qr-close-btn" type="button" onClick={() => setIsOpen(false)} disabled={isSaving}>
                 Close
               </button>
             </div>
@@ -506,106 +509,125 @@ export default function SmartCardQrCard({
                     cornerStyle={cornerStyle}
                     logoUrl={removeLogo ? null : previewLogoUrl}
                     showExportMenu={false}
+                    embedded
                   />
                 </div>
-                <p className="portal-overview-smart-qr-helper">Live preview uses your tracking URL and preserves scan-safe quiet zone.</p>
+                <p className="portal-overview-smart-qr-helper">Live preview uses your tracking URL. Fulfillment uses a scan-safe black SVG.</p>
                 {showContrastWarning ? (
                   <p className="portal-overview-smart-qr-feedback warning">Low contrast detected. Increase contrast for reliable scanning.</p>
                 ) : null}
               </section>
 
               <section className="smart-card-qr-controls">
-                <label>
-                  Preset
-                  <select value={preset} onChange={(event) => applyPreset(event.target.value)}>
-                    <option value="clutch_default">Clutch Default</option>
-                    <option value="classic">Classic</option>
-                    <option value="rounded">Rounded</option>
-                    <option value="dots">Dots</option>
-                    <option value="circular_frame">Circular Frame</option>
-                    <option value="premium_circle">Premium Circle</option>
-                  </select>
-                </label>
+                <article className="smart-card-qr-control-group">
+                  <h4>Style</h4>
 
-                <label>
-                  QR color
-                  <input type="color" value={foregroundColor} onChange={(event) => setForegroundColor(event.target.value)} />
-                </label>
+                  <label>
+                    Preset
+                    <select value={preset} onChange={(event) => applyPreset(event.target.value)}>
+                      <option value="clutch_default">Clutch Default</option>
+                      <option value="classic">Classic</option>
+                      <option value="rounded">Rounded</option>
+                      <option value="dots">Dots</option>
+                      <option value="circular_frame">Circular Frame</option>
+                      <option value="premium_circle">Premium Circle</option>
+                    </select>
+                  </label>
 
-                <label>
-                  Background color
-                  <input type="color" value={backgroundColor} onChange={(event) => setBackgroundColor(event.target.value)} />
-                </label>
+                  <label>
+                    Finder eyes
+                    <select value={finderEyes} onChange={(event) => onFinderEyesChange(event.target.value as FinderEyes)}>
+                      <option value="square">Square</option>
+                      <option value="rounded">Rounded</option>
+                      <option value="circle">Circle</option>
+                    </select>
+                  </label>
 
-                <label>
-                  Frame color
-                  <input type="color" value={frameColor} onChange={(event) => setFrameColor(event.target.value)} />
-                </label>
+                  <label>
+                    Frame style
+                    <select value={frameStyle} onChange={(event) => setFrameStyle(event.target.value as FrameStyle)}>
+                      <option value="none">None</option>
+                      <option value="circular">Circular</option>
+                      <option value="premium_circle">Premium Circle</option>
+                    </select>
+                  </label>
+                </article>
 
-                <label>
-                  Accent color
-                  <input type="color" value={accentColor} onChange={(event) => setAccentColor(event.target.value)} />
-                </label>
+                <article className="smart-card-qr-control-group">
+                  <h4>Colors</h4>
 
-                <label>
-                  Finder eyes
-                  <select value={finderEyes} onChange={(event) => onFinderEyesChange(event.target.value as FinderEyes)}>
-                    <option value="square">Square</option>
-                    <option value="rounded">Rounded</option>
-                    <option value="circle">Circle</option>
-                  </select>
-                </label>
+                  <label>
+                    QR color
+                    <input type="color" value={foregroundColor} onChange={(event) => setForegroundColor(event.target.value)} />
+                  </label>
 
-                <label>
-                  Frame style
-                  <select value={frameStyle} onChange={(event) => setFrameStyle(event.target.value as FrameStyle)}>
-                    <option value="none">None</option>
-                    <option value="circular">Circular</option>
-                    <option value="premium_circle">Premium Circle</option>
-                  </select>
-                </label>
+                  <label>
+                    Background color
+                    <input type="color" value={backgroundColor} onChange={(event) => setBackgroundColor(event.target.value)} />
+                  </label>
 
-                <label>
-                  Logo upload
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    onChange={(event) => onLogoFileChange(event.target.files?.[0] || null)}
-                  />
-                </label>
+                  <label>
+                    Frame color
+                    <input type="color" value={frameColor} onChange={(event) => setFrameColor(event.target.value)} />
+                  </label>
 
-                <label>
-                  Logo size
-                  <input
-                    type="range"
-                    min={16}
-                    max={40}
-                    step={1}
-                    value={logoSize}
-                    onChange={(event) => setLogoSize(Number(event.target.value))}
-                  />
-                </label>
+                  <label>
+                    Accent color
+                    <input type="color" value={accentColor} onChange={(event) => setAccentColor(event.target.value)} />
+                  </label>
+                </article>
 
-                <label className="smart-card-qr-checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={removeLogo}
-                    onChange={(event) => {
-                      setRemoveLogo(event.target.checked);
-                      if (event.target.checked) {
-                        setLogoFile(null);
-                      }
-                    }}
-                  />
-                  Remove logo
-                </label>
+                <article className="smart-card-qr-control-group">
+                  <h4>Logo</h4>
+
+                  <div className="smart-card-qr-upload-row">
+                    <input
+                      id={`smart-card-logo-upload-${qrId}`}
+                      className="smart-card-qr-file-input"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={(event) => onLogoFileChange(event.target.files?.[0] || null)}
+                    />
+                    <label className="btn ghost smart-card-qr-upload-btn" htmlFor={`smart-card-logo-upload-${qrId}`}>
+                      Choose Logo
+                    </label>
+                    <span className="smart-card-qr-file-name">{logoFileName}</span>
+                  </div>
+                  <p className="smart-card-qr-upload-helper">Use a simple PNG or SVG. Large logos can reduce scan reliability.</p>
+
+                  <label>
+                    Logo size
+                    <input
+                      type="range"
+                      min={16}
+                      max={40}
+                      step={1}
+                      value={logoSize}
+                      onChange={(event) => setLogoSize(Number(event.target.value))}
+                    />
+                  </label>
+
+                  <label className="smart-card-qr-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={removeLogo}
+                      onChange={(event) => {
+                        setRemoveLogo(event.target.checked);
+                        if (event.target.checked) {
+                          setLogoFile(null);
+                        }
+                      }}
+                    />
+                    Remove logo
+                  </label>
+                </article>
               </section>
             </div>
 
             <div className="smart-card-qr-modal-actions">
               <button className="btn ghost" type="button" onClick={() => setIsOpen(false)} disabled={isSaving}>Cancel</button>
               <button className="btn primary" type="button" onClick={saveStyle} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Customization"}
+                {isSaving ? "Saving..." : "Save QR Design"}
               </button>
             </div>
           </div>
