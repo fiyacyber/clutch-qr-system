@@ -213,7 +213,6 @@ export default async function PortalSettingsPage() {
           builderLocked: !advancedBuilderUnlocked,
         }}
         qrDefaults={{
-          latestQrName: latestQr?.name || "Latest QR",
           foreground: latestQr?.foreground_color || "#384862",
           background: latestQr?.background_color || "#ffffff",
           exportSizeLabel: "1024 × 1024",

@@ -53,7 +53,6 @@ type PortalSettingsCenterProps = {
     builderLocked: boolean;
   };
   qrDefaults: {
-    latestQrName: string;
     foreground: string;
     background: string;
     exportSizeLabel: string;
@@ -83,7 +82,11 @@ export default function PortalSettingsCenter({
   const supportMailTo = `mailto:${supportEmail}`;
   const featureRequestMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Feature request for Clutch")}`;
   const deleteRequestMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Account deletion request")}`;
-  const qrUsageSummary = qrUsageLimit ? `${qrUsageUsed} / ${qrUsageLimit}` : "Unlimited";
+  const qrUsageSummary = plan.code === "connect_basic"
+    ? "1 / 1"
+    : qrUsageLimit
+      ? `${qrUsageUsed} / ${qrUsageLimit}`
+      : "Unlimited";
   const builderLabel = profile.builderLocked ? "Profile Builder" : "Open Profile Builder";
   const publicProfileSummary = profile.published && profile.publicDisplayUrl
     ? profile.publicDisplayUrl
@@ -264,19 +267,6 @@ export default function PortalSettingsCenter({
             </div>
 
             <div className="ca-settings-brand-grid">
-              <article className="ca-settings-brand-preview">
-                <div className="ca-settings-qr-preview" style={{ background: qrDefaults.background }}>
-                  <div className="ca-settings-qr-mark" style={{ background: qrDefaults.foreground }} />
-                  <div className="ca-settings-qr-bars">
-                    <span style={{ background: qrDefaults.foreground }} />
-                    <span style={{ background: qrDefaults.foreground }} />
-                    <span style={{ background: qrDefaults.foreground }} />
-                  </div>
-                </div>
-                <strong>{qrDefaults.latestQrName}</strong>
-                <p>Defaults currently mirror the latest QR palette saved in this account.</p>
-              </article>
-
               <article className="ca-settings-brand-option">
                 <span>Foreground color</span>
                 <div className="ca-settings-color-row">

@@ -485,37 +485,8 @@
   }
   .ca-settings-brand-grid {
     display: grid;
-    grid-template-columns: minmax(260px, 1.1fr) repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
-  }
-  .ca-settings-brand-preview {
-    padding: 16px;
-    grid-row: span 2;
-    background: linear-gradient(180deg, #ffffff, #f8fafc);
-  }
-  .ca-settings-qr-preview {
-    min-height: 180px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    gap: 12px;
-    padding: 20px;
-    margin-bottom: 12px;
-  }
-  .ca-settings-qr-mark {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
-  }
-  .ca-settings-qr-bars {
-    display: flex;
-    gap: 6px;
-  }
-  .ca-settings-qr-bars span {
-    width: 10px;
-    height: 38px;
-    border-radius: 999px;
   }
   .ca-settings-color-row {
     display: flex;
@@ -528,11 +499,6 @@
     border-radius: 8px;
     flex-shrink: 0;
   }
-  .ca-settings-brand-preview strong {
-    display: block;
-    margin-bottom: 6px;
-  }
-  .ca-settings-brand-preview p,
   .ca-settings-brand-option p,
   .ca-modal-copy {
     margin: 0;
