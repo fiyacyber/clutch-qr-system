@@ -23,21 +23,8 @@ import "./analytics.css";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
-  "geography", "technology", "devices", "activity-heatmap", "settings",
+  "geography", "technology", "devices", "activity-heatmap",
 ];
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
 
 export default async function AnalyticsPage({
   searchParams,
@@ -59,10 +46,6 @@ export default async function AnalyticsPage({
   const tab = String(params.tab || "analytics").toLowerCase();
   const normalizedTab = tab === "devices" || tab === "leads" ? "analytics" : tab;
   const activeTab = VALID_TABS.includes(normalizedTab) ? normalizedTab : "analytics";
-
-  if (activeTab === "settings") {
-    redirect("/portal/settings");
-  }
 
   const admin = createSupabaseAdminClient();
   const analyticsDataResult = await runGuardedDashboardTask({
@@ -91,18 +74,10 @@ export default async function AnalyticsPage({
   const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true);
   const qrUsageUsed = campaignQrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
-  const managePlanHref = plan.checkoutUrl;
   const latestQrCode = campaignQrCodes[0] || null;
   const campaignQrIds = new Set(campaignQrCodes.map((code) => code.id));
   const campaignQrScans = data.qrScans.filter((scan) => campaignQrIds.has(scan.qr_code_id));
-  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
   const planLabel = plan.code === "admin" ? "Admin" : plan.code === "agency" ? "Agency" : "Clutch Connect";
-  const authenticationStatus = customer.must_change_password ? "Password reset required" : "Password login active";
-  const memberSince = formatDate(customer.created_at);
-  const lastLogin = formatDate(user.last_sign_in_at);
-  const companyName = customer.company_name || "—";
-  const latestQrForeground = latestQrCode?.foreground_color || "#384862";
-  const latestQrBackground = latestQrCode?.background_color || "#ffffff";
 
   /* ── KPI metrics ── */
   const totalScans     = campaignQrScans.length;
@@ -379,21 +354,6 @@ export default async function AnalyticsPage({
       {shouldRenderAnalyticsDashboard ? (
         <AnalyticsDashboard
           activeTab={activeTab}
-          accountName={fullName}
-          accountEmail={user.email || null}
-          companyName={companyName}
-          accountType={planLabel}
-          memberSince={memberSince}
-          lastLogin={lastLogin}
-          authenticationStatus={authenticationStatus}
-          planName={plan.name}
-          planCode={plan.code}
-          managePlanHref={managePlanHref}
-          qrUsageUsed={qrUsageUsed}
-          qrUsageLimit={qrUsageLimit}
-          latestQrName={latestQrCode?.name || null}
-          latestQrForeground={latestQrForeground}
-          latestQrBackground={latestQrBackground}
           totalScans={totalScans}
           connectViews={connectViews}
           linkClicks={linkClicks}

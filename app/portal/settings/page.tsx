@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
-import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
-import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import PortalSettingsCenter from "@/components/settings/PortalSettingsCenter";
 import { requireCustomer } from "@/lib/auth";
-import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement, isCustomerSubscriptionLocked } from "@/lib/plans";
+import { isConnectProfilePublished, isConnectSetupComplete } from "@/lib/connect";
+import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
+import { clutchConnectDisplayUrl, clutchConnectProfileUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import "../analytics/analytics.css";
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -36,8 +37,13 @@ export default async function PortalSettingsPage() {
 
   const admin = createSupabaseAdminClient();
   const plan = getCustomerPlan(customer as any);
+  const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer as any);
 
-  const [{ data: qrRows, error: qrRowsError }, { data: latestQrRows, error: latestQrRowsError }] = await Promise.all([
+  const [
+    { data: qrRows, error: qrRowsError },
+    { data: latestQrRows, error: latestQrRowsError },
+    { data: profile, error: profileError },
+  ] = await Promise.all([
     admin
       .from("qr_codes")
       .select("id")
@@ -50,6 +56,11 @@ export default async function PortalSettingsPage() {
       .neq("is_system", true)
       .order("created_at", { ascending: false })
       .limit(1),
+    admin
+      .from("profiles")
+      .select("*")
+      .eq("customer_id", customer.id)
+      .maybeSingle(),
   ]);
 
   if (qrRowsError) {
@@ -74,10 +85,57 @@ export default async function PortalSettingsPage() {
     });
   }
 
+  if (profileError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/settings",
+      endpoint: "supabase:profiles.maybeSingle",
+      code: profileError.code ?? null,
+      message: profileError.message ?? "Unknown error",
+      details: profileError.details ?? null,
+      hint: profileError.hint ?? null,
+    });
+  }
+
+  const { data: linkRows, error: linkRowsError } = profile
+    ? await admin
+        .from("profile_links")
+        .select("id, label, url, platform, is_active, sort_order")
+        .eq("profile_id", profile.id)
+        .order("sort_order", { ascending: true })
+    : { data: [] as Array<Record<string, any>>, error: null as any };
+
+  if (linkRowsError) {
+    console.error("[portal-data-error]", {
+      route: "/portal/settings",
+      endpoint: "supabase:profile_links.select",
+      code: linkRowsError.code ?? null,
+      message: linkRowsError.message ?? "Unknown error",
+      details: linkRowsError.details ?? null,
+      hint: linkRowsError.hint ?? null,
+    });
+  }
+
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
   const latestQr = latestQrRows?.[0] || null;
   const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
+  const profilePublished = isConnectProfilePublished(profile || null);
+  const setupComplete = isConnectSetupComplete(customer as any, profile || null, { links: (linkRows || []) as any, requirePublished: false });
+  const publicProfileUrl = profilePublished && profile?.slug ? clutchConnectProfileUrl(String(profile.slug)) : null;
+  const publicProfileDisplayUrl = profile?.slug ? clutchConnectDisplayUrl(String(profile.slug)) : null;
+  const builderHref = advancedBuilderUnlocked ? "/portal/connect/build" : "/portal/connect?builder=locked";
+  const profileStatusLabel = !profile
+    ? "Not started"
+    : profilePublished
+      ? "Live"
+      : setupComplete
+        ? "Ready to publish"
+        : "Setup in progress";
+  const profileCompletionLabel = !profile
+    ? "No profile yet"
+    : setupComplete
+      ? "Guided setup complete"
+      : "Guided setup incomplete";
 
   const usageLabel = plan.code === "connect_basic"
     ? "Digital profile access included"
@@ -120,86 +178,48 @@ export default async function PortalSettingsPage() {
         heatmap: !hasHeatmap,
       }}
     >
-      <main className="container" style={{ marginBottom: 16, display: "grid", gap: 14 }}>
-        <section className="card">
-          <p className="eyebrow">Plan & Billing</p>
-          <CurrentPlanBadge
-            planCode={plan.code}
-            planName={plan.name}
-            priceLabel={plan.price}
-            description={plan.description}
-            usageLabel={usageLabel}
-            subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
-            locked={isCustomerSubscriptionLocked(customer as any)}
-            trialStatus={String(customer.trial_status || "none")}
-          />
-
-          {plan.code === "admin" ? (
-            <p className="muted" style={{ marginTop: 10 }}>Internal access detected. Checkout actions are hidden for admin accounts.</p>
-          ) : (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              {billingActions.map((action) => (
-                <a key={action.label} className={`btn ${action.tone === "primary" ? "primary" : "secondary"}`} href={action.href}>
-                  {action.label}
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {plan.code === "connect_basic" ? (
-          <LockedFeatureCard
-            title="Unlock Clutch Connect+"
-            description="Advanced profile customization, forms, lead management, and profile analytics."
-            requiredPlan="Clutch Connect+"
-            requiredPlanPrice="$9.99/mo"
-            ctaLabel="Upgrade for $9.99/mo"
-            ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
-            featureList={[
-              "Advanced profile builder",
-              "Custom quote forms",
-              "Advanced Lead Inbox",
-              "Heatmap/profile analytics",
-              "Remove Clutch branding",
-            ]}
-            variant="connect_plus"
-          />
-        ) : null}
-      </main>
-      <AnalyticsDashboard
-        activeTab="settings"
+      <PortalSettingsCenter
         accountName={fullName}
         accountEmail={user.email || null}
         companyName={customer.company_name || "—"}
-        accountType={customer.is_admin ? "Admin" : plan.name}
+        accountType={customer.is_admin ? "Admin" : "Customer"}
         memberSince={formatDate(customer.created_at)}
         lastLogin={formatDate(user.last_sign_in_at)}
         authenticationStatus={customer.must_change_password ? "Password reset required" : "Password login active"}
-        planName={plan.name}
-        planCode={plan.code}
-        managePlanHref={plan.checkoutUrl}
+        isAdmin={Boolean(customer.is_admin)}
+        plan={{
+          code: plan.code,
+          name: plan.name,
+          price: plan.price,
+          description: plan.description,
+          usageLabel,
+          subscriptionStatus: String(customer.subscription_status || customer.plan_status || "active"),
+          trialStatus: String(customer.trial_status || "none"),
+        }}
+        billingActions={billingActions as Array<{ label: string; href: string; tone: "primary" | "secondary" }>}
         qrUsageUsed={qrRows?.length || 0}
         qrUsageLimit={plan.code === "admin" ? null : getEffectiveQrLimit(customer as any)}
-        latestQrName={latestQr?.name || null}
-        latestQrForeground={latestQr?.foreground_color || "#384862"}
-        latestQrBackground={latestQr?.background_color || "#ffffff"}
-        totalScans={0}
-        connectViews={0}
-        linkClicks={0}
-        uniqueVisitors={0}
-        leadsCaptured={0}
-        activeQrCodes={0}
-        qrRows={[]}
-        connectRows={[]}
-        scansOverTime={[]}
-        countryData={[]}
-        mapPoints={[]}
-        cityRows={[]}
-        deviceRows={[]}
-        browserRows={[]}
-        osRows={[]}
-        heatmap={[]}
-        geographyRows={[]}
+        profile={{
+          hasProfile: Boolean(profile),
+          setupComplete,
+          published: profilePublished,
+          slug: profile?.slug || null,
+          publicUrl: publicProfileUrl,
+          publicDisplayUrl: publicProfileDisplayUrl,
+          statusLabel: profileStatusLabel,
+          completionLabel: profileCompletionLabel,
+          guidedSetupHref: "/portal/connect/setup",
+          builderHref,
+          builderLocked: !advancedBuilderUnlocked,
+        }}
+        qrDefaults={{
+          latestQrName: latestQr?.name || "Latest QR",
+          foreground: latestQr?.foreground_color || "#384862",
+          background: latestQr?.background_color || "#ffffff",
+          exportSizeLabel: "1024 × 1024",
+        }}
+        supportEmail="support@clutchprintshop.com"
+        helpCenterHref="https://clutchprintshop.com"
       />
     </DashboardShell>
   );

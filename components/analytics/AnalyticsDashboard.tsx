@@ -5,14 +5,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { jsPDF } from "jspdf";
 import {
-  QrCode, BarChart2, Globe, Monitor,
-  Activity, Users, Download, SlidersHorizontal,
+  QrCode, BarChart2, Users, Download, SlidersHorizontal,
   CalendarDays, ChevronDown, Eye, MousePointerClick, UserCheck,
-  ArrowUpRight, Search, Building2, Mail, ShieldCheck, Bell,
-  Palette, HelpCircle, LogOut, Trash2, Sparkles, CreditCard,
+  ArrowUpRight, Search,
 } from "lucide-react";
-import CampaignMetricGrid from "@/components/dashboard/CampaignMetricGrid";
-import DashboardPreviewCard from "@/components/dashboard/DashboardPreviewCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 const ScansLineChart = dynamic(() => import("./ScansLineChart"), { ssr: false, loading: () => <div className="ca-chart-skeleton" /> });
@@ -31,21 +27,6 @@ interface ConnectRow {
 }
 export interface DashboardProps {
   activeTab: string;
-  accountName?: string;
-  accountEmail?: string | null;
-  accountType?: string;
-  companyName?: string;
-  memberSince?: string;
-  lastLogin?: string;
-  authenticationStatus?: string;
-  planName?: string;
-  planCode?: string;
-  managePlanHref?: string;
-  qrUsageUsed?: number;
-  qrUsageLimit?: number | null;
-  latestQrName?: string | null;
-  latestQrForeground?: string;
-  latestQrBackground?: string;
   totalScans: number;
   connectViews: number;
   linkClicks: number;
@@ -124,7 +105,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   const [geoQrCode, setGeoQrCode] = useState("all");
   const [showDashboardFilters, setShowDashboardFilters] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [dangerModal, setDangerModal] = useState<"signout" | "delete" | null>(null);
 
   const analyticsTab = useMemo(() => {
     if (!activeTab || activeTab === "analytics" || activeTab === "overview") return "overview";
@@ -135,20 +115,8 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     return "overview";
   }, [activeTab]);
 
-  const isSettingsView = activeTab === "settings";
-  const headerTitle = isSettingsView ? "Settings" : "Insights";
-  const headerSubtitle = isSettingsView
-    ? "Manage your account, profile, security, notifications, and subscription settings."
-    : "Measure scans, profile views, link clicks, leads, and location performance across campaigns.";
-  const isAdmin = props.planCode === "admin" || props.accountType === "Admin";
-  const qrUsageLimit = props.qrUsageLimit ?? 0;
-  const qrUsagePercent = props.qrUsageLimit ? Math.min((props.qrUsageUsed || 0) / props.qrUsageLimit, 1) * 100 : 100;
-  const qrUsageLabel = props.qrUsageLimit ? `${props.qrUsageUsed || 0} / ${props.qrUsageLimit} QR Codes Used` : "Unlimited QR Codes";
-  const planLabel = props.planName || props.accountType || "Clutch Connect";
-  const brandForeground = props.latestQrForeground || "#384862";
-  const brandBackground = props.latestQrBackground || "#ffffff";
-  const latestQrName = props.latestQrName || "Latest QR";
-
+  const headerTitle = "Insights";
+  const headerSubtitle = "Measure scans, profile views, link clicks, leads, and location performance across campaigns.";
   const isMainView = analyticsTab === "overview";
   const maxHeat = Math.max(...heatmap.map(c => c.count), 0);
 
@@ -199,10 +167,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     return [...qrRows].sort((a, b) => b.totalScans - a.totalScans)[0];
   }, [qrRows]);
 
-  const topCity = useMemo(() => {
-    return props.cityRows[0] || null;
-  }, [props.cityRows]);
-
   const overviewTopLocations = useMemo(() => {
     if (topLocationView === "countries") {
       return props.countryData
@@ -220,16 +184,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
     if (!timestamps.length) return null;
     return new Date(Math.max(...timestamps)).toISOString();
   }, [qrRows]);
-
-  const performanceMetrics = [
-    { label: "Total Scans", value: props.totalScans.toLocaleString(), description: props.totalScans ? "All campaign scan events." : "No scans yet." },
-    { label: "Unique Visitors", value: props.uniqueVisitors.toLocaleString(), description: "Estimated unique campaign visitors." },
-    { label: "Profile Views", value: props.connectViews.toLocaleString(), description: "Clutch Connect profile views." },
-    { label: "Link Clicks", value: props.linkClicks.toLocaleString(), description: "Tracked profile link engagement." },
-    { label: "Leads Captured", value: props.leadsCaptured.toLocaleString(), description: "Lead form submissions." },
-    { label: "Contact Saves", value: "—", description: "Contact save tracking appears when available." },
-    { label: "NFC Taps", value: "—", description: "NFC tap attribution placeholder for Phase 1." },
-  ];
 
   const templates = [
     { label: "Business Card", href: "/portal/create?template=business-card" },
@@ -445,18 +399,33 @@ export default function AnalyticsDashboard(props: DashboardProps) {
   }
 
   function exportCampaignXls() {
-    const rows = getCampaignExportRows();
-    const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${rows
-      .map((row, rowIndex) => `<tr>${row
-        .map((value) => {
-          const tag = rowIndex === 0 ? "th" : "td";
-          return `<${tag}>${String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")}</${tag}>`;
-        })
-        .join("")}</tr>`)
-      .join("")}</table></body></html>`;
+    const html = `
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Destination</th>
+            <th>Total Scans</th>
+            <th>Unique Visitors</th>
+            <th>Last Scan</th>
+            <th>Linked Profile</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredQrRows
+            .map(
+              (row) => `<tr>
+                <td>${row.name}</td>
+                <td>${row.destination || ""}</td>
+                <td>${row.totalScans}</td>
+                <td>${row.uniqueVisitors}</td>
+                <td>${row.lastScan ? prettyDate(row.lastScan) : "No scans"}</td>
+                <td>${row.linkedProfileName || ""}</td>
+              </tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>`;
 
     downloadBlob("clutch-campaign-performance.xls", html, "application/vnd.ms-excel;charset=utf-8;");
     setShowExportMenu(false);
@@ -516,343 +485,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
     doc.save("clutch-campaign-performance.pdf");
     setShowExportMenu(false);
-  }
-
-  function exportAnalyticsCsv() {
-    const rows: Array<Array<string | number | null | undefined>> = [
-      ["Metric", "Value"],
-      ["Total Scans", props.totalScans],
-      ["Unique Visitors", props.uniqueVisitors],
-      ["Link Clicks", props.linkClicks],
-      ["Clutch Connect Views", props.connectViews],
-      ["Leads Captured", props.leadsCaptured],
-      ["Active QR Codes", props.activeQrCodes],
-      [],
-      ["QR Campaign", "Destination", "Total Scans", "Unique Visitors", "Last Scan", "Linked Profile"],
-      ...filteredQrRows.map((row) => [
-        row.name,
-        row.destination,
-        row.totalScans,
-        row.uniqueVisitors,
-        row.lastScan || "",
-        row.linkedProfileName || "",
-      ]),
-      [],
-      ["Connect Profile", "Profile Views", "Link Clicks", "Top Clicked Link", "Leads Captured", "Linked QR Code"],
-      ...props.connectRows.map((row) => [
-        row.profileName,
-        row.profileViews,
-        row.linkClicks,
-        row.topClickedLink || "",
-        row.leadsCaptured,
-        row.linkedQrCode || "",
-      ]),
-    ];
-
-    downloadCsv("clutch-analytics-summary.csv", rows);
-  }
-
-  if (isSettingsView) {
-    const supportEmail = "support@clutchprintshop.com";
-    const supportMailTo = `mailto:${supportEmail}`;
-    const requestFeatureMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Feature request for Clutch")}`;
-    const managePlanHref = props.managePlanHref || "/portal";
-
-    return (
-      <div className="ca-main">
-        <DashboardHeader title={headerTitle} subtitle={headerSubtitle} />
-
-        <div className="ca-content ca-settings-content">
-          <section className="ca-card ca-settings-hero-card">
-            <div className="ca-settings-hero-copy">
-              <p className="ca-settings-kicker"><Sparkles size={14} /> Account Center</p>
-              <h2>{props.accountName || "Your account"}</h2>
-              <p>
-                Manage your subscription, brand defaults, notifications, and security from one place.
-              </p>
-            </div>
-
-            <div className="ca-settings-hero-meta">
-              <article>
-                <span>Plan</span>
-                <strong>{planLabel}</strong>
-              </article>
-              <article>
-                <span>QR Usage</span>
-                <strong>{qrUsageLabel}</strong>
-              </article>
-              <article>
-                <span>Member Since</span>
-                <strong>{props.memberSince || "—"}</strong>
-              </article>
-            </div>
-          </section>
-
-          <div className="ca-settings-stack">
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Account Information</h2>
-                  <p className="ca-title-sub">Your contact and organization details.</p>
-                </div>
-                <Link href="/portal/connect/edit" className="ca-secondary-link-btn">Edit Profile</Link>
-              </div>
-
-              <div className="ca-settings-info-grid">
-                <article>
-                  <span><Building2 size={14} /> Name</span>
-                  <strong>{props.accountName || "—"}</strong>
-                </article>
-                <article>
-                  <span><Mail size={14} /> Email</span>
-                  <strong>{props.accountEmail || "—"}</strong>
-                </article>
-                <article>
-                  <span>Company Name</span>
-                  <strong>{props.companyName || "—"}</strong>
-                </article>
-                <article>
-                  <span>Account Type</span>
-                  <strong>{props.accountType || "Clutch Connect"}</strong>
-                </article>
-                <article className="ca-settings-info-wide">
-                  <span>Member Since</span>
-                  <strong>{props.memberSince || "—"}</strong>
-                </article>
-              </div>
-            </section>
-
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Subscription & Usage</h2>
-                  <p className="ca-title-sub">Current plan and QR code capacity.</p>
-                </div>
-                <div className="ca-settings-badge">{isAdmin ? "Unlimited" : planLabel}</div>
-              </div>
-
-              <div className="ca-settings-plan-summary">
-                <article>
-                  <span>Plan</span>
-                  <strong>{planLabel}</strong>
-                </article>
-                <article>
-                  <span>QR Codes Used</span>
-                  <strong>{props.qrUsageLimit ? `${props.qrUsageUsed || 0} of ${props.qrUsageLimit}` : "Unlimited"}</strong>
-                </article>
-              </div>
-
-              <div className="ca-progress-shell" aria-label="QR usage progress">
-                <div className={`ca-progress-track${props.qrUsageLimit ? "" : " ca-progress-unlimited"}`}>
-                  <div className="ca-progress-fill" style={{ width: `${qrUsagePercent}%` }} />
-                </div>
-                <p className="ca-progress-note">
-                  {props.qrUsageLimit
-                    ? `${props.qrUsageUsed || 0} / ${props.qrUsageLimit} QR codes used`
-                    : "Unlimited QR codes available for this account."}
-                </p>
-                {props.planCode === "qr_pro_plus" ? (
-                  <p className="ca-progress-note ca-progress-note-muted">
-                    Agency accounts use a custom limit based on your subscription.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="ca-settings-actions-row">
-                <Link href={managePlanHref} className="ca-primary-link-btn">Manage Plan</Link>
-                <a href={supportMailTo} className="ca-secondary-link-btn">Contact Support</a>
-              </div>
-            </section>
-
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Security</h2>
-                  <p className="ca-title-sub">Password and session controls.</p>
-                </div>
-              </div>
-
-              <div className="ca-settings-security-grid">
-                <article>
-                  <span>Password</span>
-                  <strong>Managed by Clutch login</strong>
-                </article>
-                <article>
-                  <span>Last Login</span>
-                  <strong>{props.lastLogin || "—"}</strong>
-                </article>
-                <article>
-                  <span>Authentication Status</span>
-                  <strong>{props.authenticationStatus || "Password login active"}</strong>
-                </article>
-              </div>
-
-              <div className="ca-settings-actions-row">
-                <Link href="/change-password" className="ca-primary-link-btn">Change Password</Link>
-                <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal("signout")}>Sign Out Everywhere</button>
-              </div>
-
-              <div className="ca-settings-soon">
-                <ShieldCheck size={15} />
-                <div>
-                  <strong>Two-Factor Authentication</strong>
-                  <p>Coming Soon</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Notifications</h2>
-                  <p className="ca-title-sub">Notification preferences are not connected to stored settings yet.</p>
-                </div>
-                <Bell size={15} className="ca-section-icon" />
-              </div>
-
-              <div className="ca-settings-toggle-list">
-                {[
-                  "Email Notifications",
-                  "Lead Alerts",
-                  "Weekly Analytics Summary",
-                  "Product Updates",
-                ].map((label) => (
-                  <article key={label} className="ca-settings-toggle-item">
-                    <div>
-                      <strong>{label}</strong>
-                      <p>Placeholder only</p>
-                    </div>
-                    <span className="ca-settings-toggle-shell" aria-hidden="true"><span /></span>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Brand Preferences</h2>
-                  <p className="ca-title-sub">Default QR styling and export defaults.</p>
-                </div>
-                <Palette size={15} className="ca-section-icon" />
-              </div>
-
-              <div className="ca-settings-brand-grid">
-                <article className="ca-settings-brand-preview">
-                  <div className="ca-settings-qr-preview" style={{ background: brandBackground }}>
-                    <div className="ca-settings-qr-mark" style={{ background: brandForeground }} />
-                    <div className="ca-settings-qr-bars">
-                      <span style={{ background: brandForeground }} />
-                      <span style={{ background: brandForeground }} />
-                      <span style={{ background: brandForeground }} />
-                    </div>
-                  </div>
-                  <strong>{latestQrName}</strong>
-                  <p>Live preview of the latest QR palette in your account.</p>
-                </article>
-
-                <article className="ca-settings-brand-option">
-                  <span>Default QR Color</span>
-                  <div className="ca-settings-color-row">
-                    <span className="ca-settings-color-swatch" style={{ background: brandForeground }} />
-                    <strong>{brandForeground}</strong>
-                  </div>
-                </article>
-
-                <article className="ca-settings-brand-option">
-                  <span>Default Background Color</span>
-                  <div className="ca-settings-color-row">
-                    <span className="ca-settings-color-swatch" style={{ background: brandBackground, border: "1px solid #d8dde8" }} />
-                    <strong>{brandBackground}</strong>
-                  </div>
-                </article>
-
-                <article className="ca-settings-brand-option">
-                  <span>Default Download Size</span>
-                  <strong>1024 × 1024</strong>
-                  <p>Optimized for high-resolution downloads and print workflows.</p>
-                </article>
-              </div>
-            </section>
-
-            <section className="ca-card ca-settings-panel">
-              <div className="ca-card-head">
-                <div>
-                  <h2 className="ca-card-title">Support</h2>
-                  <p className="ca-title-sub">Get help from the Clutch team.</p>
-                </div>
-                <HelpCircle size={15} className="ca-section-icon" />
-              </div>
-
-              <div className="ca-settings-support-grid">
-                <a href="https://clutchprintshop.com" className="ca-secondary-link-btn">Help Center</a>
-                <a href={supportMailTo} className="ca-primary-link-btn">Contact Support</a>
-                <a href={requestFeatureMailTo} className="ca-secondary-link-btn">Request Feature</a>
-              </div>
-
-              <div className="ca-settings-support-email">
-                <Mail size={15} />
-                <span>{supportEmail}</span>
-              </div>
-            </section>
-          </div>
-
-          <section className="ca-card ca-settings-danger-card">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Danger Zone</h2>
-                <p className="ca-title-sub">These actions require confirmation before they run.</p>
-              </div>
-              <Trash2 size={15} className="ca-section-icon" />
-            </div>
-
-            <div className="ca-settings-danger-actions">
-              <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal("signout")}>Sign Out</button>
-              <button type="button" className="ca-danger-link-btn" onClick={() => setDangerModal("delete")}>Delete Account</button>
-            </div>
-          </section>
-
-          {dangerModal ? (
-            <div className="ca-modal-backdrop" role="presentation" onClick={() => setDangerModal(null)}>
-              <div
-                className="ca-modal-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="settings-danger-modal-title"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="ca-modal-head">
-                  <div>
-                    <p className="ca-settings-kicker">Confirmation Required</p>
-                    <h3 id="settings-danger-modal-title">
-                      {dangerModal === "delete" ? "Delete your account?" : "Sign out of your account?"}
-                    </h3>
-                  </div>
-                  <button type="button" className="ca-modal-close" onClick={() => setDangerModal(null)} aria-label="Close modal">×</button>
-                </div>
-
-                <p className="ca-modal-copy">
-                  {dangerModal === "delete"
-                    ? "Account deletion is handled by support so ownership can be verified before any records are removed."
-                    : "This will end your current authenticated session right away."}
-                </p>
-
-                <div className="ca-modal-actions">
-                  <button type="button" className="ca-secondary-link-btn" onClick={() => setDangerModal(null)}>Cancel</button>
-                  {dangerModal === "delete" ? (
-                    <a href={supportMailTo} className="ca-danger-link-btn">Contact Support</a>
-                  ) : (
-                    <form action="/auth/signout" method="post">
-                      <button type="submit" className="ca-danger-link-btn">Confirm Sign Out</button>
-                    </form>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -1576,33 +1208,6 @@ export default function AnalyticsDashboard(props: DashboardProps) {
               )}
             </div>
           )}
-
-          {/* ── Settings tab ── */}
-          {activeTab === "settings" && (
-            <div className="ca-card">
-              <div className="ca-card-head">
-                <h2 className="ca-card-title">Basic Account Settings</h2>
-              </div>
-
-              <div className="ca-settings-grid">
-                <article className="ca-settings-item">
-                  <p className="ca-settings-label">Email</p>
-                  <p className="ca-settings-value">{props.accountEmail || "—"}</p>
-                </article>
-
-                <article className="ca-settings-item">
-                  <p className="ca-settings-label">Account Type</p>
-                  <p className="ca-settings-value">{props.accountType || "Customer"}</p>
-                </article>
-              </div>
-
-              <div className="ca-settings-actions">
-                <Link href="/change-password" className="ca-primary-link-btn">Change Password</Link>
-                <Link href="/auth/signout" className="ca-secondary-link-btn">Sign Out</Link>
-              </div>
-            </div>
-          )}
-
           <footer className="ca-footer">Powered by ClutchPrintShop</footer>
       </div>
     </div>
