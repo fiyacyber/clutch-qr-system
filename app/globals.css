@@ -8860,20 +8860,43 @@ input.saas-font-search:focus-visible {
   font-family: var(--builder-font-family);
 }
 
+.builder-preview-stage {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+}
+
 .builder-preview-content {
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 260ms ease, transform 280ms ease;
+  transform: translateY(12px);
+  transition:
+    opacity 420ms ease,
+    transform 440ms cubic-bezier(0.2, 0.68, 0.18, 1);
+  pointer-events: none;
+  min-height: 100%;
 }
 
 .builder-preview-content.is-ready {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .builder-preview-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   padding: 0 0 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(243, 247, 253, 0.96));
+  pointer-events: none;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 180ms ease, visibility 0ms linear 180ms;
+}
+
+.builder-preview-skeleton.is-hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .builder-preview-skeleton > * {
@@ -8930,9 +8953,9 @@ input.saas-font-search:focus-visible {
 
 .builder-block-enter {
   opacity: 0;
-  transform: translateY(10px);
-  animation: builderBlockEnter 320ms cubic-bezier(0.2, 0.68, 0.18, 1) forwards;
-  animation-delay: calc(min(var(--builder-block-index, 0), 12) * 28ms);
+  transform: translateY(12px);
+  animation: builderBlockEnter 420ms cubic-bezier(0.2, 0.68, 0.18, 1) forwards;
+  animation-delay: calc(min(var(--builder-block-index, 0), 6) * 55ms);
 }
 
 @keyframes builderBlockEnter {
@@ -8946,6 +8969,17 @@ input.saas-font-search:focus-visible {
   animation: none;
   opacity: 1;
   transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .builder-preview-content,
+  .builder-block-enter {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
 }
 
 .builder-public-profile[data-theme="dark"] {
@@ -9911,7 +9945,10 @@ input.saas-font-search:focus-visible {
   width: 100%;
   min-height: 68px;
   display: grid;
-  grid-template-columns: var(--builder-action-side-size) minmax(0, 1fr) auto;
+  grid-template-columns:
+    var(--builder-action-side-size)
+    minmax(0, 1fr)
+    var(--builder-action-side-size);
   gap: 14px;
   align-items: center;
   padding: 12px 18px;
@@ -9946,11 +9983,12 @@ input.saas-font-search:focus-visible {
   text-overflow: ellipsis;
 }
 
-.builder-action-icon {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+.builder-action-card > .builder-action-icon {
+  width: var(--builder-action-side-size);
+  height: var(--builder-action-side-size);
+  flex: 0 0 var(--builder-action-side-size);
   flex-shrink: 0;
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9959,8 +9997,9 @@ input.saas-font-search:focus-visible {
   background: #f1f3f5;
 }
 
-.builder-action-content {
+.builder-action-card > .builder-action-content {
   display: grid;
+  width: 100%;
   gap: 2px;
   min-width: 0;
   justify-items: center;
@@ -9988,12 +10027,13 @@ input.saas-font-search:focus-visible {
   text-overflow: ellipsis;
 }
 
-.builder-action-chevron {
-  margin-left: auto;
-  width: auto;
+.builder-action-card > .builder-action-chevron {
+  margin-left: 0;
+  width: var(--builder-action-side-size);
+  justify-self: end;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   color: #111827;
   opacity: 0.9;
   font-size: 28px;
@@ -10018,7 +10058,10 @@ input.saas-font-search:focus-visible {
 .builder-public-profile[data-mode="preview"] .builder-action-card {
   width: 100%;
   min-height: 68px;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns:
+    var(--builder-action-side-size, 44px)
+    minmax(0, 1fr)
+    var(--builder-action-side-size, 44px);
   align-items: center;
   gap: 14px;
   padding: 12px 18px;
@@ -10685,15 +10728,19 @@ input.saas-font-search:focus-visible {
 
 @media (max-width: 480px) {
   .builder-action-card {
+    --builder-action-side-size: 42px;
     min-height: 66px;
     padding: 11px 16px;
-    grid-template-columns: 42px minmax(0, 1fr) 18px;
+    grid-template-columns:
+      var(--builder-action-side-size)
+      minmax(0, 1fr)
+      var(--builder-action-side-size);
   }
 
-  .builder-action-icon {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+  .builder-action-card > .builder-action-icon {
+    width: var(--builder-action-side-size);
+    height: var(--builder-action-side-size);
+    flex: 0 0 var(--builder-action-side-size);
   }
 
   .builder-action-title {

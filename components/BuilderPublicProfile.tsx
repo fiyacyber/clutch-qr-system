@@ -38,6 +38,9 @@ interface BuilderPublicProfileProps {
   onRemoveSection?: (sectionId: string) => void;
 }
 
+const MIN_REVEAL_DELAY_MS = 300;
+const ASSET_READY_TIMEOUT_MS = 1200;
+
 function normalizeHex(value: unknown) {
   const raw = typeof value === "string" ? value.trim().replace(/^#/, "") : "";
   if (/^[0-9a-fA-F]{3}$/.test(raw)) {
@@ -431,40 +434,71 @@ export default function BuilderPublicProfile({
     if (!raw || !banner.enabled || banner.type !== "image") return "";
     return raw;
   })();
-  const [initialDelayComplete, setInitialDelayComplete] = useState(false);
+  const [minimumDelayComplete, setMinimumDelayComplete] = useState(false);
+  const [assetTimeoutComplete, setAssetTimeoutComplete] = useState(false);
   const [avatarAssetReady, setAvatarAssetReady] = useState(!profileAvatarUrl);
   const [bannerAssetReady, setBannerAssetReady] = useState(!bannerImageUrl);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setInitialDelayComplete(true), 150);
-    return () => window.clearTimeout(timer);
+    const minimumDelayTimer = window.setTimeout(() => setMinimumDelayComplete(true), MIN_REVEAL_DELAY_MS);
+    const assetTimeoutTimer = window.setTimeout(() => setAssetTimeoutComplete(true), ASSET_READY_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(minimumDelayTimer);
+      window.clearTimeout(assetTimeoutTimer);
+    };
   }, []);
 
   useEffect(() => {
-    if (!profileAvatarUrl) {
-      setAvatarAssetReady(true);
-      return;
-    }
+    if (!profileAvatarUrl) return;
+
     setAvatarAssetReady(false);
+    let cancelled = false;
     const image = new Image();
-    image.onload = () => setAvatarAssetReady(true);
-    image.onerror = () => setAvatarAssetReady(true);
+    const markReady = () => {
+      if (!cancelled) setAvatarAssetReady(true);
+    };
+    image.onload = markReady;
+    image.onerror = markReady;
     image.src = profileAvatarUrl;
+
+    if (image.complete) {
+      markReady();
+    }
+
+    return () => {
+      cancelled = true;
+      image.onload = null;
+      image.onerror = null;
+    };
   }, [profileAvatarUrl]);
 
   useEffect(() => {
-    if (!bannerImageUrl) {
-      setBannerAssetReady(true);
-      return;
-    }
+    if (!bannerImageUrl) return;
+
     setBannerAssetReady(false);
+    let cancelled = false;
     const image = new Image();
-    image.onload = () => setBannerAssetReady(true);
-    image.onerror = () => setBannerAssetReady(true);
+    const markReady = () => {
+      if (!cancelled) setBannerAssetReady(true);
+    };
+    image.onload = markReady;
+    image.onerror = markReady;
     image.src = bannerImageUrl;
+
+    if (image.complete) {
+      markReady();
+    }
+
+    return () => {
+      cancelled = true;
+      image.onload = null;
+      image.onerror = null;
+    };
   }, [bannerImageUrl]);
 
-  const previewReady = initialDelayComplete && avatarAssetReady && bannerAssetReady;
+  const assetsReady = (!profileAvatarUrl || avatarAssetReady) && (!bannerImageUrl || bannerAssetReady);
+  const previewReady = minimumDelayComplete && (assetsReady || assetTimeoutComplete);
 
   const handleQuickAction = useCallback((action: string) => {
     if (quickActionTimeoutRef.current) {
@@ -694,8 +728,8 @@ export default function BuilderPublicProfile({
         ["--builder-banner-image" as any]: toCssImageUrl(banner.imageUrl) || "none",
       }}
     >
-      {!previewReady ? (
-        <div className="builder-preview-skeleton" aria-hidden="true">
+      <div className="builder-preview-stage">
+        <div className={`builder-preview-skeleton${previewReady ? " is-hidden" : ""}`} aria-hidden="true">
           <div className="builder-preview-skeleton-banner" />
           <div className="builder-preview-skeleton-avatar" />
           <div className="builder-preview-skeleton-title" />
@@ -704,9 +738,9 @@ export default function BuilderPublicProfile({
           <div className="builder-preview-skeleton-card" />
           <div className="builder-preview-skeleton-card" />
         </div>
-      ) : null}
-      <div className={`builder-preview-content${previewReady ? " is-ready" : ""}`}>
-        {ProfilePreviewContent}
+        <div className={`builder-preview-content${previewReady ? " is-ready" : ""}`}>
+          {ProfilePreviewContent}
+        </div>
       </div>
       {quickActionNotice ? <div className="builder-quick-action-toast">{quickActionNotice}</div> : null}
     </div>
