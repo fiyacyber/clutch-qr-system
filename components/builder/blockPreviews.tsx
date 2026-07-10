@@ -30,6 +30,7 @@ import {
 import ProfileLinkIcon from "@/components/profile/ProfileLinkIcon";
 import { BuilderBlock } from "@/lib/builder-types";
 import { formatPhoneDisplay, normalizeBeginnerConnectLinkHref, ctaRequiresLeadCapture } from "@/lib/connect";
+import { buildDirectionsBlockState, normalizeServiceArea } from "@/lib/connect-directions";
 import { trackBlockEvent } from "@/lib/builder-analytics";
 import { createInitials, getBlockData, normalizeBlockType } from "./blockUtils";
 
@@ -689,18 +690,18 @@ export function PhoneBlockPreview({ block, profile }: BlockPreviewProps) {
   }
 
   if (type === "directions-button") {
-    const address = data.address || profile.address;
-    const mapsHref = data.url || (address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : undefined);
-    if (!mapsHref) return null;
+    const address = normalizeServiceArea(data.address);
+    if (!address) return null;
+    const mapsHref = buildDirectionsBlockState(address).url;
     return (
       <div className="builder-block">
         <ActionCard
           icon={<ActionGlyph name="directions" /> as any}
           title={data.label || "Directions"}
-          subtitle={address || data.url || undefined}
+          subtitle={address}
           href={mapsHref}
-          external={Boolean(mapsHref)}
-          placeholder={!mapsHref}
+          external={true}
+          placeholder={false}
         />
       </div>
     );

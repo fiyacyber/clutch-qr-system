@@ -45,6 +45,11 @@ import {
   validateConnectSlug,
 } from "@/lib/connect";
 import { createBlock, sanitizeBuilderConfig } from "@/lib/builder-config";
+import {
+  buildDirectionsBlockState,
+  getDirectionsDataFromBlock,
+  recoverServiceArea,
+} from "@/lib/connect-directions";
 
 type SetupLinkDraft = {
   id: string;
@@ -529,6 +534,7 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
   const previewRole = getDraftPreviewRole(draft);
   const previewAvatarUrl = normalizeOptionalHttpUrl(draft.basic.avatarUrl);
   const previewWebsite = normalizeBeginnerConnectLinkHref("website", draft.contact.website);
+  const directionsState = buildDirectionsBlockState(draft.contact.serviceArea);
   const bannerThemeSettings = getBannerThemeSettings(draft.basic.bannerTheme);
   const normalizedBannerImageUrl = normalizeOptionalHttpUrl(draft.basic.bannerImageUrl);
   const useBannerImage = draft.basic.bannerMode === "image" && Boolean(normalizedBannerImageUrl);
@@ -641,10 +647,8 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
   const withDirections = updateBlockData(withLinks, "directions-button", (data) => ({
     ...data,
     label: data.label || "Directions",
-      address: draft.contact.serviceArea,
-    url: draft.contact.serviceArea
-      ? `https://maps.google.com/?q=${encodeURIComponent(draft.contact.serviceArea)}`
-        : "",
+    address: directionsState.address,
+    url: directionsState.url,
   }));
 
   const withContactVisibility = {
@@ -658,6 +662,9 @@ function buildPreviewConfig(draft: SetupDraft, baseConfig: BuilderConfig) {
       }
       if (block.type === "website-button") {
         return { ...block, visible: draft.contact.showWebsite };
+      }
+      if (block.type === "directions-button") {
+        return { ...block, visible: directionsState.visible };
       }
       return block;
     }),
@@ -753,6 +760,8 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
   const phoneBlock = builderConfig.blocks.find((block) => block.type === "phone-button");
   const emailBlock = builderConfig.blocks.find((block) => block.type === "email-button");
   const websiteBlock = builderConfig.blocks.find((block) => block.type === "website-button");
+  const directionsBlock = builderConfig.blocks.find((block) => block.type === "directions-button");
+  const directionsData = getDirectionsDataFromBlock(directionsBlock);
   const primaryActionBlock = builderConfig.blocks.find((block) => block.type === "request-quote-button" || block.type === "custom-link-button");
   const primaryActionData = (primaryActionBlock?.data || {}) as Record<string, any>;
   const formBlock = builderConfig.blocks.find((block) => block.type === "form-block");
@@ -827,7 +836,7 @@ function buildInitialDraft(profile: Record<string, any> | null, customer: Record
       email: safeText(profile?.email || ""),
       website: safeText(profile?.website || ""),
       bio: safeText(profile?.bio || ""),
-      serviceArea: safeText(profile?.location || profile?.address || ""),
+      serviceArea: safeText(directionsData.address || ""),
       showPhone: phoneBlock?.visible !== false,
       showEmail: emailBlock?.visible !== false,
       showWebsite: websiteBlock?.visible !== false,
@@ -924,7 +933,7 @@ function normalizeRecoveredDraft(rawDraft: unknown, fallbackDraft: SetupDraft): 
       email: safeText(rawContact.email || fallbackDraft.contact.email),
       website: safeText(rawContact.website || fallbackDraft.contact.website),
       bio: safeText(rawContact.bio || fallbackDraft.contact.bio),
-      serviceArea: safeText(rawContact.serviceArea || fallbackDraft.contact.serviceArea),
+      serviceArea: recoverServiceArea(rawContact, fallbackDraft.contact.serviceArea),
       showPhone: rawContact.showPhone !== false,
       showEmail: rawContact.showEmail !== false,
       showWebsite: rawContact.showWebsite !== false,
@@ -1801,14 +1810,14 @@ export default function ConnectSetupWizard({ customer, profile, links, builderCo
                   </label>
 
                   <label className="label connect-setup-span-2 connect-setup-contact-field">
-                    Service area or location
+                    Physical location
                     <input
                       className="input"
                       value={draft.contact.serviceArea}
                       onChange={(event) => updateDraft({ contact: { ...draft.contact, serviceArea: event.target.value } })}
-                      placeholder="Nashville, TN"
+                      placeholder="City, state, or business address"
                     />
-                    <span className="helper-text">Used for map and directions actions in your public profile.</span>
+                    <span className="helper-text">Optional. Adding a location displays a Directions button on your public profile.</span>
                   </label>
                 </div>
               </div>

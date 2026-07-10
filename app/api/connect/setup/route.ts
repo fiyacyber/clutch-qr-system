@@ -15,6 +15,7 @@ import {
   validateConnectSlug,
   RESERVED_CONNECT_SLUGS,
 } from "@/lib/connect";
+import { buildDirectionsBlockState } from "@/lib/connect-directions";
 import { buildConnectPublicProfileUrl, getAppBaseUrl } from "@/lib/connect-urls";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
@@ -370,6 +371,7 @@ export async function POST(req: NextRequest) {
     const bannerEnabled = profileInput.bannerEnabled !== false;
     const bannerMode = profileInput.bannerMode === "image" && bannerImageUrl ? "image" : "theme";
     const serviceArea = trimText(profileInput.serviceArea);
+    const directionsState = buildDirectionsBlockState(serviceArea);
     const showPhone = profileInput.showPhone !== false;
     const showEmail = profileInput.showEmail !== false;
     const showWebsite = profileInput.showWebsite !== false;
@@ -554,14 +556,13 @@ export async function POST(req: NextRequest) {
     nextConfig = updateBlockData(nextConfig, "directions-button", (data) => ({
       ...data,
       label: data.label || "Directions",
-      address: serviceArea || data.address || "",
-      url: serviceArea
-        ? `https://maps.google.com/?q=${encodeURIComponent(serviceArea)}`
-        : data.url || "",
+      address: directionsState.address,
+      url: directionsState.url,
     }), "contact");
     nextConfig = updateBlockVisibility(nextConfig, "phone-button", showPhone);
     nextConfig = updateBlockVisibility(nextConfig, "email-button", showEmail);
     nextConfig = updateBlockVisibility(nextConfig, "website-button", showWebsite);
+    nextConfig = updateBlockVisibility(nextConfig, "directions-button", directionsState.visible);
     nextConfig = updateBlockVisibility(nextConfig, "form-block", primaryActionLeadCaptureEnabled);
 
     const normalizedLinks = linkDrafts

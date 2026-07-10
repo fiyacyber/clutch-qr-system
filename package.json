@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib types --ext .ts,.tsx",
+    "test:connect:directions": "node --experimental-strip-types --test scripts/connect-directions.test.mjs",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
     "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"
   },

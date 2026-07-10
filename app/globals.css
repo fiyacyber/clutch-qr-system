@@ -9103,6 +9103,13 @@ input.saas-font-search:focus-visible {
   min-width: 0;
 }
 
+.builder-public-shell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
 .builder-preview-selectable {
   display: block;
   width: 100%;
@@ -14296,16 +14303,19 @@ input.saas-font-search:focus-visible {
 
 .builder-global-banner {
   position: relative;
+  display: block;
+  width: 100%;
   height: min(var(--builder-banner-height, 160px), 34vh);
   min-height: 80px;
   max-height: 320px;
-  margin: 0 -10px 10px;
-  border-radius: var(--builder-banner-radius, 24px);
+  margin: 0 0 10px;
+  border-radius: 0 0 var(--builder-banner-radius, 24px) var(--builder-banner-radius, 24px);
   overflow: hidden;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(242, 242, 242, 0.92));
-  border: 1px solid rgba(255, 255, 255, 0.52);
+  border: 0;
   box-shadow: none;
   isolation: isolate;
+  background-clip: padding-box;
 }
 
 .builder-public-profile[data-banner-overlap="true"] .builder-global-banner {
@@ -14407,17 +14417,9 @@ input.saas-font-search:focus-visible {
   margin-top: 18px;
 }
 
-.builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"] .builder-global-banner {
-  margin-bottom: -20px;
-}
-
 .builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"] .builder-profile-header-stack {
   background: transparent;
   border: 0;
-}
-
-.builder-public-profile[data-mode="preview"][data-banner-type="image"][data-banner-image-state="set"][data-banner-overlap="true"] .builder-profile-header-stack .builder-hero-avatar-wrap {
-  margin-top: -44px;
 }
 
 .builder-public-profile[data-header-align="left"] .builder-profile-header-stack .builder-hero-avatar-wrap {
@@ -14438,8 +14440,8 @@ input.saas-font-search:focus-visible {
 @media (max-width: 520px) {
   .builder-global-banner {
     height: min(var(--builder-banner-height, 160px), 28vh);
-    margin-left: -6px;
-    margin-right: -6px;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .builder-public-profile[data-banner-overlap="true"] .builder-profile-header-stack .builder-hero-avatar-wrap {

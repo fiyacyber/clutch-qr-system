@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BuilderConfig, ProfileSection } from "@/lib/builder-types";
 import { normalizeBeginnerConnectLinkHref, ctaRequiresLeadCapture } from "@/lib/connect";
+import { hasRenderableDirectionsAddress } from "@/lib/connect-directions";
 import { getBlockData, normalizeBlockType } from "./builder/blockUtils";
 import {
   ProfileHeroPreview,
@@ -270,7 +271,7 @@ function blockHasRenderableContent(block: any, profile: any, mode: "public" | "p
   if (type === "phone-button") return Boolean(data.phone || data.value || profile?.phone);
   if (type === "email-button") return Boolean(data.email || data.value || profile?.email);
   if (type === "website-button") return Boolean(data.website || data.url || profile?.website);
-  if (type === "directions-button") return Boolean(data.address || data.url || profile?.address);
+  if (type === "directions-button") return hasRenderableDirectionsAddress(data);
   if (type === "request-quote-button" || type === "custom-link-button") {
     // Hide CTA if it requires lead capture but lead capture is disabled
     if (data.isPrimaryAction === true) {
@@ -356,17 +357,12 @@ export default function BuilderPublicProfile({
   const bannerStyle: React.CSSProperties = (() => {
     const base: React.CSSProperties = {
       minHeight: `${clampNumber(banner.height, 80, 420, 160)}px`,
-      borderRadius: `${clampNumber(banner.borderRadius, 0, 48, 24)}px`,
     };
     const imageUrl = toCssImageUrl(banner.imageUrl);
     if (banner.enabled && banner.type === "image" && imageUrl) {
       return {
         ...base,
-        backgroundImage: banner.overlayEnabled
-          ? `linear-gradient(rgba(15,23,42,${clampNumber(banner.overlayOpacity, 0, 0.85, 0.22)}), rgba(15,23,42,${clampNumber(banner.overlayOpacity, 0, 0.85, 0.22)})), ${imageUrl}`
-          : imageUrl,
-        backgroundSize: "cover",
-        backgroundPosition: banner.imagePosition || "center",
+        backgroundColor: banner.backgroundColor || "#E5E7EB",
       };
     }
     if (banner.enabled && banner.type === "solid") {
