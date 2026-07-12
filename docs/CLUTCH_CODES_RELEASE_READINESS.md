@@ -97,6 +97,21 @@ After the migration and approved remediation are applied in staging, run:
 
 The script is SELECT-only. Every `passed` value must be true, every `violating_count` must be zero, the mismatch/detail result sets must be empty or explicitly explained, and any customer holding both Connect+ and Clutch Codes must have independent Connect+ provenance.
 
+## Clean-install migration baseline
+
+The executable chain now begins with `20260618000000_initial_application_schema.sql`, reconstructed from repository history immediately before the first production-recorded migration. It is followed by the existing production migration history, the timestamped reconciliation of previously undated profile fields, QR style configuration, and the Clutch Codes entitlement migration.
+
+Existing production already contains the foundational objects. Therefore the baseline must be recorded in production migration history without executing its SQL:
+
+1. Create and verify a restorable production backup.
+2. Run `supabase migration list` against the explicitly linked production project and confirm the existing twenty versions from `20260619090000` through `20260704011000` are present.
+3. Review a migration dry run and confirm `20260618000000` is the only historical version missing before the new forward migrations.
+4. Run `supabase migration repair 20260618000000 --status applied` against production. This changes migration history only; it does not execute the baseline SQL.
+5. Run `supabase migration list` again and require the local and remote timestamp columns to agree.
+6. Run another dry run. It must propose only `20260704012000`, `20260706123000`, and `20260712100000` as unapplied migrations.
+
+Stop if any earlier production-recorded migration is missing, if the dry run proposes creating foundational tables, or if the linked project reference is not the approved production reference. Never run `20260618000000_initial_application_schema.sql` directly against production.
+
 ## Recommended production rollout order
 
 1. Human reviewers decide all nine ambiguous customer entitlements and record authoritative evidence, reviewer, classification, included allowance, and subscription allowance for every UUID.

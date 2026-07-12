@@ -1,14 +1,22 @@
--- Clutch QR database schema. Use this only in a clean Supabase project.
--- qr_limit remains a legacy compatibility field. New authoritative allowances default to zero.
+-- Clutch QR clean-install schema.
+--
+-- This file is generated from the ordered migration chain for review and
+-- one-shot clean-project inspection. Supabase environments should be created
+-- with the timestamped files under supabase/migrations so migration history is
+-- recorded correctly. Do not run this file against an existing environment.
+
+
+-- =============================================================================
+-- 20260618000000_initial_application_schema.sql
+-- =============================================================================
+-- Foundational Clutch QR schema as it existed before the first tracked
+-- production migration (20260619090000_add_customer_plan_code.sql).
+--
+-- Existing production databases must mark this migration as applied; they
+-- must never execute it. Fresh environments apply it before the historical
+-- forward migration chain.
 
 create extension if not exists "pgcrypto";
-
-create table public.customer_groups (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique,
-  description text,
-  created_at timestamptz default now()
-);
 
 create table public.customers (
   id uuid primary key default gen_random_uuid(),
@@ -18,36 +26,11 @@ create table public.customers (
   last_name text,
   company_name text,
   shopify_customer_id text,
-  shopify_order_id text,
-  shopify_subscription_id text,
-  shopify_line_item_id text,
-  customer_group_id uuid references public.customer_groups(id) on delete set null,
   qr_limit integer not null default 10,
-  included_qr_allowance integer not null default 0 check (included_qr_allowance >= 0),
-  subscription_qr_limit integer not null default 0 check (subscription_qr_limit >= 0),
-  clutch_codes_plan_code text check (clutch_codes_plan_code is null or clutch_codes_plan_code in ('clutch_codes_starter', 'clutch_codes_growth', 'clutch_codes_pro')),
-  clutch_codes_subscription_status text not null default 'inactive' check (clutch_codes_subscription_status in ('inactive', 'active', 'past_due', 'unpaid', 'paused', 'cancelled', 'expired')),
-  clutch_codes_welcome_email_sent_at timestamptz,
-  clutch_codes_welcome_email_event_key text,
-  plan text not null default 'qr_pro' check (plan in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')),
-  plan_code text not null default 'qr_pro' check (plan_code in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')),
-  subscription_status text not null default 'active' check (subscription_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
-  plan_status text not null default 'active' check (plan_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
-  onboarding_status text not null default 'not_started' check (onboarding_status in ('not_started', 'invited', 'active', 'needs_help', 'blocked')),
-  onboarding_note text,
-  internal_notes text,
-  last_admin_reviewed_at timestamptz,
-  must_change_password boolean not null default false,
-  temp_password_created_at timestamptz,
-  onboarding_email_sent_at timestamptz,
-  trial_started_at timestamptz,
-  trial_ends_at timestamptz,
-  trial_status text not null default 'none' check (trial_status in ('none', 'active', 'expired', 'converted', 'cancelled')),
   is_admin boolean not null default false,
   logo_url text,
   logo_path text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  created_at timestamptz default now()
 );
 
 create table public.qr_codes (
@@ -76,105 +59,15 @@ create table public.qr_scans (
   ip_hash text,
   user_agent text,
   referrer text,
-  device_type text,
-  browser text,
-  operating_system text,
-  referrer_source text,
-  country text,
-  region text,
-  city text,
-  latitude double precision,
-  longitude double precision,
-  location_source text default 'geoip',
-  utm_source text,
-  utm_medium text,
-  utm_campaign text,
-  utm_content text,
-  utm_term text,
   created_at timestamptz default now()
 );
-
-create table public.webhook_events (
-  id uuid primary key default gen_random_uuid(),
-  shopify_event_id text not null unique,
-  topic text not null,
-  shopify_order_id text,
-  shopify_subscription_id text,
-  status text not null default 'processing' check (status in ('processing', 'completed', 'skipped', 'duplicate', 'error')),
-  error_message text,
-  created_at timestamptz default now()
-);
-
-create table public.shopify_entitlement_events (
-  id uuid primary key default gen_random_uuid(),
-  event_key text not null unique,
-  shopify_event_id text not null,
-  topic text not null,
-  shopify_order_id text,
-  shopify_line_item_id text,
-  shopify_subscription_contract_id text,
-  customer_id uuid references public.customers(id) on delete set null,
-  action text not null,
-  plan_code text check (plan_code is null or plan_code in ('clutch_codes_starter', 'clutch_codes_growth', 'clutch_codes_pro')),
-  subscription_qr_limit integer check (subscription_qr_limit is null or subscription_qr_limit >= 0),
-  status text not null default 'processing' check (status in ('processing', 'completed', 'skipped', 'failed')),
-  email_sent_at timestamptz,
-  error_message text,
-  raw_payload jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table public.clutch_codes_allowance_migration_audit (
-  customer_id uuid primary key references public.customers(id) on delete cascade,
-  classification text not null,
-  review_required boolean not null,
-  proposed_included_qr_allowance integer not null default 0 check (proposed_included_qr_allowance >= 0),
-  proposed_subscription_qr_limit integer not null default 0 check (proposed_subscription_qr_limit >= 0),
-  evidence jsonb not null default '{}'::jsonb,
-  classified_at timestamptz not null default now(),
-  reviewed_at timestamptz,
-  review_notes text
-);
-
-comment on column public.customers.qr_limit is
-  'Legacy compatibility mirror/fallback only. Authoritative capacity is included_qr_allowance + subscription_qr_limit.';
 
 create index qr_codes_customer_id_idx on public.qr_codes(customer_id);
 create index qr_codes_slug_idx on public.qr_codes(slug);
 create index qr_scans_qr_code_id_idx on public.qr_scans(qr_code_id);
 create index qr_scans_created_at_idx on public.qr_scans(created_at);
-create index qr_scans_device_type_idx on public.qr_scans(device_type);
-create index qr_scans_browser_idx on public.qr_scans(browser);
-create index qr_scans_operating_system_idx on public.qr_scans(operating_system);
-create index qr_scans_referrer_source_idx on public.qr_scans(referrer_source);
-create index qr_scans_location_idx on public.qr_scans(country, region, city);
-create index qr_scans_utm_source_idx on public.qr_scans(utm_source);
-create index qr_scans_utm_medium_idx on public.qr_scans(utm_medium);
-create index qr_scans_utm_campaign_idx on public.qr_scans(utm_campaign);
 create index customers_auth_user_id_idx on public.customers(auth_user_id);
 create index customers_email_idx on public.customers(email);
-create index customers_plan_idx on public.customers(plan);
-create index customers_customer_group_id_idx on public.customers(customer_group_id);
-create index customers_onboarding_status_idx on public.customers(onboarding_status);
-create index customers_plan_code_idx on public.customers(plan_code);
-create index customers_subscription_status_idx on public.customers(subscription_status);
-create index customers_shopify_customer_id_idx on public.customers(shopify_customer_id);
-create index customers_shopify_order_id_idx on public.customers(shopify_order_id);
-create index customers_shopify_subscription_id_idx on public.customers(shopify_subscription_id);
-create index customers_shopify_line_item_id_idx on public.customers(shopify_line_item_id);
-create index customers_clutch_codes_plan_code_idx on public.customers(clutch_codes_plan_code);
-create unique index customers_clutch_codes_welcome_email_event_key on public.customers(clutch_codes_welcome_email_event_key) where clutch_codes_welcome_email_event_key is not null;
-create index webhook_events_topic_idx on public.webhook_events(topic);
-create index webhook_events_shopify_order_id_idx on public.webhook_events(shopify_order_id);
-create index webhook_events_shopify_subscription_id_idx on public.webhook_events(shopify_subscription_id);
-create index webhook_events_status_idx on public.webhook_events(status);
-create index webhook_events_created_at_idx on public.webhook_events(created_at);
-create index shopify_entitlement_events_shopify_event_id_idx on public.shopify_entitlement_events(shopify_event_id);
-create index shopify_entitlement_events_shopify_order_id_idx on public.shopify_entitlement_events(shopify_order_id);
-create index shopify_entitlement_events_subscription_contract_id_idx on public.shopify_entitlement_events(shopify_subscription_contract_id);
-create index shopify_entitlement_events_customer_id_idx on public.shopify_entitlement_events(customer_id);
-create index clutch_codes_allowance_migration_audit_review_idx on public.clutch_codes_allowance_migration_audit(review_required, classification);
 
 insert into storage.buckets (
   id,
@@ -223,16 +116,13 @@ before update on public.qr_codes
 for each row
 execute function public.set_updated_at();
 
-create trigger set_customers_updated_at
-before update on public.customers
-for each row
-execute function public.set_updated_at();
-
 create or replace function public.current_user_is_admin()
 returns boolean as $$
 begin
   return exists (
-    select 1 from public.customers where auth_user_id = auth.uid() and is_admin = true
+    select 1
+    from public.customers
+    where auth_user_id = auth.uid() and is_admin = true
   );
 end;
 $$ language plpgsql security definer;
@@ -244,10 +134,24 @@ declare
   allowed_qrs integer;
   customer_admin boolean;
 begin
-  select included_qr_allowance + subscription_qr_limit, is_admin into allowed_qrs, customer_admin from public.customers where id = new.customer_id;
-  if customer_admin = true then return new; end if;
-  select count(*) into qr_total from public.qr_codes where customer_id = new.customer_id;
-  if qr_total >= allowed_qrs then raise exception 'Maximum QR code limit reached for this customer'; end if;
+  select qr_limit, is_admin
+  into allowed_qrs, customer_admin
+  from public.customers
+  where id = new.customer_id;
+
+  if customer_admin = true then
+    return new;
+  end if;
+
+  select count(*)
+  into qr_total
+  from public.qr_codes
+  where customer_id = new.customer_id;
+
+  if qr_total >= allowed_qrs then
+    raise exception 'Maximum QR code limit reached for this customer';
+  end if;
+
   return new;
 end;
 $$ language plpgsql;
@@ -258,33 +162,1752 @@ for each row
 execute function public.enforce_qr_limit();
 
 alter table public.customers enable row level security;
-alter table public.customer_groups enable row level security;
 alter table public.qr_codes enable row level security;
 alter table public.qr_scans enable row level security;
-alter table public.webhook_events enable row level security;
-alter table public.shopify_entitlement_events enable row level security;
-alter table public.clutch_codes_allowance_migration_audit enable row level security;
 
-create policy "Admins can view customer groups" on public.customer_groups for select using (public.current_user_is_admin());
-create policy "Admins can insert customer groups" on public.customer_groups for insert with check (public.current_user_is_admin());
-create policy "Admins can update customer groups" on public.customer_groups for update using (public.current_user_is_admin()) with check (public.current_user_is_admin());
-create policy "Customers can view own profile" on public.customers for select using (auth.uid() = auth_user_id or public.current_user_is_admin());
-create policy "Admins can insert customers" on public.customers for insert with check (public.current_user_is_admin());
-create policy "Admins can update customers" on public.customers for update using (public.current_user_is_admin()) with check (public.current_user_is_admin());
-create policy "Customers can view own QR codes" on public.qr_codes for select using (customer_id in (select id from public.customers where auth_user_id = auth.uid()) or public.current_user_is_admin());
-create policy "Admins can insert QR codes" on public.qr_codes for insert with check (public.current_user_is_admin());
-create policy "Customers and admins can update QR codes" on public.qr_codes for update using (customer_id in (select id from public.customers where auth_user_id = auth.uid()) or public.current_user_is_admin()) with check (customer_id in (select id from public.customers where auth_user_id = auth.uid()) or public.current_user_is_admin());
-create policy "Customers can view own QR scans" on public.qr_scans for select using (qr_code_id in (select q.id from public.qr_codes q join public.customers c on q.customer_id = c.id where c.auth_user_id = auth.uid()) or public.current_user_is_admin());
-create policy "Admins can view webhook events" on public.webhook_events for select using (public.current_user_is_admin());
+create policy "Customers can view own profile"
+on public.customers for select
+using (auth.uid() = auth_user_id or public.current_user_is_admin());
+
+create policy "Admins can insert customers"
+on public.customers for insert
+with check (public.current_user_is_admin());
+
+create policy "Admins can update customers"
+on public.customers for update
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+create policy "Customers can view own QR codes"
+on public.qr_codes for select
+using (
+  customer_id in (
+    select id from public.customers where auth_user_id = auth.uid()
+  ) or public.current_user_is_admin()
+);
+
+create policy "Admins can insert QR codes"
+on public.qr_codes for insert
+with check (public.current_user_is_admin());
+
+create policy "Customers and admins can update QR codes"
+on public.qr_codes for update
+using (
+  customer_id in (
+    select id from public.customers where auth_user_id = auth.uid()
+  ) or public.current_user_is_admin()
+)
+with check (
+  customer_id in (
+    select id from public.customers where auth_user_id = auth.uid()
+  ) or public.current_user_is_admin()
+);
+
+create policy "Customers can view own QR scans"
+on public.qr_scans for select
+using (
+  qr_code_id in (
+    select q.id
+    from public.qr_codes q
+    join public.customers c on q.customer_id = c.id
+    where c.auth_user_id = auth.uid()
+  ) or public.current_user_is_admin()
+);
 
 revoke update on public.qr_codes from authenticated;
 grant update (name, destination_url) on public.qr_codes to authenticated;
 grant select on public.customers to authenticated;
-grant select, insert, update on public.customer_groups to authenticated;
 grant select on public.qr_codes to authenticated;
 grant select on public.qr_scans to authenticated;
-grant select on public.webhook_events to authenticated;
-revoke all on table public.shopify_entitlement_events from anon, authenticated;
-revoke all on table public.clutch_codes_allowance_migration_audit from anon, authenticated;
 grant insert, update on public.customers to authenticated;
 grant insert, update on public.qr_codes to authenticated;
+
+
+-- =============================================================================
+-- 20260619090000_add_customer_plan_code.sql
+-- =============================================================================
+
+-- Phase 2: account plan entitlements for QR Pro and QR Pro+.
+-- Existing customer data is preserved. Existing admins become the admin plan.
+
+alter table public.customers
+  add column if not exists plan_code text not null default 'qr_pro';
+
+alter table public.customers
+  add column if not exists plan_status text not null default 'active';
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'customers_plan_code_check'
+      and conrelid = 'public.customers'::regclass
+  ) then
+    alter table public.customers
+      add constraint customers_plan_code_check
+      check (plan_code in ('qr_pro', 'qr_pro_plus', 'admin'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'customers_plan_status_check'
+      and conrelid = 'public.customers'::regclass
+  ) then
+    alter table public.customers
+      add constraint customers_plan_status_check
+      check (plan_status in ('active', 'past_due', 'canceled'));
+  end if;
+end $$;
+
+update public.customers
+set plan_code = 'admin'
+where is_admin = true;
+
+update public.customers
+set plan_code = 'qr_pro_plus'
+where is_admin = false
+  and coalesce(qr_limit, 10) >= 60;
+
+update public.customers
+set qr_limit = case
+  when plan_code = 'qr_pro_plus' then 60
+  when plan_code = 'admin' then greatest(qr_limit, 60)
+  else 10
+end
+where plan_code in ('qr_pro', 'qr_pro_plus', 'admin');
+
+
+-- =============================================================================
+-- 20260619100000_add_admin_groups_onboarding.sql
+-- =============================================================================
+
+-- Phase 3: private admin dashboard support.
+-- Adds customer groups and admin-managed onboarding fields without deleting data.
+
+create table if not exists public.customer_groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  description text,
+  created_at timestamptz default now()
+);
+
+alter table public.customers
+  add column if not exists customer_group_id uuid references public.customer_groups(id) on delete set null;
+
+alter table public.customers
+  add column if not exists onboarding_status text not null default 'not_started';
+
+alter table public.customers
+  add column if not exists onboarding_note text;
+
+alter table public.customers
+  add column if not exists internal_notes text;
+
+alter table public.customers
+  add column if not exists last_admin_reviewed_at timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'customers_onboarding_status_check'
+      and conrelid = 'public.customers'::regclass
+  ) then
+    alter table public.customers
+      add constraint customers_onboarding_status_check
+      check (onboarding_status in ('not_started', 'invited', 'active', 'needs_help', 'blocked'));
+  end if;
+end $$;
+
+create index if not exists customers_customer_group_id_idx on public.customers(customer_group_id);
+create index if not exists customers_onboarding_status_idx on public.customers(onboarding_status);
+create index if not exists customers_plan_code_idx on public.customers(plan_code);
+
+alter table public.customer_groups enable row level security;
+
+drop policy if exists "Admins can view customer groups" on public.customer_groups;
+drop policy if exists "Admins can insert customer groups" on public.customer_groups;
+drop policy if exists "Admins can update customer groups" on public.customer_groups;
+
+create policy "Admins can view customer groups"
+on public.customer_groups
+for select
+using (public.current_user_is_admin());
+
+create policy "Admins can insert customer groups"
+on public.customer_groups
+for insert
+with check (public.current_user_is_admin());
+
+create policy "Admins can update customer groups"
+on public.customer_groups
+for update
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+grant select, insert, update on public.customer_groups to authenticated;
+
+
+-- =============================================================================
+-- 20260619110000_add_advanced_scan_metadata.sql
+-- =============================================================================
+
+-- Phase 4: optional advanced analytics scan metadata.
+-- All columns are additive and nullable so existing scan history is preserved.
+
+alter table public.qr_scans
+  add column if not exists device_type text,
+  add column if not exists browser text,
+  add column if not exists operating_system text,
+  add column if not exists referrer_source text,
+  add column if not exists country text,
+  add column if not exists region text,
+  add column if not exists city text,
+  add column if not exists latitude double precision,
+  add column if not exists longitude double precision;
+
+create index if not exists qr_scans_device_type_idx on public.qr_scans(device_type);
+create index if not exists qr_scans_browser_idx on public.qr_scans(browser);
+create index if not exists qr_scans_operating_system_idx on public.qr_scans(operating_system);
+create index if not exists qr_scans_referrer_source_idx on public.qr_scans(referrer_source);
+create index if not exists qr_scans_location_idx on public.qr_scans(country, region, city);
+
+
+-- =============================================================================
+-- 20260619130000_phase5_shopify_automation.sql
+-- =============================================================================
+
+-- Phase 5: Shopify automation, customer provisioning, subscription status, and webhook idempotency.
+
+alter table public.customers
+  add column if not exists plan text not null default 'qr_pro',
+  add column if not exists plan_code text not null default 'qr_pro',
+  add column if not exists qr_limit integer not null default 10,
+  add column if not exists shopify_customer_id text,
+  add column if not exists shopify_order_id text,
+  add column if not exists shopify_subscription_id text,
+  add column if not exists subscription_status text not null default 'active',
+  add column if not exists plan_status text not null default 'active',
+  add column if not exists must_change_password boolean not null default false,
+  add column if not exists temp_password_created_at timestamptz,
+  add column if not exists onboarding_email_sent_at timestamptz,
+  add column if not exists updated_at timestamptz default now();
+
+update public.customers
+set plan = coalesce(nullif(plan, ''), plan_code, 'qr_pro'),
+    plan_code = coalesce(nullif(plan_code, ''), plan, 'qr_pro'),
+    subscription_status = coalesce(nullif(subscription_status, ''), plan_status, 'active'),
+    plan_status = coalesce(nullif(plan_status, ''), subscription_status, 'active');
+
+update public.customers
+set plan = 'admin',
+    plan_code = 'admin'
+where is_admin = true;
+
+do $$
+begin
+  alter table public.customers drop constraint if exists customers_plan_code_check;
+  alter table public.customers drop constraint if exists customers_plan_check;
+  alter table public.customers drop constraint if exists customers_plan_status_check;
+  alter table public.customers drop constraint if exists customers_subscription_status_check;
+
+  alter table public.customers
+    add constraint customers_plan_code_check
+    check (plan_code in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin'));
+
+  alter table public.customers
+    add constraint customers_plan_check
+    check (plan in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin'));
+
+  alter table public.customers
+    add constraint customers_subscription_status_check
+    check (subscription_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled'));
+
+  alter table public.customers
+    add constraint customers_plan_status_check
+    check (plan_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled'));
+end $$;
+
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists set_customers_updated_at on public.customers;
+create trigger set_customers_updated_at
+before update on public.customers
+for each row
+execute function public.set_updated_at();
+
+create index if not exists customers_plan_idx on public.customers(plan);
+create index if not exists customers_plan_code_idx on public.customers(plan_code);
+create index if not exists customers_subscription_status_idx on public.customers(subscription_status);
+create index if not exists customers_shopify_customer_id_idx on public.customers(shopify_customer_id);
+create index if not exists customers_shopify_order_id_idx on public.customers(shopify_order_id);
+create index if not exists customers_shopify_subscription_id_idx on public.customers(shopify_subscription_id);
+
+create table if not exists public.webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  shopify_event_id text not null unique,
+  topic text not null,
+  shopify_order_id text,
+  shopify_subscription_id text,
+  status text not null default 'processing' check (status in ('processing', 'completed', 'skipped', 'duplicate', 'error')),
+  error_message text,
+  created_at timestamptz default now()
+);
+
+create index if not exists webhook_events_topic_idx on public.webhook_events(topic);
+create index if not exists webhook_events_shopify_order_id_idx on public.webhook_events(shopify_order_id);
+create index if not exists webhook_events_shopify_subscription_id_idx on public.webhook_events(shopify_subscription_id);
+create index if not exists webhook_events_status_idx on public.webhook_events(status);
+create index if not exists webhook_events_created_at_idx on public.webhook_events(created_at);
+
+alter table public.webhook_events enable row level security;
+
+drop policy if exists "Admins can view webhook events" on public.webhook_events;
+create policy "Admins can view webhook events"
+on public.webhook_events
+for select
+using (public.current_user_is_admin());
+
+grant select on public.webhook_events to authenticated;
+
+
+-- =============================================================================
+-- 20260622121500_add_qr_scan_utm_columns.sql
+-- =============================================================================
+
+-- Add UTM tracking columns for advanced QR analytics.
+-- Safe to run multiple times.
+
+alter table public.qr_scans
+  add column if not exists utm_source text,
+  add column if not exists utm_medium text,
+  add column if not exists utm_campaign text,
+  add column if not exists utm_content text,
+  add column if not exists utm_term text;
+
+create index if not exists qr_scans_utm_source_idx on public.qr_scans(utm_source);
+create index if not exists qr_scans_utm_medium_idx on public.qr_scans(utm_medium);
+create index if not exists qr_scans_utm_campaign_idx on public.qr_scans(utm_campaign);
+
+
+-- =============================================================================
+-- 20260622142000_add_clutch_connect.sql
+-- =============================================================================
+
+-- Clutch Connect: smart business card profiles, links, leads, and click analytics.
+-- Additive migration to preserve existing QR and analytics behavior.
+
+alter table public.qr_codes
+  add column if not exists qr_type text not null default 'url',
+  add column if not exists profile_id uuid;
+
+create table if not exists public.profiles (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references public.customers(id) on delete cascade,
+  business_name text,
+  contact_name text,
+  title text,
+  phone text,
+  email text,
+  website text,
+  bio text,
+  avatar_url text,
+  cover_url text,
+  theme_color text not null default '#FFA665',
+  slug text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  constraint profiles_customer_id_unique unique (customer_id)
+);
+
+create table if not exists public.profile_links (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  label text not null,
+  url text not null,
+  icon text,
+  sort_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.profile_leads (
+  id bigint generated by default as identity primary key,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  name text,
+  email text,
+  phone text,
+  message text,
+  honeypot text,
+  ip_hash text,
+  user_agent text,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.profile_click_events (
+  id bigint generated by default as identity primary key,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  profile_link_id uuid references public.profile_links(id) on delete set null,
+  event_type text not null check (event_type in (
+    'profile_view',
+    'call_click',
+    'text_click',
+    'email_click',
+    'website_click',
+    'vcard_download',
+    'link_click',
+    'lead_submit'
+  )),
+  metadata jsonb,
+  ip_hash text,
+  user_agent text,
+  created_at timestamptz default now()
+);
+
+alter table public.qr_codes
+  drop constraint if exists qr_codes_qr_type_check;
+
+alter table public.qr_codes
+  add constraint qr_codes_qr_type_check
+  check (qr_type in ('url', 'connect_profile'));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'qr_codes_profile_id_fkey'
+      and conrelid = 'public.qr_codes'::regclass
+  ) then
+    alter table public.qr_codes
+      add constraint qr_codes_profile_id_fkey
+      foreign key (profile_id) references public.profiles(id) on delete set null;
+  end if;
+end
+$$;
+
+create index if not exists profiles_customer_id_idx on public.profiles(customer_id);
+create index if not exists profiles_slug_idx on public.profiles(slug);
+create index if not exists profile_links_profile_id_idx on public.profile_links(profile_id);
+create index if not exists profile_links_sort_order_idx on public.profile_links(profile_id, sort_order);
+create index if not exists profile_leads_profile_id_idx on public.profile_leads(profile_id);
+create index if not exists profile_leads_created_at_idx on public.profile_leads(created_at);
+create index if not exists profile_click_events_profile_id_idx on public.profile_click_events(profile_id);
+create index if not exists profile_click_events_event_type_idx on public.profile_click_events(event_type);
+create index if not exists profile_click_events_created_at_idx on public.profile_click_events(created_at);
+create index if not exists qr_codes_qr_type_idx on public.qr_codes(qr_type);
+create index if not exists qr_codes_profile_id_idx on public.qr_codes(profile_id);
+
+drop trigger if exists set_profiles_updated_at on public.profiles;
+
+create trigger set_profiles_updated_at
+before update on public.profiles
+for each row
+execute function public.set_updated_at();
+
+alter table public.profiles enable row level security;
+alter table public.profile_links enable row level security;
+alter table public.profile_leads enable row level security;
+alter table public.profile_click_events enable row level security;
+
+-- Profiles: owners/admins can manage; public can read only active profiles.
+drop policy if exists "Public can view active profiles" on public.profiles;
+create policy "Public can view active profiles"
+  on public.profiles
+  for select
+  using (is_active = true or public.current_user_is_admin() or customer_id in (
+    select id from public.customers where auth_user_id = auth.uid()
+  ));
+
+drop policy if exists "Owners and admins can manage profiles" on public.profiles;
+create policy "Owners and admins can manage profiles"
+  on public.profiles
+  for all
+  using (
+    public.current_user_is_admin() or customer_id in (
+      select id from public.customers where auth_user_id = auth.uid()
+    )
+  )
+  with check (
+    public.current_user_is_admin() or customer_id in (
+      select id from public.customers where auth_user_id = auth.uid()
+    )
+  );
+
+-- Links: public can read active links on active profiles; owners/admins manage all.
+drop policy if exists "Public can view active profile links" on public.profile_links;
+create policy "Public can view active profile links"
+  on public.profile_links
+  for select
+  using (
+    (is_active = true and profile_id in (
+      select p.id from public.profiles p where p.is_active = true
+    ))
+    or public.current_user_is_admin()
+    or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Owners and admins can manage profile links" on public.profile_links;
+create policy "Owners and admins can manage profile links"
+  on public.profile_links
+  for all
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  )
+  with check (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+-- Leads and click events: owners/admins read; public insert only for active profiles.
+drop policy if exists "Owners and admins can view profile leads" on public.profile_leads;
+create policy "Owners and admins can view profile leads"
+  on public.profile_leads
+  for select
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Public can submit profile leads" on public.profile_leads;
+create policy "Public can submit profile leads"
+  on public.profile_leads
+  for insert
+  with check (profile_id in (
+    select id from public.profiles where is_active = true
+  ));
+
+drop policy if exists "Owners and admins can view profile click events" on public.profile_click_events;
+create policy "Owners and admins can view profile click events"
+  on public.profile_click_events
+  for select
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Public can submit profile click events" on public.profile_click_events;
+create policy "Public can submit profile click events"
+  on public.profile_click_events
+  for insert
+  with check (profile_id in (
+    select id from public.profiles where is_active = true
+  ));
+
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.profile_links to authenticated;
+grant select on public.profile_leads to authenticated;
+grant select on public.profile_click_events to authenticated;
+grant insert on public.profile_leads to anon, authenticated;
+grant insert on public.profile_click_events to anon, authenticated;
+
+
+-- =============================================================================
+-- 20260622143000_add_clutch_connect_profiles.sql
+-- =============================================================================
+
+-- Clutch Connect compatibility migration.
+-- Canonical schema and policies are defined in:
+--   20260622142000_add_clutch_connect.sql
+-- This migration is intentionally minimal so later runs do not override the
+-- canonical qr_type values or duplicate policies/triggers.
+
+alter table public.qr_codes
+  add column if not exists qr_type text not null default 'url',
+  add column if not exists profile_id uuid;
+
+alter table public.qr_codes
+  drop constraint if exists qr_codes_qr_type_check;
+
+alter table public.qr_codes
+  add constraint qr_codes_qr_type_check
+  check (qr_type in ('url', 'connect_profile'));
+
+create index if not exists qr_codes_qr_type_idx on public.qr_codes(qr_type);
+create index if not exists qr_codes_profile_id_idx on public.qr_codes(profile_id);
+
+
+-- =============================================================================
+-- 20260622151000_add_platform_to_links.sql
+-- =============================================================================
+
+-- Add platform field to profile_links table
+alter table public.profile_links add column if not exists platform text;
+
+-- Add updated_at column for tracking updates
+alter table public.profile_links add column if not exists updated_at timestamptz default now();
+
+-- Create updated_at trigger for profile_links
+create or replace function public.update_profile_links_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists profile_links_updated_at on public.profile_links;
+
+create trigger profile_links_updated_at
+before update on public.profile_links
+for each row
+execute function update_profile_links_updated_at();
+
+
+-- =============================================================================
+-- 20260622163000_add_wallet_events.sql
+-- =============================================================================
+
+-- Track Apple Wallet and Google Wallet adds for Clutch Connect profiles.
+
+create table if not exists public.wallet_events (
+  id bigint generated by default as identity primary key,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  wallet_type text not null check (wallet_type in ('apple', 'google')),
+  ip_hash text,
+  user_agent text,
+  created_at timestamptz default now()
+);
+
+create index if not exists wallet_events_profile_id_idx on public.wallet_events(profile_id);
+create index if not exists wallet_events_wallet_type_idx on public.wallet_events(wallet_type);
+create index if not exists wallet_events_created_at_idx on public.wallet_events(created_at);
+
+alter table public.wallet_events enable row level security;
+
+drop policy if exists "Owners and admins can view wallet events" on public.wallet_events;
+create policy "Owners and admins can view wallet events"
+  on public.wallet_events
+  for select
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Public can submit wallet events" on public.wallet_events;
+create policy "Public can submit wallet events"
+  on public.wallet_events
+  for insert
+  with check (profile_id in (
+    select id from public.profiles where is_active = true
+  ));
+
+grant select on public.wallet_events to authenticated;
+grant insert on public.wallet_events to anon, authenticated;
+
+
+-- =============================================================================
+-- 20260624013000_add_unified_clutch_analytics.sql
+-- =============================================================================
+
+-- Unified analytics bridge for QR + Clutch Connect.
+-- Additive migration that preserves existing qr_scans/profile_click_events behavior.
+
+create extension if not exists "pgcrypto";
+
+-- Naming compatibility for downstream analytics specs.
+create or replace view public.clutch_connect_profiles as
+select * from public.profiles;
+
+alter table public.qr_codes
+  add column if not exists connect_profile_id uuid references public.profiles(id) on delete set null;
+
+update public.qr_codes
+set connect_profile_id = profile_id
+where connect_profile_id is null
+  and profile_id is not null;
+
+alter table public.profiles
+  add column if not exists primary_qr_code_id uuid references public.qr_codes(id) on delete set null;
+
+create index if not exists qr_codes_connect_profile_id_idx on public.qr_codes(connect_profile_id);
+create index if not exists profiles_primary_qr_code_id_idx on public.profiles(primary_qr_code_id);
+
+create table if not exists public.qr_scan_events (
+  id uuid primary key default gen_random_uuid(),
+  qr_code_id uuid references public.qr_codes(id) on delete set null,
+  connect_profile_id uuid references public.profiles(id) on delete set null,
+  event_type text not null default 'scan',
+  visitor_id text,
+  ip_hash text,
+  user_agent text,
+  device_type text,
+  browser text,
+  os text,
+  country text,
+  region text,
+  city text,
+  referrer text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.connect_events (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  qr_code_id uuid references public.qr_codes(id) on delete set null,
+  event_type text not null,
+  link_id uuid references public.profile_links(id) on delete set null,
+  link_label text,
+  link_url text,
+  visitor_id text,
+  ip_hash text,
+  user_agent text,
+  device_type text,
+  browser text,
+  os text,
+  country text,
+  region text,
+  city text,
+  referrer text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists qr_scan_events_qr_code_id_idx on public.qr_scan_events(qr_code_id);
+create index if not exists qr_scan_events_connect_profile_id_idx on public.qr_scan_events(connect_profile_id);
+create index if not exists qr_scan_events_created_at_idx on public.qr_scan_events(created_at);
+create index if not exists qr_scan_events_visitor_id_idx on public.qr_scan_events(visitor_id);
+
+create index if not exists connect_events_profile_id_idx on public.connect_events(profile_id);
+create index if not exists connect_events_qr_code_id_idx on public.connect_events(qr_code_id);
+create index if not exists connect_events_event_type_idx on public.connect_events(event_type);
+create index if not exists connect_events_created_at_idx on public.connect_events(created_at);
+create index if not exists connect_events_visitor_id_idx on public.connect_events(visitor_id);
+
+alter table public.qr_scan_events enable row level security;
+alter table public.connect_events enable row level security;
+
+drop policy if exists "Owners and admins can view qr scan events" on public.qr_scan_events;
+create policy "Owners and admins can view qr scan events"
+  on public.qr_scan_events
+  for select
+  using (
+    public.current_user_is_admin()
+    or qr_code_id in (
+      select q.id
+      from public.qr_codes q
+      join public.customers c on c.id = q.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+    or connect_profile_id in (
+      select p.id
+      from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Public can submit qr scan events" on public.qr_scan_events;
+create policy "Public can submit qr scan events"
+  on public.qr_scan_events
+  for insert
+  with check (true);
+
+drop policy if exists "Owners and admins can view connect events" on public.connect_events;
+create policy "Owners and admins can view connect events"
+  on public.connect_events
+  for select
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Public can submit connect events" on public.connect_events;
+create policy "Public can submit connect events"
+  on public.connect_events
+  for insert
+  with check (profile_id in (
+    select id from public.profiles where is_active = true
+  ));
+
+grant select on public.qr_scan_events to authenticated;
+grant insert on public.qr_scan_events to anon, authenticated;
+grant select on public.connect_events to authenticated;
+grant insert on public.connect_events to anon, authenticated;
+
+
+-- =============================================================================
+-- 20260624100000_add_clutch_connect_trials.sql
+-- =============================================================================
+
+-- Add Clutch Connect 30-day trial tracking for Shopify product purchases.
+
+alter table public.customers
+  add column if not exists trial_started_at timestamptz,
+  add column if not exists trial_ends_at timestamptz,
+  add column if not exists trial_status text not null default 'none';
+
+do $$
+begin
+  alter table public.customers drop constraint if exists customers_trial_status_check;
+
+  alter table public.customers
+    add constraint customers_trial_status_check
+    check (trial_status in ('none', 'active', 'expired', 'converted', 'cancelled'));
+end $$;
+
+create index if not exists customers_trial_status_idx on public.customers(trial_status);
+create index if not exists customers_trial_ends_at_idx on public.customers(trial_ends_at);
+
+
+-- =============================================================================
+-- 20260625103000_add_qr_scan_location_source.sql
+-- =============================================================================
+
+-- Additive migration for QR scan GeoIP metadata.
+-- Existing scan rows remain unchanged; new rows can default to geoip when the app supplies coordinates.
+
+alter table public.qr_scans
+  add column if not exists location_source text;
+
+alter table public.qr_scans
+  alter column location_source set default 'geoip';
+
+
+-- =============================================================================
+-- 20260630195751_add_profile_leads_crm_fields.sql
+-- =============================================================================
+
+alter table public.profile_leads
+  add column if not exists status text not null default 'new',
+  add column if not exists archived_at timestamptz,
+  add column if not exists contacted_at timestamptz,
+  add column if not exists qualified_at timestamptz,
+  add column if not exists converted_at timestamptz,
+  add column if not exists closed_at timestamptz,
+  add column if not exists crm_notes text,
+  add column if not exists updated_at timestamptz default now();
+
+update public.profile_leads
+set status = 'new'
+where status is null
+  or lower(status) not in ('new', 'contacted', 'qualified', 'converted', 'closed', 'archived');
+
+update public.profile_leads
+set status = lower(status)
+where status <> lower(status);
+
+alter table public.profile_leads
+  alter column status set default 'new',
+  alter column status set not null,
+  alter column updated_at set default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profile_leads_status_check'
+      and conrelid = 'public.profile_leads'::regclass
+  ) then
+    alter table public.profile_leads
+      add constraint profile_leads_status_check
+      check (status in ('new', 'contacted', 'qualified', 'converted', 'closed', 'archived'));
+  end if;
+end $$;
+
+create index if not exists profile_leads_profile_status_idx on public.profile_leads(profile_id, status);
+create index if not exists profile_leads_archived_at_idx on public.profile_leads(archived_at);
+create index if not exists profile_leads_updated_at_idx on public.profile_leads(updated_at);
+
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists set_profile_leads_updated_at on public.profile_leads;
+create trigger set_profile_leads_updated_at
+before update on public.profile_leads
+for each row
+execute function public.set_updated_at();
+
+drop policy if exists "Owners and admins can update profile leads" on public.profile_leads;
+create policy "Owners and admins can update profile leads"
+  on public.profile_leads
+  for update
+  using (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  )
+  with check (
+    public.current_user_is_admin() or profile_id in (
+      select p.id from public.profiles p
+      join public.customers c on c.id = p.customer_id
+      where c.auth_user_id = auth.uid()
+    )
+  );
+
+grant update on public.profile_leads to authenticated;
+
+
+-- =============================================================================
+-- 20260702233000_add_smart_card_order_tracking.sql
+-- =============================================================================
+
+-- Smart Business Card order tracking tables, indexes, and RLS policies.
+
+create extension if not exists "pgcrypto";
+
+-- Ensure shared helper exists for updated_at triggers.
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- -----------------------------------------------------------------------------
+-- card_orders
+-- -----------------------------------------------------------------------------
+create table if not exists public.card_orders (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references public.customers(id) on delete set null,
+  shopify_order_id text not null,
+  shopify_order_number text,
+  shopify_customer_id text,
+  customer_name text,
+  customer_email text,
+  customer_phone text,
+  product_title text,
+  variant_title text,
+  engraving_requested boolean not null default false,
+  engraving_business_name text,
+  engraving_title text,
+  engraving_phone text,
+  engraving_email text,
+  custom_details text,
+  logo_file_url text,
+  status text not null default 'setup_pending',
+  raw_line_item jsonb,
+  raw_order_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.card_orders
+  add column if not exists customer_id uuid references public.customers(id) on delete set null,
+  add column if not exists shopify_order_id text,
+  add column if not exists shopify_order_number text,
+  add column if not exists shopify_customer_id text,
+  add column if not exists customer_name text,
+  add column if not exists customer_email text,
+  add column if not exists customer_phone text,
+  add column if not exists product_title text,
+  add column if not exists variant_title text,
+  add column if not exists engraving_requested boolean not null default false,
+  add column if not exists engraving_business_name text,
+  add column if not exists engraving_title text,
+  add column if not exists engraving_phone text,
+  add column if not exists engraving_email text,
+  add column if not exists custom_details text,
+  add column if not exists logo_file_url text,
+  add column if not exists status text not null default 'setup_pending',
+  add column if not exists raw_line_item jsonb,
+  add column if not exists raw_order_payload jsonb,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+-- -----------------------------------------------------------------------------
+-- shopify_orders
+-- -----------------------------------------------------------------------------
+create table if not exists public.shopify_orders (
+  id uuid primary key default gen_random_uuid(),
+  shopify_order_id text not null unique,
+  shopify_order_number text,
+  customer_id uuid references public.customers(id) on delete set null,
+  customer_email text,
+  total_price numeric,
+  financial_status text,
+  raw_payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.shopify_orders
+  add column if not exists shopify_order_id text,
+  add column if not exists shopify_order_number text,
+  add column if not exists customer_id uuid references public.customers(id) on delete set null,
+  add column if not exists customer_email text,
+  add column if not exists total_price numeric,
+  add column if not exists financial_status text,
+  add column if not exists raw_payload jsonb,
+  add column if not exists created_at timestamptz not null default now();
+
+create unique index if not exists shopify_orders_shopify_order_id_key
+  on public.shopify_orders(shopify_order_id);
+
+-- -----------------------------------------------------------------------------
+-- shopify_webhooks
+-- -----------------------------------------------------------------------------
+create table if not exists public.shopify_webhooks (
+  id uuid primary key default gen_random_uuid(),
+  webhook_id text not null unique,
+  topic text not null,
+  shop_domain text,
+  processed_at timestamptz not null default now()
+);
+
+alter table public.shopify_webhooks
+  add column if not exists webhook_id text,
+  add column if not exists topic text,
+  add column if not exists shop_domain text,
+  add column if not exists processed_at timestamptz not null default now();
+
+create unique index if not exists shopify_webhooks_webhook_id_key
+  on public.shopify_webhooks(webhook_id);
+
+-- -----------------------------------------------------------------------------
+-- Required indexes
+-- -----------------------------------------------------------------------------
+create index if not exists card_orders_shopify_order_id_idx
+  on public.card_orders(shopify_order_id);
+create index if not exists card_orders_shopify_order_number_idx
+  on public.card_orders(shopify_order_number);
+create index if not exists card_orders_customer_email_idx
+  on public.card_orders(customer_email);
+create index if not exists card_orders_status_idx
+  on public.card_orders(status);
+create index if not exists card_orders_created_at_idx
+  on public.card_orders(created_at);
+
+create index if not exists shopify_orders_shopify_order_number_idx
+  on public.shopify_orders(shopify_order_number);
+create index if not exists shopify_orders_customer_email_idx
+  on public.shopify_orders(customer_email);
+create index if not exists shopify_orders_created_at_idx
+  on public.shopify_orders(created_at);
+
+create index if not exists shopify_webhooks_created_at_idx
+  on public.shopify_webhooks(processed_at);
+
+-- -----------------------------------------------------------------------------
+-- updated_at trigger for card_orders
+-- -----------------------------------------------------------------------------
+drop trigger if exists set_card_orders_updated_at on public.card_orders;
+create trigger set_card_orders_updated_at
+before update on public.card_orders
+for each row
+execute function public.set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- RLS
+-- -----------------------------------------------------------------------------
+alter table public.card_orders enable row level security;
+alter table public.shopify_orders enable row level security;
+alter table public.shopify_webhooks enable row level security;
+
+-- card_orders: admin can read/update all.
+drop policy if exists "card_orders_admin_read_all" on public.card_orders;
+create policy "card_orders_admin_read_all"
+on public.card_orders
+for select
+using (public.current_user_is_admin());
+
+drop policy if exists "card_orders_admin_update_all" on public.card_orders;
+create policy "card_orders_admin_update_all"
+on public.card_orders
+for update
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+-- card_orders: customers can read only their own records.
+drop policy if exists "card_orders_customer_read_own" on public.card_orders;
+create policy "card_orders_customer_read_own"
+on public.card_orders
+for select
+using (
+  customer_id in (
+    select c.id
+    from public.customers c
+    where c.auth_user_id = auth.uid()
+  )
+);
+
+-- shopify_orders visibility mirrors ownership/admin.
+drop policy if exists "shopify_orders_admin_read_all" on public.shopify_orders;
+create policy "shopify_orders_admin_read_all"
+on public.shopify_orders
+for select
+using (public.current_user_is_admin());
+
+drop policy if exists "shopify_orders_customer_read_own" on public.shopify_orders;
+create policy "shopify_orders_customer_read_own"
+on public.shopify_orders
+for select
+using (
+  customer_id in (
+    select c.id
+    from public.customers c
+    where c.auth_user_id = auth.uid()
+  )
+);
+
+-- webhook logs are admin-readable.
+drop policy if exists "shopify_webhooks_admin_read_all" on public.shopify_webhooks;
+create policy "shopify_webhooks_admin_read_all"
+on public.shopify_webhooks
+for select
+using (public.current_user_is_admin());
+
+-- Service role server routes can write.
+drop policy if exists "card_orders_service_role_insert" on public.card_orders;
+create policy "card_orders_service_role_insert"
+on public.card_orders
+as permissive
+for insert
+to service_role
+with check (true);
+
+drop policy if exists "card_orders_service_role_update" on public.card_orders;
+create policy "card_orders_service_role_update"
+on public.card_orders
+as permissive
+for update
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "shopify_orders_service_role_insert" on public.shopify_orders;
+create policy "shopify_orders_service_role_insert"
+on public.shopify_orders
+as permissive
+for insert
+to service_role
+with check (true);
+
+drop policy if exists "shopify_orders_service_role_update" on public.shopify_orders;
+create policy "shopify_orders_service_role_update"
+on public.shopify_orders
+as permissive
+for update
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "shopify_webhooks_service_role_insert" on public.shopify_webhooks;
+create policy "shopify_webhooks_service_role_insert"
+on public.shopify_webhooks
+as permissive
+for insert
+to service_role
+with check (true);
+
+drop policy if exists "shopify_webhooks_service_role_update" on public.shopify_webhooks;
+create policy "shopify_webhooks_service_role_update"
+on public.shopify_webhooks
+as permissive
+for update
+to service_role
+using (true)
+with check (true);
+
+-- Grants (RLS still applies).
+grant select on public.card_orders to authenticated;
+grant select on public.shopify_orders to authenticated;
+grant select on public.shopify_webhooks to authenticated;
+
+
+-- =============================================================================
+-- 20260703001000_add_card_orders_onboarding_email_fields.sql
+-- =============================================================================
+
+-- Phase 5: onboarding email idempotency fields for Smart Card orders.
+
+alter table public.card_orders
+  add column if not exists welcome_email_sent_at timestamptz,
+  add column if not exists onboarding_email_type text;
+
+create index if not exists card_orders_welcome_email_sent_at_idx
+  on public.card_orders(welcome_email_sent_at);
+
+
+-- =============================================================================
+-- 20260703120000_add_card_orders_fulfillment_workflow_fields.sql
+-- =============================================================================
+
+-- Phase 9: internal fulfillment workflow metadata for Smart Business Card orders.
+
+alter table public.card_orders
+  add column if not exists internal_notes text,
+  add column if not exists proof_url text,
+  add column if not exists proof_sent_at timestamptz,
+  add column if not exists customer_approved_at timestamptz,
+  add column if not exists supplier_ordered_at timestamptz,
+  add column if not exists tracking_number text,
+  add column if not exists tracking_url text,
+  add column if not exists fulfilled_at timestamptz,
+  add column if not exists setup_completed_at timestamptz,
+  add column if not exists updated_at timestamptz not null default now();
+
+create index if not exists card_orders_proof_sent_at_idx
+  on public.card_orders(proof_sent_at);
+
+create index if not exists card_orders_customer_approved_at_idx
+  on public.card_orders(customer_approved_at);
+
+create index if not exists card_orders_supplier_ordered_at_idx
+  on public.card_orders(supplier_ordered_at);
+
+create index if not exists card_orders_fulfilled_at_idx
+  on public.card_orders(fulfilled_at);
+
+create index if not exists card_orders_setup_completed_at_idx
+  on public.card_orders(setup_completed_at);
+
+
+-- =============================================================================
+-- 20260703130000_add_card_orders_fulfillment_handoff_fields.sql
+-- =============================================================================
+
+-- Phase 9A: Smart Business Card order handler handoff metadata.
+
+alter table public.card_orders
+  add column if not exists fulfillment_handler_email text,
+  add column if not exists fulfillment_sent_at timestamptz,
+  add column if not exists fulfillment_status text not null default 'not_sent',
+  add column if not exists fulfillment_notes text,
+  add column if not exists supplier_order_id text;
+
+create index if not exists card_orders_fulfillment_status_idx
+  on public.card_orders(fulfillment_status);
+
+create index if not exists card_orders_fulfillment_sent_at_idx
+  on public.card_orders(fulfillment_sent_at);
+
+
+-- =============================================================================
+-- 20260703143000_add_card_orders_proof_approval_fields.sql
+-- =============================================================================
+
+-- Final phase: proof approval workflow metadata for Smart Business Card orders.
+
+alter table public.card_orders
+  add column if not exists approver_name text,
+  add column if not exists approver_email text,
+  add column if not exists proof_url text,
+  add column if not exists proof_token text,
+  add column if not exists proof_sent_at timestamptz,
+  add column if not exists proof_viewed_at timestamptz,
+  add column if not exists customer_approved_at timestamptz,
+  add column if not exists changes_requested_at timestamptz,
+  add column if not exists approval_notes text,
+  add column if not exists approval_status text not null default 'not_ready';
+
+create unique index if not exists card_orders_proof_token_key
+  on public.card_orders(proof_token)
+  where proof_token is not null;
+
+create index if not exists card_orders_approval_status_idx
+  on public.card_orders(approval_status);
+
+create index if not exists card_orders_proof_viewed_at_idx
+  on public.card_orders(proof_viewed_at);
+
+create index if not exists card_orders_changes_requested_at_idx
+  on public.card_orders(changes_requested_at);
+
+
+-- =============================================================================
+-- 20260704010000_add_system_smart_card_qr_fields.sql
+-- =============================================================================
+
+-- Additive fields and constraints for system-managed Smart Card Link records.
+
+alter table public.qr_codes
+  add column if not exists is_system boolean not null default false,
+  add column if not exists qr_type text not null default 'url',
+  add column if not exists card_order_id uuid,
+  add column if not exists connect_profile_id uuid,
+  add column if not exists profile_id uuid;
+
+-- Keep qr_type flexible enough for existing builder types and add smart_card.
+alter table public.qr_codes
+  drop constraint if exists qr_codes_qr_type_check;
+
+alter table public.qr_codes
+  add constraint qr_codes_qr_type_check
+  check (
+    qr_type in (
+      'url',
+      'connect_profile',
+      'text',
+      'wifi',
+      'email',
+      'sms',
+      'image',
+      'pdf',
+      'vcard',
+      'smart_card'
+    )
+  );
+
+-- Add profile references if constraints are not present yet.
+do $$
+begin
+  if exists (select 1 from pg_class where relname = 'profiles' and relnamespace = 'public'::regnamespace)
+     and not exists (
+       select 1
+       from pg_constraint
+       where conname = 'qr_codes_profile_id_fkey'
+         and conrelid = 'public.qr_codes'::regclass
+     ) then
+    alter table public.qr_codes
+      add constraint qr_codes_profile_id_fkey
+      foreign key (profile_id) references public.profiles(id) on delete set null;
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (select 1 from pg_class where relname = 'profiles' and relnamespace = 'public'::regnamespace)
+     and not exists (
+       select 1
+       from pg_constraint
+       where conname = 'qr_codes_connect_profile_id_fkey'
+         and conrelid = 'public.qr_codes'::regclass
+     ) then
+    alter table public.qr_codes
+      add constraint qr_codes_connect_profile_id_fkey
+      foreign key (connect_profile_id) references public.profiles(id) on delete set null;
+  end if;
+end
+$$;
+
+-- card_orders reference is optional depending on table existence.
+do $$
+begin
+  if exists (select 1 from pg_class where relname = 'card_orders' and relnamespace = 'public'::regnamespace)
+     and not exists (
+       select 1
+       from pg_constraint
+       where conname = 'qr_codes_card_order_id_fkey'
+         and conrelid = 'public.qr_codes'::regclass
+     ) then
+    alter table public.qr_codes
+      add constraint qr_codes_card_order_id_fkey
+      foreign key (card_order_id) references public.card_orders(id) on delete set null;
+  end if;
+end
+$$;
+
+create index if not exists qr_codes_is_system_idx on public.qr_codes(is_system);
+create index if not exists qr_codes_card_order_id_idx on public.qr_codes(card_order_id);
+create index if not exists qr_codes_qr_type_is_system_idx on public.qr_codes(qr_type, is_system);
+create index if not exists qr_codes_connect_profile_id_idx on public.qr_codes(connect_profile_id);
+create index if not exists qr_codes_profile_id_idx on public.qr_codes(profile_id);
+
+
+-- =============================================================================
+-- 20260704011000_add_card_orders_system_qr_fields.sql
+-- =============================================================================
+
+-- Additive Smart Card Link fields on card_orders for downstream fulfillment/diagnostics.
+
+alter table public.card_orders
+  add column if not exists system_qr_code_id uuid,
+  add column if not exists system_qr_slug text,
+  add column if not exists system_qr_url text,
+  add column if not exists system_qr_png_url text,
+  add column if not exists system_qr_svg_url text,
+  add column if not exists nfc_url text;
+
+do $$
+begin
+  if exists (select 1 from pg_class where relname = 'qr_codes' and relnamespace = 'public'::regnamespace)
+     and not exists (
+       select 1
+       from pg_constraint
+       where conname = 'card_orders_system_qr_code_id_fkey'
+         and conrelid = 'public.card_orders'::regclass
+     ) then
+    alter table public.card_orders
+      add constraint card_orders_system_qr_code_id_fkey
+      foreign key (system_qr_code_id) references public.qr_codes(id) on delete set null;
+  end if;
+end
+$$;
+
+create index if not exists card_orders_system_qr_code_id_idx on public.card_orders(system_qr_code_id);
+create index if not exists card_orders_system_qr_slug_idx on public.card_orders(system_qr_slug);
+
+
+-- =============================================================================
+-- 20260704012000_reconcile_untracked_profile_schema.sql
+-- =============================================================================
+
+-- Capture profile schema changes that exist in production but were originally
+-- applied from undated SQL files. Every statement is safe on both the current
+-- production-shaped schema and a fresh migration run.
+
+alter table public.profiles
+  add column if not exists layout text default 'grid',
+  add column if not exists show_card_showcase boolean default true,
+  add column if not exists show_lead_form boolean default true,
+  add column if not exists builder_config jsonb default null;
+
+alter table public.profiles
+  drop constraint if exists profiles_layout_check;
+
+alter table public.profiles
+  add constraint profiles_layout_check
+  check (layout in ('grid', 'stack', 'buttons'));
+
+alter table public.profile_links
+  add column if not exists custom_color text,
+  add column if not exists icon_style text default 'emoji',
+  add column if not exists description text,
+  add column if not exists platform text;
+
+alter table public.profile_links
+  drop constraint if exists profile_links_icon_style_check;
+
+alter table public.profile_links
+  add constraint profile_links_icon_style_check
+  check (icon_style in ('emoji', 'solid', 'outline', 'none'));
+
+create index if not exists profiles_builder_config_idx
+  on public.profiles using gin (builder_config);
+
+create index if not exists profile_links_platform_idx
+  on public.profile_links(platform);
+
+create index if not exists profile_links_is_active_idx
+  on public.profile_links(is_active);
+
+comment on column public.profiles.builder_config is
+  'JSONB configuration for block-based profile builder. Contains theme, blocks, and form definitions.';
+
+
+-- =============================================================================
+-- 20260706123000_add_qr_style_config.sql
+-- =============================================================================
+
+alter table public.qr_codes
+  add column if not exists style_config jsonb not null default '{}'::jsonb;
+
+notify pgrst, 'reload schema';
+
+
+-- =============================================================================
+-- 20260712100000_add_clutch_codes_allowances_and_sources.sql
+-- =============================================================================
+
+-- Clutch Codes subscription entitlements and durable Shopify event/email idempotency.
+-- Run supabase/preflight/20260712100000_classify_clutch_codes_allowances.sql first
+-- and resolve every review_required row before relying on migrated capacity.
+
+alter table public.customers
+  add column if not exists included_qr_allowance integer not null default 0,
+  add column if not exists subscription_qr_limit integer not null default 0,
+  add column if not exists clutch_codes_plan_code text,
+  add column if not exists clutch_codes_subscription_status text not null default 'inactive',
+  add column if not exists clutch_codes_welcome_email_sent_at timestamptz,
+  add column if not exists clutch_codes_welcome_email_event_key text,
+  add column if not exists shopify_line_item_id text;
+
+alter table public.customers
+  drop constraint if exists customers_plan_check,
+  drop constraint if exists customers_plan_code_check,
+  drop constraint if exists customers_included_qr_allowance_check,
+  drop constraint if exists customers_subscription_qr_limit_check,
+  drop constraint if exists customers_clutch_codes_plan_code_check,
+  drop constraint if exists customers_clutch_codes_subscription_status_check;
+
+alter table public.customers
+  add constraint customers_plan_check
+    check (plan in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')) not valid,
+  add constraint customers_plan_code_check
+    check (plan_code in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')) not valid,
+  add constraint customers_included_qr_allowance_check
+    check (included_qr_allowance >= 0),
+  add constraint customers_subscription_qr_limit_check
+    check (subscription_qr_limit >= 0),
+  add constraint customers_clutch_codes_plan_code_check
+    check (
+      clutch_codes_plan_code is null
+      or clutch_codes_plan_code in ('clutch_codes_starter', 'clutch_codes_growth', 'clutch_codes_pro')
+    ),
+  add constraint customers_clutch_codes_subscription_status_check
+    check (clutch_codes_subscription_status in ('inactive', 'active', 'past_due', 'unpaid', 'paused', 'cancelled', 'expired'));
+
+alter table public.customers validate constraint customers_plan_check;
+alter table public.customers validate constraint customers_plan_code_check;
+
+-- Constraint smoke test: this row is inserted and deleted inside the migration and
+-- proves the authoritative new-customer values are accepted without persisting data.
+do $$
+declare
+  validation_customer_id uuid;
+begin
+  insert into public.customers (email, plan, plan_code, included_qr_allowance, subscription_qr_limit)
+  values (
+    'clutch-codes-migration-validation+' || gen_random_uuid()::text || '@invalid.example',
+    'connect_basic',
+    'connect_basic',
+    0,
+    0
+  )
+  returning id into validation_customer_id;
+
+  delete from public.customers where id = validation_customer_id;
+end;
+$$;
+
+comment on column public.customers.qr_limit is
+  'Legacy compatibility mirror/fallback only. Authoritative capacity is included_qr_allowance + subscription_qr_limit.';
+
+create table if not exists public.clutch_codes_allowance_migration_audit (
+  customer_id uuid primary key references public.customers(id) on delete cascade,
+  classification text not null,
+  review_required boolean not null,
+  proposed_included_qr_allowance integer not null default 0 check (proposed_included_qr_allowance >= 0),
+  proposed_subscription_qr_limit integer not null default 0 check (proposed_subscription_qr_limit >= 0),
+  evidence jsonb not null default '{}'::jsonb,
+  classified_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  review_notes text
+);
+
+alter table public.clutch_codes_allowance_migration_audit enable row level security;
+revoke all on table public.clutch_codes_allowance_migration_audit from anon, authenticated;
+create index if not exists clutch_codes_allowance_migration_audit_review_idx
+  on public.clutch_codes_allowance_migration_audit(review_required, classification);
+
+-- Classify and persist evidence before changing either authoritative allowance.
+with evidence as (
+  select
+    c.id as customer_id,
+    c.is_admin,
+    c.plan,
+    c.plan_code,
+    c.subscription_status,
+    c.shopify_subscription_id,
+    c.shopify_order_id,
+    greatest(coalesce(c.qr_limit, 0), 0) as legacy_qr_limit,
+    coalesce(qr.qr_count, 0) as existing_qr_count,
+    coalesce(cards.card_order_count, 0) as confirmed_card_order_count,
+    coalesce(orders.has_paid_clutch_codes_order, false) as has_paid_clutch_codes_order
+  from public.customers c
+  left join lateral (
+    select count(*)::integer as qr_count
+    from public.qr_codes q
+    where q.customer_id = c.id
+  ) qr on true
+  left join lateral (
+    select count(*)::integer as card_order_count
+    from public.card_orders co
+    where co.customer_id = c.id
+  ) cards on true
+  left join lateral (
+    select bool_or(
+      so.financial_status in ('paid', 'partially_paid')
+      and exists (
+        select 1
+        from jsonb_array_elements(coalesce(so.raw_payload->'line_items', '[]'::jsonb)) li
+        where upper(coalesce(li->>'sku', '')) in (
+          'CLUTCH-CODES-STARTER', 'CLUTCH-CODES-GROWTH', 'CLUTCH-CODES-PRO'
+        )
+      )
+    ) as has_paid_clutch_codes_order
+    from public.shopify_orders so
+    where so.customer_id = c.id
+       or (c.shopify_order_id is not null and so.shopify_order_id = c.shopify_order_id)
+  ) orders on true
+), classified as (
+  select
+    evidence.*,
+    (
+      shopify_subscription_id is not null
+      and lower(coalesce(subscription_status, '')) = 'active'
+      and lower(coalesce(plan_code, plan, '')) in ('qr_pro', 'qr_pro_plus', 'agency')
+    ) as has_active_paid_subscription_evidence
+  from evidence
+)
+insert into public.clutch_codes_allowance_migration_audit (
+  customer_id,
+  classification,
+  review_required,
+  proposed_included_qr_allowance,
+  proposed_subscription_qr_limit,
+  evidence
+)
+select
+  customer_id,
+  case
+    when is_admin then 'admin_preserve'
+    when has_active_paid_subscription_evidence and confirmed_card_order_count > 0
+      then 'active_paid_subscription_plus_confirmed_card'
+    when has_active_paid_subscription_evidence then 'active_paid_subscription'
+    when confirmed_card_order_count > 0 then 'confirmed_card_allowance'
+    when has_paid_clutch_codes_order then 'manual_review_paid_order_without_contract'
+    when existing_qr_count > 0 then 'manual_review_existing_qr_without_source'
+    when lower(coalesce(plan_code, plan, '')) in ('qr_pro', 'qr_pro_plus', 'agency')
+      then 'manual_review_legacy_paid_plan_without_subscription_id'
+    else 'manual_review_no_entitlement_source'
+  end,
+  not (
+    is_admin
+    or has_active_paid_subscription_evidence
+    or confirmed_card_order_count > 0
+  ),
+  case when not is_admin then confirmed_card_order_count else 0 end,
+  case when not is_admin and has_active_paid_subscription_evidence then legacy_qr_limit else 0 end,
+  jsonb_build_object(
+    'is_admin', is_admin,
+    'plan', plan,
+    'plan_code', plan_code,
+    'subscription_status', subscription_status,
+    'has_shopify_subscription_id', shopify_subscription_id is not null,
+    'shopify_order_id', shopify_order_id,
+    'legacy_qr_limit', legacy_qr_limit,
+    'existing_qr_count', existing_qr_count,
+    'confirmed_card_order_count', confirmed_card_order_count,
+    'has_paid_clutch_codes_order', has_paid_clutch_codes_order
+  )
+from classified
+on conflict (customer_id) do update set
+  classification = excluded.classification,
+  review_required = excluded.review_required,
+  proposed_included_qr_allowance = excluded.proposed_included_qr_allowance,
+  proposed_subscription_qr_limit = excluded.proposed_subscription_qr_limit,
+  evidence = excluded.evidence,
+  classified_at = now();
+
+-- Apply only evidence-backed classifications. Ambiguous rows remain at zero and
+-- are visible in clutch_codes_allowance_migration_audit for manual review.
+update public.customers c
+set
+  included_qr_allowance = audit.proposed_included_qr_allowance,
+  subscription_qr_limit = audit.proposed_subscription_qr_limit
+from public.clutch_codes_allowance_migration_audit audit
+where audit.customer_id = c.id
+  and audit.review_required = false
+  and audit.classification <> 'admin_preserve';
+
+create unique index if not exists customers_clutch_codes_welcome_email_event_key
+  on public.customers(clutch_codes_welcome_email_event_key)
+  where clutch_codes_welcome_email_event_key is not null;
+
+create index if not exists customers_clutch_codes_plan_code_idx
+  on public.customers(clutch_codes_plan_code);
+
+create index if not exists customers_shopify_line_item_id_idx
+  on public.customers(shopify_line_item_id);
+
+create table if not exists public.shopify_entitlement_events (
+  id uuid primary key default gen_random_uuid(),
+  event_key text not null unique,
+  shopify_event_id text not null,
+  topic text not null,
+  shopify_order_id text,
+  shopify_line_item_id text,
+  shopify_subscription_contract_id text,
+  customer_id uuid references public.customers(id) on delete set null,
+  action text not null,
+  plan_code text,
+  subscription_qr_limit integer,
+  status text not null default 'processing',
+  email_sent_at timestamptz,
+  error_message text,
+  raw_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint shopify_entitlement_events_status_check
+    check (status in ('processing', 'completed', 'skipped', 'failed')),
+  constraint shopify_entitlement_events_plan_code_check
+    check (
+      plan_code is null
+      or plan_code in ('clutch_codes_starter', 'clutch_codes_growth', 'clutch_codes_pro')
+    ),
+  constraint shopify_entitlement_events_subscription_qr_limit_check
+    check (subscription_qr_limit is null or subscription_qr_limit >= 0)
+);
+
+create index if not exists shopify_entitlement_events_shopify_event_id_idx
+  on public.shopify_entitlement_events(shopify_event_id);
+
+create index if not exists shopify_entitlement_events_shopify_order_id_idx
+  on public.shopify_entitlement_events(shopify_order_id);
+
+create index if not exists shopify_entitlement_events_subscription_contract_id_idx
+  on public.shopify_entitlement_events(shopify_subscription_contract_id);
+
+create index if not exists shopify_entitlement_events_customer_id_idx
+  on public.shopify_entitlement_events(customer_id);
+
+alter table public.shopify_entitlement_events enable row level security;
+revoke all on table public.shopify_entitlement_events from anon, authenticated;
+
+create or replace function public.enforce_qr_limit()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  qr_total integer;
+  allowed_qrs integer;
+  customer_admin boolean;
+begin
+  select
+    greatest(coalesce(c.included_qr_allowance, 0), 0)
+      + greatest(coalesce(c.subscription_qr_limit, 0), 0),
+    c.is_admin
+  into allowed_qrs, customer_admin
+  from public.customers c
+  where c.id = new.customer_id;
+
+  if customer_admin = true then
+    return new;
+  end if;
+
+  select count(*) into qr_total
+  from public.qr_codes q
+  where q.customer_id = new.customer_id;
+
+  if qr_total >= allowed_qrs then
+    raise exception 'Maximum QR code limit reached for this customer';
+  end if;
+
+  return new;
+end;
+$$;

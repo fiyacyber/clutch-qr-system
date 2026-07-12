@@ -21,6 +21,14 @@ const migrationSql = fs.readFileSync(
   "utf8"
 );
 const cleanSchemaSql = fs.readFileSync(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+const baselineSql = fs.readFileSync(
+  new URL("../supabase/migrations/20260618000000_initial_application_schema.sql", import.meta.url),
+  "utf8"
+);
+const reconciliationSql = fs.readFileSync(
+  new URL("../supabase/migrations/20260704012000_reconcile_untracked_profile_schema.sql", import.meta.url),
+  "utf8"
+);
 const preflightSql = fs.readFileSync(
   new URL("../supabase/preflight/20260712100000_classify_clutch_codes_allowances.sql", import.meta.url),
   "utf8"
@@ -313,6 +321,36 @@ test("clean schema starts with zero included and subscription allowance", () => 
   assert.match(cleanSchemaSql, /included_qr_allowance integer not null default 0/i);
   assert.match(cleanSchemaSql, /subscription_qr_limit integer not null default 0/i);
   assert.doesNotMatch(cleanSchemaSql, /included_qr_allowance integer not null default 10/i);
+});
+
+test("clean migration chain includes the historical foundation before forward migrations", () => {
+  assert.match(baselineSql, /create table public\.customers/i);
+  assert.match(baselineSql, /create table public\.qr_codes/i);
+  assert.match(baselineSql, /create table public\.qr_scans/i);
+  assert.match(baselineSql, /insert into storage\.buckets/i);
+
+  const baselinePosition = cleanSchemaSql.indexOf("20260618000000_initial_application_schema.sql");
+  const firstForwardPosition = cleanSchemaSql.indexOf("20260619090000_add_customer_plan_code.sql");
+  const entitlementPosition = cleanSchemaSql.indexOf("20260712100000_add_clutch_codes_allowances_and_sources.sql");
+  assert.ok(baselinePosition >= 0);
+  assert.ok(firstForwardPosition > baselinePosition);
+  assert.ok(entitlementPosition > firstForwardPosition);
+});
+
+test("untracked production profile fields are reconciled without adding obsolete QR builder fields", () => {
+  assert.match(reconciliationSql, /builder_config jsonb/i);
+  assert.match(reconciliationSql, /show_card_showcase boolean/i);
+  assert.match(reconciliationSql, /profile_links_icon_style_check/i);
+  assert.doesNotMatch(reconciliationSql, /add column if not exists theme\b/i);
+  assert.doesNotMatch(reconciliationSql, /add column if not exists download_size\b/i);
+});
+
+test("every executable migration is timestamped and duplicate Linktree files are absent", () => {
+  const migrationDirectory = new URL("../supabase/migrations/", import.meta.url);
+  const files = fs.readdirSync(migrationDirectory).filter((file) => file.endsWith(".sql"));
+  assert.ok(files.length > 0);
+  assert.equal(files.every((file) => /^\d{14}_[a-z0-9_]+\.sql$/.test(file)), true);
+  assert.equal(files.some((file) => file.includes("enhance_connect_for_linktree")), false);
 });
 
 test("legacy paid-looking capacity without a contract ID is not made permanent included capacity", () => {
