@@ -1,17 +1,34 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import {
   buildClutchCodesCancellationPatch,
   CLUTCH_CODES_PLANS,
+  classifyLegacyAllowance,
   detectClutchCodesSubscription,
   getEffectiveClutchCodesCapacity,
+  extractShopifySubscriptionContractId,
   normalizeClutchCodesPlanCode,
   provisionClutchCodesPaidOrder,
   type ClutchCodesCustomerRecord,
   type ClutchCodesProvisioningDependencies,
   type ShopifyPaidOrder,
 } from "../lib/clutch-codes.ts";
-import { detectExtensionPlan } from "../shopify-extensions/clutch-codes-onboarding/src/plans.ts";
+import { detectExtensionPlan, EXTENSION_COPY } from "../shopify-extensions/clutch-codes-onboarding/src/plans.ts";
+
+const migrationSql = fs.readFileSync(
+  new URL("../supabase/migrations/20260712100000_add_clutch_codes_allowances_and_sources.sql", import.meta.url),
+  "utf8"
+);
+const cleanSchemaSql = fs.readFileSync(new URL("../supabase/schema.sql", import.meta.url), "utf8");
+const preflightSql = fs.readFileSync(
+  new URL("../supabase/preflight/20260712100000_classify_clutch_codes_allowances.sql", import.meta.url),
+  "utf8"
+);
+const contractLifecycleSource = fs.readFileSync(
+  new URL("../lib/clutch-codes-supabase.ts", import.meta.url),
+  "utf8"
+);
 
 function orderForSku(sku: string, overrides: Partial<ShopifyPaidOrder> = {}): ShopifyPaidOrder {
   return {
@@ -269,4 +286,101 @@ test("extension renders only for the three canonical SKUs", () => {
 
 test("legacy qr_pro normalizes to the current Pro compatibility plan", () => {
   assert.equal(normalizeClutchCodesPlanCode("qr_pro"), "clutch_codes_pro");
+});
+
+test("new Clutch Codes customer insert is compatible with canonical plan constraints", () => {
+  const supported = [
+    "free_qr",
+    "connect_basic",
+    "connect_plus",
+    "qr_pro",
+    "qr_pro_plus",
+    "agency",
+    "admin",
+  ];
+  for (const plan of supported) {
+    assert.match(migrationSql, new RegExp(`['\"]${plan}['\"]`));
+    assert.match(cleanSchemaSql, new RegExp(`['\"]${plan}['\"]`));
+  }
+  assert.match(migrationSql, /values\s*\([\s\S]*'connect_basic',\s*'connect_basic',\s*0,\s*0[\s\S]*\)/i);
+});
+
+test("clean schema starts with zero included and subscription allowance", () => {
+  assert.match(cleanSchemaSql, /included_qr_allowance integer not null default 0/i);
+  assert.match(cleanSchemaSql, /subscription_qr_limit integer not null default 0/i);
+  assert.doesNotMatch(cleanSchemaSql, /included_qr_allowance integer not null default 10/i);
+});
+
+test("legacy paid-looking capacity without a contract ID is not made permanent included capacity", () => {
+  const result = classifyLegacyAllowance({
+    isAdmin: false,
+    plan: "qr_pro",
+    planCode: "qr_pro",
+    subscriptionStatus: "active",
+    hasShopifySubscriptionId: false,
+    hasPaidClutchCodesOrder: true,
+    qrLimit: 100,
+    existingQrCount: 3,
+    confirmedCardOrderCount: 0,
+  });
+  assert.equal(result.reviewRequired, true);
+  assert.equal(result.includedQrAllowance, 0);
+  assert.equal(result.subscriptionQrLimit, 0);
+  assert.equal(result.classification, "manual_review_paid_order_without_contract");
+  assert.doesNotMatch(
+    migrationSql,
+    /set\s+included_qr_allowance\s*=\s*greatest\s*\(\s*coalesce\s*\(\s*qr_limit/i
+  );
+});
+
+test("ambiguous legacy rows are surfaced for manual review", () => {
+  const result = classifyLegacyAllowance({
+    isAdmin: false,
+    plan: "qr_pro_plus",
+    planCode: "qr_pro_plus",
+    subscriptionStatus: "active",
+    hasShopifySubscriptionId: false,
+    hasPaidClutchCodesOrder: false,
+    qrLimit: 60,
+    existingQrCount: 0,
+    confirmedCardOrderCount: 0,
+  });
+  assert.equal(result.reviewRequired, true);
+  assert.match(result.classification, /^manual_review_/);
+  assert.match(migrationSql, /clutch_codes_allowance_migration_audit/);
+  assert.match(migrationSql, /audit\.review_required\s*=\s*false/i);
+  assert.match(preflightSql, /review_required/);
+});
+
+test("extension confirms the order without claiming dashboard provisioning succeeded", () => {
+  assert.equal(EXTENSION_COPY.heading, "Your Clutch Codes order is confirmed");
+  assert.equal(
+    EXTENSION_COPY.body,
+    "We’re preparing your dashboard access using the email entered during checkout."
+  );
+  assert.doesNotMatch(`${EXTENSION_COPY.heading} ${EXTENSION_COPY.body}`, /dashboard access is ready/i);
+});
+
+test("unverified order fields do not create a false subscription contract linkage", () => {
+  const payload = orderForSku("CLUTCH-CODES-PRO", {
+    subscription_contract_id: "gid://shopify/SubscriptionContract/unverified",
+    subscription_id: "also-unverified",
+    line_items: [
+      {
+        id: "line-1",
+        sku: "CLUTCH-CODES-PRO",
+        selling_plan_allocation: { subscription_contract_id: "still-unverified" },
+      },
+    ],
+  });
+  assert.equal(extractShopifySubscriptionContractId(payload, payload.line_items?.[0]), null);
+});
+
+test("all subscription-contract lifecycle processing stays disabled behind one proof flag", () => {
+  assert.match(contractLifecycleSource, /ENABLE_CLUTCH_CODES_CONTRACT_WEBHOOKS/);
+  assert.doesNotMatch(contractLifecycleSource, /ENABLE_CLUTCH_CODES_CONTRACT_UPDATES/);
+  assert.match(
+    contractLifecycleSource,
+    /if\s*\(!lifecycleEnabled\)\s*\{[\s\S]*All contract lifecycle handling is disabled/
+  );
 });

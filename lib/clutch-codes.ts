@@ -160,15 +160,83 @@ export function extractShopifyCustomerId(payload: ShopifyPaidOrder) {
 
 export function extractShopifySubscriptionContractId(
   payload: ShopifyPaidOrder,
-  lineItem?: ShopifySubscriptionLineItem | null
+  _lineItem?: ShopifySubscriptionLineItem | null
 ) {
-  const allocation = lineItem?.selling_plan_allocation as Record<string, unknown> | null | undefined;
-  const value =
-    payload.subscription_contract_id ||
-    payload.subscription_id ||
-    allocation?.subscription_contract_id ||
-    allocation?.subscription_id;
-  return value == null ? null : String(value);
+  void payload;
+  void _lineItem;
+  // orders/paid does not provide a contract ID in the real Shopify Subscriptions
+  // payloads captured for this store. Never infer one from similarly named payload
+  // fields or selling_plan_allocation. A future verified enrichment must introduce
+  // an explicit trusted boundary instead of adding a guessed raw-payload mapping.
+  return null;
+}
+
+export type LegacyAllowanceEvidence = {
+  isAdmin: boolean;
+  plan?: string | null;
+  planCode?: string | null;
+  subscriptionStatus?: string | null;
+  hasShopifySubscriptionId: boolean;
+  hasPaidClutchCodesOrder: boolean;
+  qrLimit: number;
+  existingQrCount: number;
+  confirmedCardOrderCount: number;
+};
+
+export function classifyLegacyAllowance(evidence: LegacyAllowanceEvidence) {
+  const normalizedPlan = String(evidence.planCode || evidence.plan || "").toLowerCase();
+  const activePaidQrSubscription =
+    evidence.hasShopifySubscriptionId &&
+    String(evidence.subscriptionStatus || "").toLowerCase() === "active" &&
+    ["qr_pro", "qr_pro_plus", "agency"].includes(normalizedPlan);
+  const includedAllowance = Math.max(0, Math.trunc(evidence.confirmedCardOrderCount || 0));
+
+  if (evidence.isAdmin) {
+    return {
+      classification: "admin_preserve" as const,
+      reviewRequired: false,
+      includedQrAllowance: 0,
+      subscriptionQrLimit: 0,
+    };
+  }
+
+  if (activePaidQrSubscription) {
+    return {
+      classification: includedAllowance
+        ? ("active_paid_subscription_plus_confirmed_card" as const)
+        : ("active_paid_subscription" as const),
+      reviewRequired: false,
+      includedQrAllowance: includedAllowance,
+      subscriptionQrLimit: Math.max(0, Math.trunc(evidence.qrLimit || 0)),
+    };
+  }
+
+  if (includedAllowance > 0) {
+    return {
+      classification: "confirmed_card_allowance" as const,
+      reviewRequired: false,
+      includedQrAllowance: includedAllowance,
+      subscriptionQrLimit: 0,
+    };
+  }
+
+  let classification = "manual_review_no_entitlement_source" as
+    | "manual_review_no_entitlement_source"
+    | "manual_review_paid_order_without_contract"
+    | "manual_review_existing_qr_without_source"
+    | "manual_review_legacy_paid_plan_without_subscription_id";
+  if (evidence.hasPaidClutchCodesOrder) classification = "manual_review_paid_order_without_contract";
+  else if (evidence.existingQrCount > 0) classification = "manual_review_existing_qr_without_source";
+  else if (["qr_pro", "qr_pro_plus", "agency"].includes(normalizedPlan)) {
+    classification = "manual_review_legacy_paid_plan_without_subscription_id";
+  }
+
+  return {
+    classification,
+    reviewRequired: true,
+    includedQrAllowance: 0,
+    subscriptionQrLimit: 0,
+  };
 }
 
 export function extractCheckoutEmail(payload: ShopifyPaidOrder) {

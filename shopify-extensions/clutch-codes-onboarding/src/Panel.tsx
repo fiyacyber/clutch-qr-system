@@ -1,4 +1,4 @@
-import type { ExtensionPlan } from "./plans";
+import { EXTENSION_COPY, type ExtensionPlan } from "./plans";
 
 const DASHBOARD_URL = "https://qr.clutchprintshop.com/login";
 const SUPPORT_EMAIL = "info@clutchprintshop.com";
@@ -16,10 +16,8 @@ export function ClutchCodesPanel({
     <s-section>
       <s-stack direction="block" gap="base">
         <s-text color="subdued">CLUTCH CODES™</s-text>
-        <s-heading>Your dashboard access is ready</s-heading>
-        <s-text>
-          Your {plan.name} plan includes up to {plan.allowance} active Clutch Codes.
-        </s-text>
+        <s-heading>{EXTENSION_COPY.heading}</s-heading>
+        <s-text>{EXTENSION_COPY.body}</s-text>
         <s-stack direction="block" gap="small-200">
           <s-paragraph><s-text type="strong">Plan:</s-text> {plan.name}</s-paragraph>
           <s-paragraph><s-text type="strong">Monthly amount:</s-text> {plan.price}</s-paragraph>

@@ -224,7 +224,7 @@ export function createClutchCodesSupabaseDependencies(
       });
       await sendTransactionalEmail({
         to,
-        subject: `Your ${plan.name} dashboard is ready`,
+        subject: `Your ${plan.name} subscription is active`,
         text: template.text,
         html: template.html,
         idempotencyKey,
@@ -305,14 +305,15 @@ export async function processClutchCodesContractLifecycle({
   const nextStatus = CONTRACT_STATUS_BY_TOPIC[topic];
   if (!nextStatus) return { qualified: false, skippedReason: `Unsupported lifecycle topic: ${topic}` };
 
-  const isReliableRemoval = topic === "subscription_contracts/cancel" || topic === "subscription_contracts/expire";
-  const lifecycleEnabled = String(process.env.ENABLE_CLUTCH_CODES_CONTRACT_UPDATES || "").toLowerCase() === "true";
-  if (!isReliableRemoval && !lifecycleEnabled) {
+  const lifecycleEnabled = String(process.env.ENABLE_CLUTCH_CODES_CONTRACT_WEBHOOKS || "").toLowerCase() === "true";
+  if (!lifecycleEnabled) {
     return {
       qualified: false,
-      skippedReason: "Non-cancellation contract updates are behind ENABLE_CLUTCH_CODES_CONTRACT_UPDATES.",
+      skippedReason: "All contract lifecycle handling is disabled behind ENABLE_CLUTCH_CODES_CONTRACT_WEBHOOKS until contract ownership and payload mapping are proven.",
     };
   }
+
+  const removesSubscriptionCapacity = topic === "subscription_contracts/cancel" || topic === "subscription_contracts/expire";
 
   const contractId = String(payload.admin_graphql_api_id || payload.id || "").trim();
   if (!contractId) return { qualified: false, skippedReason: "Missing Shopify subscription contract ID." };
@@ -355,7 +356,7 @@ export async function processClutchCodesContractLifecycle({
     customer_id: customer.id,
     action: nextStatus,
     plan_code: nextPlanCode,
-    subscription_qr_limit: isReliableRemoval ? 0 : nextLimit,
+    subscription_qr_limit: removesSubscriptionCapacity ? 0 : nextLimit,
     status: "processing",
     raw_payload: payload,
   });
@@ -364,7 +365,7 @@ export async function processClutchCodesContractLifecycle({
 
   try {
     const includedAllowance = Math.max(0, Number(customer.included_qr_allowance || 0));
-    const patch = isReliableRemoval
+    const patch = removesSubscriptionCapacity
       ? buildClutchCodesCancellationPatch(customer)
       : {
           clutch_codes_plan_code: nextPlanCode,
@@ -384,9 +385,9 @@ export async function processClutchCodesContractLifecycle({
     return {
       qualified: true,
       planCode: nextPlanCode,
-      subscriptionQrLimit: isReliableRemoval ? 0 : nextLimit,
+      subscriptionQrLimit: removesSubscriptionCapacity ? 0 : nextLimit,
       includedQrAllowance: includedAllowance,
-      effectiveCapacity: isReliableRemoval
+      effectiveCapacity: removesSubscriptionCapacity
         ? includedAllowance
         : getEffectiveClutchCodesCapacity({
             included_qr_allowance: includedAllowance,

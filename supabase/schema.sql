@@ -1,5 +1,5 @@
 -- Clutch QR database schema. Use this only in a clean Supabase project.
--- This matches the schema discussed in chat: admin dashboard + customer portal + QR limit default 10.
+-- qr_limit remains a legacy compatibility field. New authoritative allowances default to zero.
 
 create extension if not exists "pgcrypto";
 
@@ -23,14 +23,14 @@ create table public.customers (
   shopify_line_item_id text,
   customer_group_id uuid references public.customer_groups(id) on delete set null,
   qr_limit integer not null default 10,
-  included_qr_allowance integer not null default 10 check (included_qr_allowance >= 0),
+  included_qr_allowance integer not null default 0 check (included_qr_allowance >= 0),
   subscription_qr_limit integer not null default 0 check (subscription_qr_limit >= 0),
   clutch_codes_plan_code text check (clutch_codes_plan_code is null or clutch_codes_plan_code in ('clutch_codes_starter', 'clutch_codes_growth', 'clutch_codes_pro')),
   clutch_codes_subscription_status text not null default 'inactive' check (clutch_codes_subscription_status in ('inactive', 'active', 'past_due', 'unpaid', 'paused', 'cancelled', 'expired')),
   clutch_codes_welcome_email_sent_at timestamptz,
   clutch_codes_welcome_email_event_key text,
-  plan text not null default 'qr_pro' check (plan in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin')),
-  plan_code text not null default 'qr_pro' check (plan_code in ('free_qr', 'qr_pro', 'qr_pro_plus', 'admin')),
+  plan text not null default 'qr_pro' check (plan in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')),
+  plan_code text not null default 'qr_pro' check (plan_code in ('free_qr', 'connect_basic', 'connect_plus', 'qr_pro', 'qr_pro_plus', 'agency', 'admin')),
   subscription_status text not null default 'active' check (subscription_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
   plan_status text not null default 'active' check (plan_status in ('active', 'past_due', 'unpaid', 'cancelled', 'canceled')),
   onboarding_status text not null default 'not_started' check (onboarding_status in ('not_started', 'invited', 'active', 'needs_help', 'blocked')),
@@ -125,6 +125,21 @@ create table public.shopify_entitlement_events (
   updated_at timestamptz not null default now()
 );
 
+create table public.clutch_codes_allowance_migration_audit (
+  customer_id uuid primary key references public.customers(id) on delete cascade,
+  classification text not null,
+  review_required boolean not null,
+  proposed_included_qr_allowance integer not null default 0 check (proposed_included_qr_allowance >= 0),
+  proposed_subscription_qr_limit integer not null default 0 check (proposed_subscription_qr_limit >= 0),
+  evidence jsonb not null default '{}'::jsonb,
+  classified_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  review_notes text
+);
+
+comment on column public.customers.qr_limit is
+  'Legacy compatibility mirror/fallback only. Authoritative capacity is included_qr_allowance + subscription_qr_limit.';
+
 create index qr_codes_customer_id_idx on public.qr_codes(customer_id);
 create index qr_codes_slug_idx on public.qr_codes(slug);
 create index qr_scans_qr_code_id_idx on public.qr_scans(qr_code_id);
@@ -159,6 +174,7 @@ create index shopify_entitlement_events_shopify_event_id_idx on public.shopify_e
 create index shopify_entitlement_events_shopify_order_id_idx on public.shopify_entitlement_events(shopify_order_id);
 create index shopify_entitlement_events_subscription_contract_id_idx on public.shopify_entitlement_events(shopify_subscription_contract_id);
 create index shopify_entitlement_events_customer_id_idx on public.shopify_entitlement_events(customer_id);
+create index clutch_codes_allowance_migration_audit_review_idx on public.clutch_codes_allowance_migration_audit(review_required, classification);
 
 insert into storage.buckets (
   id,
@@ -247,6 +263,7 @@ alter table public.qr_codes enable row level security;
 alter table public.qr_scans enable row level security;
 alter table public.webhook_events enable row level security;
 alter table public.shopify_entitlement_events enable row level security;
+alter table public.clutch_codes_allowance_migration_audit enable row level security;
 
 create policy "Admins can view customer groups" on public.customer_groups for select using (public.current_user_is_admin());
 create policy "Admins can insert customer groups" on public.customer_groups for insert with check (public.current_user_is_admin());
@@ -268,5 +285,6 @@ grant select on public.qr_codes to authenticated;
 grant select on public.qr_scans to authenticated;
 grant select on public.webhook_events to authenticated;
 revoke all on table public.shopify_entitlement_events from anon, authenticated;
+revoke all on table public.clutch_codes_allowance_migration_audit from anon, authenticated;
 grant insert, update on public.customers to authenticated;
 grant insert, update on public.qr_codes to authenticated;

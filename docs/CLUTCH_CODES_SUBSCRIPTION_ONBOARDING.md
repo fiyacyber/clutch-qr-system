@@ -17,10 +17,17 @@ Effective QR capacity is:
 Apply `supabase/migrations/20260712100000_add_clutch_codes_allowances_and_sources.sql` before enabling the webhook code. It:
 
 - adds the two allowance columns and Clutch Codes subscription source fields;
-- backfills existing `qr_limit` values into `included_qr_allowance`;
+- expands the `plan` and `plan_code` checks without changing existing values, and validates that `connect_basic` can be inserted in both columns;
+- classifies legacy allowance evidence before changing data instead of treating every historical `qr_limit` as permanent included capacity;
+- moves only verified active paid subscription capacity to `subscription_qr_limit`, counts confirmed card/print orders as included capacity, preserves admin rows, and records ambiguous rows for manual review;
 - adds `shopify_entitlement_events` for durable provisioning and email idempotency;
+- adds the private `clutch_codes_allowance_migration_audit` table so every classification and its evidence remains reviewable;
 - keeps the entitlement-event table inaccessible to `anon` and `authenticated` roles;
 - updates the QR insertion guard to use the combined allowance.
+
+Before applying the migration, run the read-only preflight query at `supabase/preflight/20260712100000_classify_clutch_codes_allowances.sql`. It returns exactly one classification per existing customer, the proposed included/subscription allowances, whether manual review is required, and the evidence used. Resolve every `review_required = true` row before assigning permanent included capacity. The migration deliberately leaves ambiguous authoritative allowances at zero and records them in the audit table; it does not silently convert the legacy compatibility value.
+
+On a clean install, both authoritative allowance columns default to zero. `qr_limit` remains only for older application/database compatibility and is recalculated as the effective sum where the migration's entitlement functions write capacity.
 
 Run Supabase database/security advisors after applying the migration in staging. No production database mutation is performed by this repository change.
 
@@ -32,7 +39,7 @@ Run Supabase database/security advisors after applying the migration in staging.
 - `RESEND_API_KEY`: sends the transactional access email.
 - `RESEND_FROM_EMAIL`: verified sender address; the Clutch Codes message overrides only the display name.
 - `CLUTCH_APP_BASE_URL` or `CLUTCH_QR_BASE_URL`: defaults to `https://qr.clutchprintshop.com` and is used for auth redirects.
-- `ENABLE_CLUTCH_CODES_CONTRACT_UPDATES`: optional, default `false`. Enables non-cancellation subscription-contract status/update handling only after the installed subscription app's payloads are verified to identify the same contract and, for plan changes, include line SKU data.
+- `ENABLE_CLUTCH_CODES_CONTRACT_WEBHOOKS`: optional, default `false`. Keep it `false` in the current Shopify Subscriptions architecture. It gates **all** `subscription_contracts/*` handling, including cancellation and expiry, until the linked app owns the contracts and a real development-store payload proves the contract and plan mapping.
 
 Existing Smart Card email flags and product allowlists remain unchanged.
 
@@ -40,23 +47,28 @@ Supabase Auth must allow the exact production redirect URL used by `buildPasswor
 
 ## Shopify scopes and protected data
 
-Minimum app scopes depend on how subscriptions are owned and registered:
+The current paid selling plans are owned by Shopify's first-party **Subscriptions** app (`gid://shopify/App/66228322305`, handle `subscriptions-remix`), not by a future custom Clutch Codes app. This was verified against all three canonical SKUs. Shopify restricts `read_own_subscription_contracts` to contracts owned by the querying app, so that scope does not give the custom app access to these existing contracts. Likewise, the custom app cannot receive `subscription_contracts/*` events for contracts owned by Shopify Subscriptions.
+
+Current minimum app scopes:
 
 - `read_orders` for paid-order webhook access;
-- `read_customers` if the linked app needs customer data outside the webhook payload;
-- `read_own_subscription_contracts` for contracts owned by this app;
-- `write_own_subscription_contracts` only if the app will actually mutate its own contracts (not required by this implementation).
+- `read_customers` if the linked app reads the customer or a future cancellation-bridge metafield outside the webhook payload.
+
+Do not request `read_own_subscription_contracts` or `write_own_subscription_contracts` as a solution for the current Shopify Subscriptions contracts. Those scopes become relevant only if a future version of the same custom app creates and owns its own contracts.
 
 The extension's checkout-email row requires Shopify approval/access for protected customer data. Without it, the panel still renders and simply omits the email row.
 
 ## Webhook topics and routes
 
-Register these against the application webhook endpoints:
+Production-ready registration for the current architecture:
 
 - `orders/paid` → `/api/webhooks/shopify/orders-paid` (required; activation, renewals, and paid effective plan changes when the renewal order contains a canonical SKU).
-- `subscription_contracts/cancel` → `/api/shopify/webhook` (required for cancellation).
-- `subscription_contracts/expire` → `/api/shopify/webhook` (required for expiry).
-- `subscription_contracts/activate`, `subscription_contracts/update`, `subscription_contracts/pause`, and `subscription_contracts/fail` → `/api/shopify/webhook` only after setting `ENABLE_CLUTCH_CODES_CONTRACT_UPDATES=true` and verifying the subscription app's contract ownership/payloads.
+
+Do **not** register or list `subscription_contracts/activate`, `update`, `pause`, `fail`, `cancel`, or `expire` as production requirements for the current custom app. It does not own the contracts and cannot rely on receiving those events. Their code path remains entirely disabled behind `ENABLE_CLUTCH_CODES_CONTRACT_WEBHOOKS=false` for future development-store proof only.
+
+Read-only inspection of the three real paid Clutch Codes `orders/paid` payloads currently stored by the application found no top-level contract ID and no `selling_plan_allocation`. An order payload's `subscription_contract_id`, `subscription_id`, or nested selling-plan fields must not be assumed to contain a contract ID. The current paid-order implementation therefore persists no contract linkage; a future verified enrichment must introduce an explicit trusted boundary and development-store regression evidence first.
+
+For Shopify Subscriptions, Shopify Flow currently provides the supported cross-app synchronization path: use its **Subscription contract updated** trigger to write a dedicated customer metafield, then let the custom app read/process that bridge with `read_customers`. This bridge must be implemented and proven with a real development-store cancellation before enabling automatic entitlement removal. Until then, cancellation requires manual entitlement reconciliation that clears only `subscription_qr_limit`; the application must not claim automatic cancellation synchronization.
 
 `app_subscriptions/*` topics are Shopify app-billing events and must not be treated as customer Clutch Codes subscriptions.
 
@@ -69,7 +81,7 @@ npm run preview:clutch-codes-email
 open work/clutch-codes-subscription-email.html
 ```
 
-The production subject is dynamic, for example `Your Clutch Codes Growth dashboard is ready`. Resend receives both a persistent database marker and the deterministic `idempotency-key` header.
+The production subject is dynamic, for example `Your Clutch Codes Growth subscription is active`. Resend receives both a persistent database marker and the deterministic `idempotency-key` header.
 
 ## Shopify app and extension setup status
 
@@ -94,13 +106,22 @@ Manual setup:
 4. Confirm one completed row in `shopify_entitlement_events`, the customer allowance fields, one Supabase auth user, and one Resend delivery.
 5. Replay the same webhook ID and then deliver the same order with a different webhook ID. Capacity and the welcome email must remain unchanged.
 6. Buy an upgrade/downgrade and confirm the next reliable paid order replaces `subscription_qr_limit` at that effective time.
-7. Cancel the contract and confirm only `subscription_qr_limit` becomes zero; included allowance and QR rows remain.
+7. Cancel the Shopify Subscriptions contract and verify the real development-store behavior. Until the documented Flow bridge is implemented, manually reconcile the entitlement by clearing only `subscription_qr_limit`; included allowance and QR rows must remain.
+8. Confirm the stored paid-order payload does not create `shopify_subscription_id` unless a separately verified contract enrichment exists.
 
 ## Deployment sequence
 
 1. Apply the migration in staging and run Supabase advisors.
 2. Configure server-only secrets and the Supabase Auth redirect allowlist.
-3. Register/verify webhooks in a development store.
+3. Register and verify only the supported `orders/paid` webhook in a development store.
 4. Link and preview the Shopify extension, then add both blocks in the editor.
 5. Execute the test purchase matrix.
 6. Promote the application and publish the extension through the normal reviewed release process. Do not deploy from this branch directly.
+
+## Shopify ownership references
+
+- [Subscription contracts and app ownership](https://shopify.dev/docs/apps/build/purchase-options/subscriptions/contracts)
+- [Admin API access scopes](https://shopify.dev/docs/api/usage/access-scopes)
+- [Shopify Subscriptions setup and management](https://help.shopify.com/en/manual/products/purchase-options/subscriptions/setup)
+- [Shopify staff: contract webhooks are delivered only to the owning app](https://community.shopify.dev/t/subscription-contracts-create-webhook-not-triggered-for-checkout-created-subscriptions/28167/15)
+- [Shopify staff: use Shopify Flow as a cross-app bridge for first-party subscription status](https://community.shopify.dev/t/recommended-pattern-for-non-subscription-apps-to-detect-active-subscriptions-created-by-shopify-subscriptions/32590/2)

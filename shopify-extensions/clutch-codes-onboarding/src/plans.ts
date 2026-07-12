@@ -26,6 +26,11 @@ export const EXTENSION_PLANS: Record<string, ExtensionPlan> = {
   },
 };
 
+export const EXTENSION_COPY = {
+  heading: "Your Clutch Codes order is confirmed",
+  body: "We’re preparing your dashboard access using the email entered during checkout.",
+} as const;
+
 function getSku(line: any) {
   return String(
     line?.merchandise?.sku ||

@@ -327,7 +327,7 @@ export function buildClutchCodesSubscriptionAccessEmailTemplate({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Your ${escapeHtml(planName)} dashboard is ready</title>
+    <title>Your ${escapeHtml(planName)} subscription is active</title>
   </head>
   <body style="margin:0;padding:0;background:#f6f8fb;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;line-height:1px;color:transparent;">${escapeHtml(preheader)}</div>
