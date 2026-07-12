@@ -54,6 +54,10 @@ type CustomerPlanShape = {
   trial_ends_at?: string | null;
   trial_status?: string | null;
   qr_limit?: number | null;
+  included_qr_allowance?: number | null;
+  subscription_qr_limit?: number | null;
+  clutch_codes_plan_code?: string | null;
+  clutch_codes_subscription_status?: string | null;
 };
 
 const CONNECT_BASIC_ENTITLEMENTS: PlanEntitlements = {
@@ -132,6 +136,14 @@ const ADMIN_ENTITLEMENTS: PlanEntitlements = {
   clientReporting: true,
   highVolume: true,
   internalAdmin: true,
+};
+
+const CLUTCH_CODES_ENTITLEMENTS: Partial<PlanEntitlements> = {
+  dynamicQr: true,
+  qrCustomization: true,
+  qrLogoUpload: true,
+  qrExports: true,
+  campaignAnalytics: true,
 };
 
 const CANONICAL_PLAN_DEFINITIONS: Record<CanonicalPlanCode, PlanDefinition> = {
@@ -289,11 +301,26 @@ export function getEffectiveQrLimit(customer?: CustomerPlanShape | null) {
   const storedLimit = Number(customer?.qr_limit || 0);
   if (plan.code === "admin") return Math.max(plan.qrLimit, storedLimit || 0);
 
-  return plan.qrLimit;
+  const included = customer?.included_qr_allowance;
+  const subscription = customer?.subscription_qr_limit;
+  if (included !== null && included !== undefined && subscription !== null && subscription !== undefined) {
+    return Math.max(0, Number(included) || 0) + Math.max(0, Number(subscription) || 0);
+  }
+
+  // Compatibility fallback for deployments that have not applied the allowance migration yet.
+  return storedLimit || plan.qrLimit;
 }
 
 export function getPlanEntitlements(customer?: CustomerPlanShape | null): PlanEntitlements {
-  return getCustomerPlan(customer).entitlements;
+  const base = getCustomerPlan(customer).entitlements;
+  if (!customer?.clutch_codes_plan_code || customer.clutch_codes_subscription_status !== "active") {
+    return base;
+  }
+
+  return Object.entries(CLUTCH_CODES_ENTITLEMENTS).reduce(
+    (entitlements, [key, enabled]) => ({ ...entitlements, [key]: enabled }),
+    { ...base }
+  );
 }
 
 export function hasEntitlement(customer: CustomerPlanShape | null | undefined, entitlementKey: EntitlementKey): boolean {
@@ -302,7 +329,12 @@ export function hasEntitlement(customer: CustomerPlanShape | null | undefined, e
 
 export function isQrPlan(customer?: CustomerPlanShape | null) {
   const code = getCustomerPlan(customer).code;
-  return code === "qr_pro" || code === "agency" || code === "admin";
+  return (
+    code === "qr_pro" ||
+    code === "agency" ||
+    code === "admin" ||
+    (Boolean(customer?.clutch_codes_plan_code) && customer?.clutch_codes_subscription_status === "active")
+  );
 }
 
 export function isConnectPlusOrHigher(customer?: CustomerPlanShape | null) {

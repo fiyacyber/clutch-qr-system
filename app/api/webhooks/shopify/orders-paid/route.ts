@@ -6,6 +6,8 @@ import { buildAppQrUrl, buildConnectPublicProfileUrl, getAppBaseUrl } from "@/li
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildSmartCardSetupEmailTemplate } from "@/lib/email-templates";
 import { buildSetupForgotPasswordPath } from "@/lib/onboarding-routing";
+import { provisionClutchCodesPaidOrder, type ShopifyPaidOrder } from "@/lib/clutch-codes";
+import { createClutchCodesSupabaseDependencies } from "@/lib/clutch-codes-supabase";
 
 export const runtime = "nodejs";
 
@@ -17,6 +19,7 @@ type ShopifyLineItemProperty = {
 
 type ShopifyLineItem = {
   id?: number | string;
+  sku?: string;
   product_id?: number | string;
   variant_id?: number | string;
   title?: string;
@@ -885,6 +888,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Supabase service role is not configured." }, { status: 500 });
   }
 
+  let payload: ShopifyOrderPayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
+  }
+
   // Idempotency check before payload processing.
   const { data: existingWebhookByHeader, error: existingByHeaderError } = await admin
     .from("shopify_webhooks")
@@ -925,14 +935,27 @@ export async function POST(req: NextRequest) {
   }
 
   if (existingWebhookByHeader?.webhook_id) {
-    return NextResponse.json({ ok: true, duplicate: true, webhook_id: webhookId }, { status: 200 });
-  }
-
-  let payload: ShopifyOrderPayload;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
+    try {
+      const clutchCodes = await provisionClutchCodesPaidOrder({
+        payload: payload as ShopifyPaidOrder,
+        webhookEventId: webhookId,
+        dependencies: createClutchCodesSupabaseDependencies(admin),
+      });
+      return NextResponse.json(
+        { ok: true, duplicate: true, webhook_id: webhookId, clutch_codes: clutchCodes },
+        { status: 200 }
+      );
+    } catch (error) {
+      console.error("clutch-codes duplicate webhook retry failed", {
+        webhook_event_id: webhookId,
+        shopify_order_id: normalizeOrderId(payload) || null,
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+      return NextResponse.json(
+        { ok: false, error: "Clutch Codes provisioning failed.", webhook_id: webhookId },
+        { status: 500 }
+      );
+    }
   }
 
   const shopDomain = req.headers.get("x-shopify-shop-domain");
@@ -984,6 +1007,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "Failed to upsert shopify_orders.", webhook_id: webhookId },
       { status: 200 }
+    );
+  }
+
+  let clutchCodesProvisioning: Awaited<ReturnType<typeof provisionClutchCodesPaidOrder>>;
+  try {
+    clutchCodesProvisioning = await provisionClutchCodesPaidOrder({
+      payload: payload as ShopifyPaidOrder,
+      webhookEventId: webhookId,
+      dependencies: createClutchCodesSupabaseDependencies(admin),
+    });
+    console.info("clutch-codes provisioning completed", {
+      webhook_event_id: webhookId,
+      shopify_order_id: orderId,
+      normalized_plan_code: clutchCodesProvisioning.planCode || null,
+      qualified: clutchCodesProvisioning.qualified,
+      duplicate: Boolean(clutchCodesProvisioning.duplicate),
+      email_sent: Boolean(clutchCodesProvisioning.emailSent),
+      effective_capacity: clutchCodesProvisioning.effectiveCapacity ?? null,
+    });
+  } catch (error) {
+    console.error("clutch-codes provisioning failed", {
+      webhook_event_id: webhookId,
+      shopify_order_id: orderId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return NextResponse.json(
+      { ok: false, error: "Clutch Codes provisioning failed.", webhook_id: webhookId },
+      { status: 500 }
     );
   }
 
@@ -1262,6 +1313,7 @@ export async function POST(req: NextRequest) {
       smart_card_qr_created_count: smartCardQrCreated,
       smart_card_qr_reused_count: smartCardQrReused,
       topic,
+      clutch_codes: clutchCodesProvisioning,
     },
     { status: 200 }
   );

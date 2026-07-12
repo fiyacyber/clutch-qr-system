@@ -138,7 +138,7 @@ export default async function PublicConnectProfilePage({
 
   const { data: customer } = await admin
     .from("customers")
-    .select("id, is_admin, plan, plan_code, qr_limit, subscription_status, plan_status, trial_status, trial_ends_at")
+    .select("id, is_admin, plan, plan_code, qr_limit, included_qr_allowance, subscription_qr_limit, clutch_codes_plan_code, clutch_codes_subscription_status, subscription_status, plan_status, trial_status, trial_ends_at")
     .eq("id", profile.customer_id)
     .maybeSingle();
 
