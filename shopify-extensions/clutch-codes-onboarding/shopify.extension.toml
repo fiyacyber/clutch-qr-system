@@ -1,0 +1,21 @@
+api_version = "2026-01"
+
+[[extensions]]
+name = "Clutch Codes onboarding"
+handle = "clutch-codes-onboarding"
+type = "ui_extension"
+
+[[extensions.targeting]]
+target = "purchase.thank-you.block.render"
+module = "./src/ThankYou.tsx"
+
+[[extensions.targeting]]
+target = "customer-account.order-status.block.render"
+module = "./src/OrderStatus.tsx"
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "subscription_management_url"
+type = "single_line_text_field"
+name = "Subscription management URL"
+description = "Optional real Shopify or subscription-app customer portal URL. Leave blank unless verified."
