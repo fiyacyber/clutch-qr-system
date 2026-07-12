@@ -29,6 +29,10 @@ const contractLifecycleSource = fs.readFileSync(
   new URL("../lib/clutch-codes-supabase.ts", import.meta.url),
   "utf8"
 );
+const ordersPaidWebhookSource = fs.readFileSync(
+  new URL("../app/api/webhooks/shopify/orders-paid/route.ts", import.meta.url),
+  "utf8"
+);
 
 function orderForSku(sku: string, overrides: Partial<ShopifyPaidOrder> = {}): ShopifyPaidOrder {
   return {
@@ -383,4 +387,20 @@ test("all subscription-contract lifecycle processing stays disabled behind one p
     contractLifecycleSource,
     /if\s*\(!lifecycleEnabled\)\s*\{[\s\S]*All contract lifecycle handling is disabled/
   );
+});
+
+test("transient orders-paid persistence failures return a retryable server error", () => {
+  for (const errorMessage of [
+    "Webhook id lookup failed.",
+    "Failed to store webhook idempotency record.",
+    "Failed to upsert shopify_orders.",
+    "Failed to insert card_orders.",
+  ]) {
+    const escaped = errorMessage.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(
+      ordersPaidWebhookSource,
+      new RegExp(`${escaped}[\\s\\S]{0,800}status:\\s*500`),
+      `${errorMessage} must allow Shopify to retry`
+    );
+  }
 });

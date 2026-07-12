@@ -930,7 +930,7 @@ export async function POST(req: NextRequest) {
             }
           : {}),
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 
@@ -972,7 +972,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.error("orders-paid webhook insert failed", insertWebhookError.message);
-    return NextResponse.json({ ok: false, error: "Failed to store webhook idempotency record." }, { status: 200 });
+    return NextResponse.json({ ok: false, error: "Failed to store webhook idempotency record." }, { status: 500 });
   }
 
   const orderId = normalizeOrderId(payload);
@@ -983,7 +983,7 @@ export async function POST(req: NextRequest) {
   if (!orderId) {
     return NextResponse.json(
       { ok: false, error: "Missing Shopify order id.", webhook_id: webhookId },
-      { status: 200 }
+      { status: 400 }
     );
   }
 
@@ -1006,7 +1006,7 @@ export async function POST(req: NextRequest) {
     console.error("orders-paid upsert shopify_orders failed", upsertOrderError.message);
     return NextResponse.json(
       { ok: false, error: "Failed to upsert shopify_orders.", webhook_id: webhookId },
-      { status: 200 }
+      { status: 500 }
     );
   }
 
@@ -1107,7 +1107,7 @@ export async function POST(req: NextRequest) {
       console.error("orders-paid insert card_orders failed", insertCardOrderError.message);
       return NextResponse.json(
         { ok: false, error: "Failed to insert card_orders.", webhook_id: webhookId },
-        { status: 200 }
+        { status: 500 }
       );
     }
 
