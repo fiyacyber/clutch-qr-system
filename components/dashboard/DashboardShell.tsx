@@ -1,6 +1,7 @@
 "use client";
 
 import SidebarNav from "@/components/dashboard/SidebarNav";
+import UnifiedMobileNav from "@/components/dashboard/UnifiedMobileNav";
 import type { AccountAccess } from "@/lib/account-access";
 
 export type DashboardNavVariant = "default" | "connect-basic" | "onboarding";
@@ -39,6 +40,7 @@ export default function DashboardShell({
         showLeadInbox={showLeadInbox}
       />
       <div className="ds-main-shell">{children}</div>
+      <UnifiedMobileNav accountAccess={accountAccess} isAdmin={isAdmin} />
     </div>
   );
 }

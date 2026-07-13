@@ -1,29 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BarChart3,
-  Map,
-  LayoutDashboard,
+  Boxes,
+  CreditCard,
+  Home,
   Link2,
   LogOut,
   Menu,
+  PackageCheck,
+  Plus,
   QrCode,
   Settings,
   Shield,
   Sparkles,
+  UserRoundCog,
   Users,
   X,
-  CreditCard,
-  PackageCheck,
-  UserRoundCog,
 } from "lucide-react";
-import { Suspense, useState } from "react";
 import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
-import { ACCOUNT_MODULE_ROUTES, type AccountAccess, type AccountModuleKey } from "@/lib/account-access";
-import { getActiveAccountModule } from "@/lib/account-navigation";
+import type { AccountAccess } from "@/lib/account-access";
+import styles from "./SidebarNav.module.css";
 
 interface SidebarNavProps {
   accountAccess?: AccountAccess;
@@ -38,338 +39,114 @@ interface SidebarNavProps {
   showLeadInbox?: boolean;
 }
 
-type LegacyNavKey = "overview" | "campaign-performance" | "connect" | "guided-setup" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
-
-type NavItem = {
-  key: LegacyNavKey;
+type Item = {
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  match: (pathname: string, tab: string | null) => boolean;
-  adminOnly?: boolean;
-  lockKey?: "qr" | "analytics" | "heatmap";
+  visible?: boolean;
 };
 
-const moduleLabels: Record<AccountModuleKey, { label: string; icon: NavItem["icon"] }> = {
-  overview: { label: "Overview", icon: LayoutDashboard },
-  "print-orders": { label: "Print Orders", icon: PackageCheck },
-  "smart-card": { label: "Smart Card", icon: CreditCard },
-  "clutch-connect": { label: "Clutch Connect", icon: Link2 },
-  "guided-setup": { label: "Guided Setup", icon: Sparkles },
-  "profile-builder": { label: "Profile Builder", icon: UserRoundCog },
-  "lead-inbox": { label: "Lead Inbox", icon: Users },
-  "profile-analytics": { label: "Profile Analytics", icon: BarChart3 },
-  "qr-codes": { label: "QR Codes", icon: QrCode },
-  "campaign-analytics": { label: "Campaign Analytics", icon: BarChart3 },
-  "campaign-heatmap": { label: "Campaign Heatmap", icon: Map },
-  subscription: { label: "Subscription", icon: CreditCard },
-  settings: { label: "Settings", icon: Settings },
-  admin: { label: "Admin", icon: Shield },
-};
-
-const navItems: NavItem[] = [
-  {
-    key: "overview",
-    label: "Overview",
-    href: "/portal",
-    icon: LayoutDashboard,
-    match: (pathname) => pathname === "/portal",
-  },
-  {
-    key: "campaign-performance",
-    label: "Campaign Performance",
-    href: "/portal/analytics?tab=campaign-performance",
-    icon: QrCode,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "campaign-performance",
-    lockKey: "qr",
-  },
-  {
-    key: "connect",
-    label: "Clutch Connect",
-    href: "/portal/connect",
-    icon: Link2,
-    match: (pathname) =>
-      pathname === "/portal/connect" ||
-      pathname === "/portal/connect/build" ||
-      pathname === "/portal/connect/edit" ||
-      pathname === "/portal/connect/links" ||
-      pathname.startsWith("/clutch-connect"),
-  },
-  {
-    key: "guided-setup",
-    label: "Guided Setup",
-    href: "/portal/connect/setup",
-    icon: Sparkles,
-    match: (pathname) => pathname.startsWith("/portal/connect/setup") || pathname.startsWith("/setup/guided"),
-  },
-  {
-    key: "lead-inbox",
-    label: "Lead Inbox",
-    href: "/portal/connect/leads",
-    icon: Users,
-    match: (pathname) => pathname.startsWith("/portal/connect/leads"),
-  },
-  {
-    key: "qr",
-    label: "QR Codes",
-    href: "/portal/qr",
-    icon: QrCode,
-    match: (pathname) => pathname === "/portal/qr" || pathname.startsWith("/portal/qr/"),
-    lockKey: "qr",
-  },
-  {
-    key: "analytics",
-    label: "Analytics",
-    href: "/portal/analytics",
-    icon: BarChart3,
-    match: (pathname, tab) => pathname === "/portal/analytics" && (!tab || tab === "analytics" || tab === "overview"),
-    lockKey: "analytics",
-  },
-  {
-    key: "heatmap",
-    label: "Heatmap",
-    href: "/portal/heatmap",
-    icon: Map,
-    match: (pathname) => pathname === "/portal/heatmap",
-    lockKey: "heatmap",
-  },
-  {
-    key: "admin",
-    label: "Admin",
-    href: "/admin",
-    icon: Shield,
-    match: (pathname) => pathname.startsWith("/admin"),
-    adminOnly: true,
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    href: "/portal/settings",
-    icon: Settings,
-    match: (pathname) => pathname === "/portal/settings",
-  },
-];
-
-function itemByKey(key: NavItem["key"]): NavItem {
-  const item = navItems.find((entry) => entry.key === key);
-  if (!item) {
-    throw new Error(`Missing nav item: ${key}`);
-  }
-  return item;
+function isActive(pathname: string, href: string) {
+  if (href === "/portal") return pathname === "/portal";
+  if (href.includes("?")) return pathname === href.split("?")[0];
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function getNavSections({
-  navVariant,
-  isAdmin,
-  showGuidedSetup,
-  showLeadInbox,
-}: {
-  navVariant: DashboardNavVariant;
-  isAdmin?: boolean;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
-  const shouldShowGuidedSetup = showGuidedSetup === true;
-  const shouldShowLeadInbox = showLeadInbox !== false;
-  const guidedSetupKey: NavItem["key"][] = shouldShowGuidedSetup ? ["guided-setup"] : [];
-  const leadInboxKey: NavItem["key"][] = shouldShowLeadInbox ? ["lead-inbox"] : [];
-  const primaryKeysByVariant: Record<DashboardNavVariant, NavItem["key"][]> = {
-    default: ["overview", "campaign-performance", "connect", ...guidedSetupKey, "qr", "analytics", "heatmap", "settings"],
-    "connect-basic": ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
-    onboarding: ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
-  };
-
-  const primary = primaryKeysByVariant[navVariant].map(itemByKey);
-  if (isAdmin) {
-    primary.splice(primary.length - 1, 0, itemByKey("admin"));
-  }
-
-  const secondaryKeys: NavItem["key"][] = ["campaign-performance", "qr", "analytics", "heatmap"];
-  const secondary = navVariant === "connect-basic"
-    ? secondaryKeys.map(itemByKey)
-    : [];
-
-  return { primary, secondary };
-}
-
-function SidebarListInner({
-  accountAccess,
-  isAdmin,
-  onNavigate,
-  navLocks,
-  navVariant,
-  showGuidedSetup,
-  showLeadInbox,
-}: {
-  accountAccess?: AccountAccess;
-  isAdmin?: boolean;
-  onNavigate?: () => void;
-  navLocks?: SidebarNavProps["navLocks"];
-  navVariant: DashboardNavVariant;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
+function ProductNav({ accountAccess, isAdmin, close }: { accountAccess: AccountAccess; isAdmin?: boolean; close?: () => void }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tab = searchParams.get("tab");
-
-  if (accountAccess) {
-    const moduleEntries = (Object.keys(accountAccess.modules) as AccountModuleKey[])
-      .filter((key) => accountAccess.modules[key] !== "hidden")
-      .map((key) => ({ key, state: accountAccess.modules[key], ...moduleLabels[key], href: ACCOUNT_MODULE_ROUTES[key] || "/portal" }));
-    const activeKey = getActiveAccountModule(pathname, searchParams, moduleEntries.map((item) => item.key));
-    return (
-      <>
-        <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
-        <nav className="ds-sidebar-nav" aria-label="Primary">
-          {moduleEntries.map((item) => {
-            const Icon = item.icon;
-            const active = item.key === activeKey;
-            if (item.state === "locked") {
-              return (
-                <button key={item.key} type="button" className="ds-nav-item" disabled aria-disabled="true">
-                  <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
-                  <small className="ds-nav-lock-pill">Locked</small>
-                </button>
-              );
-            }
-            return (
-              <Link key={item.key} href={item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={onNavigate}>
-                <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-        <form action="/auth/signout" method="get" className="ds-logout-wrap"><button type="submit" className="ds-nav-item ds-logout-btn"><LogOut size={16} strokeWidth={1.8} /><span>Logout</span></button></form>
-      </>
-    );
-  }
-  const navSections = getNavSections({ navVariant, isAdmin, showGuidedSetup, showLeadInbox });
-  const orderedVisibleItems = [...navSections.primary, ...navSections.secondary];
-  const activeKey = orderedVisibleItems.find((item) => item.match(pathname, tab))?.key || null;
-
-  function renderItem(item: NavItem, secondary = false) {
-    const active = item.key === activeKey;
-    const Icon = item.icon;
-    const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
-
-    if (isLocked) {
-      return (
-        <button
-          key={`${secondary ? "secondary" : "primary"}-${item.label}`}
-          type="button"
-          className={`ds-nav-item${secondary ? " is-secondary" : ""}`}
-          disabled
-          aria-disabled="true"
-        >
-          <Icon size={16} strokeWidth={1.8} />
-          <span>{item.label}</span>
-          <small className="ds-nav-lock-pill">Locked</small>
-        </button>
-      );
-    }
-
-    return (
-      <Link
-        key={`${secondary ? "secondary" : "primary"}-${item.label}`}
-        href={item.href}
-        className={`ds-nav-item${secondary ? " is-secondary" : ""}${active ? " is-active" : ""}`}
-        onClick={onNavigate}
-      >
-        <Icon size={16} strokeWidth={1.8} />
-        <span>{item.label}</span>
-      </Link>
-    );
-  }
+  const items: Item[] = [
+    { label: "Home", href: "/portal", icon: Home },
+    { label: "Clutch Codes", href: "/portal/qr", icon: QrCode, visible: accountAccess.modules["qr-codes"] === "enabled" },
+    {
+      label: "Analytics",
+      href: "/portal/analytics",
+      icon: BarChart3,
+      visible: accountAccess.modules["campaign-analytics"] === "enabled" || accountAccess.modules["profile-analytics"] === "enabled",
+    },
+    { label: "Print Orders", href: "/portal/print-orders", icon: PackageCheck, visible: accountAccess.modules["print-orders"] === "enabled" },
+    { label: "Business Kits", href: "/portal/business-kits", icon: Boxes, visible: accountAccess.hasBusinessKit },
+    { label: "Clutch Connect", href: "/portal/connect", icon: Link2, visible: accountAccess.modules["clutch-connect"] === "enabled" },
+    { label: "Guided Setup", href: "/portal/connect/setup", icon: Sparkles, visible: accountAccess.modules["guided-setup"] === "enabled" },
+    { label: "Profile Builder", href: "/portal/connect/build", icon: UserRoundCog, visible: accountAccess.modules["profile-builder"] === "enabled" },
+    { label: "Lead Inbox", href: "/portal/connect/leads", icon: Users, visible: accountAccess.modules["lead-inbox"] === "enabled" },
+    { label: "Subscription", href: "/portal/subscription", icon: CreditCard, visible: accountAccess.modules.subscription === "enabled" },
+    { label: "Settings", href: "/portal/settings", icon: Settings },
+    { label: "Admin", href: "/admin", icon: Shield, visible: Boolean(isAdmin) },
+  ];
 
   return (
     <>
       <div className="ds-logo-wrap">
         <Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority />
       </div>
-
+      {accountAccess.canCreateQr ? (
+        <Link href="/portal/create" className={styles.createLink} onClick={close}>
+          <Plus size={18} strokeWidth={2.2} /><span>Create Clutch Code</span>
+        </Link>
+      ) : null}
       <nav className="ds-sidebar-nav" aria-label="Primary">
-        {navSections.primary.map((item) => renderItem(item))}
-
-        {navSections.secondary.length ? (
-          <>
-            <p className="ds-sidebar-section-label">Upgrade tools</p>
-            {navSections.secondary.map((item) => renderItem(item, true))}
-          </>
-        ) : null}
+        {items.filter((item) => item.visible !== false).map((item) => {
+          const Icon = item.icon;
+          const active = isActive(pathname, item.href);
+          return (
+            <Link key={item.href} href={item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={close}>
+              <Icon size={17} strokeWidth={1.9} /><span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
-
       <form action="/auth/signout" method="get" className="ds-logout-wrap">
-        <button type="submit" className="ds-nav-item ds-logout-btn">
-          <LogOut size={16} strokeWidth={1.8} />
-          <span>Logout</span>
-        </button>
+        <button type="submit" className="ds-nav-item ds-logout-btn"><LogOut size={17} strokeWidth={1.9} /><span>Logout</span></button>
       </form>
     </>
   );
 }
 
-function SidebarList(props: {
-  accountAccess?: AccountAccess;
-  isAdmin?: boolean;
-  onNavigate?: () => void;
-  navLocks?: SidebarNavProps["navLocks"];
-  navVariant: DashboardNavVariant;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <SidebarListInner {...props} />
-    </Suspense>
-  );
-}
-
-export default function SidebarNav({ accountAccess, isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox }: SidebarNavProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const inferredConnectBasic = !isAdmin && navLocks?.qr === true && navLocks?.analytics === true && navLocks?.heatmap === true;
-  const resolvedVariant: DashboardNavVariant = navVariant || (inferredConnectBasic ? "connect-basic" : "default");
+function LegacyNav({ isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox, close }: SidebarNavProps & { close?: () => void }) {
+  const pathname = usePathname();
+  const connectOnly = navVariant === "connect-basic" || navVariant === "onboarding";
+  const items: Item[] = [
+    { label: "Home", href: "/portal", icon: Home },
+    { label: "Clutch Codes", href: "/portal/qr", icon: QrCode, visible: !connectOnly && navLocks?.qr !== true },
+    { label: "Analytics", href: "/portal/analytics", icon: BarChart3, visible: !connectOnly && navLocks?.analytics !== true },
+    { label: "Clutch Connect", href: "/portal/connect", icon: Link2 },
+    { label: "Guided Setup", href: "/portal/connect/setup", icon: Sparkles, visible: showGuidedSetup === true },
+    { label: "Lead Inbox", href: "/portal/connect/leads", icon: Users, visible: showLeadInbox !== false && connectOnly },
+    { label: "Settings", href: "/portal/settings", icon: Settings },
+    { label: "Admin", href: "/admin", icon: Shield, visible: Boolean(isAdmin) },
+  ];
 
   return (
     <>
-      <button
-        type="button"
-        className="ds-mobile-toggle"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
-      >
-        <Menu size={18} />
-      </button>
+      <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
+      {!connectOnly && navLocks?.qr !== true ? <Link href="/portal/create" className={styles.createLink} onClick={close}><Plus size={18} /><span>Create Clutch Code</span></Link> : null}
+      <nav className="ds-sidebar-nav" aria-label="Primary">
+        {items.filter((item) => item.visible !== false).map((item) => {
+          const Icon = item.icon;
+          return <Link key={item.href} href={item.href} className={`ds-nav-item${isActive(pathname, item.href) ? " is-active" : ""}`} onClick={close}><Icon size={17} strokeWidth={1.9} /><span>{item.label}</span></Link>;
+        })}
+      </nav>
+      <form action="/auth/signout" method="get" className="ds-logout-wrap"><button type="submit" className="ds-nav-item ds-logout-btn"><LogOut size={17} /><span>Logout</span></button></form>
+    </>
+  );
+}
 
-      <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
-        <SidebarList
-          accountAccess={accountAccess}
-          isAdmin={isAdmin}
-          navLocks={navLocks}
-          navVariant={resolvedVariant}
-          showGuidedSetup={showGuidedSetup}
-          showLeadInbox={showLeadInbox}
-        />
-      </aside>
+export default function SidebarNav(props: SidebarNavProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const close = () => setMobileOpen(false);
 
-      {mobileOpen ? <div className="ds-mobile-backdrop" onClick={() => setMobileOpen(false)} /> : null}
+  const content = props.accountAccess
+    ? <ProductNav accountAccess={props.accountAccess} isAdmin={props.isAdmin} close={close} />
+    : <LegacyNav {...props} close={close} />;
 
+  return (
+    <>
+      <button type="button" className="ds-mobile-toggle" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19} /></button>
+      <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">{content}</aside>
+      {mobileOpen ? <button type="button" className="ds-mobile-backdrop" onClick={close} aria-label="Close navigation" /> : null}
       <aside className={`ds-sidebar mobile${mobileOpen ? " open" : ""}`} aria-label="Mobile dashboard sidebar">
-        <div className="ds-mobile-head">
-          <span>Navigation</span>
-          <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">
-            <X size={16} />
-          </button>
-        </div>
-        <SidebarList
-          accountAccess={accountAccess}
-          isAdmin={isAdmin}
-          navLocks={navLocks}
-          navVariant={resolvedVariant}
-          showGuidedSetup={showGuidedSetup}
-          showLeadInbox={showLeadInbox}
-          onNavigate={() => setMobileOpen(false)}
-        />
+        <div className="ds-mobile-head"><span>Navigation</span><button type="button" onClick={close} aria-label="Close navigation"><X size={17} /></button></div>
+        {content}
       </aside>
     </>
   );

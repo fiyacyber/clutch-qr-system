@@ -5,104 +5,67 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
-import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
-import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import StoredQrLibrary from "./stored-qr-library";
-import type { StoredQrItem } from "./stored-qr-library";
+import StoredQrLibrary, { type StoredQrItem } from "./stored-qr-library";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { customerFacingCodeSource } from "@/lib/business-kits";
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
-
   if (!user) redirect("/login");
-  if (customerLookupError) {
-    return (
-      <DashboardShell>
-        <PortalCustomerLookupUnavailable />
-      </DashboardShell>
-    );
-  }
+  if (customerLookupError) return <DashboardShell><PortalCustomerLookupUnavailable /></DashboardShell>;
   if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();
-
-  const qrCodesResult = await runGuardedDashboardTask({
-    route: "/portal/qr",
-    endpoint: "supabase:qr_codes.select",
-    customerId: customer.id,
-    fallback: [] as Array<{
-      id: string;
-      name: string;
-      slug: string;
-      destination_url: string;
-      scan_count: number | null;
-      is_active: boolean | null;
-      created_at: string | null;
-      updated_at: string | null;
-      foreground_color: string | null;
-      background_color: string | null;
-    }>,
-    task: () =>
-      admin
-        .from("qr_codes")
-        .select("id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color, qr_type")
+  const [access, qrCodesResult, provisioningsResult] = await Promise.all([
+    loadAccountAccess(admin, customer),
+    runGuardedDashboardTask({
+      route: "/portal/qr",
+      endpoint: "supabase:qr_codes.select",
+      customerId: customer.id,
+      fallback: [] as Array<any>,
+      task: () => admin.from("qr_codes")
+        .select("id,name,slug,destination_url,scan_count,is_active,created_at,updated_at,foreground_color,background_color,qr_type,capacity_source,print_order_item_id,is_system")
         .eq("customer_id", customer.id)
-        .or("is_system.eq.false,qr_type.eq.tracked_print")
+        .or("is_system.eq.false,qr_type.eq.tracked_print,qr_type.eq.business_kit")
         .order("created_at", { ascending: false }),
-  });
+    }),
+    runGuardedDashboardTask({
+      route: "/portal/qr",
+      endpoint: "supabase:print_qr_provisionings.select",
+      customerId: customer.id,
+      fallback: [] as Array<{ print_order_item_id: string; source_type: string }>,
+      task: () => admin.from("print_qr_provisionings")
+        .select("print_order_item_id,source_type")
+        .eq("customer_id", customer.id),
+    }),
+  ]);
 
+  if (!access.canEditOwnedQr && !access.hasClutchCodes) redirect("/portal?access=clutch-codes-locked");
   const qrCodes = qrCodesResult.data || [];
-  const access = await loadAccountAccess(admin, customer);
-  if (!access.canEditOwnedQr && !access.hasClutchCodes) redirect("/portal?access=qr-library-locked");
-  const qrIds = qrCodes.map((item) => item.id);
-
+  const qrIds = qrCodes.map((item: any) => item.id);
   const qrScansResult = qrIds.length
     ? await runGuardedDashboardTask({
         route: "/portal/qr",
         endpoint: "supabase:qr_scans.select",
         customerId: customer.id,
         fallback: [] as Array<{ qr_code_id: string; created_at: string | null }>,
-        task: () =>
-          admin
-            .from("qr_scans")
-            .select("qr_code_id, created_at")
-            .in("qr_code_id", qrIds)
-            .order("created_at", { ascending: false })
-            .limit(1000),
+        task: () => admin.from("qr_scans").select("qr_code_id,created_at").in("qr_code_id", qrIds).order("created_at", { ascending: false }).limit(1000),
       })
     : { data: [] as Array<{ qr_code_id: string; created_at: string | null }>, failed: false };
 
+  const lastScanByQrId = new Map<string, string | null>();
+  for (const scan of qrScansResult.data || []) if (!lastScanByQrId.has(scan.qr_code_id)) lastScanByQrId.set(scan.qr_code_id, scan.created_at || null);
+  const sourceByItem = new Map((provisioningsResult.data || []).map((row) => [String(row.print_order_item_id), row.source_type]));
   const panelIssues: string[] = [];
-  if (qrCodesResult.failed) panelIssues.push("Stored QR code list is temporarily unavailable.");
+  if (qrCodesResult.failed) panelIssues.push("Your Clutch Code library is temporarily unavailable.");
+  if (provisioningsResult.failed) panelIssues.push("Code source labels are temporarily unavailable.");
   if (qrScansResult.failed) panelIssues.push("Recent scan timestamps are temporarily unavailable.");
 
-  const lastScanByQrId = new Map<string, string | null>();
-  for (const scan of qrScansResult.data || []) {
-    if (!lastScanByQrId.has(scan.qr_code_id)) {
-      lastScanByQrId.set(scan.qr_code_id, scan.created_at || null);
-    }
-  }
-
-  const plan = getCustomerPlan(customer);
-  const limit = getEffectiveQrLimit(customer);
-  const used = qrCodes.length;
-  const hasDynamicQr = access.canEditOwnedQr;
-  const hasHeatmap = access.canUseCampaignAnalytics;
-
-  const usageLabel = !hasDynamicQr
-    ? "Dynamic QR campaigns are locked"
-    : plan.code === "agency"
-      ? `${used} / 250+ QR codes used`
-      : plan.code === "admin"
-        ? `${used} / Unlimited QR codes used`
-        : `${used} / ${limit} QR codes used`;
-
-  const libraryRows: StoredQrItem[] = qrCodes.map((code) => ({
+  const libraryRows: StoredQrItem[] = qrCodes.map((code: any) => ({
     id: code.id,
     name: code.name,
     slug: code.slug,
@@ -114,95 +77,26 @@ export default async function StoredQrCodesPage() {
     foregroundColor: code.foreground_color || "#384862",
     backgroundColor: code.background_color || "#FFFFFF",
     lastScannedAt: lastScanByQrId.get(code.id) || null,
+    sourceLabel: customerFacingCodeSource({ ...code, source_type: code.print_order_item_id ? sourceByItem.get(String(code.print_order_item_id)) : null }),
   }));
 
   return (
-    <DashboardShell
-      accountAccess={access}
-      isAdmin={Boolean(customer.is_admin)}
-      navLocks={{
-        qr: !hasDynamicQr,
-        analytics: !hasHeatmap,
-        heatmap: !hasHeatmap,
-      }}
-    >
+    <DashboardShell accountAccess={access} isAdmin={Boolean(customer.is_admin)}>
       <main className="container stored-qr-shell">
-        {panelIssues.length ? (
-          <RetryNotice
-            title="Some QR library data is temporarily unavailable"
-            description={panelIssues[0]}
-            details={panelIssues.slice(1)}
-          />
-        ) : null}
-
+        {panelIssues.length ? <RetryNotice title="Some Clutch Code data is temporarily unavailable" description={panelIssues[0]} details={panelIssues.slice(1)} /> : null}
         <DashboardHeader
-          title="QR Codes"
-          subtitle="Create, manage, and analyze your QR campaign library."
-          actions={(
-            <div className="qr-studio-top-actions">
-              <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
-              {hasHeatmap ? <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link> : null}
-              {access.canCreateQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} />Create QR</Link> : null}
-            </div>
-          )}
+          title="Clutch Codes"
+          subtitle="Create, customize, distribute, and track every code from one library."
+          actions={<div className="qr-studio-top-actions">
+            {access.canUseCampaignAnalytics ? <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} /> Analytics</Link> : null}
+            {access.canCreateQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} /> Create Clutch Code</Link> : null}
+          </div>}
         />
-
-        <CurrentPlanBadge
-          planCode={plan.code}
-          planName={plan.name}
-          priceLabel={plan.price}
-          description={plan.description}
-          usageLabel={usageLabel}
-          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
-          trialStatus={String(customer.trial_status || "none")}
+        <StoredQrLibrary
+          items={libraryRows}
+          canCreate={access.canCreateQr}
+          usage={{ used: access.usedQrCount, limit: access.effectiveQrCapacity }}
         />
-
-        {!hasDynamicQr ? (
-          <LockedFeatureCard
-            title="Unlock QR Pro"
-            description="Create dynamic QR campaigns with editable destinations and analytics."
-            requiredPlan="QR Pro"
-            requiredPlanPrice="$14.99/mo"
-            ctaLabel="Upgrade to QR Pro"
-            ctaHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
-            featureList={[
-              "100 dynamic QR codes",
-              "Editable destinations",
-              "QR customization",
-              "QR exports",
-              "Campaign analytics",
-            ]}
-            variant="qr_pro"
-          />
-        ) : null}
-
-        {hasDynamicQr && plan.code === "qr_pro" && used >= limit ? (
-          <LockedFeatureCard
-            title="Need more QR codes?"
-            description="Agency unlocks 250+ QR codes, higher-volume tracking, and client reporting."
-            requiredPlan="Agency"
-            requiredPlanPrice="Custom"
-            ctaLabel="Request Agency Access"
-            ctaHref={PLAN_DEFINITIONS.agency.checkoutUrl}
-            featureList={[
-              "250+ QR codes",
-              "Client reporting",
-              "Advanced campaign reports",
-              "Priority setup",
-            ]}
-            variant="agency"
-          />
-        ) : null}
-
-        {hasDynamicQr ? (
-          <StoredQrLibrary
-            items={libraryRows}
-            usage={{
-              used,
-              limit: plan.code === "admin" ? null : limit,
-            }}
-          />
-        ) : null}
       </main>
     </DashboardShell>
   );
