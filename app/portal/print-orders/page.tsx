@@ -24,13 +24,14 @@ export default async function CustomerPrintOrdersPage() {
       {(data || []).map((item: any) => {
         const qr = item.print_qr_provisionings?.[0]?.qr_codes;
         return <section className="dashboard-card" key={item.id}>
-          <h2>{item.product_title}</h2><p>Order {item.shopify_order_number || item.shopify_order_id} · {item.material_type} · Qty {item.quantity}</p>
+          <h2><Link href={`/portal/print-orders/${item.id}`}>{item.product_title}</Link></h2><p>Order {item.shopify_order_number || item.shopify_order_id} · {item.material_type} · Qty {item.quantity}</p>
           <p>Tracking: {item.tracking_mode} · Campaign: {item.campaign_name || "—"}</p>
           {item.destination_url ? <p>Destination: <a href={item.destination_url} rel="noreferrer" target="_blank">{item.destination_url}</a></p> : null}
           <p>Artwork: {item.artwork_status} · Proof: {item.proof_status} · Production: {item.production_status} · Fulfillment: {item.fulfillment_status}</p>
           {item.attention_reason ? <p className="alert">Needs attention: {item.attention_reason}</p> : null}
           {qr?.slug ? <Link href={`/portal/qr/${item.print_qr_provisionings[0].qr_code_id}/edit`}>Manage Clutch Code</Link> : null}
           {item.tracking_url ? <p><a href={item.tracking_url} rel="noreferrer" target="_blank">Track shipment</a></p> : null}
+          <p><Link href={`/portal/print-orders/${item.id}`}>View order workflow</Link></p>
         </section>;
       })}
     </main>

@@ -23,14 +23,14 @@ export default async function AdminPrintOrdersPage({ searchParams }: { searchPar
   if (error) throw new Error("Unable to load the print-order queue.");
   return <DashboardShell isAdmin>
     <main className="container admin-page">
-      <DashboardHeader title="Print Orders" subtitle="Read-only tracked-print, artwork, proof, production, and fulfillment queue." />
+      <DashboardHeader title="Print Orders" subtitle="Artwork, proof, production, and fulfillment operations queue." />
       <AdminDashboardTabs activeTab="print-orders" />
       <div className="dashboard-actions">
         <Link href="/admin/print-orders">All</Link><Link href="/admin/print-orders?view=attention">Needs attention</Link>
         <Link href="/admin/print-orders?tracking=tracked">Tracked print</Link><Link href="/admin/print-orders?tracking=none">No tracking</Link>
       </div>
       <div className="table-scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>SKU / material</th><th>Qty</th><th>Tracking</th><th>Campaign</th><th>Artwork</th><th>Proof</th><th>Production</th><th>Fulfillment</th><th>Provisioning</th><th>QR</th><th>Attention</th><th>Created</th></tr></thead>
-        <tbody>{(data || []).map((item: any) => <tr key={item.id}><td>{item.shopify_order_number || item.shopify_order_id}</td><td>{item.customer_name || item.customer_email || "Guest"}</td><td>{item.product_title}{item.variant_title ? ` — ${item.variant_title}` : ""}</td><td>{item.sku || "—"}<br />{item.material_type}</td><td>{item.quantity}</td><td>{item.tracking_mode}</td><td>{item.campaign_name || "—"}</td><td>{item.artwork_status}</td><td>{item.proof_status}</td><td>{item.production_status}</td><td>{item.fulfillment_status}</td><td>{item.provisioning_status}</td><td>{item.print_qr_provisionings?.[0]?.provisioning_status || "—"}</td><td>{item.attention_reason || "—"}</td><td>{new Date(item.created_at).toLocaleString()}</td></tr>)}</tbody>
+        <tbody>{(data || []).map((item: any) => <tr key={item.id}><td><Link href={`/admin/print-orders/${item.id}`}>{item.shopify_order_number || item.shopify_order_id}</Link></td><td>{item.customer_name || item.customer_email || "Guest"}</td><td>{item.product_title}{item.variant_title ? ` — ${item.variant_title}` : ""}</td><td>{item.sku || "—"}<br />{item.material_type}</td><td>{item.quantity}</td><td>{item.tracking_mode}</td><td>{item.campaign_name || "—"}</td><td>{item.artwork_status}</td><td>{item.proof_status}</td><td>{item.production_status}</td><td>{item.fulfillment_status}</td><td>{item.provisioning_status}</td><td>{item.print_qr_provisionings?.[0]?.provisioning_status || "—"}</td><td>{item.attention_reason || "—"}</td><td>{new Date(item.created_at).toLocaleString()}</td></tr>)}</tbody>
       </table></div>
       {!data?.length ? <p className="empty-state">No print orders match these filters.</p> : null}
     </main>
