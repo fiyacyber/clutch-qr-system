@@ -8,6 +8,7 @@ import QRLivePreview from "@/components/QRLivePreview";
 import QRStylePanel, { type DownloadSize, type ThemePreset } from "@/components/QRStylePanel";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import styles from "./QRCodeCreateStudioForm.module.css";
+import flowStyles from "./QRCodeCreateStudioFlow.module.css";
 
 type DotStyle = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
 type CornerStyle = "square" | "dot" | "extra-rounded";
@@ -219,22 +220,22 @@ export default function QRCodeCreateStudioForm({
 
   return (
     <form className={styles.container} onSubmit={handleSubmit}>
-      <section className={styles.flowTabs} aria-label="Clutch Code creation steps">
+      <section className={flowStyles.flowTabs} aria-label="Clutch Code creation steps">
         {steps.map(({ key, number, label, icon: Icon }) => (
-          <button key={key} type="button" className={activeStep === key ? styles.activeFlowTab : ""} onClick={() => setActiveStep(key)}>
+          <button key={key} type="button" className={activeStep === key ? flowStyles.activeFlowTab : ""} onClick={() => setActiveStep(key)}>
             <span>{number}</span><Icon size={17} /><strong>{label}</strong>
           </button>
         ))}
       </section>
 
-      <div className={styles.builderGrid}>
+      <div className={flowStyles.builderGrid}>
         <section className={styles.workspace}>
           {activeStep === "destination" ? (
             <section className={styles.stepCard}>
               <div className={styles.stepHeader}><div><span className={styles.stepNumber}>Step 1</span><h2>What should this Clutch Code do?</h2></div><span className={styles.stepPill}>{destinationType === "connect_profile" ? "Clutch Connect" : "Website"}</span></div>
-              <div className={styles.destinationChoices}>
-                <button type="button" className={destinationType === "url" ? styles.activeDestination : ""} onClick={() => setDestinationType("url")}><Globe2 size={22} /><strong>Website</strong><small>Send customers to any HTTPS page.</small></button>
-                <button type="button" className={destinationType === "connect_profile" ? styles.activeDestination : ""} onClick={() => setDestinationType("connect_profile")}><Contact size={22} /><strong>Clutch Connect</strong><small>Open your digital profile or smart-card destination.</small></button>
+              <div className={flowStyles.destinationChoices}>
+                <button type="button" className={destinationType === "url" ? flowStyles.activeDestination : ""} onClick={() => setDestinationType("url")}><Globe2 size={22} /><strong>Website</strong><small>Send customers to any HTTPS page.</small></button>
+                <button type="button" className={destinationType === "connect_profile" ? flowStyles.activeDestination : ""} onClick={() => setDestinationType("connect_profile")}><Contact size={22} /><strong>Clutch Connect</strong><small>Open your digital profile or smart-card destination.</small></button>
               </div>
               <div className={styles.fieldGrid}>
                 <label className={styles.field}><span className={styles.fieldLabel}>Clutch Code name</span><input className={styles.input} value={name} onChange={(event) => setName(event.target.value)} placeholder="Summer postcard campaign" maxLength={100} disabled={isSaving} /><span className={styles.hint}>Use a name you will recognize in Analytics and Print Orders.</span></label>
@@ -245,7 +246,7 @@ export default function QRCodeCreateStudioForm({
                 )}
               </div>
               <div className={styles.destinationMeta}><article><span>Destination</span><strong>{destinationSummary}</strong></article><article><span>Code status</span><strong>{baseDestination ? "Ready" : "Needs destination"}</strong></article><article><span>Dynamic redirect</span><strong>Editable after creation</strong></article></div>
-              <button type="button" className={styles.nextButton} onClick={() => setActiveStep("customize")}>Continue to Customize</button>
+              <button type="button" className={flowStyles.nextButton} onClick={() => setActiveStep("customize")}>Continue to Customize</button>
             </section>
           ) : null}
 
@@ -253,7 +254,7 @@ export default function QRCodeCreateStudioForm({
             <section className={styles.stepCard}>
               <div className={styles.stepHeader}><div><span className={styles.stepNumber}>Step 2</span><h2>Make it recognizable and scan-safe.</h2></div><span className={styles.stepPill}>Live preview</span></div>
               <QRStylePanel theme={theme} onThemeChange={setTheme} foregroundColor={foregroundColor} onForegroundColorChange={setForegroundColor} backgroundColor={backgroundColor} onBackgroundColorChange={setBackgroundColor} dotStyle={dotStyle} onDotStyleChange={setDotStyle} cornerStyle={cornerStyle} onCornerStyleChange={setCornerStyle} downloadSize={downloadSize} onDownloadSizeChange={setDownloadSize} logoFile={logoFile} onLogoFileChange={setLogoFile} />
-              <button type="button" className={styles.nextButton} onClick={() => setActiveStep("distribute")}>Continue to Distribute</button>
+              <button type="button" className={flowStyles.nextButton} onClick={() => setActiveStep("distribute")}>Continue to Distribute</button>
             </section>
           ) : null}
 
@@ -261,7 +262,7 @@ export default function QRCodeCreateStudioForm({
             <section className={styles.stepCard}>
               <div className={styles.stepHeader}><div><span className={styles.stepNumber}>Step 3</span><h2>Where will customers see this code?</h2></div><span className={styles.stepPill}>{DISTRIBUTION_LABELS[distribution]}</span></div>
               <QRTypeSelector value={distribution} onChange={setDistribution} />
-              <div className={styles.guidanceBox}>
+              <div className={flowStyles.guidanceBox}>
                 <strong>Distribution guidance</strong>
                 <p><CheckCircle2 size={16} /> Keep a clear margin around the code.</p>
                 <p><CheckCircle2 size={16} /> Test-scan at the final printed or displayed size.</p>
@@ -279,7 +280,7 @@ export default function QRCodeCreateStudioForm({
           ) : null}
         </section>
 
-        <aside className={styles.previewRail} id="clutch-code-preview">
+        <aside className={flowStyles.previewRail} id="clutch-code-preview">
           <QRLivePreview finalUrl={finalUrl} foregroundColor={foregroundColor} backgroundColor={backgroundColor} dotStyle={dotStyle} cornerStyle={cornerStyle} logoUrl={previewLogoUrl} used={used} limit={limit} isLocked={isLocked} name={name} destinationTypeLabel={destinationType === "connect_profile" ? "Clutch Connect" : "Website"} destinationPreview={destinationSummary} printMockupType={distribution} trackingPreview={trackingSummary} downloadSize={downloadSize} canCreate={canCreate} error={error} />
         </aside>
       </div>
