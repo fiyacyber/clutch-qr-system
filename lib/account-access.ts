@@ -300,7 +300,7 @@ export function canPerformAccountAction(
 
 export const ACCOUNT_MODULE_ROUTES: Partial<Record<AccountModuleKey, string>> = {
   overview: "/portal",
-  "print-orders": "/portal?section=print-orders",
+  "print-orders": "/portal/print-orders",
   "smart-card": "/portal/connect",
   "clutch-connect": "/portal/connect",
   "guided-setup": "/portal/connect/setup",

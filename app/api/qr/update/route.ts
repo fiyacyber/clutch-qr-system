@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   const { data: qrCode, error: qrError } = await admin
     .from("qr_codes")
-    .select("id, logo_path, logo_url, foreground_color, background_color, dot_style, corner_style")
+    .select("id, name, qr_type, logo_path, logo_url, foreground_color, background_color, dot_style, corner_style, customer_can_edit_destination")
     .eq("id", id)
     .eq("customer_id", customer.id)
     .single();
@@ -110,6 +110,10 @@ export async function POST(req: NextRequest) {
     console.error("QR LOOKUP ERROR:", qrError);
     return NextResponse.json({ error: "QR code not found" }, { status: 404 });
   }
+  if (qrCode.customer_can_edit_destination !== true) {
+    return NextResponse.json({ error: "This QR destination cannot be edited." }, { status: 403 });
+  }
+  const isTrackedPrintQr = qrCode.qr_type === "tracked_print";
 
   let logo_enabled = Boolean(qrCode.logo_url);
   let logo_url = qrCode.logo_url as string | null;
@@ -191,14 +195,14 @@ export async function POST(req: NextRequest) {
   const { error } = await admin
     .from("qr_codes")
     .update({
-      name,
+      name: isTrackedPrintQr ? qrCode.name : name,
       destination_url: resolvedDestination,
       foreground_color: access.canCustomizeQr ? foreground_color : qrCode.foreground_color,
       background_color: access.canCustomizeQr ? background_color : qrCode.background_color,
       dot_style: access.canCustomizeQr ? dot_style : qrCode.dot_style,
       corner_style: access.canCustomizeQr ? corner_style : qrCode.corner_style,
-      qr_type,
-      profile_id,
+      qr_type: isTrackedPrintQr ? "tracked_print" : qr_type,
+      profile_id: isTrackedPrintQr ? null : profile_id,
       theme,
       logo_enabled,
       logo_url,
