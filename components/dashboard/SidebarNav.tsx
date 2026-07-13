@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
 import type { AccountAccess } from "@/lib/account-access";
+import styles from "./SidebarNav.module.css";
 
 interface SidebarNavProps {
   accountAccess?: AccountAccess;
@@ -79,7 +80,7 @@ function ProductNav({ accountAccess, isAdmin, close }: { accountAccess: AccountA
         <Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority />
       </div>
       {accountAccess.canCreateQr ? (
-        <Link href="/portal/create" className="ds-sidebar-create" onClick={close}>
+        <Link href="/portal/create" className={styles.createLink} onClick={close}>
           <Plus size={18} strokeWidth={2.2} /><span>Create Clutch Code</span>
         </Link>
       ) : null}
@@ -118,7 +119,7 @@ function LegacyNav({ isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInb
   return (
     <>
       <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
-      {!connectOnly && navLocks?.qr !== true ? <Link href="/portal/create" className="ds-sidebar-create" onClick={close}><Plus size={18} /><span>Create Clutch Code</span></Link> : null}
+      {!connectOnly && navLocks?.qr !== true ? <Link href="/portal/create" className={styles.createLink} onClick={close}><Plus size={18} /><span>Create Clutch Code</span></Link> : null}
       <nav className="ds-sidebar-nav" aria-label="Primary">
         {items.filter((item) => item.visible !== false).map((item) => {
           const Icon = item.icon;
