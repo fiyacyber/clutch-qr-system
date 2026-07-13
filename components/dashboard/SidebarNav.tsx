@@ -23,6 +23,7 @@ import {
 import { Suspense, useState } from "react";
 import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
 import { ACCOUNT_MODULE_ROUTES, type AccountAccess, type AccountModuleKey } from "@/lib/account-access";
+import { getActiveAccountModule } from "@/lib/account-navigation";
 
 interface SidebarNavProps {
   accountAccess?: AccountAccess;
@@ -216,17 +217,25 @@ function SidebarListInner({
     const moduleEntries = (Object.keys(accountAccess.modules) as AccountModuleKey[])
       .filter((key) => accountAccess.modules[key] !== "hidden")
       .map((key) => ({ key, state: accountAccess.modules[key], ...moduleLabels[key], href: ACCOUNT_MODULE_ROUTES[key] || "/portal" }));
+    const activeKey = getActiveAccountModule(pathname, searchParams, moduleEntries.map((item) => item.key));
     return (
       <>
         <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
         <nav className="ds-sidebar-nav" aria-label="Primary">
           {moduleEntries.map((item) => {
             const Icon = item.icon;
-            const active = item.href.split("?")[0] === pathname;
+            const active = item.key === activeKey;
+            if (item.state === "locked") {
+              return (
+                <button key={item.key} type="button" className="ds-nav-item" disabled aria-disabled="true">
+                  <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
+                  <small className="ds-nav-lock-pill">Locked</small>
+                </button>
+              );
+            }
             return (
-              <Link key={item.key} href={item.state === "locked" ? "/portal" : item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={onNavigate} aria-disabled={item.state === "locked"}>
+              <Link key={item.key} href={item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={onNavigate}>
                 <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
-                {item.state === "locked" ? <small className="ds-nav-lock-pill">Locked</small> : null}
               </Link>
             );
           })}
@@ -244,6 +253,22 @@ function SidebarListInner({
     const Icon = item.icon;
     const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
 
+    if (isLocked) {
+      return (
+        <button
+          key={`${secondary ? "secondary" : "primary"}-${item.label}`}
+          type="button"
+          className={`ds-nav-item${secondary ? " is-secondary" : ""}`}
+          disabled
+          aria-disabled="true"
+        >
+          <Icon size={16} strokeWidth={1.8} />
+          <span>{item.label}</span>
+          <small className="ds-nav-lock-pill">Locked</small>
+        </button>
+      );
+    }
+
     return (
       <Link
         key={`${secondary ? "secondary" : "primary"}-${item.label}`}
@@ -253,7 +278,6 @@ function SidebarListInner({
       >
         <Icon size={16} strokeWidth={1.8} />
         <span>{item.label}</span>
-        {isLocked ? <small className="ds-nav-lock-pill">Locked</small> : null}
       </Link>
     );
   }

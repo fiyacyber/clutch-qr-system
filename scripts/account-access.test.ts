@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
-import { canAccessAccountModule, resolveAccountAccess } from "../lib/account-access.ts";
+import { canAccessAccountModule, canPerformAccountAction, resolveAccountAccess } from "../lib/account-access.ts";
+import { hasActiveProfileEvidence, hasSmartCardSystemQrEvidence } from "../lib/account-evidence.ts";
+import { getActiveAccountModule } from "../lib/account-navigation.ts";
 import { buildLegacyAdminCustomerUpdate } from "../lib/admin-customer-update.ts";
 
 const baseCustomer = {
@@ -38,6 +40,29 @@ test("Smart Card only grants basic profile tools without campaign creation", () 
   assert.equal(result.canUseProfileBuilder, false);
   assert.equal(result.canCreateQr, false);
   assert.equal(canAccessAccountModule(result, "guided-setup"), true);
+});
+
+test("only smart_card system QR records prove Smart Card ownership", () => {
+  assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "smart_card" }]), true);
+  assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "tracked_print" }]), false);
+  assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "business_kit" }]), false);
+  assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true }]), false);
+});
+
+test("only explicitly active profiles count as ownership evidence", () => {
+  assert.equal(hasActiveProfileEvidence([{ is_active: true }]), true);
+  assert.equal(hasActiveProfileEvidence([{ is_active: false }]), false);
+  assert.equal(hasActiveProfileEvidence([{ is_active: null }]), false);
+  assert.equal(hasActiveProfileEvidence([{}]), false);
+});
+
+test("server and admin apply strict Smart Card and active-profile evidence", () => {
+  const serverSource = fs.readFileSync(new URL("../lib/account-access-server.ts", import.meta.url), "utf8");
+  const adminSource = fs.readFileSync(new URL("../app/admin/page.tsx", import.meta.url), "utf8");
+  assert.match(serverSource, /\.eq\("is_system", true\)\.eq\("qr_type", "smart_card"\)/);
+  assert.match(serverSource, /\.eq\("is_active", true\)/);
+  assert.match(adminSource, /hasSmartCardSystemQrEvidence\(c\.qr_codes\)/);
+  assert.match(adminSource, /hasActiveProfileEvidence\(c\.profiles\)/);
 });
 
 test("Connect+ only grants profile features, not general QR creation", () => {
@@ -177,6 +202,14 @@ test("admin alone is unrestricted and unlimited", () => {
   assert.equal(Object.values(result.modules).every((state) => state === "enabled" || state === "hidden"), true);
 });
 
+test("admin remains unrestricted when legacy subscription status is cancelled", () => {
+  const result = access({ is_admin: true, plan: "admin", plan_code: "admin", subscription_status: "cancelled" });
+  assert.equal(result.canUseAdmin, true);
+  assert.equal(result.canCreateQr, true);
+  assert.equal(result.canUseCampaignHeatmap, true);
+  assert.equal(result.effectiveQrCapacity, null);
+});
+
 test("cancelled Clutch Codes locks subscription features", () => {
   const result = access({
     clutch_codes_plan_code: "clutch_codes_starter",
@@ -225,6 +258,59 @@ test("legacy admin Save preserves split allowances and Clutch Codes fields", () 
   assert.equal("subscription_qr_limit" in update, false);
   assert.equal("clutch_codes_plan_code" in update, false);
   assert.equal("clutch_codes_subscription_status" in update, false);
+});
+
+test("account navigation chooses exactly one pathname and query-aware active module", () => {
+  const visible = [
+    "overview", "print-orders", "smart-card", "clutch-connect", "guided-setup", "profile-builder",
+    "lead-inbox", "profile-analytics", "qr-codes", "campaign-analytics", "campaign-heatmap",
+    "subscription", "settings", "admin",
+  ] as const;
+  const params = (value = "") => new URLSearchParams(value);
+  assert.equal(getActiveAccountModule("/portal", params(), [...visible]), "overview");
+  assert.equal(getActiveAccountModule("/portal", params("section=print-orders"), [...visible]), "print-orders");
+  assert.equal(getActiveAccountModule("/portal/analytics", params("tab=profile"), [...visible]), "profile-analytics");
+  assert.equal(getActiveAccountModule("/portal/analytics", params("tab=campaign"), [...visible]), "campaign-analytics");
+  assert.equal(getActiveAccountModule("/portal/subscription", params(), [...visible]), "subscription");
+  assert.equal(getActiveAccountModule("/portal/qr/abc/edit", params(), [...visible]), "qr-codes");
+  assert.equal(getActiveAccountModule("/admin/customers", params(), [...visible]), "admin");
+  assert.equal(getActiveAccountModule("/portal/connect", params(), [...visible]), "smart-card");
+});
+
+test("behavioral access boundaries match product ownership", () => {
+  const noProduct = access();
+  const smartCard = access({}, { hasSmartCardOrder: true });
+  const connectPlus = access({ plan: "connect_plus", plan_code: "connect_plus" });
+  const starterBelowLimit = access({
+    clutch_codes_plan_code: "clutch_codes_starter",
+    clutch_codes_subscription_status: "active",
+    subscription_qr_limit: 10,
+  }, { usedQrCount: 9 });
+  const starterAtLimit = access({
+    clutch_codes_plan_code: "clutch_codes_starter",
+    clutch_codes_subscription_status: "active",
+    subscription_qr_limit: 10,
+  }, { usedQrCount: 10 });
+  const trackedPrint = access({ included_qr_allowance: 1 }, {
+    hasTrackedPrint: true,
+    hasPrintOrders: true,
+    hasIncludedPrintQr: true,
+  });
+
+  assert.equal(canPerformAccountAction(noProduct, "create-qr"), false);
+  assert.equal(canPerformAccountAction(smartCard, "create-qr"), false);
+  assert.equal(canPerformAccountAction(connectPlus, "create-qr"), false);
+  assert.equal(canPerformAccountAction(starterBelowLimit, "create-qr"), true);
+  assert.equal(canPerformAccountAction(starterAtLimit, "create-qr"), false);
+  assert.equal(canPerformAccountAction(trackedPrint, "edit-owned-qr", { ownsRecord: true }), true);
+  assert.equal(canPerformAccountAction(trackedPrint, "edit-owned-qr", { ownsRecord: false }), false);
+  assert.equal(canPerformAccountAction(trackedPrint, "create-qr"), false);
+  assert.equal(canPerformAccountAction(starterBelowLimit, "profile-builder"), false);
+  assert.equal(canPerformAccountAction(smartCard, "profile-builder"), false);
+  assert.equal(canPerformAccountAction(connectPlus, "profile-builder"), true);
+  assert.equal(canPerformAccountAction(noProduct, "admin"), false);
+  assert.equal(canPerformAccountAction(noProduct, "campaign-heatmap"), false);
+  assert.equal(canPerformAccountAction(access({ is_admin: true }), "campaign-heatmap"), true);
 });
 
 test("direct paid routes and APIs use server-side account access gates", () => {

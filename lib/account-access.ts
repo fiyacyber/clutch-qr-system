@@ -272,6 +272,32 @@ export function isAccountModuleVisible(access: AccountAccess, module: AccountMod
   return access.modules[module] !== "hidden";
 }
 
+export type AccountAccessAction =
+  | "create-qr"
+  | "edit-owned-qr"
+  | "profile-builder"
+  | "admin"
+  | "campaign-heatmap";
+
+export function canPerformAccountAction(
+  access: AccountAccess,
+  action: AccountAccessAction,
+  context: { ownsRecord?: boolean } = {}
+): boolean {
+  switch (action) {
+    case "create-qr":
+      return access.canCreateQr;
+    case "edit-owned-qr":
+      return context.ownsRecord === true && access.canEditOwnedQr;
+    case "profile-builder":
+      return access.canUseProfileBuilder;
+    case "admin":
+      return access.canUseAdmin;
+    case "campaign-heatmap":
+      return access.canUseCampaignHeatmap;
+  }
+}
+
 export const ACCOUNT_MODULE_ROUTES: Partial<Record<AccountModuleKey, string>> = {
   overview: "/portal",
   "print-orders": "/portal?section=print-orders",

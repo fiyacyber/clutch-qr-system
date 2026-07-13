@@ -7,6 +7,7 @@ import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { getCustomerPlan, normalizePlanCode, PLAN_DEFINITIONS } from "@/lib/plans";
 import { resolveAccountAccess } from "@/lib/account-access";
+import { hasActiveProfileEvidence, hasSmartCardSystemQrEvidence } from "@/lib/account-evidence";
 
 interface AdminPageProps {
   searchParams?: Promise<{ q?: string }>;
@@ -463,8 +464,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   customer: c,
                   usedQrCount: qrCount,
                   hasSmartCardOrder: (c.card_orders || []).length > 0,
-                  hasSmartCardSystemQr: (c.qr_codes || []).some((qr: any) => qr.is_system === true),
-                  hasActiveProfile: (c.profiles || []).some((profile: any) => profile.is_active !== false),
+                  hasSmartCardSystemQr: hasSmartCardSystemQrEvidence(c.qr_codes),
+                  hasActiveProfile: hasActiveProfileEvidence(c.profiles),
                 });
 
                 return (

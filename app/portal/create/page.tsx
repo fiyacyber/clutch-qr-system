@@ -12,6 +12,7 @@ import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 import {
   PLAN_DEFINITIONS,
   getCustomerPlan,
@@ -69,7 +70,7 @@ export default async function CreatePortalPage() {
 
   const used = qrCodesResult.data?.length || 0;
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canCreateQr) redirect("/portal?access=qr-creation-locked");
+  if (!canPerformAccountAction(access, "create-qr")) redirect("/portal?access=qr-creation-locked");
   const limit = getEffectiveQrLimit(customer);
   const plan = getCustomerPlan(customer);
   const hasDynamicQr = access.canCreateQr;

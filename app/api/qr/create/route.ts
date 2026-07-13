@@ -8,6 +8,7 @@ import {
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
   }
 
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canCreateQr) {
+  if (!canPerformAccountAction(access, "create-qr")) {
     return NextResponse.json({ error: "This account does not have available Clutch Codes creation capacity." }, { status: 403 });
   }
 

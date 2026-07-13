@@ -7,6 +7,7 @@ import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 export default async function BuilderPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -23,7 +24,7 @@ export default async function BuilderPage() {
   if (customer.must_change_password) redirect("/change-password");
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canUseProfileBuilder) redirect("/portal/connect?builder=locked");
+  if (!canPerformAccountAction(access, "profile-builder")) redirect("/portal/connect?builder=locked");
 
   const { data: profile, error: profileError } = await admin
     .from("profiles")

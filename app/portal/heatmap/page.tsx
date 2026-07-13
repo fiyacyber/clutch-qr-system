@@ -11,6 +11,7 @@ import { parseCoordinate } from "@/lib/analytics";
 import { PLAN_DEFINITIONS, getCustomerPlan } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 export default async function HeatmapCommandCenterPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -27,7 +28,7 @@ export default async function HeatmapCommandCenterPage() {
 
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canUseCampaignHeatmap) redirect("/portal?access=campaign-heatmap-locked");
+  if (!canPerformAccountAction(access, "campaign-heatmap")) redirect("/portal?access=campaign-heatmap-locked");
   const plan = getCustomerPlan(customer);
   const hasHeatmap = access.canUseCampaignHeatmap;
   const hasDynamicQr = access.canEditOwnedQr;

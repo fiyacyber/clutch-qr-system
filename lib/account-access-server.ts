@@ -11,7 +11,7 @@ export async function loadAccountAccess(
   const [qrResult, cardOrderResult, systemQrResult, profileResult] = await Promise.all([
     admin.from("qr_codes").select("id", { count: "exact", head: true }).eq("customer_id", customer.id).neq("is_system", true),
     admin.from("card_orders").select("id", { count: "exact", head: true }).eq("customer_id", customer.id),
-    admin.from("qr_codes").select("id", { count: "exact", head: true }).eq("customer_id", customer.id).eq("is_system", true),
+    admin.from("qr_codes").select("id", { count: "exact", head: true }).eq("customer_id", customer.id).eq("is_system", true).eq("qr_type", "smart_card"),
     admin.from("profiles").select("id", { count: "exact", head: true }).eq("customer_id", customer.id).eq("is_active", true),
   ]);
 
