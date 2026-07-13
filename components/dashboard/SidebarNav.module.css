@@ -1,0 +1,22 @@
+.createLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  margin: 4px 14px 14px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: #ffa665;
+  color: #26344a;
+  font-size: 0.9rem;
+  font-weight: 850;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(255, 166, 101, 0.24);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.createLink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(255, 166, 101, 0.31);
+}
