@@ -21,6 +21,7 @@ import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/compo
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import StatCard from "@/components/dashboard/StatCard";
 import SmartCardQrCard from "@/components/dashboard/SmartCardQrCard";
+import { AccountWarnings, ActiveProducts, QrCapacity } from "@/components/dashboard/AccountAccessCards";
 import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
@@ -28,7 +29,6 @@ import { requireCustomer } from "@/lib/auth";
 import { isConnectProfilePublished, isConnectSetupComplete } from "@/lib/connect";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import {
-  hasEntitlement,
   getCustomerPlan,
   getCustomerSubscriptionStatus,
   getEffectiveQrLimit,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/plans";
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { resolveAccountAccess } from "@/lib/account-access";
 
 interface PortalPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -258,11 +259,19 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   const subscriptionLocked = isCustomerSubscriptionLocked(customer);
   const subscriptionLockMessage = getSubscriptionLockMessage(customer);
   const totalScans = campaignCodes.reduce((sum, code) => sum + (code.scan_count || 0), 0);
-  const remaining = Math.max(limit - used, 0);
-  const remainingLabel = plan.code === "admin" ? "Unlimited" : String(remaining);
-  const isConnectBasicPlan = plan.code === "connect_basic";
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const access = resolveAccountAccess({
+    customer,
+    usedQrCount: used,
+    hasSmartCardOrder: (cardOrdersResult.data || []).length > 0,
+    hasSmartCardSystemQr: smartCardCodes.length > 0,
+    hasActiveProfile: Boolean(connectProfile?.id && connectProfile?.is_active),
+  });
+  const remaining = access.remainingQrCapacity || 0;
+  const remainingLabel = access.remainingQrCapacity === null ? "Unlimited" : String(remaining);
+  const isConnectBasicPlan = access.dashboardVariant === "smart-card";
+  const showCampaignDashboard = access.hasClutchCodes || access.hasTrackedPrint || access.hasBusinessKit || access.isAdmin;
+  const hasDynamicQr = access.canCreateQr || access.canEditOwnedQr;
+  const hasHeatmap = access.canUseCampaignHeatmap;
   const hasConnectProfile = Boolean(connectProfile?.id);
   const setupChecklistComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: false });
   const hasPublicProfile = isConnectProfilePublished(connectProfile || null) && Boolean(connectProfile?.slug);
@@ -332,15 +341,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     }
   }
 
-  const usageLabel = plan.code === "connect_basic"
-    ? "Digital profile access included"
-    : plan.code === "connect_plus"
-      ? "Profile tools unlocked"
-      : plan.code === "agency"
-        ? `${used} / 250+ QR codes used`
-        : plan.code === "admin"
-          ? `${used} / Unlimited QR codes used`
-          : `${used} / ${limit} QR codes used`;
+  const usageLabel = access.effectiveQrCapacity === null
+    ? `${used} / Unlimited QR codes used`
+    : `${used} / ${access.effectiveQrCapacity} active codes`;
 
   const nextStepCard = plan.code === "connect_plus"
       ? {
@@ -441,6 +444,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navVariant={isConnectBasicPlan ? "connect-basic" : "default"}
       showGuidedSetup={!hasPublicProfile}
@@ -472,7 +476,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
 
         <DashboardHeader
           pretitle={isConnectBasicPlan ? `Welcome, ${welcomeFirstName}` : undefined}
-          title={isConnectBasicPlan ? "Smart Business Card Dashboard" : "Clutch Connect Platform"}
+          title={access.dashboardTitle}
           subtitle={
             isConnectBasicPlan
               ? smartCardSubtitle
@@ -487,17 +491,21 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
                   </Link>
                   <Link className="btn ghost" href="/portal/connect/leads">Lead Inbox</Link>
                 </>
-              ) : (
+              ) : showCampaignDashboard ? (
                 <>
-                  <Link className="btn primary" href="/portal/create">Create Campaign</Link>
+                  {access.canCreateQr ? <Link className="btn primary" href="/portal/create">Create QR Code</Link> : null}
                   <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
                   <Link className="btn secondary" href="/portal/analytics">View Insights</Link>
-                  <Link className="btn ghost" href="/portal/connect/build">Edit Clutch Connect</Link>
+                  {access.canUseProfileBuilder ? <Link className="btn ghost" href="/portal/connect/build">Edit Clutch Connect</Link> : null}
                 </>
-              )}
+              ) : <Link className="btn ghost" href="/portal/settings">Account Settings</Link>}
             </div>
           )}
         />
+
+        <AccountWarnings warnings={access.warnings} />
+        <ActiveProducts access={access} />
+        <QrCapacity access={access} />
 
         {isConnectBasicPlan ? (
           <section className="portal-overview-plan-mini">
@@ -505,22 +513,22 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             <span>Free</span>
             <span>{subscriptionStatus}</span>
           </section>
-        ) : (
+        ) : access.hasClutchCodes ? (
           <CurrentPlanBadge
-            planCode={plan.code}
-            planName={plan.name}
-            priceLabel={plan.price}
-            description={plan.description}
+            planCode={access.clutchCodesPlanCode || "clutch_codes"}
+            planName={access.clutchCodesPlanName || "Clutch Codes"}
+            priceLabel={access.clutchCodesPrice || "Shopify subscription"}
+            description="Dynamic QR campaigns, editable destinations, customization, exports, and campaign analytics."
             usageLabel={usageLabel}
-            subscriptionStatus={subscriptionStatus}
+            subscriptionStatus={String(customer.clutch_codes_subscription_status || "inactive")}
             locked={subscriptionLocked}
             trialStatus={String(customer.trial_status || "none")}
           />
-        )}
+        ) : null}
 
-        {!isConnectBasicPlan && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
+        {showCampaignDashboard && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
 
-        {!isConnectBasicPlan ? (
+        {access.canViewPrintOrders ? (
           <AnalyticsCard title="Recent Order Status">
             {visibleCardOrders.length ? (
               <ul className="portal-overview-order-list">
@@ -818,7 +826,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               </AnalyticsCard>
             </section>
           </>
-        ) : (
+        ) : showCampaignDashboard ? (
           <>
             <section className="ds-stat-grid">
               <StatCard
@@ -937,7 +945,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
               </AnalyticsCard>
             </section>
           </>
-        )}
+        ) : null}
       </main>
     </DashboardShell>
   );

@@ -116,6 +116,18 @@
   color: #fff;
 }
 
+.ds-nav-item:disabled,
+.ds-nav-item[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ds-nav-item:disabled:hover,
+.ds-nav-item[aria-disabled="true"]:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.74);
+}
+
 .ds-nav-item.is-active {
   background: rgba(255, 166, 101, 0.16);
   border-left-color: var(--clutch-orange);
@@ -14748,3 +14760,21 @@ input.saas-font-search:focus-visible {
 .saas-block-main:hover .saas-block-name {
   color: #B45309;
 }
+.account-product-grid,
+.account-capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.account-product-card-link { color: inherit; text-decoration: none; }
+.account-product-card { display: grid; gap: .45rem; min-height: 130px; }
+.account-product-card strong, .account-capacity-card strong { color: var(--navy, #384862); font-size: 1.15rem; }
+.account-capacity-card { display: grid; gap: .35rem; }
+.account-warning-card { border-left: 4px solid #FFA665; }
+.account-warning-card ul { margin: .65rem 0 0; padding-left: 1.2rem; }
+.subscription-summary-card { display: grid; gap: .65rem; }
+.subscription-summary-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; margin: 0; }
+.subscription-summary-list div { padding: .75rem; border-radius: 12px; background: rgba(56, 72, 98, .06); }
+.subscription-summary-list dt { color: #667085; font-size: .82rem; }
+.subscription-summary-list dd { margin: .2rem 0 0; color: #384862; font-weight: 700; }

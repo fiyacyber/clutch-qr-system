@@ -8,8 +8,9 @@ import ConnectTabs from "@/components/connect/ConnectTabs";
 import CopyValueButton from "@/components/dashboard/CopyValueButton";
 import { requireCustomer } from "@/lib/auth";
 import { clutchConnectProfileUrl } from "@/lib/qr";
-import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 function sourceFromQrType(qrType?: string | null) {
   const value = (qrType || "").toLowerCase();
@@ -60,6 +61,8 @@ export default async function PortalConnectLeadsPage() {
   if (!customer) return <PortalAccountNotActive />;
 
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canUseLeadInbox) redirect("/portal?access=lead-inbox-locked");
 
   const { data: profile, error: profileError } = await admin
     .from("profiles")
@@ -81,13 +84,13 @@ export default async function PortalConnectLeadsPage() {
   if (!profile) redirect("/portal/connect");
 
   const plan = getCustomerPlan(customer);
-  const canUseAdvancedInbox = hasEntitlement(customer, "advancedLeadInbox") || plan.code === "admin";
+  const canUseAdvancedInbox = access.hasConnectPlus || access.isAdmin;
   const canUseSourceInsights = hasEntitlement(customer, "sourceTracking") || plan.code === "admin";
   const canUseCampaignPerformance = hasEntitlement(customer, "campaignAnalytics") || plan.code === "admin";
   const canUsePdfReports = hasEntitlement(customer, "pdfReports") || plan.code === "admin";
-  const advancedBuilderUnlocked = isAdvancedBuilderUnlocked(customer);
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const advancedBuilderUnlocked = access.canUseProfileBuilder;
+  const hasDynamicQr = access.canEditOwnedQr;
+  const hasHeatmap = access.canUseProfileHeatmap;
   const publicProfileUrl = clutchConnectProfileUrl(profile.slug);
 
   const [leadsResult, eventsResult, unifiedEventsResult, qrCodesResult, qrScansResult] = await Promise.all([
@@ -314,6 +317,7 @@ export default async function PortalConnectLeadsPage() {
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,

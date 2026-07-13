@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { fetchUnifiedAnalyticsData, isCountedProfileView } from "@/lib/clutch-analytics";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
     }
 
     const admin = createSupabaseAdminClient();
+    const access = await loadAccountAccess(admin, customer);
+    if (!access.canUseCampaignAnalytics && !access.canUseProfileAnalytics) return NextResponse.json({ error: "Analytics access is locked." }, { status: 403 });
     const data = await fetchUnifiedAnalyticsData(admin, customer as any);
 
     const totalScans = data.qrScans.length;

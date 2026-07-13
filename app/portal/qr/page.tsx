@@ -9,10 +9,11 @@ import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
-import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import StoredQrLibrary from "./stored-qr-library";
 import type { StoredQrItem } from "./stored-qr-library";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -56,6 +57,8 @@ export default async function StoredQrCodesPage() {
   });
 
   const qrCodes = qrCodesResult.data || [];
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canEditOwnedQr && !access.hasClutchCodes) redirect("/portal?access=qr-library-locked");
   const qrIds = qrCodes.map((item) => item.id);
 
   const qrScansResult = qrIds.length
@@ -88,8 +91,8 @@ export default async function StoredQrCodesPage() {
   const plan = getCustomerPlan(customer);
   const limit = getEffectiveQrLimit(customer);
   const used = qrCodes.length;
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const hasDynamicQr = access.canEditOwnedQr;
+  const hasHeatmap = access.canUseCampaignAnalytics;
 
   const usageLabel = !hasDynamicQr
     ? "Dynamic QR campaigns are locked"
@@ -115,6 +118,7 @@ export default async function StoredQrCodesPage() {
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,
@@ -138,7 +142,7 @@ export default async function StoredQrCodesPage() {
             <div className="qr-studio-top-actions">
               <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
               {hasHeatmap ? <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link> : null}
-              {hasDynamicQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} />Create QR</Link> : null}
+              {access.canCreateQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} />Create QR</Link> : null}
             </div>
           )}
         />

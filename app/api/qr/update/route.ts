@@ -6,6 +6,7 @@ import {
 import { nanoid } from "nanoid";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import { getSubscriptionLockMessage, isCustomerSubscriptionLocked } from "@/lib/plans";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -83,6 +84,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canEditOwnedQr) {
+    return NextResponse.json({ error: "This account cannot edit QR codes." }, { status: 403 });
+  }
+  if (!access.canUploadQrLogo && (logoFile || remove_logo)) {
+    return NextResponse.json({ error: "Logo customization requires an active Clutch Codes subscription." }, { status: 403 });
+  }
+
   if (isCustomerSubscriptionLocked(customer)) {
     return NextResponse.json(
       { error: getSubscriptionLockMessage(customer) },
@@ -92,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   const { data: qrCode, error: qrError } = await admin
     .from("qr_codes")
-    .select("id, logo_path, logo_url")
+    .select("id, logo_path, logo_url, foreground_color, background_color, dot_style, corner_style")
     .eq("id", id)
     .eq("customer_id", customer.id)
     .single();
@@ -184,10 +193,10 @@ export async function POST(req: NextRequest) {
     .update({
       name,
       destination_url: resolvedDestination,
-      foreground_color,
-      background_color,
-      dot_style,
-      corner_style,
+      foreground_color: access.canCustomizeQr ? foreground_color : qrCode.foreground_color,
+      background_color: access.canCustomizeQr ? background_color : qrCode.background_color,
+      dot_style: access.canCustomizeQr ? dot_style : qrCode.dot_style,
+      corner_style: access.canCustomizeQr ? corner_style : qrCode.corner_style,
       qr_type,
       profile_id,
       theme,

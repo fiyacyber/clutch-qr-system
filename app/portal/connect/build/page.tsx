@@ -5,8 +5,9 @@ import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/compo
 import { createDefaultBuilderConfig } from "@/lib/builder-config";
 import { buildDefaultProfileSlug, normalizeSlug } from "@/lib/connect";
 import { requireCustomer } from "@/lib/auth";
-import { isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 export default async function BuilderPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -21,9 +22,9 @@ export default async function BuilderPage() {
   }
   if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
-  if (!isAdvancedBuilderUnlocked(customer)) redirect("/portal/connect?builder=locked");
-
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!canPerformAccountAction(access, "profile-builder")) redirect("/portal/connect?builder=locked");
 
   const { data: profile, error: profileError } = await admin
     .from("profiles")

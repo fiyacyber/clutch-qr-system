@@ -4,10 +4,11 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/sup
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import {
   getCustomerPlan,
-  getEffectiveQrLimit,
   getSubscriptionLockMessage,
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
+import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -80,6 +81,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer record not found." }, { status: 404 });
   }
 
+  const access = await loadAccountAccess(admin, customer);
+  if (!canPerformAccountAction(access, "create-qr")) {
+    return NextResponse.json({ error: "This account does not have available Clutch Codes creation capacity." }, { status: 403 });
+  }
+
   if (isCustomerSubscriptionLocked(customer)) {
     return NextResponse.json(
       { error: getSubscriptionLockMessage(customer) },
@@ -96,7 +102,7 @@ export async function POST(req: NextRequest) {
 
   const used = qrCodes?.length || 0;
   const plan = getCustomerPlan(customer);
-  const limit = getEffectiveQrLimit(customer);
+  const limit = access.effectiveQrCapacity ?? Number.MAX_SAFE_INTEGER;
 
   if (used >= limit) {
     return NextResponse.json(

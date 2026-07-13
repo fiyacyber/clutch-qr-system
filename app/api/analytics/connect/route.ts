@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { fetchUnifiedAnalyticsData, isCountedProfileView } from "@/lib/clutch-analytics";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export async function GET() {
   const { user, customer } = await requireCustomer();
@@ -10,6 +11,8 @@ export async function GET() {
   }
 
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canUseProfileAnalytics) return NextResponse.json({ error: "Profile analytics access is locked." }, { status: 403 });
   const data = await fetchUnifiedAnalyticsData(admin, customer as any);
 
   const profileEventMap = new Map<string, any[]>();

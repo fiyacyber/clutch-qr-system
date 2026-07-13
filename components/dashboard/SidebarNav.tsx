@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
@@ -15,11 +16,17 @@ import {
   Sparkles,
   Users,
   X,
+  CreditCard,
+  PackageCheck,
+  UserRoundCog,
 } from "lucide-react";
 import { Suspense, useState } from "react";
 import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
+import { ACCOUNT_MODULE_ROUTES, type AccountAccess, type AccountModuleKey } from "@/lib/account-access";
+import { getActiveAccountModule } from "@/lib/account-navigation";
 
 interface SidebarNavProps {
+  accountAccess?: AccountAccess;
   isAdmin?: boolean;
   navLocks?: {
     qr?: boolean;
@@ -31,14 +38,33 @@ interface SidebarNavProps {
   showLeadInbox?: boolean;
 }
 
+type LegacyNavKey = "overview" | "campaign-performance" | "connect" | "guided-setup" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
+
 type NavItem = {
-  key: "overview" | "campaign-performance" | "connect" | "guided-setup" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
+  key: LegacyNavKey;
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   match: (pathname: string, tab: string | null) => boolean;
   adminOnly?: boolean;
   lockKey?: "qr" | "analytics" | "heatmap";
+};
+
+const moduleLabels: Record<AccountModuleKey, { label: string; icon: NavItem["icon"] }> = {
+  overview: { label: "Overview", icon: LayoutDashboard },
+  "print-orders": { label: "Print Orders", icon: PackageCheck },
+  "smart-card": { label: "Smart Card", icon: CreditCard },
+  "clutch-connect": { label: "Clutch Connect", icon: Link2 },
+  "guided-setup": { label: "Guided Setup", icon: Sparkles },
+  "profile-builder": { label: "Profile Builder", icon: UserRoundCog },
+  "lead-inbox": { label: "Lead Inbox", icon: Users },
+  "profile-analytics": { label: "Profile Analytics", icon: BarChart3 },
+  "qr-codes": { label: "QR Codes", icon: QrCode },
+  "campaign-analytics": { label: "Campaign Analytics", icon: BarChart3 },
+  "campaign-heatmap": { label: "Campaign Heatmap", icon: Map },
+  subscription: { label: "Subscription", icon: CreditCard },
+  settings: { label: "Settings", icon: Settings },
+  admin: { label: "Admin", icon: Shield },
 };
 
 const navItems: NavItem[] = [
@@ -167,6 +193,7 @@ function getNavSections({
 }
 
 function SidebarListInner({
+  accountAccess,
   isAdmin,
   onNavigate,
   navLocks,
@@ -174,6 +201,7 @@ function SidebarListInner({
   showGuidedSetup,
   showLeadInbox,
 }: {
+  accountAccess?: AccountAccess;
   isAdmin?: boolean;
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
@@ -184,6 +212,38 @@ function SidebarListInner({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
+
+  if (accountAccess) {
+    const moduleEntries = (Object.keys(accountAccess.modules) as AccountModuleKey[])
+      .filter((key) => accountAccess.modules[key] !== "hidden")
+      .map((key) => ({ key, state: accountAccess.modules[key], ...moduleLabels[key], href: ACCOUNT_MODULE_ROUTES[key] || "/portal" }));
+    const activeKey = getActiveAccountModule(pathname, searchParams, moduleEntries.map((item) => item.key));
+    return (
+      <>
+        <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
+        <nav className="ds-sidebar-nav" aria-label="Primary">
+          {moduleEntries.map((item) => {
+            const Icon = item.icon;
+            const active = item.key === activeKey;
+            if (item.state === "locked") {
+              return (
+                <button key={item.key} type="button" className="ds-nav-item" disabled aria-disabled="true">
+                  <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
+                  <small className="ds-nav-lock-pill">Locked</small>
+                </button>
+              );
+            }
+            return (
+              <Link key={item.key} href={item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={onNavigate}>
+                <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <form action="/auth/signout" method="get" className="ds-logout-wrap"><button type="submit" className="ds-nav-item ds-logout-btn"><LogOut size={16} strokeWidth={1.8} /><span>Logout</span></button></form>
+      </>
+    );
+  }
   const navSections = getNavSections({ navVariant, isAdmin, showGuidedSetup, showLeadInbox });
   const orderedVisibleItems = [...navSections.primary, ...navSections.secondary];
   const activeKey = orderedVisibleItems.find((item) => item.match(pathname, tab))?.key || null;
@@ -192,6 +252,22 @@ function SidebarListInner({
     const active = item.key === activeKey;
     const Icon = item.icon;
     const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
+
+    if (isLocked) {
+      return (
+        <button
+          key={`${secondary ? "secondary" : "primary"}-${item.label}`}
+          type="button"
+          className={`ds-nav-item${secondary ? " is-secondary" : ""}`}
+          disabled
+          aria-disabled="true"
+        >
+          <Icon size={16} strokeWidth={1.8} />
+          <span>{item.label}</span>
+          <small className="ds-nav-lock-pill">Locked</small>
+        </button>
+      );
+    }
 
     return (
       <Link
@@ -202,7 +278,6 @@ function SidebarListInner({
       >
         <Icon size={16} strokeWidth={1.8} />
         <span>{item.label}</span>
-        {isLocked ? <small className="ds-nav-lock-pill">Locked</small> : null}
       </Link>
     );
   }
@@ -210,7 +285,7 @@ function SidebarListInner({
   return (
     <>
       <div className="ds-logo-wrap">
-        <img src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" />
+        <Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority />
       </div>
 
       <nav className="ds-sidebar-nav" aria-label="Primary">
@@ -235,6 +310,7 @@ function SidebarListInner({
 }
 
 function SidebarList(props: {
+  accountAccess?: AccountAccess;
   isAdmin?: boolean;
   onNavigate?: () => void;
   navLocks?: SidebarNavProps["navLocks"];
@@ -249,7 +325,7 @@ function SidebarList(props: {
   );
 }
 
-export default function SidebarNav({ isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox }: SidebarNavProps) {
+export default function SidebarNav({ accountAccess, isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox }: SidebarNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const inferredConnectBasic = !isAdmin && navLocks?.qr === true && navLocks?.analytics === true && navLocks?.heatmap === true;
   const resolvedVariant: DashboardNavVariant = navVariant || (inferredConnectBasic ? "connect-basic" : "default");
@@ -267,6 +343,7 @@ export default function SidebarNav({ isAdmin, navLocks, navVariant, showGuidedSe
 
       <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
         <SidebarList
+          accountAccess={accountAccess}
           isAdmin={isAdmin}
           navLocks={navLocks}
           navVariant={resolvedVariant}
@@ -285,6 +362,7 @@ export default function SidebarNav({ isAdmin, navLocks, navVariant, showGuidedSe
           </button>
         </div>
         <SidebarList
+          accountAccess={accountAccess}
           isAdmin={isAdmin}
           navLocks={navLocks}
           navVariant={resolvedVariant}

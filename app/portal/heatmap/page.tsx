@@ -8,8 +8,10 @@ import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
 import { parseCoordinate } from "@/lib/analytics";
-import { PLAN_DEFINITIONS, getCustomerPlan, hasEntitlement } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
+import { canPerformAccountAction } from "@/lib/account-access";
 
 export default async function HeatmapCommandCenterPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -24,11 +26,12 @@ export default async function HeatmapCommandCenterPage() {
   if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
-  const plan = getCustomerPlan(customer);
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!canPerformAccountAction(access, "campaign-heatmap")) redirect("/portal?access=campaign-heatmap-locked");
+  const plan = getCustomerPlan(customer);
+  const hasHeatmap = access.canUseCampaignHeatmap;
+  const hasDynamicQr = access.canEditOwnedQr;
   const { data: qrCodes, error: qrError } = await admin
     .from("qr_codes")
     .select("id, name, is_active")
@@ -72,6 +75,7 @@ export default async function HeatmapCommandCenterPage() {
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,

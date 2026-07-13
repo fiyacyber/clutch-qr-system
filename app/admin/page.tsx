@@ -6,6 +6,8 @@ import PlanLimitFields from "@/components/admin/PlanLimitFields";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { getCustomerPlan, normalizePlanCode, PLAN_DEFINITIONS } from "@/lib/plans";
+import { resolveAccountAccess } from "@/lib/account-access";
+import { hasActiveProfileEvidence, hasSmartCardSystemQrEvidence } from "@/lib/account-evidence";
 
 interface AdminPageProps {
   searchParams?: Promise<{ q?: string }>;
@@ -69,7 +71,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     await Promise.all([
       admin
         .from("customers")
-        .select("*, customer_groups(id, name), qr_codes(id, name, slug, scan_count, is_active, updated_at)")
+        .select("*, customer_groups(id, name), qr_codes(id, name, slug, scan_count, is_active, is_system, qr_type, updated_at), card_orders(id), profiles(id, is_active)")
         .order("created_at", { ascending: false }),
       admin.from("customer_groups").select("*").order("name", { ascending: true }),
       admin
@@ -458,6 +460,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   (sum: number, qr: any) => sum + (qr.scan_count || 0),
                   0
                 );
+                const access = resolveAccountAccess({
+                  customer: c,
+                  usedQrCount: qrCount,
+                  hasSmartCardOrder: (c.card_orders || []).length > 0,
+                  hasSmartCardSystemQr: hasSmartCardSystemQrEvidence(c.qr_codes),
+                  hasActiveProfile: hasActiveProfileEvidence(c.profiles),
+                });
 
                 return (
                   <tr key={c.id}>
@@ -467,12 +476,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </td>
                     <td>
                       <span className="status-pill">{plan.name}</span>
+                      <span className="admin-cell-subtext">Active Products: {access.activeProductLabels.join(", ") || "None"}</span>
+                      <span className="admin-cell-subtext">Base Profile Plan: {plan.name}</span>
+                      <span className="admin-cell-subtext">Smart Card: {access.hasSmartCard ? "Yes" : "No"}</span>
+                      <span className="admin-cell-subtext">Connect+: {access.hasConnectPlus ? "Active" : "No"}</span>
+                      <span className="admin-cell-subtext">Clutch Codes: {access.clutchCodesPlanName || "None"} ({String(c.clutch_codes_subscription_status || "inactive")})</span>
                       <span className="admin-cell-subtext">Normalized: {plan.code}</span>
                       <span className="admin-cell-subtext">Stored: {String(c.plan_code || c.plan || "-")}</span>
                       <span className="admin-cell-subtext">Subscription: {c.subscription_status || c.plan_status || "active"}</span>
                     </td>
                     <td>
-                      <strong>{qrCount}/{c.qr_limit || 0}</strong>
+                      <strong>{qrCount}/{access.effectiveQrCapacity === null ? "Unlimited" : access.effectiveQrCapacity}</strong>
+                      <span className="admin-cell-subtext">Included: {access.includedQrAllowance}</span>
+                      <span className="admin-cell-subtext">Subscription: {access.subscriptionQrAllowance}</span>
+                      <span className="admin-cell-subtext">Tracked Print: {access.hasTrackedPrint ? "Yes" : "No"}</span>
+                      <span className="admin-cell-subtext">Business Kit: {access.hasBusinessKit ? "Yes" : "No"}</span>
+                      {access.warnings.map((warning) => <span className="admin-cell-subtext" key={warning}>Warning: {warning}</span>)}
                       <span className="admin-cell-subtext">Plan baseline: {normalizedStoredPlanCode === "admin" ? "Unlimited" : PLAN_DEFINITIONS[normalizedStoredPlanCode].qrLimit}</span>
                       <span className="admin-cell-subtext">{scanCount} scans</span>
                     </td>

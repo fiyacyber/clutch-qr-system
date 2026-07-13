@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -64,12 +65,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: customer } = await admin
     .from("customers")
-    .select("id")
+    .select("*")
     .eq("auth_user_id", user.id)
     .single();
 
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+  }
+
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canCustomizeQr) {
+    return NextResponse.json({ error: "QR customization requires an active Clutch Codes subscription." }, { status: 403 });
   }
 
   const contentType = req.headers.get("content-type") || "";

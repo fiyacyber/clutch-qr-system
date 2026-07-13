@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export async function GET(
   req: NextRequest,
@@ -15,6 +16,8 @@ export async function GET(
     }
 
     const admin = createSupabaseAdminClient();
+    const access = await loadAccountAccess(admin, customer);
+    if (!access.canUseCampaignAnalytics) return NextResponse.json({ error: "Campaign analytics access is locked." }, { status: 403 });
 
     // Get the QR code - verify it belongs to this customer
     const { data: code, error: codeError } = await admin
