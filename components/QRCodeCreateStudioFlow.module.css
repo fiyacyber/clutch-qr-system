@@ -1,0 +1,176 @@
+.flowTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 18px;
+  background: #f6f7f9;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.flowTabs button {
+  display: grid;
+  grid-template-columns: 28px 18px 1fr;
+  align-items: center;
+  gap: 9px;
+  min-height: 62px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #707a89;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flowTabs button + button {
+  border-left: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.flowTabs button > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e4e7eb;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.flowTabs button strong {
+  color: inherit;
+  font-size: 0.88rem;
+}
+
+.flowTabs .activeFlowTab {
+  border-bottom-color: #384862;
+  background: #fff;
+  color: #263348;
+}
+
+.flowTabs .activeFlowTab > span {
+  background: #384862;
+  color: #fff;
+}
+
+.builderGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.previewRail {
+  position: sticky;
+  top: 20px;
+}
+
+.destinationChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.destinationChoices button {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 3px 12px;
+  min-height: 92px;
+  padding: 15px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  background: #fff;
+  color: #384862;
+  text-align: left;
+  cursor: pointer;
+}
+
+.destinationChoices button svg {
+  grid-row: 1 / span 2;
+}
+
+.destinationChoices button strong,
+.destinationChoices button small {
+  display: block;
+}
+
+.destinationChoices button small {
+  color: #788392;
+  line-height: 1.35;
+}
+
+.destinationChoices .activeDestination {
+  border-color: #384862;
+  background: #f3f5f8;
+  box-shadow: inset 0 0 0 1px #384862;
+}
+
+.nextButton {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 14px;
+  background: #384862;
+  color: #fff;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.guidanceBox {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff7f1;
+  color: #384862;
+}
+
+.guidanceBox p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #687487;
+  line-height: 1.45;
+}
+
+.guidanceBox svg {
+  flex: 0 0 auto;
+  color: #d86e2b;
+}
+
+@media (max-width: 1040px) {
+  .builderGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .previewRail {
+    position: static;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .flowTabs button {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 4px;
+    min-height: 72px;
+    padding: 7px 3px;
+    text-align: center;
+  }
+
+  .flowTabs button svg {
+    display: none;
+  }
+
+  .flowTabs button strong {
+    font-size: 0.72rem;
+  }
+
+  .destinationChoices {
+    grid-template-columns: 1fr;
+  }
+}
