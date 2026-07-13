@@ -8,9 +8,15 @@ export type PrintOrderPayload = {
   line_items?: Array<Record<string, any>>;
 };
 
+export type TrackedPrintCustomer = { id: string; auth_user_id?: string | null; shopify_customer_id?: string | null; [key: string]: any };
+export type CustomerIdentityResolution =
+  | { status: "found"; customer: TrackedPrintCustomer }
+  | { status: "not_found" }
+  | { status: "conflict" };
+
 export type TrackedPrintDependencies = {
-  findCustomer(email: string, shopifyCustomerId: string | null): Promise<{ id: string; auth_user_id?: string | null } | null>;
-  ensureNeutralCustomer(email: string, name: string, shopifyCustomerId: string | null, orderId: string): Promise<{ id: string }>;
+  resolveCustomer(email: string, shopifyCustomerId: string | null): Promise<CustomerIdentityResolution>;
+  ensureNeutralCustomer(email: string, name: string, shopifyCustomerId: string | null, orderId: string): Promise<CustomerIdentityResolution>;
   findPrintItem(orderId: string, lineItemId: string): Promise<Record<string, any> | null>;
   upsertPrintItem(input: Record<string, unknown>): Promise<Record<string, any> & { id: string; provisioning_status: string; immutableMatch: boolean }>;
   provisionQr(input: { printOrderItemId: string; customerId: string; destinationUrl: string | null; campaignName: string | null; materialType: string; idempotencyKey: string; existingQrCodeId: string | null }): Promise<{ qrCodeId: string; includedQrAllowance: number }>;
@@ -41,17 +47,22 @@ export async function provisionTrackedPrintOrder(input: {
     const existingItem = await input.dependencies.findPrintItem(orderId, lineItemId);
     let invalid = (requiresNew && (!email || !properties.destinationUrl || !properties.validDestination)) ||
       (requiresExisting && (!email || !properties.existingQrCodeId));
-    let customer = existingItem?.customer_id ? { id: String(existingItem.customer_id) } :
-      (!trackingUnavailable && email ? await input.dependencies.findCustomer(email, input.payload.customer?.id ? String(input.payload.customer.id) : null) : null);
+    const shopifyCustomerId = input.payload.customer?.id ? String(input.payload.customer.id) : null;
+    const identity = !trackingUnavailable && email ? await input.dependencies.resolveCustomer(email, shopifyCustomerId) : { status: "not_found" as const };
+    let identityConflict = identity.status === "conflict";
+    let customer = existingItem?.customer_id ? { id: String(existingItem.customer_id) } : identity.status === "found" ? identity.customer : null;
     if (requiresExisting && !customer) invalid = true;
-    if (!trackingUnavailable && !invalid && requiresNew && !customer) {
-      customer = await input.dependencies.ensureNeutralCustomer(email, input.payload.billing_address?.name || "", input.payload.customer?.id ? String(input.payload.customer.id) : null, orderId);
+    if (!identityConflict && !trackingUnavailable && !invalid && requiresNew && !customer) {
+      const ensured = await input.dependencies.ensureNeutralCustomer(email, input.payload.billing_address?.name || "", shopifyCustomerId, orderId);
+      identityConflict = ensured.status === "conflict";
+      customer = ensured.status === "found" ? ensured.customer : null;
     }
-    const provisioningStatus = trackingUnavailable || invalid ? "needs_attention" : properties.trackingMode === "none" ? "not_required" : "pending";
-    const attentionReason = trackingUnavailable ? "QR tracking is not available for this product configuration." :
+    const provisioningStatus = identityConflict || trackingUnavailable || invalid ? "needs_attention" : properties.trackingMode === "none" ? "not_required" : "pending";
+    const attentionReason = identityConflict ? "Customer account identifiers require review." :
+      trackingUnavailable ? "QR tracking is not available for this product configuration." :
       invalid ? (email ? "Tracking request requires valid destination or existing code." : "Tracking request requires checkout email.") : null;
     const item = await input.dependencies.upsertPrintItem({
-      customer_id: customer?.id || null, shopify_order_id: orderId,
+      customer_id: identityConflict ? null : customer?.id || null, shopify_order_id: orderId,
       shopify_order_number: String(input.payload.name || input.payload.order_number || "") || null,
       shopify_line_item_id: lineItemId, shopify_customer_id: input.payload.customer?.id ? String(input.payload.customer.id) : null,
       customer_email: email || null, customer_name: input.payload.billing_address?.name || null,

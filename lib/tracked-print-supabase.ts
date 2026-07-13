@@ -1,15 +1,32 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import type { TrackedPrintDependencies } from "@/lib/tracked-print";
+import type { CustomerIdentityResolution, TrackedPrintCustomer, TrackedPrintDependencies } from "@/lib/tracked-print";
 
-async function findCustomerExact(admin: SupabaseClient, email: string, shopifyCustomerId: string | null) {
+export function resolveCustomerIdentityRows(
+  emailCustomer: TrackedPrintCustomer | null,
+  shopifyCustomer: TrackedPrintCustomer | null,
+  incomingShopifyCustomerId: string | null
+): CustomerIdentityResolution {
+  if (emailCustomer && shopifyCustomer && emailCustomer.id !== shopifyCustomer.id) return { status: "conflict" };
+  if (emailCustomer) {
+    const storedShopifyId = emailCustomer.shopify_customer_id ? String(emailCustomer.shopify_customer_id) : null;
+    if (storedShopifyId !== null && storedShopifyId !== incomingShopifyCustomerId) return { status: "conflict" };
+    return { status: "found", customer: emailCustomer };
+  }
+  if (shopifyCustomer) return { status: "found", customer: shopifyCustomer };
+  return { status: "not_found" };
+}
+
+async function resolveCustomerIdentity(admin: SupabaseClient, email: string, shopifyCustomerId: string | null): Promise<CustomerIdentityResolution> {
   const normalizedEmail = email.trim().toLowerCase();
   const { data: byEmail, error: emailError } = await admin.from("customers").select("*").eq("email", normalizedEmail).limit(1).maybeSingle();
   if (emailError) throw emailError;
-  if (byEmail) return byEmail;
-  if (!shopifyCustomerId) return null;
-  const { data: byShopify, error: shopifyError } = await admin.from("customers").select("*").eq("shopify_customer_id", shopifyCustomerId).limit(1).maybeSingle();
-  if (shopifyError) throw shopifyError;
-  return byShopify;
+  let byShopify = null;
+  if (shopifyCustomerId) {
+    const result = await admin.from("customers").select("*").eq("shopify_customer_id", shopifyCustomerId).limit(1).maybeSingle();
+    if (result.error) throw result.error;
+    byShopify = result.data;
+  }
+  return resolveCustomerIdentityRows(byEmail, byShopify, shopifyCustomerId);
 }
 
 export async function findAuthUserByEmail(admin: SupabaseClient, email: string): Promise<User | null> {
@@ -47,13 +64,15 @@ async function ensureAuthUser(admin: SupabaseClient, email: string, name: string
 
 export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): TrackedPrintDependencies {
   return {
-    async findCustomer(email, shopifyCustomerId) {
-      return findCustomerExact(admin, email, shopifyCustomerId);
+    async resolveCustomer(email, shopifyCustomerId) {
+      return resolveCustomerIdentity(admin, email, shopifyCustomerId);
     },
     async ensureNeutralCustomer(email, name, shopifyCustomerId, orderId) {
       const normalizedEmail = email.trim().toLowerCase();
-      const existing = await findCustomerExact(admin, normalizedEmail, shopifyCustomerId);
-      if (existing) {
+      const resolution = await resolveCustomerIdentity(admin, normalizedEmail, shopifyCustomerId);
+      if (resolution.status === "conflict") return resolution;
+      if (resolution.status === "found") {
+        const existing = resolution.customer;
         let authUserId: string | null = null;
         if (!existing.auth_user_id) {
           const authUser = await ensureAuthUser(admin, normalizedEmail, name);
@@ -64,22 +83,27 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
           const { error } = await admin.from("customers").update(safePatch).eq("id", existing.id);
           if (error) throw error;
         }
-        return { id: existing.id };
+        return { status: "found", customer: existing };
       }
 
-      const user = await ensureAuthUser(admin, normalizedEmail, name);
       const neutral = {
-        auth_user_id: user.id, email: normalizedEmail, first_name: name.split(/\s+/)[0] || null,
+        email: normalizedEmail, first_name: name.split(/\s+/)[0] || null,
         plan: "free_qr", plan_code: "free_qr", included_qr_allowance: 0,
         subscription_qr_limit: 0, qr_limit: 0, shopify_customer_id: shopifyCustomerId,
         shopify_order_id: orderId,
       };
       const { data, error } = await admin.from("customers").insert(neutral).select("id").single();
-      if (!error && data) return data;
-      if (error?.code !== "23505") throw error || new Error("Unable to create neutral tracked-print customer.");
-      const concurrent = await findCustomerExact(admin, normalizedEmail, shopifyCustomerId);
-      if (!concurrent) throw new Error("Concurrent tracked-print customer creation could not be resolved.");
-      return { id: concurrent.id };
+      if (error) {
+        if (error.code !== "23505") throw error;
+        const concurrent = await resolveCustomerIdentity(admin, normalizedEmail, shopifyCustomerId);
+        if (concurrent.status === "not_found") throw new Error("Concurrent tracked-print customer creation could not be resolved.");
+        return concurrent;
+      }
+      if (!data) throw new Error("Unable to create neutral tracked-print customer.");
+      const user = await ensureAuthUser(admin, normalizedEmail, name);
+      const { error: linkError } = await admin.from("customers").update({ auth_user_id: user.id }).eq("id", data.id).is("auth_user_id", null);
+      if (linkError) throw linkError;
+      return { status: "found", customer: { ...data, auth_user_id: user.id } };
     },
     async findPrintItem(orderId, lineItemId) {
       const { data, error } = await admin.from("print_order_items").select("*").eq("shopify_order_id", orderId)

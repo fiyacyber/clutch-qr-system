@@ -5,18 +5,18 @@ import { classifyPrintProduct } from "../lib/print-products.ts";
 import { normalizePrintLineProperties } from "../lib/print-line-properties.ts";
 import { provisionTrackedPrintOrder, type TrackedPrintDependencies } from "../lib/tracked-print.ts";
 import { resolveAccountAccess } from "../lib/account-access.ts";
-import { buildSafeExistingCustomerLinkagePatch } from "../lib/tracked-print-supabase.ts";
+import { buildSafeExistingCustomerLinkagePatch, resolveCustomerIdentityRows } from "../lib/tracked-print-supabase.ts";
 
 const registry = [{ sku: "POSTCARD-4X6", materialType: "Postcard", defaultTrackingAvailable: true }];
 const line = (overrides: Record<string, unknown> = {}) => ({ id: "line-1", sku: "POSTCARD-4X6", product_id: "p1", title: "Postcards", quantity: 1, properties: [], ...overrides });
 const order = (item = line(), overrides: Record<string, unknown> = {}) => ({ id: "order-1", name: "#1001", email: "buyer@example.com", customer: { id: "customer-1", email: "buyer@example.com" }, line_items: [item], ...overrides });
 
-function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean } = {}) {
+function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean } = {}) {
   const items = new Map<string, any>(); const qrs = new Map<string, string>(); const activities = new Set<string>();
   let authCustomers = 0;
   const dependencies: TrackedPrintDependencies = {
-    async findCustomer() { return options.existingCustomer ? { id: "customer-db-1" } : null; },
-    async ensureNeutralCustomer() { authCustomers++; return { id: "customer-db-1" }; },
+    async resolveCustomer() { return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1" } } : { status: "not_found" }; },
+    async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; return { status: "found", customer: { id: "customer-db-1" } }; },
     async findPrintItem(orderId, lineItemId) { return items.get(`${orderId}:${lineItemId}`) || null; },
     async upsertPrintItem(input) {
       const key = `${input.shopify_order_id}:${input.shopify_line_item_id}`; const previous = items.get(key);
@@ -37,6 +37,41 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
   };
   return { dependencies, items, qrs, activities, get authCustomers() { return authCustomers; } };
 }
+
+test("customer identity resolver reconciles email and Shopify matches explicitly", () => {
+  const emailNoShopify = { id: "email", shopify_customer_id: null };
+  const emailSameShopify = { id: "same", shopify_customer_id: "shop-1" };
+  const shopifySame = { id: "same", shopify_customer_id: "shop-1" };
+  const shopifyOnly = { id: "shopify", shopify_customer_id: "shop-1" };
+  assert.deepEqual(resolveCustomerIdentityRows(null, null, "shop-1"), { status: "not_found" });
+  assert.equal(resolveCustomerIdentityRows(emailNoShopify, null, "shop-1").status, "found");
+  assert.equal(resolveCustomerIdentityRows(emailSameShopify, null, "shop-1").status, "found");
+  assert.equal(resolveCustomerIdentityRows(emailSameShopify, null, "shop-2").status, "conflict");
+  assert.deepEqual(resolveCustomerIdentityRows(null, shopifyOnly, "shop-1"), { status: "found", customer: shopifyOnly });
+  assert.deepEqual(resolveCustomerIdentityRows(emailSameShopify, shopifySame, "shop-1"), { status: "found", customer: emailSameShopify });
+  assert.equal(resolveCustomerIdentityRows(emailNoShopify, shopifyOnly, "shop-1").status, "conflict");
+  assert.equal(resolveCustomerIdentityRows({ id: "admin", is_admin: true, shopify_customer_id: null }, shopifyOnly, "shop-1").status, "conflict");
+});
+
+test("identity conflict is a successful needs-attention result with no side effects", async () => {
+  const h = harness({ identityConflict: true });
+  const payload = order(line({ properties: { tracking: "new code", destination: "https://example.com" } }));
+  const first = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+  const second = await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
+  assert.equal((first.results[0] as any).status, "needs_attention"); assert.equal((first.results[0] as any).customerId, undefined);
+  const item = [...h.items.values()][0];
+  assert.equal(item.customer_id, null); assert.equal(item.attention_reason, "Customer account identifiers require review.");
+  assert.equal(h.authCustomers, 0); assert.equal(h.qrs.size, 0); assert.equal(h.items.size, 1);
+  assert.equal(h.activities.size, 1); assert.equal((second.results[0] as any).status, "needs_attention");
+});
+
+test("concurrent insert conflict reruns identity reconciliation and remains needs attention", async () => {
+  const h = harness({ concurrentConflict: true });
+  const payload = order(line({ properties: { tracking: "new code", destination: "https://example.com" } }));
+  const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+  assert.equal((result.results[0] as any).status, "needs_attention"); assert.equal(h.authCustomers, 0); assert.equal(h.qrs.size, 0);
+  assert.equal([...h.items.values()][0].customer_id, null);
+});
 
 test("neutral linkage patches never include protected commerce fields", () => {
   for (const plan of ["clutch_codes_starter", "clutch_codes_growth", "connect_plus", "admin"]) {
@@ -194,7 +229,8 @@ test("neutral customer implementation uses paginated Auth lookup and insert-conf
   const source = fs.readFileSync(new URL("../lib/tracked-print-supabase.ts", import.meta.url), "utf8");
   assert.match(source, /for \(let page = 1; page <= 100; page\+\+\)/);
   assert.doesNotMatch(source, /\.or\(/); assert.doesNotMatch(source, /from\("customers"\)\.upsert/);
-  assert.match(source, /error\?\.code !== "23505"/); assert.match(source, /findCustomerExact/);
+  assert.match(source, /error\.code !== "23505"/); assert.match(source, /resolveCustomerIdentity/);
+  assert.ok(source.indexOf('from("customers").insert(neutral)') < source.lastIndexOf("ensureAuthUser(admin, normalizedEmail, name)"));
 });
 
 test("production trusted registry defaults to no eligible products", () => {

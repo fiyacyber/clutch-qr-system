@@ -31,6 +31,8 @@ The first accepted `(shopify_order_id, shopify_line_item_id)` record owns its im
 
 Neutral customer creation searches Auth users page-by-page and performs independent exact customer lookups by normalized email and Shopify customer ID. Existing accounts receive only missing Auth/Shopify linkage; plan, admin, entitlement, allowance, subscription, onboarding, and status fields are never overwritten. New neutral rows use insert-plus-unique-conflict reuse.
 
+Email and Shopify customer identity are resolved together as `found`, `not_found`, or `conflict`; neither identifier wins by lookup order. Differing customer rows, or an email account already linked to a different Shopify customer, produce a sanitized needs-attention print item with no customer link, Auth creation, QR, provisioning, allowance change, or customer mutation. Unique-conflict recovery reruns the same full resolver before any Auth user is created.
+
 ## Capacity
 
 Completed `included_permanent` provisionings are authoritative for `included_qr_allowance`. Reconciliation counts those records, then mirrors `qr_limit = included_qr_allowance + subscription_qr_limit`. Used capacity counts `qr_codes.counts_toward_capacity=true`. Smart Card and other system-exempt QRs do not count. Admin remains unlimited through `is_admin=true`.
