@@ -1,30 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
-import { classifyPrintProduct } from "../lib/print-products.ts";
+import { classifyPrintProduct, validatePrintProductRegistry } from "../lib/print-products.ts";
 import { normalizePrintLineProperties } from "../lib/print-line-properties.ts";
 import { provisionTrackedPrintOrder, type TrackedPrintDependencies } from "../lib/tracked-print.ts";
 import { resolveAccountAccess } from "../lib/account-access.ts";
 import { buildSafeExistingCustomerLinkagePatch, resolveCustomerIdentityRows } from "../lib/tracked-print-supabase.ts";
+import { isEligibleExistingClutchCode, normalizeExistingClutchCodeReference } from "../lib/existing-clutch-code.ts";
+import { downloadShopifyArtwork, importShopifyArtwork } from "../lib/shopify-artwork-import.ts";
 
-const registry = [{ sku: "POSTCARD-4X6", materialType: "Postcard", defaultTrackingAvailable: true }];
+const registry = [{ sku: "POSTCARD-4X6", materialType: "postcard" as const, defaultTrackingAvailable: true }];
 const line = (overrides: Record<string, unknown> = {}) => ({ id: "line-1", sku: "POSTCARD-4X6", product_id: "p1", title: "Postcards", quantity: 1, properties: [], ...overrides });
 const order = (item = line(), overrides: Record<string, unknown> = {}) => ({ id: "order-1", name: "#1001", email: "buyer@example.com", customer: { id: "customer-1", email: "buyer@example.com" }, line_items: [item], ...overrides });
 
-function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean } = {}) {
+function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean; importFailure?: boolean } = {}) {
   const items = new Map<string, any>(); const qrs = new Map<string, string>(); const activities = new Set<string>();
+  const importedArtwork = new Set<string>();
   let authCustomers = 0;
   const dependencies: TrackedPrintDependencies = {
-    async resolveCustomer() { return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1" } } : { status: "not_found" }; },
-    async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; return { status: "found", customer: { id: "customer-db-1" } }; },
+    async resolveCustomer() { return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
+    async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; return { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } }; },
+    async resolveExistingCode(_customerId, reference) { return options.rejectExisting ? null : reference === "owned" || reference === "owned-qr" ? "00000000-0000-4000-8000-000000000001" : null; },
     async findPrintItem(orderId, lineItemId) { return items.get(`${orderId}:${lineItemId}`) || null; },
     async upsertPrintItem(input) {
       const key = `${input.shopify_order_id}:${input.shopify_line_item_id}`; const previous = items.get(key);
       if (previous) {
-        const keys = ["customer_id","product_id","variant_id","sku","material_type","quantity","tracking_mode","destination_url","existing_qr_code_id","campaign_name"];
+        const keys = [
+          "customer_id", "product_id", "variant_id", "sku", "material_type", "quantity",
+          "tracking_mode", "destination_url", "existing_qr_code_id", "campaign_name",
+          "artwork_method", "artwork_file_url", "artwork_instructions", "reorder_reference",
+          "qr_placement_instructions",
+        ];
         return { ...previous, immutableMatch: keys.every((field) => (previous[field] ?? null) === (input[field] ?? null)) };
       }
       const value = { ...input, id: `item-${items.size + 1}` }; items.set(key, value); return { ...value, immutableMatch: true };
+    },
+    async importArtwork(input) {
+      if (options.importFailure) throw new Error("import failed");
+      const imported = !importedArtwork.has(input.idempotencyKey);
+      importedArtwork.add(input.idempotencyKey);
+      return { fileId: "file-1", imported };
     },
     async provisionQr(input) {
       if (options.rejectExisting && input.existingQrCodeId) throw new Error("selected QR is unavailable");
@@ -35,7 +50,7 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
     async recordActivity(input) { activities.add(input.idempotencyKey); },
     async markAttention(orderId, reason) { for (const [key, item] of items) if (item.id === orderId) items.set(key, { ...item, provisioning_status: "needs_attention", attention_reason: reason }); },
   };
-  return { dependencies, items, qrs, activities, get authCustomers() { return authCustomers; } };
+  return { dependencies, items, qrs, activities, importedArtwork, get authCustomers() { return authCustomers; } };
 }
 
 test("customer identity resolver reconciles email and Shopify matches explicitly", () => {
@@ -101,6 +116,173 @@ test("property parser validates destinations and extracts existing QR IDs", () =
   assert.equal("material_type" in normalizePrintLineProperties({ "Material Type": "Fake" }).normalizedProperties, false);
 });
 
+test("property parser supports every Phase 4 canonical property and artwork method", () => {
+  const parsed = normalizePrintLineProperties({
+    "Tracking Mode": "new_included_code",
+    "Campaign Name": "Summer Postcard Campaign",
+    "Destination URL": "https://example.com/summer",
+    "Existing Clutch Code": "summer-code",
+    "Artwork Method": "reorder_existing",
+    "Artwork Upload URL": "https://cdn.shopify.com/s/files/artwork.pdf",
+    "Artwork Instructions": "Use the approved blue background.",
+    "Reorder Reference": "#1042",
+    "QR Placement Instructions": "Bottom-right corner.",
+  });
+  assert.equal(parsed.trackingMode, "new_included_code");
+  assert.equal(parsed.artworkMethod, "reorder_existing");
+  assert.equal(parsed.existingClutchCode, "summer-code");
+  assert.equal(parsed.reorderReference, "#1042");
+  for (const key of ["tracking_mode", "campaign_name", "destination_url", "existing_clutch_code", "artwork_method", "artwork_file_url", "artwork_instructions", "reorder_reference", "qr_placement_instructions"]) {
+    assert.equal(typeof parsed.normalizedProperties[key], "string");
+  }
+});
+
+test("property parser applies canonical length limits before persistence", () => {
+  const parsed = normalizePrintLineProperties({
+    "Campaign Name": "c".repeat(300),
+    "Artwork Instructions": "a".repeat(3000),
+    "Reorder Reference": "r".repeat(400),
+    "QR Placement Instructions": "q".repeat(800),
+  });
+  assert.equal(parsed.campaignName?.length, 160);
+  assert.equal(parsed.artworkInstructions?.length, 2000);
+  assert.equal(parsed.reorderReference?.length, 200);
+  assert.equal(parsed.qrPlacementInstructions?.length, 500);
+});
+
+test("registry validation fails closed for ambiguous and conflicting entries", () => {
+  assert.equal(validatePrintProductRegistry("not json").entries.length, 0);
+  assert.ok(validatePrintProductRegistry([{ materialType: "postcard", defaultTrackingAvailable: true }]).errors.length > 0);
+  assert.ok(validatePrintProductRegistry([{ sku: "A", materialType: "unknown", defaultTrackingAvailable: true }]).errors.length > 0);
+  assert.ok(validatePrintProductRegistry([{ sku: "A", materialType: "postcard" }]).errors.length > 0);
+  assert.ok(validatePrintProductRegistry([
+    { sku: "A", productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
+    { sku: "A", productId: "2", materialType: "flyer", defaultTrackingAvailable: false },
+  ]).errors.some((error) => error.includes("duplicates SKU")));
+  assert.ok(validatePrintProductRegistry([
+    { productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
+    { productId: "1", materialType: "flyer", defaultTrackingAvailable: true },
+  ]).errors.some((error) => error.includes("conflicts")));
+});
+
+test("existing Clutch Code references normalize UUID, slug, and canonical redirect URL", () => {
+  assert.deepEqual(normalizeExistingClutchCodeReference("550e8400-e29b-41d4-a716-446655440000"), { kind: "id", value: "550e8400-e29b-41d4-a716-446655440000" });
+  assert.deepEqual(normalizeExistingClutchCodeReference("Summer-Code"), { kind: "slug", value: "summer-code" });
+  assert.deepEqual(normalizeExistingClutchCodeReference("https://qr.clutchprintshop.com/qr/Summer-Code?source=dashboard"), { kind: "slug", value: "summer-code" });
+  assert.equal(normalizeExistingClutchCodeReference("https://example.com/qr/summer-code"), null);
+  assert.equal(normalizeExistingClutchCodeReference("../../admin"), null);
+});
+
+test("existing Clutch Code eligibility rejects wrong-owner, system, inactive, and excluded codes", () => {
+  const eligible = { id: "q1", customer_id: "c1", is_system: false, capacity_source: "subscription", counts_toward_capacity: true, customer_can_edit_destination: true, is_active: true, qr_type: "url" };
+  assert.equal(isEligibleExistingClutchCode(eligible, "c1"), true);
+  assert.equal(isEligibleExistingClutchCode({ ...eligible, customer_id: "c2" }, "c1"), false);
+  assert.equal(isEligibleExistingClutchCode({ ...eligible, is_system: true }, "c1"), false);
+  assert.equal(isEligibleExistingClutchCode({ ...eligible, is_active: false }, "c1"), false);
+  for (const qr_type of ["smart_card", "tracked_print", "business_kit", "system_exempt"]) {
+    assert.equal(isEligibleExistingClutchCode({ ...eligible, qr_type }, "c1"), false);
+  }
+});
+
+const publicDns = async () => [{ address: "23.227.38.65", family: 4 }];
+const pdfBytes = Buffer.from("%PDF-1.7\ntracked print artwork");
+
+test("Shopify artwork download rejects non-Shopify hosts and private DNS results", async () => {
+  await assert.rejects(() => downloadShopifyArtwork({ sourceUrl: "https://example.com/art.pdf", lookup: publicDns }), /artwork_source_not_allowed/);
+  await assert.rejects(() => downloadShopifyArtwork({ sourceUrl: "https://cdn.shopify.com/art.pdf", lookup: async () => [{ address: "127.0.0.1", family: 4 }] }), /artwork_source_not_public/);
+});
+
+test("Shopify artwork download rejects redirects outside the allowlist", async () => {
+  await assert.rejects(() => downloadShopifyArtwork({
+    sourceUrl: "https://cdn.shopify.com/art.pdf",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(null, { status: 302, headers: { location: "https://example.com/steal.pdf" } }),
+  }), /artwork_source_not_allowed/);
+});
+
+test("Shopify artwork download rejects oversized and MIME-mismatched responses", async () => {
+  await assert.rejects(() => downloadShopifyArtwork({
+    sourceUrl: "https://cdn.shopify.com/art.pdf",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf", "content-length": String(25 * 1024 * 1024 + 1) } }),
+  }), /artwork_file_too_large/);
+  await assert.rejects(() => downloadShopifyArtwork({
+    sourceUrl: "https://cdn.shopify.com/art.png",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf" } }),
+  }), /artwork_mime_extension_mismatch/);
+});
+
+test("Shopify artwork download validates and streams an allowed file", async () => {
+  const result = await downloadShopifyArtwork({
+    sourceUrl: "https://cdn.shopify.com/s/files/order-artwork.pdf",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf", "content-disposition": "attachment; filename=customer-artwork.pdf" } }),
+  });
+  assert.equal(result.mimeType, "application/pdf");
+  assert.equal(result.originalFilename, "customer-artwork.pdf");
+  assert.equal(result.bytes.equals(pdfBytes), true);
+});
+
+function artworkAdminMock(options: { registrationFails?: boolean } = {}) {
+  const uploaded: string[] = [];
+  const removed: string[] = [];
+  const admin = {
+    from() {
+      const chain: any = {
+        select() { return chain; }, eq() { return chain; }, limit() { return chain; },
+        async maybeSingle() { return { data: null, error: null }; },
+      };
+      return chain;
+    },
+    storage: {
+      from() {
+        return {
+          async upload(path: string) { uploaded.push(path); return { error: null }; },
+          async remove(paths: string[]) { removed.push(...paths); return { error: null }; },
+        };
+      },
+    },
+    async rpc() {
+      return options.registrationFails
+        ? { data: null, error: new Error("registration failed") }
+        : { data: [{ file_id: "file-1" }], error: null };
+    },
+  };
+  return { admin: admin as any, uploaded, removed };
+}
+
+test("successful checkout artwork import stores privately and registers once", async () => {
+  const mock = artworkAdminMock();
+  const result = await importShopifyArtwork({
+    admin: mock.admin,
+    printOrderItemId: "order-item-1",
+    actorAuthUserId: "auth-1",
+    sourceUrl: "https://cdn.shopify.com/art.pdf",
+    idempotencyKey: "artwork:1",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf" } }),
+  });
+  assert.equal(result.fileId, "file-1");
+  assert.equal(mock.uploaded.length, 1);
+  assert.equal(mock.removed.length, 0);
+});
+
+test("checkout artwork import removes the object after database registration failure", async () => {
+  const mock = artworkAdminMock({ registrationFails: true });
+  await assert.rejects(() => importShopifyArtwork({
+    admin: mock.admin,
+    printOrderItemId: "order-item-1",
+    actorAuthUserId: "auth-1",
+    sourceUrl: "https://cdn.shopify.com/art.pdf",
+    idempotencyKey: "artwork:1",
+    lookup: publicDns,
+    fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf" } }),
+  }));
+  assert.equal(mock.uploaded.length, 1);
+  assert.deepEqual(mock.removed, mock.uploaded);
+});
+
 test("normal print creates one item and no customer, QR, or allowance", async () => {
   const h = harness(); const result = await provisionTrackedPrintOrder({ payload: order(), webhookEventId: "w1", dependencies: h.dependencies, registry });
   assert.equal(result.processedItems, 1); assert.equal(h.items.size, 1); assert.equal(h.authCustomers, 0); assert.equal(h.qrs.size, 0);
@@ -109,13 +291,13 @@ test("normal print creates one item and no customer, QR, or allowance", async ()
 
 for (const quantity of [1, 500]) test(`quantity ${quantity} provisions exactly one included code`, async () => {
   const h = harness();
-  const item = line({ quantity, properties: { "Tracking Mode": "new included code", "Destination URL": "https://example.com" } });
+  const item = line({ quantity, properties: { "Tracking Mode": "new included code", "Campaign Name": "Postcard campaign", "Destination URL": "https://example.com" } });
   await provisionTrackedPrintOrder({ payload: order(item), webhookEventId: "w1", dependencies: h.dependencies, registry });
   assert.equal(h.items.size, 1); assert.equal(h.qrs.size, 1); assert.equal(h.authCustomers, 1);
 });
 
 test("same order and line is idempotent across webhook IDs", async () => {
-  const h = harness(); const payload = order(line({ properties: { tracking: "new code", destination: "https://example.com" } }));
+  const h = harness(); const payload = order(line({ properties: { tracking: "new code", campaign: "Campaign", destination: "https://example.com" } }));
   await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
   await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
   assert.equal(h.items.size, 1); assert.equal(h.qrs.size, 1);
@@ -127,7 +309,7 @@ test("immutable replay differences are preserved and reported once", async () =>
     { tracking: "new code", destination: "https://changed.example.com" },
     { tracking: "existing code", "existing qr code id": "changed-qr" },
   ]) {
-    const h = harness(); const original = order(line({ properties: { tracking: "new code", destination: "https://example.com" } }));
+    const h = harness(); const original = order(line({ properties: { tracking: "new code", campaign: "Campaign", destination: "https://example.com" } }));
     await provisionTrackedPrintOrder({ payload: original, webhookEventId: "w1", dependencies: h.dependencies, registry });
     const replay = order(line({ properties: changed }));
     const first = await provisionTrackedPrintOrder({ payload: replay, webhookEventId: "w2", dependencies: h.dependencies, registry });
@@ -139,11 +321,11 @@ test("immutable replay differences are preserved and reported once", async () =>
 
 test("an identical pending item resumes provisioning without rewriting inputs", async () => {
   const h = harness({ existingCustomer: true });
-  const properties = { tracking: "new code", destination: "https://example.com" };
+  const properties = { tracking: "new code", campaign: "Campaign", destination: "https://example.com" };
   h.items.set("order-1:line-1", {
     id: "item-1", customer_id: "customer-db-1", product_id: "p1", variant_id: null,
-    sku: "POSTCARD-4X6", material_type: "Postcard", quantity: 1, tracking_mode: "new_included_code",
-    destination_url: "https://example.com/", existing_qr_code_id: null, campaign_name: null,
+    sku: "POSTCARD-4X6", material_type: "postcard", quantity: 1, tracking_mode: "new_included_code",
+    destination_url: "https://example.com/", existing_qr_code_id: null, campaign_name: "Campaign",
     provisioning_status: "pending", attention_reason: null,
   });
   const result = await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "w2", dependencies: h.dependencies, registry });
@@ -151,12 +333,12 @@ test("an identical pending item resumes provisioning without rewriting inputs", 
 });
 
 test("tracking availability is trusted and cannot be overridden by properties", async () => {
-  const disabledRegistry = [{ sku: "POSTCARD-4X6", materialType: "Postcard", defaultTrackingAvailable: false }];
+  const disabledRegistry = [{ sku: "POSTCARD-4X6", materialType: "postcard" as const, defaultTrackingAvailable: false }];
   const plain = harness();
   await provisionTrackedPrintOrder({ payload: order(), webhookEventId: "w1", dependencies: plain.dependencies, registry: disabledRegistry });
   assert.equal([...plain.items.values()][0].provisioning_status, "not_required");
   for (const properties of [
-    { tracking: "new code", destination: "https://example.com" },
+    { tracking: "new code", campaign: "Campaign", destination: "https://example.com" },
     { tracking: "existing code", "existing qr code id": "owned" },
   ]) {
     const h = harness({ existingCustomer: true });
@@ -168,7 +350,7 @@ test("tracking availability is trusted and cannot be overridden by properties", 
 });
 
 test("two eligible line items create two records and two codes", async () => {
-  const h = harness(); const properties = { tracking: "new code", destination: "https://example.com" };
+  const h = harness(); const properties = { tracking: "new code", campaign: "Campaign", destination: "https://example.com" };
   const payload = order(line({ properties }), { line_items: [line({ id: "l1", properties }), line({ id: "l2", properties })] });
   await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
   assert.equal(h.items.size, 2); assert.equal(h.qrs.size, 2);
@@ -176,9 +358,9 @@ test("two eligible line items create two records and two codes", async () => {
 
 test("existing owned code links without a new QR or included allowance", async () => {
   const h = harness({ existingCustomer: true });
-  const payload = order(line({ properties: { tracking: "existing code", "existing qr code id": "owned-qr" } }));
+  const payload = order(line({ properties: { tracking: "existing code", "Existing Clutch Code": "owned-qr" } }));
   const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
-  assert.equal(h.qrs.get("item-1"), "owned-qr"); assert.equal((result.results[0] as any).includedQrAllowance, 0);
+  assert.equal(h.qrs.get("item-1"), "00000000-0000-4000-8000-000000000001"); assert.equal((result.results[0] as any).includedQrAllowance, 0);
 });
 
 test("wrong-customer or Smart Card selection is rejected without creating another QR", async () => {
@@ -189,10 +371,75 @@ test("wrong-customer or Smart Card selection is rejected without creating anothe
   assert.equal(h.qrs.size, 0);
 });
 
+test("upload_now imports artwork once and duplicate webhook delivery does not duplicate it", async () => {
+  const h = harness();
+  const payload = order(line({ properties: {
+    "Tracking Mode": "new_included_code",
+    "Campaign Name": "Launch campaign",
+    "Destination URL": "https://example.com/launch",
+    "Artwork Method": "upload_now",
+    "Artwork Upload URL": "https://cdn.shopify.com/artwork.pdf",
+  } }));
+  await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+  await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
+  assert.equal(h.importedArtwork.size, 1);
+  assert.equal(h.qrs.size, 1);
+});
+
+test("artwork import failure creates needs_attention without failing the webhook or provisioning a QR", async () => {
+  const h = harness({ importFailure: true });
+  const payload = order(line({ properties: {
+    "Tracking Mode": "new_included_code",
+    "Campaign Name": "Launch campaign",
+    "Destination URL": "https://example.com/launch",
+    "Artwork Method": "upload_now",
+    "Artwork Upload URL": "https://cdn.shopify.com/artwork.pdf",
+  } }));
+  const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+  assert.equal((result.results[0] as any).status, "needs_attention");
+  assert.equal(h.qrs.size, 0);
+  assert.equal([...h.items.values()][0].attention_reason, "Checkout artwork could not be imported securely.");
+});
+
+for (const [method, extra] of [
+  ["upload_later", {}],
+  ["request_design", { "Artwork Instructions": "Create a clean two-sided design." }],
+  ["reorder_existing", { "Reorder Reference": "#1042" }],
+] as const) {
+  test(`${method} creates no checkout artwork file`, async () => {
+    const h = harness();
+    const payload = order(line({ properties: { "Tracking Mode": "none", "Artwork Method": method, ...extra } }));
+    const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+    assert.equal((result.results[0] as any).status, "not_required");
+    assert.equal(h.importedArtwork.size, 0);
+    assert.equal(h.qrs.size, 0);
+    assert.equal(h.authCustomers, 1);
+  });
+}
+
+test("request design and reorder selections require their supporting fields", async () => {
+  for (const method of ["request_design", "reorder_existing"]) {
+    const h = harness();
+    const payload = order(line({ properties: { "Tracking Mode": "none", "Artwork Method": method } }));
+    const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+    assert.equal((result.results[0] as any).status, "needs_attention");
+    assert.equal(h.authCustomers, 0);
+  }
+});
+
+test("reorder reference is persisted as a normalized operational field", async () => {
+  const h = harness();
+  await provisionTrackedPrintOrder({
+    payload: order(line({ properties: { "Tracking Mode": "none", "Artwork Method": "reorder_existing", "Reorder Reference": "#1042" } })),
+    webhookEventId: "w1", dependencies: h.dependencies, registry,
+  });
+  assert.equal([...h.items.values()][0].reorder_reference, "#1042");
+});
+
 test("missing email or invalid destination needs attention without provisioning", async () => {
   for (const payload of [
-    order(line({ properties: { tracking: "new code", destination: "https://example.com" } }), { email: "", customer: null }),
-    order(line({ properties: { tracking: "new code", destination: "bad" } })),
+    order(line({ properties: { tracking: "new code", campaign: "Campaign", destination: "https://example.com" } }), { email: "", customer: null }),
+    order(line({ properties: { tracking: "new code", campaign: "Campaign", destination: "bad" } })),
   ]) {
     const h = harness(); await provisionTrackedPrintOrder({ payload, webhookEventId: "w", dependencies: h.dependencies, registry });
     assert.equal([...h.items.values()][0].provisioning_status, "needs_attention"); assert.equal(h.qrs.size, 0); assert.equal(h.authCustomers, 0);
@@ -223,6 +470,23 @@ test("corrective migration preserves all QR types and strict existing-code eligi
   const sql = fs.readFileSync(new URL("../supabase/migrations/20260713031044_correct_tracked_print_safety.sql", import.meta.url), "utf8");
   for (const type of ["url","connect_profile","text","wifi","email","sms","image","pdf","vcard","smart_card","tracked_print","business_kit"]) assert.match(sql, new RegExp(`'${type}'`));
   for (const predicate of ["q.is_system = false","q.capacity_source = 'subscription'","q.counts_toward_capacity = true","q.customer_can_edit_destination = true","q.is_active = true"]) assert.match(sql, new RegExp(predicate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("Phase 4 migrations add TIFF support and normalized reorder references", () => {
+  const tiff = fs.readFileSync("supabase/migrations/20260713225926_add_tracked_print_tiff_support.sql", "utf8");
+  const reorder = fs.readFileSync("supabase/migrations/20260713232644_add_tracked_print_reorder_reference.sql", "utf8");
+  assert.match(tiff, /image\/tiff/);
+  assert.match(reorder, /add column reorder_reference text/);
+  assert.match(reorder, /char_length\(reorder_reference\) <= 200/);
+});
+
+test("admin print operations surface artwork method, instructions, and reorder reference", () => {
+  const queue = fs.readFileSync("app/admin/print-orders/page.tsx", "utf8");
+  const detail = fs.readFileSync("app/admin/print-orders/[id]/page.tsx", "utf8");
+  assert.match(queue, /Artwork method/);
+  assert.match(queue, /item\.reorder_reference/);
+  assert.match(detail, /order\.artwork_instructions/);
+  assert.match(detail, /order\.qr_placement_instructions/);
 });
 
 test("neutral customer implementation uses paginated Auth lookup and insert-conflict reuse", () => {
