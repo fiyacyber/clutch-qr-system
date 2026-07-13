@@ -50,9 +50,9 @@ export default async function StoredQrCodesPage() {
     task: () =>
       admin
         .from("qr_codes")
-        .select("id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color")
+        .select("id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color, qr_type")
         .eq("customer_id", customer.id)
-        .neq("is_system", true)
+        .or("is_system.eq.false,qr_type.eq.tracked_print")
         .order("created_at", { ascending: false }),
   });
 

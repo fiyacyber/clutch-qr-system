@@ -37,7 +37,7 @@ export default async function EditQrCodePage({
   const [{ data: code, error: codeError }, { data: profiles, error: profilesError }] = await Promise.all([
     admin
       .from("qr_codes")
-      .select("id, name, destination_url, slug, qr_type, profile_id, scan_count, updated_at, foreground_color, background_color, dot_style, corner_style, logo_url")
+      .select("id, name, destination_url, slug, qr_type, profile_id, scan_count, updated_at, foreground_color, background_color, dot_style, corner_style, logo_url, customer_can_edit_destination")
       .eq("id", qrId)
       .eq("customer_id", customer.id)
       .maybeSingle(),
@@ -74,6 +74,7 @@ export default async function EditQrCodePage({
   if (!code) {
     redirect("/portal/qr");
   }
+  if (code.customer_can_edit_destination !== true) redirect("/portal/qr");
 
   return (
     <DashboardShell

@@ -9,6 +9,8 @@ import { buildSetupForgotPasswordPath } from "@/lib/onboarding-routing";
 import { provisionClutchCodesPaidOrder, type ShopifyPaidOrder } from "@/lib/clutch-codes";
 import { createClutchCodesSupabaseDependencies } from "@/lib/clutch-codes-supabase";
 import { isEnabledEnvironmentFlag } from "@/lib/env-flags.js";
+import { provisionTrackedPrintOrder } from "@/lib/tracked-print";
+import { createTrackedPrintSupabaseDependencies } from "@/lib/tracked-print-supabase";
 
 export const runtime = "nodejs";
 
@@ -28,6 +30,7 @@ type ShopifyLineItem = {
   variant_title?: string;
   handle?: string;
   properties?: ShopifyLineItemProperty[] | Record<string, unknown> | null;
+  quantity?: number | string;
 };
 
 type ShopifyOrderPayload = {
@@ -942,8 +945,13 @@ export async function POST(req: NextRequest) {
         webhookEventId: webhookId,
         dependencies: createClutchCodesSupabaseDependencies(admin),
       });
+      const trackedPrint = await provisionTrackedPrintOrder({
+        payload,
+        webhookEventId: webhookId,
+        dependencies: createTrackedPrintSupabaseDependencies(admin),
+      });
       return NextResponse.json(
-        { ok: true, duplicate: true, webhook_id: webhookId, clutch_codes: clutchCodes },
+        { ok: true, duplicate: true, webhook_id: webhookId, clutch_codes: clutchCodes, tracked_print: trackedPrint },
         { status: 200 }
       );
     } catch (error) {
@@ -1035,6 +1043,31 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       { ok: false, error: "Clutch Codes provisioning failed.", webhook_id: webhookId },
+      { status: 500 }
+    );
+  }
+
+  let trackedPrintProvisioning: Awaited<ReturnType<typeof provisionTrackedPrintOrder>>;
+  try {
+    trackedPrintProvisioning = await provisionTrackedPrintOrder({
+      payload,
+      webhookEventId: webhookId,
+      dependencies: createTrackedPrintSupabaseDependencies(admin),
+    });
+    console.info("tracked-print provisioning completed", {
+      webhook_event_id: webhookId,
+      shopify_order_id: orderId,
+      eligible_items: trackedPrintProvisioning.eligibleItems,
+      processed_items: trackedPrintProvisioning.processedItems,
+    });
+  } catch (error) {
+    console.error("tracked-print provisioning failed", {
+      webhook_event_id: webhookId,
+      shopify_order_id: orderId,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return NextResponse.json(
+      { ok: false, error: "Tracked-print provisioning failed.", webhook_id: webhookId },
       { status: 500 }
     );
   }
@@ -1314,6 +1347,7 @@ export async function POST(req: NextRequest) {
       smart_card_qr_reused_count: smartCardQrReused,
       topic,
       clutch_codes: clutchCodesProvisioning,
+      tracked_print: trackedPrintProvisioning,
     },
     { status: 200 }
   );

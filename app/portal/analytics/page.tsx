@@ -76,7 +76,7 @@ export default async function AnalyticsPage({
   const showLockedCampaign = isCampaignTab && !hasDynamicQr;
   const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
   const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
-  const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true);
+  const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true || code.qr_type === "tracked_print");
   const qrUsageUsed = campaignQrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
   const latestQrCode = campaignQrCodes[0] || null;
