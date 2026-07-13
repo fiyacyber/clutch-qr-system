@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { isAdvancedAnalyticsUnlocked } from "@/lib/plans";
+import { loadAccountAccess } from "@/lib/account-access-server";
 import {
   applyAnalyticsFilters,
   getScanBrowser,
@@ -23,11 +23,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isAdvancedAnalyticsUnlocked(customer)) {
-    return NextResponse.json({ error: "Agency is required." }, { status: 403 });
-  }
-
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canExportQr || !access.canUseCampaignAnalytics) {
+    return NextResponse.json({ error: "Campaign export access is locked." }, { status: 403 });
+  }
   const { data: qrCodes } = await admin
     .from("qr_codes")
     .select("id, name, slug")

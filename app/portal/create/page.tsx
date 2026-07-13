@@ -11,12 +11,12 @@ import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
 import {
   PLAN_DEFINITIONS,
   getCustomerPlan,
   getEffectiveQrLimit,
   getSubscriptionLockMessage,
-  hasEntitlement,
   isCustomerSubscriptionLocked,
 } from "@/lib/plans";
 
@@ -68,10 +68,12 @@ export default async function CreatePortalPage() {
   if (profilesResult.failed) panelIssues.push("Clutch Connect profile linking is temporarily unavailable.");
 
   const used = qrCodesResult.data?.length || 0;
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canCreateQr) redirect("/portal?access=qr-creation-locked");
   const limit = getEffectiveQrLimit(customer);
   const plan = getCustomerPlan(customer);
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
+  const hasDynamicQr = access.canCreateQr;
+  const hasHeatmap = access.canUseCampaignHeatmap;
   const locked = isCustomerSubscriptionLocked(customer) || !hasDynamicQr;
   const lockMessage = getSubscriptionLockMessage(customer);
   const usageLabel = !hasDynamicQr
@@ -84,6 +86,7 @@ export default async function CreatePortalPage() {
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,

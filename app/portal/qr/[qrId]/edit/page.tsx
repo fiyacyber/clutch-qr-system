@@ -6,8 +6,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import { requireCustomer } from "@/lib/auth";
-import { getCustomerPlan, hasEntitlement } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export default async function EditQrCodePage({
   params,
@@ -27,13 +27,12 @@ export default async function EditQrCodePage({
   if (!customer) return <PortalAccountNotActive />;
   if (customer.must_change_password) redirect("/change-password");
 
-  const plan = getCustomerPlan(customer);
-  const hasDynamicQr = hasEntitlement(customer, "dynamicQr") || plan.code === "admin";
-  const hasHeatmap = hasEntitlement(customer, "heatmapAnalytics") || plan.code === "admin";
-  if (!hasDynamicQr) redirect("/portal/qr");
-
   const { qrId } = await params;
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canEditOwnedQr) redirect("/portal?access=qr-edit-locked");
+  const hasDynamicQr = access.canEditOwnedQr;
+  const hasHeatmap = access.canUseCampaignAnalytics;
 
   const [{ data: code, error: codeError }, { data: profiles, error: profilesError }] = await Promise.all([
     admin
@@ -78,6 +77,7 @@ export default async function EditQrCodePage({
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,

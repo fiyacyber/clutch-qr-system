@@ -3,7 +3,7 @@ import { requireCustomer } from "@/lib/auth";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
-import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement } from "@/lib/plans";
+import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
   buildHourlyHeatmap,
@@ -20,6 +20,7 @@ import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/compo
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
@@ -48,6 +49,10 @@ export default async function AnalyticsPage({
   const activeTab = VALID_TABS.includes(normalizedTab) ? normalizedTab : "analytics";
 
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canUseCampaignAnalytics && !access.canUseProfileAnalytics) {
+    redirect("/portal?access=analytics-locked");
+  }
   const analyticsDataResult = await runGuardedDashboardTask({
     route: "/portal/analytics",
     endpoint: "analytics:fetchUnifiedAnalyticsData",
@@ -63,8 +68,8 @@ export default async function AnalyticsPage({
   });
   const data = analyticsDataResult.data;
   const plan = getCustomerPlan(customer as any);
-  const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
-  const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
+  const hasHeatmap = access.canUseProfileAnalytics || access.canUseCampaignAnalytics;
+  const hasDynamicQr = access.canUseCampaignAnalytics;
   const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
   const isCampaignUnlocked = isCampaignTab && hasDynamicQr;
   const isAnalyticsUnlocked = !isCampaignTab && hasHeatmap;
@@ -275,6 +280,7 @@ export default async function AnalyticsPage({
 
   return (
     <DashboardShell
+      accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
         qr: !hasDynamicQr,

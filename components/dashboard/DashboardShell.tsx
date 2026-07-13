@@ -1,10 +1,12 @@
 "use client";
 
 import SidebarNav from "@/components/dashboard/SidebarNav";
+import type { AccountAccess } from "@/lib/account-access";
 
 export type DashboardNavVariant = "default" | "connect-basic" | "onboarding";
 
 interface DashboardShellProps {
+  accountAccess?: AccountAccess;
   isAdmin?: boolean;
   navLocks?: {
     qr?: boolean;
@@ -18,6 +20,7 @@ interface DashboardShellProps {
 }
 
 export default function DashboardShell({
+  accountAccess,
   isAdmin,
   navLocks,
   navVariant,
@@ -28,6 +31,7 @@ export default function DashboardShell({
   return (
     <div className="ds-app-shell">
       <SidebarNav
+        accountAccess={accountAccess}
         isAdmin={isAdmin}
         navLocks={navLocks}
         navVariant={navVariant}

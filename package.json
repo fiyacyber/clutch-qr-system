@@ -9,7 +9,8 @@
     "lint": "eslint app components lib types --ext .ts,.tsx",
     "test:connect:directions": "node --experimental-strip-types --test scripts/connect-directions.test.mjs",
     "test:clutch-codes": "node --experimental-strip-types --test scripts/clutch-codes-subscription.test.ts",
-    "test": "npm run test:connect:directions && npm run test:clutch-codes",
+    "test:account-access": "node --experimental-strip-types --test scripts/account-access.test.ts",
+    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
     "preview:clutch-codes-email": "node --experimental-strip-types scripts/preview-clutch-codes-email.ts",
     "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"

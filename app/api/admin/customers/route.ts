@@ -5,6 +5,7 @@ import {
   generateTemporaryPassword,
   sendCustomerOnboardingEmail,
 } from "@/lib/shopify-provisioning";
+import { buildLegacyAdminCustomerUpdate } from "@/lib/admin-customer-update";
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient();
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     : submittedLimit || PLAN_DEFINITIONS[plan_code].qrLimit;
 
   if (id) {
-    const updatePayload: Record<string, string | number | boolean | null> = {
+    const updatePayload = buildLegacyAdminCustomerUpdate({
       company_name,
       customer_group_id,
       onboarding_status: mark_invited ? "invited" : onboarding_status,
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       plan_status: subscription_status === "cancelled" ? "canceled" : subscription_status,
       must_change_password,
       updated_at: new Date().toISOString(),
-    };
+    }) as Record<string, string | number | boolean | null>;
 
     if (mark_invited || reset_temp_password) {
       updatePayload.onboarding_email_sent_at = new Date().toISOString();

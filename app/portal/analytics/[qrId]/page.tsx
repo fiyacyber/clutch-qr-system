@@ -18,6 +18,7 @@ import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import "../analytics.css";
+import { loadAccountAccess } from "@/lib/account-access-server";
 
 export default async function QRAnalyticsPage({
   params,
@@ -37,6 +38,8 @@ export default async function QRAnalyticsPage({
   if (!customer) return <PortalAccountNotActive />;
 
   const admin = createSupabaseAdminClient();
+  const access = await loadAccountAccess(admin, customer);
+  if (!access.canUseCampaignAnalytics) redirect("/portal?access=campaign-analytics-locked");
 
   // Get the QR code
   const { data: code, error: codeError } = await admin
