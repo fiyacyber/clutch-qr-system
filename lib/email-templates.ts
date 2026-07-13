@@ -297,3 +297,162 @@ export function buildSmartCardSetupEmailTemplate({
 
   return { html, text };
 }
+
+export function buildClutchCodesSubscriptionAccessEmailTemplate({
+  firstName,
+  planName,
+  monthlyPrice,
+  allowance,
+  accessUrl,
+  manageSubscriptionUrl,
+  supportEmail = "info@clutchprintshop.com",
+}: {
+  firstName?: string | null;
+  planName: string;
+  monthlyPrice: string;
+  allowance: number;
+  accessUrl: string;
+  manageSubscriptionUrl?: string | null;
+  supportEmail?: string;
+}) {
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const safeAccessUrl = escapeHtml(accessUrl);
+  const safeManageUrl = manageSubscriptionUrl ? escapeHtml(manageSubscriptionUrl) : null;
+  const safeSupportEmail = escapeHtml(supportEmail);
+  const preheader = "Access your Clutch Codes dashboard and start creating trackable campaigns.";
+
+  const html = `
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Your ${escapeHtml(planName)} subscription is active</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f6f8fb;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;line-height:1px;color:transparent;">${escapeHtml(preheader)}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f6f8fb;padding:20px 10px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#ffffff;border:1px solid #d9e1eb;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="background:#384862;padding:26px 24px 22px 24px;">
+                <p style="margin:0;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:28px;line-height:1.2;font-weight:700;">Clutch Codes™</p>
+                <p style="margin:6px 0 0 0;color:#FFA665;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;">from Clutch Print Shop</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 10px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;">${escapeHtml(greeting)}</p>
+                <h1 style="margin:0 0 12px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:29px;line-height:1.2;">Your Clutch Codes subscription is active</h1>
+                <p style="margin:0 0 18px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">Create dynamic QR campaigns, update destinations after printing, and review scan analytics.</p>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px 0;background:#f8fafc;border:1px solid #d9e1eb;border-radius:14px;">
+                  <tr><td style="padding:18px 18px 8px 18px;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:18px;line-height:1.4;font-weight:700;">Plan summary</td></tr>
+                  <tr><td style="padding:0 18px 8px 18px;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;"><strong>Plan:</strong> ${escapeHtml(planName)}</td></tr>
+                  <tr><td style="padding:0 18px 8px 18px;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;"><strong>Billing:</strong> ${escapeHtml(monthlyPrice)}</td></tr>
+                  <tr><td style="padding:0 18px 18px 18px;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;"><strong>Allowance:</strong> ${allowance} active Clutch Codes</td></tr>
+                </table>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 14px 0;">
+                  <tr>
+                    <td align="center" style="background:#FFA665;border-radius:999px;">
+                      <a href="${safeAccessUrl}" style="display:inline-block;padding:14px 24px;color:#25334a;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.2;font-weight:700;">Access Clutch Codes</a>
+                    </td>
+                  </tr>
+                </table>
+                ${safeManageUrl ? `<p style="margin:0 0 20px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;"><a href="${safeManageUrl}" style="color:#384862;text-decoration:underline;font-weight:700;">Manage your subscription</a></p>` : ""}
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px 0;border-top:1px solid #d9e1eb;border-bottom:1px solid #d9e1eb;">
+                  <tr><td style="padding:18px 0 10px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:18px;line-height:1.4;font-weight:700;">Get started</td></tr>
+                  <tr><td style="padding:0 0 8px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>1.</strong> Open your secure access link</td></tr>
+                  <tr><td style="padding:0 0 8px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>2.</strong> Create your first Clutch Code</td></tr>
+                  <tr><td style="padding:0 0 18px 0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;"><strong>3.</strong> Download it and begin tracking</td></tr>
+                </table>
+
+                <p style="margin:0 0 16px 0;padding:14px;background:#fff7f0;border-left:4px solid #FFA665;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;"><strong>Important:</strong> Clutch Codes subscriptions provide dynamic QR campaign capacity. Clutch Connect+ is a separate digital-profile upgrade.</p>
+                <p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;">Need help? Email <a href="mailto:${safeSupportEmail}" style="color:#384862;text-decoration:underline;">${safeSupportEmail}</a>.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 24px;background:#f8fafc;border-top:1px solid #d9e1eb;">
+                <p style="margin:0 0 5px 0;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;font-weight:700;">Clutch Print Shop · Clutch Codes™</p>
+                <p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;">This transactional email was sent because a Clutch Codes subscription was purchased using this address.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = [
+    preheader,
+    "",
+    greeting,
+    "",
+    "Your Clutch Codes subscription is active",
+    "",
+    `Plan: ${planName}`,
+    `Billing: ${monthlyPrice}`,
+    `Allowance: ${allowance} active Clutch Codes`,
+    "",
+    "Create dynamic QR campaigns, update destinations after printing, and review scan analytics.",
+    "",
+    "Access Clutch Codes:",
+    accessUrl,
+    ...(manageSubscriptionUrl ? ["", "Manage your subscription:", manageSubscriptionUrl] : []),
+    "",
+    "Get started:",
+    "1. Open your secure access link",
+    "2. Create your first Clutch Code",
+    "3. Download it and begin tracking",
+    "",
+    "Clutch Codes subscriptions provide dynamic QR campaign capacity. Clutch Connect+ is a separate digital-profile upgrade.",
+    "",
+    `Need help? ${supportEmail}`,
+    "",
+    "Clutch Print Shop · Clutch Codes™",
+    "This transactional email was sent because a Clutch Codes subscription was purchased using this address.",
+  ].join("\n");
+
+  return { html, text, preheader };
+}
+
+export function buildClutchCodesLifecycleEmailTemplate({
+  event,
+  planName,
+  allowance,
+  dashboardUrl = "https://qr.clutchprintshop.com/login",
+  supportEmail = "info@clutchprintshop.com",
+}: {
+  event: "plan_changed" | "subscription_canceled" | "payment_problem";
+  planName?: string | null;
+  allowance?: number | null;
+  dashboardUrl?: string;
+  supportEmail?: string;
+}) {
+  const content = {
+    plan_changed: {
+      subject: "Your Clutch Codes plan has changed",
+      heading: "Your Clutch Codes plan has changed",
+      body: `${planName || "Your plan"}${allowance != null ? ` now includes up to ${allowance} active Clutch Codes` : " has been updated"}.`,
+    },
+    subscription_canceled: {
+      subject: "Your Clutch Codes subscription was canceled",
+      heading: "Your Clutch Codes subscription was canceled",
+      body: "Subscription capacity has been removed. Any included print allowance and existing Clutch Code records remain available.",
+    },
+    payment_problem: {
+      subject: "There is a payment problem with your Clutch Codes subscription",
+      heading: "Your Clutch Codes subscription needs attention",
+      body: "Shopify reported a billing problem. Review your subscription payment details or contact support for help.",
+    },
+  }[event];
+  const safeDashboardUrl = escapeHtml(dashboardUrl);
+  const safeSupportEmail = escapeHtml(supportEmail);
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(content.subject)}</title></head><body style="margin:0;background:#f6f8fb;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="padding:20px 10px;background:#f6f8fb;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#ffffff;border:1px solid #d9e1eb;border-radius:16px;overflow:hidden;"><tr><td style="padding:24px;background:#384862;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:26px;font-weight:700;">Clutch Codes™</td></tr><tr><td style="padding:24px;"><h1 style="margin:0 0 12px;color:#384862;font-family:Helvetica,Arial,sans-serif;font-size:27px;line-height:1.2;">${escapeHtml(content.heading)}</h1><p style="margin:0 0 18px;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">${escapeHtml(content.body)}</p><p style="margin:0 0 18px;"><a href="${safeDashboardUrl}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#FFA665;color:#25334a;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-weight:700;">Access Clutch Codes</a></p><p style="margin:0;color:#4f5f76;font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;">Need help? <a href="mailto:${safeSupportEmail}" style="color:#384862;">${safeSupportEmail}</a></p></td></tr></table></td></tr></table></body></html>`;
+  const text = [content.heading, "", content.body, "", `Access Clutch Codes: ${dashboardUrl}`, `Support: ${supportEmail}`].join("\n");
+  return { subject: content.subject, html, text };
+}

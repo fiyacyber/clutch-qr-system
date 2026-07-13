@@ -7,6 +7,7 @@ import {
   verifyShopifyWebhook,
   type ShopifyWebhookTopic,
 } from "@/lib/shopify-provisioning";
+import { processClutchCodesContractLifecycle } from "@/lib/clutch-codes-supabase";
 
 const SUPPORTED_TOPICS = new Set([
   "checkouts/create",
@@ -17,6 +18,12 @@ const SUPPORTED_TOPICS = new Set([
   "app_subscriptions/create",
   "app_subscriptions/update",
   "app_subscriptions/cancelled",
+  "subscription_contracts/activate",
+  "subscription_contracts/update",
+  "subscription_contracts/pause",
+  "subscription_contracts/fail",
+  "subscription_contracts/cancel",
+  "subscription_contracts/expire",
 ]);
 
 function normalizeTopic(req: NextRequest) {
@@ -132,6 +139,30 @@ export async function handleShopifyWebhook(req: NextRequest) {
   }
 
   try {
+    if (topic.startsWith("subscription_contracts/")) {
+      const lifecycleResult = await processClutchCodesContractLifecycle({
+        admin,
+        topic,
+        payload,
+        webhookEventId: eventId,
+      });
+      await recordWebhookEvent({
+        eventId,
+        topic,
+        payload,
+        status: lifecycleResult.qualified ? "completed" : "skipped",
+        errorMessage: lifecycleResult.skippedReason,
+      });
+      console.info("clutch-codes lifecycle webhook processed", {
+        webhook_event_id: eventId,
+        topic,
+        normalized_plan_code: lifecycleResult.planCode || null,
+        qualified: lifecycleResult.qualified,
+        duplicate: Boolean(lifecycleResult.duplicate),
+      });
+      return NextResponse.json({ ok: true, ...lifecycleResult });
+    }
+
     const result = await provisionCustomerFromShopify({
       admin,
       topic,

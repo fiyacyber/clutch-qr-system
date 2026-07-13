@@ -1,0 +1,16 @@
+{
+  "name": "clutch-codes-onboarding-extension-source",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions": "2026.7.0",
+    "preact": "^10.27.2"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0"
+  }
+}

@@ -4,15 +4,19 @@ type SendEmailInput = {
   text: string;
   html?: string;
   idempotencyKey?: string;
+  fromName?: string;
 };
 
 function getResendApiKey() {
   return process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "";
 }
 
-function getEmailFromAddress() {
+function getEmailFromAddress(fromName = "Clutch Connect") {
   const configuredFrom = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || "welcome@clutchprintshop.com";
-  return configuredFrom.includes("<") ? configuredFrom : `Clutch Connect <${configuredFrom}>`;
+  if (!configuredFrom.includes("<")) return `${fromName} <${configuredFrom}>`;
+
+  const address = configuredFrom.match(/<([^>]+)>/)?.[1]?.trim();
+  return address ? `${fromName} <${address}>` : configuredFrom;
 }
 
 export function isEmailConfigured() {
@@ -25,6 +29,7 @@ export async function sendTransactionalEmail({
   text,
   html,
   idempotencyKey,
+  fromName,
 }: SendEmailInput) {
   const apiKey = getResendApiKey();
 
@@ -40,7 +45,7 @@ export async function sendTransactionalEmail({
       ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
     },
     body: JSON.stringify({
-      from: getEmailFromAddress(),
+      from: getEmailFromAddress(fromName),
       to,
       subject,
       text,
