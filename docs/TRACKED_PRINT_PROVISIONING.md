@@ -27,6 +27,10 @@ Plain print creates only `print_order_items` and does not create Auth, customer,
 
 `provision_tracked_print_qr` is a service-role-only, fixed-search-path transaction covering QR creation/linking, provisioning, activity, item completion, and capacity reconciliation. Execution is revoked from `anon` and `authenticated`.
 
+The first accepted `(shopify_order_id, shopify_line_item_id)` record owns its immutable provisioning inputs. Replays use insert-and-select rather than a broad upsert. Materially different replays preserve completed/not-required work, create one sanitized discrepancy activity, and only place unfinished work into attention state. Identical pending records resume safely.
+
+Neutral customer creation searches Auth users page-by-page and performs independent exact customer lookups by normalized email and Shopify customer ID. Existing accounts receive only missing Auth/Shopify linkage; plan, admin, entitlement, allowance, subscription, onboarding, and status fields are never overwritten. New neutral rows use insert-plus-unique-conflict reuse.
+
 ## Capacity
 
 Completed `included_permanent` provisionings are authoritative for `included_qr_allowance`. Reconciliation counts those records, then mirrors `qr_limit = included_qr_allowance + subscription_qr_limit`. Used capacity counts `qr_codes.counts_toward_capacity=true`. Smart Card and other system-exempt QRs do not count. Admin remains unlimited through `is_admin=true`.
@@ -38,6 +42,8 @@ Tracked QRs use `is_system=true`, `qr_type=tracked_print`, `capacity_source=incl
 Customers have RLS-protected read access only to their own print items, provisionings, and activity. They cannot directly mutate workflow, provisioning, allowance, or ownership data. Server admin pages use the server-only service-role client after an `is_admin` authorization check.
 
 Tracked-print-only customers can view/export their owned QR, edit only its destination, and see basic campaign analytics. They cannot create unrelated QRs, delete the included QR, customize advanced style/logo fields, access campaign heatmaps, or receive Connect features.
+
+Existing-code selection accepts only an active, editable, non-system, capacity-counting subscription QR owned by the same customer. Smart Card, tracked-print, Business Kit, system-exempt, inactive, non-editable, and other-customer QRs are rejected with a generic message.
 
 ## Database relationships and Business Kit
 

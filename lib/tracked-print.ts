@@ -11,7 +11,8 @@ export type PrintOrderPayload = {
 export type TrackedPrintDependencies = {
   findCustomer(email: string, shopifyCustomerId: string | null): Promise<{ id: string; auth_user_id?: string | null } | null>;
   ensureNeutralCustomer(email: string, name: string, shopifyCustomerId: string | null, orderId: string): Promise<{ id: string }>;
-  upsertPrintItem(input: Record<string, unknown>): Promise<{ id: string; provisioning_status: string }>;
+  findPrintItem(orderId: string, lineItemId: string): Promise<Record<string, any> | null>;
+  upsertPrintItem(input: Record<string, unknown>): Promise<Record<string, any> & { id: string; provisioning_status: string; immutableMatch: boolean }>;
   provisionQr(input: { printOrderItemId: string; customerId: string; destinationUrl: string | null; campaignName: string | null; materialType: string; idempotencyKey: string; existingQrCodeId: string | null }): Promise<{ qrCodeId: string; includedQrAllowance: number }>;
   recordActivity(input: { orderId: string; action: string; idempotencyKey: string; reason?: string | null }): Promise<void>;
   markAttention(orderId: string, reason: string): Promise<void>;
@@ -36,15 +37,19 @@ export async function provisionTrackedPrintOrder(input: {
     const email = emailFor(input.payload);
     const requiresNew = properties.trackingMode === "new_included_code";
     const requiresExisting = properties.trackingMode === "existing_code";
+    const trackingUnavailable = properties.trackingMode !== "none" && classification.defaultTrackingAvailable === false;
+    const existingItem = await input.dependencies.findPrintItem(orderId, lineItemId);
     let invalid = (requiresNew && (!email || !properties.destinationUrl || !properties.validDestination)) ||
       (requiresExisting && (!email || !properties.existingQrCodeId));
-    let customer = email ? await input.dependencies.findCustomer(email, input.payload.customer?.id ? String(input.payload.customer.id) : null) : null;
+    let customer = existingItem?.customer_id ? { id: String(existingItem.customer_id) } :
+      (!trackingUnavailable && email ? await input.dependencies.findCustomer(email, input.payload.customer?.id ? String(input.payload.customer.id) : null) : null);
     if (requiresExisting && !customer) invalid = true;
-    if (!invalid && requiresNew && !customer) {
+    if (!trackingUnavailable && !invalid && requiresNew && !customer) {
       customer = await input.dependencies.ensureNeutralCustomer(email, input.payload.billing_address?.name || "", input.payload.customer?.id ? String(input.payload.customer.id) : null, orderId);
     }
-    const provisioningStatus = invalid ? "needs_attention" : properties.trackingMode === "none" ? "not_required" : "pending";
-    const attentionReason = invalid ? (email ? "Tracking request requires valid destination or existing code." : "Tracking request requires checkout email.") : null;
+    const provisioningStatus = trackingUnavailable || invalid ? "needs_attention" : properties.trackingMode === "none" ? "not_required" : "pending";
+    const attentionReason = trackingUnavailable ? "QR tracking is not available for this product configuration." :
+      invalid ? (email ? "Tracking request requires valid destination or existing code." : "Tracking request requires checkout email.") : null;
     const item = await input.dependencies.upsertPrintItem({
       customer_id: customer?.id || null, shopify_order_id: orderId,
       shopify_order_number: String(input.payload.name || input.payload.order_number || "") || null,
@@ -62,10 +67,17 @@ export async function provisionTrackedPrintOrder(input: {
       production_status: "not_started", fulfillment_status: "unfulfilled", provisioning_status: provisioningStatus,
       attention_reason: attentionReason, normalized_properties: properties.normalizedProperties,
     });
-    const operationKey = `tracked-print:${orderId}:${lineItemId}:${properties.trackingMode}`;
-    if (provisioningStatus === "not_required" || provisioningStatus === "needs_attention") {
-      await input.dependencies.recordActivity({ orderId: item.id, action: provisioningStatus, idempotencyKey: `${operationKey}:activity`, reason: attentionReason });
-      results.push({ lineItemId, status: provisioningStatus }); continue;
+    const itemKey = `tracked-print:${orderId}:${lineItemId}`;
+    if (!item.immutableMatch) {
+      await input.dependencies.recordActivity({ orderId: item.id, action: "payload_discrepancy", idempotencyKey: `${itemKey}:discrepancy`, reason: "Replay payload differs from accepted provisioning inputs." });
+      if (!["completed", "not_required"].includes(item.provisioning_status)) await input.dependencies.markAttention(item.id, "Replay payload differs from accepted provisioning inputs.");
+      results.push({ lineItemId, status: "needs_attention", discrepancy: true }); continue;
+    }
+    const acceptedStatus = item.provisioning_status;
+    const operationKey = `${itemKey}:${item.tracking_mode}`;
+    if (acceptedStatus === "not_required" || acceptedStatus === "needs_attention") {
+      await input.dependencies.recordActivity({ orderId: item.id, action: acceptedStatus, idempotencyKey: `${operationKey}:activity`, reason: item.attention_reason || attentionReason });
+      results.push({ lineItemId, status: acceptedStatus }); continue;
     }
     if (!customer) {
       results.push({ lineItemId, status: "needs_attention" }); continue;
@@ -73,9 +85,9 @@ export async function provisionTrackedPrintOrder(input: {
     let provisioned;
     try {
       provisioned = await input.dependencies.provisionQr({
-        printOrderItemId: item.id, customerId: customer.id, destinationUrl: properties.destinationUrl,
-        campaignName: properties.campaignName, materialType: classification.materialType,
-        idempotencyKey: operationKey, existingQrCodeId: properties.existingQrCodeId,
+        printOrderItemId: item.id, customerId: customer.id, destinationUrl: item.destination_url,
+        campaignName: item.campaign_name, materialType: item.material_type,
+        idempotencyKey: operationKey, existingQrCodeId: item.existing_qr_code_id,
       });
     } catch (error) {
       if (!requiresExisting) throw error;

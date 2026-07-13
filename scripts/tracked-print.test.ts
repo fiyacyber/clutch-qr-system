@@ -5,6 +5,7 @@ import { classifyPrintProduct } from "../lib/print-products.ts";
 import { normalizePrintLineProperties } from "../lib/print-line-properties.ts";
 import { provisionTrackedPrintOrder, type TrackedPrintDependencies } from "../lib/tracked-print.ts";
 import { resolveAccountAccess } from "../lib/account-access.ts";
+import { buildSafeExistingCustomerLinkagePatch } from "../lib/tracked-print-supabase.ts";
 
 const registry = [{ sku: "POSTCARD-4X6", materialType: "Postcard", defaultTrackingAvailable: true }];
 const line = (overrides: Record<string, unknown> = {}) => ({ id: "line-1", sku: "POSTCARD-4X6", product_id: "p1", title: "Postcards", quantity: 1, properties: [], ...overrides });
@@ -16,7 +17,15 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
   const dependencies: TrackedPrintDependencies = {
     async findCustomer() { return options.existingCustomer ? { id: "customer-db-1" } : null; },
     async ensureNeutralCustomer() { authCustomers++; return { id: "customer-db-1" }; },
-    async upsertPrintItem(input) { const key = `${input.shopify_order_id}:${input.shopify_line_item_id}`; const previous = items.get(key); const value = { ...input, id: previous?.id || `item-${items.size + 1}` }; items.set(key, value); return { id: value.id, provisioning_status: String(value.provisioning_status) }; },
+    async findPrintItem(orderId, lineItemId) { return items.get(`${orderId}:${lineItemId}`) || null; },
+    async upsertPrintItem(input) {
+      const key = `${input.shopify_order_id}:${input.shopify_line_item_id}`; const previous = items.get(key);
+      if (previous) {
+        const keys = ["customer_id","product_id","variant_id","sku","material_type","quantity","tracking_mode","destination_url","existing_qr_code_id","campaign_name"];
+        return { ...previous, immutableMatch: keys.every((field) => (previous[field] ?? null) === (input[field] ?? null)) };
+      }
+      const value = { ...input, id: `item-${items.size + 1}` }; items.set(key, value); return { ...value, immutableMatch: true };
+    },
     async provisionQr(input) {
       if (options.rejectExisting && input.existingQrCodeId) throw new Error("selected QR is unavailable");
       if (!qrs.has(input.printOrderItemId)) qrs.set(input.printOrderItemId, input.existingQrCodeId || `qr-${qrs.size + 1}`);
@@ -28,6 +37,15 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
   };
   return { dependencies, items, qrs, activities, get authCustomers() { return authCustomers; } };
 }
+
+test("neutral linkage patches never include protected commerce fields", () => {
+  for (const plan of ["clutch_codes_starter", "clutch_codes_growth", "connect_plus", "admin"]) {
+    const existing = { id: "c1", plan, plan_code: plan, is_admin: plan === "admin", included_qr_allowance: 7, subscription_qr_limit: 30, qr_limit: 37 };
+    const patch = buildSafeExistingCustomerLinkagePatch(existing, { authUserId: "auth", shopifyCustomerId: "shopify", shopifyOrderId: "order" });
+    assert.deepEqual(patch, { auth_user_id: "auth", shopify_customer_id: "shopify", shopify_order_id: "order" });
+    for (const protectedField of ["plan","plan_code","is_admin","included_qr_allowance","subscription_qr_limit","qr_limit","clutch_codes_plan_code","clutch_codes_subscription_status"]) assert.equal(protectedField in patch, false);
+  }
+});
 
 test("trusted SKU is eligible and title-only or customer properties are insufficient", () => {
   assert.equal(classifyPrintProduct({ sku: "postcard-4x6" }, registry).eligible, true);
@@ -66,6 +84,52 @@ test("same order and line is idempotent across webhook IDs", async () => {
   await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
   await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
   assert.equal(h.items.size, 1); assert.equal(h.qrs.size, 1);
+});
+
+test("immutable replay differences are preserved and reported once", async () => {
+  for (const changed of [
+    { tracking: "none", destination: "https://example.com" },
+    { tracking: "new code", destination: "https://changed.example.com" },
+    { tracking: "existing code", "existing qr code id": "changed-qr" },
+  ]) {
+    const h = harness(); const original = order(line({ properties: { tracking: "new code", destination: "https://example.com" } }));
+    await provisionTrackedPrintOrder({ payload: original, webhookEventId: "w1", dependencies: h.dependencies, registry });
+    const replay = order(line({ properties: changed }));
+    const first = await provisionTrackedPrintOrder({ payload: replay, webhookEventId: "w2", dependencies: h.dependencies, registry });
+    const second = await provisionTrackedPrintOrder({ payload: replay, webhookEventId: "w3", dependencies: h.dependencies, registry });
+    assert.equal((first.results[0] as any).discrepancy, true); assert.equal((second.results[0] as any).discrepancy, true);
+    assert.equal(h.qrs.size, 1); assert.equal(h.activities.has("tracked-print:order-1:line-1:discrepancy"), true);
+  }
+});
+
+test("an identical pending item resumes provisioning without rewriting inputs", async () => {
+  const h = harness({ existingCustomer: true });
+  const properties = { tracking: "new code", destination: "https://example.com" };
+  h.items.set("order-1:line-1", {
+    id: "item-1", customer_id: "customer-db-1", product_id: "p1", variant_id: null,
+    sku: "POSTCARD-4X6", material_type: "Postcard", quantity: 1, tracking_mode: "new_included_code",
+    destination_url: "https://example.com/", existing_qr_code_id: null, campaign_name: null,
+    provisioning_status: "pending", attention_reason: null,
+  });
+  const result = await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "w2", dependencies: h.dependencies, registry });
+  assert.equal((result.results[0] as any).status, "completed"); assert.equal(h.qrs.size, 1);
+});
+
+test("tracking availability is trusted and cannot be overridden by properties", async () => {
+  const disabledRegistry = [{ sku: "POSTCARD-4X6", materialType: "Postcard", defaultTrackingAvailable: false }];
+  const plain = harness();
+  await provisionTrackedPrintOrder({ payload: order(), webhookEventId: "w1", dependencies: plain.dependencies, registry: disabledRegistry });
+  assert.equal([...plain.items.values()][0].provisioning_status, "not_required");
+  for (const properties of [
+    { tracking: "new code", destination: "https://example.com" },
+    { tracking: "existing code", "existing qr code id": "owned" },
+  ]) {
+    const h = harness({ existingCustomer: true });
+    await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "w", dependencies: h.dependencies, registry: disabledRegistry });
+    const item = [...h.items.values()][0];
+    assert.equal(item.provisioning_status, "needs_attention"); assert.equal(item.attention_reason, "QR tracking is not available for this product configuration.");
+    assert.equal(h.authCustomers, 0); assert.equal(h.qrs.size, 0);
+  }
 });
 
 test("two eligible line items create two records and two codes", async () => {
@@ -118,6 +182,23 @@ test("migration contains atomic reconciliation, RLS, protected QR metadata, and 
   assert.match(sql, /create or replace function public\.provision_tracked_print_qr/); assert.match(sql, /security definer set search_path = ''/);
   assert.match(sql, /revoke all on function public\.provision_tracked_print_qr/); assert.match(sql, /counts_toward_capacity/);
   assert.match(sql, /enable row level security/g);
+});
+
+test("corrective migration preserves all QR types and strict existing-code eligibility", () => {
+  const sql = fs.readFileSync(new URL("../supabase/migrations/20260713031044_correct_tracked_print_safety.sql", import.meta.url), "utf8");
+  for (const type of ["url","connect_profile","text","wifi","email","sms","image","pdf","vcard","smart_card","tracked_print","business_kit"]) assert.match(sql, new RegExp(`'${type}'`));
+  for (const predicate of ["q.is_system = false","q.capacity_source = 'subscription'","q.counts_toward_capacity = true","q.customer_can_edit_destination = true","q.is_active = true"]) assert.match(sql, new RegExp(predicate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("neutral customer implementation uses paginated Auth lookup and insert-conflict reuse", () => {
+  const source = fs.readFileSync(new URL("../lib/tracked-print-supabase.ts", import.meta.url), "utf8");
+  assert.match(source, /for \(let page = 1; page <= 100; page\+\+\)/);
+  assert.doesNotMatch(source, /\.or\(/); assert.doesNotMatch(source, /from\("customers"\)\.upsert/);
+  assert.match(source, /error\?\.code !== "23505"/); assert.match(source, /findCustomerExact/);
+});
+
+test("production trusted registry defaults to no eligible products", () => {
+  assert.equal(classifyPrintProduct({ sku: "POSTCARD-4X6" }, []).eligible, false);
 });
 
 test("orders-paid retains HMAC and email kill-switch paths while integrating tracked print", () => {
