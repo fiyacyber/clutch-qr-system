@@ -55,4 +55,4 @@ Existing-code selection accepts only an active, editable, non-system, capacity-c
 
 Before enabling production processing, verify every eligible production SKU/product ID and configure `TRACKED_PRINT_PRODUCT_REGISTRY_JSON` in the intended Vercel environments. The next Shopify/theme phase must add product-page controls that emit the canonical properties, restrict choices to eligible variants, provide destination/existing-code selection UX, and upload artwork through an approved mechanism. This PR does not change Shopify, the theme, webhook registrations, or environment variables.
 
-Phase 3 remains responsible for proof approval, artwork mutations, production handoff/status changes, fulfillment/tracking updates, and the Shopify product-page controls.
+The application-side Phase 3 artwork, proof, production, and fulfillment workflow is documented in `PRINT_OPERATIONS_WORKFLOW.md`. Shopify product-page controls remain separate and are not part of that application workflow.
