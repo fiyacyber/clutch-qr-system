@@ -1,3 +1,5 @@
+import { isEnabledEnvironmentFlag } from "./env-flags.js";
+
 export const CLUTCH_CODES_DASHBOARD_URL = "https://qr.clutchprintshop.com";
 export const CLUTCH_CODES_SUPPORT_EMAIL = "info@clutchprintshop.com";
 
@@ -277,6 +279,7 @@ export type ClutchCodesCustomerRecord = {
   subscription_qr_limit?: number | null;
   qr_limit?: number | null;
   clutch_codes_plan_code?: string | null;
+  clutch_codes_subscription_status?: string | null;
   clutch_codes_welcome_email_sent_at?: string | null;
   clutch_codes_welcome_email_event_key?: string | null;
 };
@@ -386,6 +389,10 @@ export async function provisionClutchCodesPaidOrder({
 
   try {
     const existingCustomer = await dependencies.findCustomer(email, extractShopifyCustomerId(payload));
+    const wasAlreadySubscribed = Boolean(
+      existingCustomer?.clutch_codes_plan_code &&
+        existingCustomer.clutch_codes_subscription_status === "active"
+    );
     const firstName = extractCustomerFirstName(payload);
     const auth = existingCustomer?.auth_user_id
       ? { authUserId: existingCustomer.auth_user_id, created: false }
@@ -403,7 +410,14 @@ export async function provisionClutchCodesPaidOrder({
     });
 
     let emailSent = false;
-    if (!customer.clutch_codes_welcome_email_sent_at) {
+    const sendOnboardingEmails = isEnabledEnvironmentFlag(process.env.SEND_ONBOARDING_EMAILS);
+    if (!sendOnboardingEmails) {
+      console.info("clutch-codes onboarding email skipped because SEND_ONBOARDING_EMAILS is disabled", {
+        event_key: eventKey,
+        order_id: orderId,
+        plan_code: detection.plan.code,
+      });
+    } else if (!wasAlreadySubscribed && !customer.clutch_codes_welcome_email_sent_at) {
       const reserved = await dependencies.reserveWelcomeEmail(customer.id, eventKey);
       if (reserved) {
         try {

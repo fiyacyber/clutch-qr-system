@@ -8,6 +8,7 @@ import { buildSmartCardSetupEmailTemplate } from "@/lib/email-templates";
 import { buildSetupForgotPasswordPath } from "@/lib/onboarding-routing";
 import { provisionClutchCodesPaidOrder, type ShopifyPaidOrder } from "@/lib/clutch-codes";
 import { createClutchCodesSupabaseDependencies } from "@/lib/clutch-codes-supabase";
+import { isEnabledEnvironmentFlag } from "@/lib/env-flags.js";
 
 export const runtime = "nodejs";
 
@@ -1230,14 +1231,13 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const sendEmails = String(process.env.SEND_ONBOARDING_EMAILS || "").toLowerCase() === "true";
+    const sendEmails = isEnabledEnvironmentFlag(process.env.SEND_ONBOARDING_EMAILS);
     const emailType = provisioned.existingCustomer ? "existing_customer_setup" : "new_customer_welcome";
     const subject = "Your Clutch Connect setup is ready";
 
     if (!sendEmails) {
-      console.info("orders-paid onboarding email skipped (SEND_ONBOARDING_EMAILS is not true)", {
+      console.info("orders-paid onboarding email skipped (SEND_ONBOARDING_EMAILS is disabled)", {
         card_order_id: insertedCardOrder.id,
-        email: customerEmail,
         subject,
       });
       continue;

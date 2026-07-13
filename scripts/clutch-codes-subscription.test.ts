@@ -15,6 +15,9 @@ import {
   type ShopifyPaidOrder,
 } from "../lib/clutch-codes.ts";
 import { detectExtensionPlan, EXTENSION_COPY } from "../shopify-extensions/clutch-codes-onboarding/src/plans.ts";
+import { isEnabledEnvironmentFlag } from "../lib/env-flags.js";
+
+process.env.SEND_ONBOARDING_EMAILS = "true";
 
 const migrationSql = fs.readFileSync(
   new URL("../supabase/migrations/20260712100000_add_clutch_codes_allowances_and_sources.sql", import.meta.url),
@@ -66,6 +69,8 @@ function createMemoryDependencies({
     sent: [] as any[],
     generatedLinks: [] as string[],
     authUsersCreated: 0,
+    reserveCalls: 0,
+    completedEvents: [] as Array<{ eventKey: string; emailSent: boolean }>,
   };
 
   const dependencies: ClutchCodesProvisioningDependencies = {
@@ -113,6 +118,7 @@ function createMemoryDependencies({
       return link;
     },
     async reserveWelcomeEmail(customerId, eventKey) {
+      state.reserveCalls += 1;
       const record = state.customers.find((candidate) => candidate.id === customerId)!;
       if (record.clutch_codes_welcome_email_sent_at) return false;
       if (record.clutch_codes_welcome_email_event_key && record.clutch_codes_welcome_email_event_key !== eventKey) {
@@ -132,11 +138,102 @@ function createMemoryDependencies({
       const record = state.customers.find((candidate) => candidate.id === customerId)!;
       record.clutch_codes_welcome_email_event_key = null;
     },
-    async completeEvent() {},
+    async completeEvent(eventKey, result) {
+      state.completedEvents.push({ eventKey, emailSent: result.emailSent });
+    },
     async failEvent() {},
   };
   return { state, dependencies };
 }
+
+async function withOnboardingEmailFlag<T>(value: string | undefined, action: () => Promise<T>): Promise<T> {
+  const previous = process.env.SEND_ONBOARDING_EMAILS;
+  if (value === undefined) delete process.env.SEND_ONBOARDING_EMAILS;
+  else process.env.SEND_ONBOARDING_EMAILS = value;
+  try {
+    return await action();
+  } finally {
+    if (previous === undefined) delete process.env.SEND_ONBOARDING_EMAILS;
+    else process.env.SEND_ONBOARDING_EMAILS = previous;
+  }
+}
+
+for (const [label, value] of [
+  ["missing", undefined],
+  ["false", "false"],
+  ["FALSE", "FALSE"],
+  ["0", "0"],
+] as const) {
+  test(`${label} onboarding flag skips the Clutch Codes email without marking it`, async () => {
+    await withOnboardingEmailFlag(value, async () => {
+      const { state, dependencies } = createMemoryDependencies();
+      const result = await provisionClutchCodesPaidOrder({
+        payload: orderForSku("CLUTCH-CODES-STARTER"),
+        webhookEventId: `event-disabled-${label}`,
+        dependencies,
+      });
+
+      assert.equal(result.emailSent, false);
+      assert.equal(result.effectiveCapacity, 10);
+      assert.equal(state.customers[0].subscription_qr_limit, 10);
+      assert.equal(state.reserveCalls, 0);
+      assert.equal(state.generatedLinks.length, 0);
+      assert.equal(state.sent.length, 0);
+      assert.equal(state.customers[0].clutch_codes_welcome_email_event_key, undefined);
+      assert.equal(state.customers[0].clutch_codes_welcome_email_sent_at, undefined);
+      assert.deepEqual(state.completedEvents.map((event) => event.emailSent), [false]);
+    });
+  });
+}
+
+for (const value of ["true", "TRUE", "1"] as const) {
+  test(`${value} onboarding flag sends the Clutch Codes email once`, async () => {
+    await withOnboardingEmailFlag(value, async () => {
+      const { state, dependencies } = createMemoryDependencies();
+      const payload = orderForSku("CLUTCH-CODES-STARTER", { id: `order-enabled-${value}` });
+      await provisionClutchCodesPaidOrder({ payload, webhookEventId: `event-enabled-${value}`, dependencies });
+      await provisionClutchCodesPaidOrder({ payload, webhookEventId: `event-enabled-${value}-retry`, dependencies });
+      assert.equal(state.sent.length, 1);
+      assert.equal(state.generatedLinks.length, 1);
+      assert.equal(state.customers[0].clutch_codes_welcome_email_sent_at != null, true);
+    });
+  });
+}
+
+test("renewal does not send the original welcome email", async () => {
+  const { state, dependencies } = createMemoryDependencies({
+    customer: {
+      id: "existing-subscriber",
+      email: "customer@example.com",
+      auth_user_id: "auth-existing",
+      included_qr_allowance: 0,
+      subscription_qr_limit: 10,
+      qr_limit: 10,
+      plan_code: "free_qr",
+      clutch_codes_plan_code: "clutch_codes_starter",
+      clutch_codes_subscription_status: "active",
+    },
+  });
+  await provisionClutchCodesPaidOrder({
+    payload: orderForSku("CLUTCH-CODES-STARTER", { id: "renewal-order" }),
+    webhookEventId: "event-renewal",
+    dependencies,
+  });
+  assert.equal(state.sent.length, 0);
+  assert.equal(state.generatedLinks.length, 0);
+  assert.equal(state.reserveCalls, 0);
+});
+
+test("strict onboarding flag parser is shared by the Smart Card flow", () => {
+  for (const value of ["true", "TRUE", "1", "yes", "YES", "on", "ON"]) {
+    assert.equal(isEnabledEnvironmentFlag(value), true);
+  }
+  for (const value of [undefined, "", "false", "FALSE", "0", "no", "off", "unknown"]) {
+    assert.equal(isEnabledEnvironmentFlag(value), false);
+  }
+  assert.match(ordersPaidWebhookSource, /isEnabledEnvironmentFlag\(process\.env\.SEND_ONBOARDING_EMAILS\)/);
+  assert.doesNotMatch(ordersPaidWebhookSource, /Boolean\(process\.env\.SEND_ONBOARDING_EMAILS\)/);
+});
 
 for (const [label, sku, expected] of [
   ["Starter", "CLUTCH-CODES-STARTER", 10],
