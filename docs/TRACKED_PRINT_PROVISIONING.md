@@ -33,7 +33,7 @@ Plain print creates only `print_order_items` and does not create Auth, customer,
 
 `provision_tracked_print_qr` is a service-role-only, fixed-search-path transaction covering QR creation/linking, provisioning, activity, item completion, and capacity reconciliation. Execution is revoked from `anon` and `authenticated`.
 
-The first accepted `(shopify_order_id, shopify_line_item_id)` record owns its immutable provisioning inputs. Replays use insert-and-select rather than a broad upsert. Materially different replays preserve completed/not-required work, create one sanitized discrepancy activity, and only place unfinished work into attention state. Identical pending records resume safely.
+The first accepted `(shopify_order_id, shopify_line_item_id)` record owns its immutable provisioning inputs. Replays use insert-and-select rather than a broad upsert. Materially different replays preserve completed/not-required work, create one sanitized discrepancy activity, and only place unfinished work into attention state. Identical pending records resume safely. An immutable replay may also resume the exact checkout-artwork import failure; identity conflicts, disabled tracking, invalid inputs, payload discrepancies, and all other `needs_attention` states remain blocked for review.
 
 Neutral customer creation searches Auth users page-by-page and performs independent exact customer lookups by normalized email and Shopify customer ID. Existing accounts receive only missing Auth/Shopify linkage; plan, admin, entitlement, allowance, subscription, onboarding, and status fields are never overwritten. New neutral rows use insert-plus-unique-conflict reuse.
 
