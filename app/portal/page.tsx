@@ -38,6 +38,7 @@ import {
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { resolveAccountAccess } from "@/lib/account-access";
+import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 interface PortalPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -224,8 +225,17 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   if (shopifyOrdersResult.failed) panelIssues.push("Shopify order tracking is temporarily unavailable.");
 
   const codes = qrCodesResult.data || [];
-  const qrIds = codes.map((code) => code.id);
-  const scanRowsResult = qrIds.length
+  const dashboardCodeAccess = new Map(await Promise.all(codes.map(async (code) => [
+    code.id,
+    await loadOrderLinkedQrAccess(admin, customer, code.id),
+  ] as const)));
+  const qrIds = codes.filter((code) =>
+    dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics || code.qr_type === "smart_card"
+  ).map((code) => code.id);
+  const fullAccountAnalytics = Boolean(customer.is_admin || hasActiveClutchCodesSubscription(customer));
+  const fullScanIds = codes.filter((code) => qrIds.includes(code.id) && (fullAccountAnalytics || code.qr_type === "smart_card")).map((code) => code.id);
+  const basicScanIds = qrIds.filter((id) => !fullScanIds.includes(id));
+  const fullScanRowsResult = fullScanIds.length
     ? await runGuardedDashboardTask({
         route: "/portal",
         endpoint: "supabase:qr_scans.select",
@@ -235,15 +245,29 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
           admin
             .from("qr_scans")
             .select("id, qr_code_id, created_at, city, region, country, device_type, browser, operating_system")
-            .in("qr_code_id", qrIds)
+            .in("qr_code_id", fullScanIds)
             .order("created_at", { ascending: false })
             .limit(250),
       })
     : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null; device_type?: string | null; browser?: string | null; operating_system?: string | null }>, failed: false };
-  if (scanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
+  const basicScanRowsResult = basicScanIds.length
+    ? await runGuardedDashboardTask({
+        route: "/portal",
+        endpoint: "supabase:qr_scans.basic-select",
+        customerId: customer.id,
+        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null }>,
+        task: () => admin.from("qr_scans").select("id, qr_code_id, created_at").in("qr_code_id", basicScanIds)
+          .order("created_at", { ascending: false }).limit(250),
+      })
+    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null }>, failed: false };
+  if (fullScanRowsResult.failed || basicScanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
 
-  const scans = scanRowsResult.data || [];
-  const campaignCodes = codes.filter((code: any) => code.is_system !== true);
+  const scans = [...(fullScanRowsResult.data || []), ...(basicScanRowsResult.data || []).map((scan) => ({
+    ...scan, city: null, region: null, country: null, device_type: null, browser: null, operating_system: null,
+  }))].sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
+  const campaignCodes = codes.filter((code: any) =>
+    (code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type))) && dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics
+  );
   const campaignCodeIds = new Set(campaignCodes.map((code) => code.id));
   const campaignScans = scans.filter((scan) => campaignCodeIds.has(scan.qr_code_id));
   const smartCardCodes = codes.filter((code: any) => code.is_system === true && code.qr_type === "smart_card");

@@ -21,6 +21,8 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { projectAuthorizedAnalyticsDomains, resolvePortalAnalyticsMode } from "@/lib/order-linked-portal-analytics";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
@@ -50,33 +52,73 @@ export default async function AnalyticsPage({
 
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canUseCampaignAnalytics && !access.canUseProfileAnalytics) {
-    redirect("/portal?access=analytics-locked");
-  }
-  const analyticsDataResult = await runGuardedDashboardTask({
-    route: "/portal/analytics",
-    endpoint: "analytics:fetchUnifiedAnalyticsData",
-    customerId: customer.id,
-    fallback: {
-      isAdmin: Boolean(customer.is_admin),
-      qrCodes: [],
-      profiles: [],
-      qrScans: [],
-      connectEvents: [],
-    } as UnifiedAnalyticsData,
-    task: () => fetchUnifiedAnalyticsData(admin, customer as any),
+  const accessNow = new Date();
+  const hasFullCampaignAnalytics = access.hasClutchCodes;
+  const hasFullProfileAnalytics = access.canUseProfileAnalytics;
+  const analyticsMode = await resolvePortalAnalyticsMode({
+    isAdmin: Boolean(customer.is_admin),
+    hasFullCampaignAnalytics,
+    hasFullProfileAnalytics,
+    accountAccess: access,
+    dependencies: {
+      fetchFull: async () => runGuardedDashboardTask({
+        route: "/portal/analytics",
+        endpoint: "analytics:fetchUnifiedAnalyticsData",
+        customerId: customer.id,
+        fallback: {
+          isAdmin: Boolean(customer.is_admin),
+          qrCodes: [],
+          profiles: [],
+          qrScans: [],
+          connectEvents: [],
+        } as UnifiedAnalyticsData,
+        task: () => fetchUnifiedAnalyticsData(admin, customer as any),
+      }),
+      listOwnedCodes: async () => admin.from("qr_codes").select("id, name, slug").eq("customer_id", customer.id),
+      listScans: async (codeIds) => admin.from("qr_scans").select("qr_code_id, created_at")
+        .in("qr_code_id", codeIds).order("created_at", { ascending: true }),
+      resolveCodeAccess: (codeId) => loadOrderLinkedQrAccess(admin, customer, codeId, accessNow, { throwOnError: true }),
+    },
   });
-  const data = analyticsDataResult.data;
+  if (analyticsMode.kind === "locked") redirect("/portal?access=analytics-locked");
+  if (analyticsMode.kind === "basic") {
+    return (
+      <DashboardShell accountAccess={access} isAdmin={false}>
+        <main className="container analytics-container">
+          <h1>Clutch Codes™ Basic Analytics</h1>
+          <p>Included access shows aggregate scan activity for each included code.</p>
+          {analyticsMode.status === "error" ? (
+            <RetryNotice title="Included analytics are temporarily unavailable" description={analyticsMode.message} />
+          ) : null}
+          {analyticsMode.status === "empty" ? <p>No active included-code analytics are available.</p> : null}
+          {analyticsMode.status === "ready" ? analyticsMode.rows.map((row) => <section className="chart-container" key={row.code.id}>
+            <h2>{row.code.name}</h2>
+            <p><strong>{row.totalScans}</strong> total scans</p>
+            <p>First scan: {row.firstScanAt ? new Date(row.firstScanAt).toLocaleString("en-US", { timeZone: "UTC" }) : "—"}</p>
+            <p>Last scan: {row.lastScanAt ? new Date(row.lastScanAt).toLocaleString("en-US", { timeZone: "UTC" }) : "—"}</p>
+            {row.scansByUtcDay.map((day) => <p key={day.date}>{day.date}: {day.count}</p>)}
+          </section>) : null}
+        </main>
+      </DashboardShell>
+    );
+  }
+  const data = projectAuthorizedAnalyticsDomains(analyticsMode.data, {
+    campaign: hasFullCampaignAnalytics || Boolean(customer.is_admin),
+    profile: hasFullProfileAnalytics || Boolean(customer.is_admin),
+  });
   const plan = getCustomerPlan(customer as any);
-  const hasHeatmap = access.canUseProfileAnalytics || access.canUseCampaignAnalytics;
-  const hasDynamicQr = access.canUseCampaignAnalytics;
+  const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type)));
+  const campaignAccessEntries = await Promise.all(campaignCandidates.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));
+  const accessibleCampaignCodes = campaignAccessEntries.filter((entry) => entry.access.canViewBasicAnalytics).map((entry) => entry.code);
+  const hasDynamicQr = accessibleCampaignCodes.length > 0;
+  const hasHeatmap = access.canUseProfileAnalytics || hasDynamicQr;
   const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
   const isCampaignUnlocked = isCampaignTab && hasDynamicQr;
   const isAnalyticsUnlocked = !isCampaignTab && hasHeatmap;
   const showLockedCampaign = isCampaignTab && !hasDynamicQr;
   const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
   const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
-  const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true || code.qr_type === "tracked_print");
+  const campaignQrCodes = accessibleCampaignCodes;
   const qrUsageUsed = campaignQrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
   const latestQrCode = campaignQrCodes[0] || null;
@@ -288,7 +330,7 @@ export default async function AnalyticsPage({
         heatmap: !hasHeatmap,
       }}
     >
-      {analyticsDataResult.failed ? (
+      {analyticsMode.failed ? (
         <main className="container" style={{ marginBottom: 16 }}>
           <RetryNotice
             title="Analytics data is temporarily unavailable"

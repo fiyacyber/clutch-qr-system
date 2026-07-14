@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import { getSubscriptionLockMessage, isCustomerSubscriptionLocked } from "@/lib/plans";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { buildIncludedDestinationUpdate, loadOrderLinkedQrAccess, parseOrderLinkedDestination } from "@/lib/order-linked-access";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -18,7 +19,16 @@ const ALLOWED_LOGO_TYPES = new Map([
 ]);
 const QR_TYPES = new Set(["url", "connect_profile"]);
 
-export async function POST(req: NextRequest) {
+const defaultDependencies = {
+  createSupabaseServerClient,
+  createSupabaseAdminClient,
+  loadAccountAccess,
+  loadOrderLinkedQrAccess,
+};
+
+export function createQrUpdateHandler(dependencies: Partial<typeof defaultDependencies> = {}) {
+  const deps = { ...defaultDependencies, ...dependencies };
+  return async function handler(req: NextRequest) {
   const form = await req.formData();
 
   const id = String(form.get("id") || "");
@@ -27,9 +37,8 @@ export async function POST(req: NextRequest) {
     form.get("name") || "Clutch QR Code"
   ).trim();
 
-  const destination_url = normalizeUrl(
-    String(form.get("destination_url") || "")
-  );
+  const rawDestination = form.get("destination_url");
+  const destination_url = normalizeUrl(String(rawDestination || ""));
 
   const foreground_color = String(
     form.get("foreground_color") || "#384862"
@@ -62,7 +71,7 @@ export async function POST(req: NextRequest) {
       ? logoEntry
       : null;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await deps.createSupabaseServerClient();
 
   const {
     data: { user },
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = deps.createSupabaseAdminClient();
 
   const { data: customer } = await admin
     .from("customers")
@@ -84,19 +93,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  const access = await loadAccountAccess(admin, customer);
+  const access = await deps.loadAccountAccess(admin, customer);
   if (!access.canEditOwnedQr) {
     return NextResponse.json({ error: "This account cannot edit QR codes." }, { status: 403 });
   }
   if (!access.canUploadQrLogo && (logoFile || remove_logo)) {
     return NextResponse.json({ error: "Logo customization requires an active Clutch Codes subscription." }, { status: 403 });
-  }
-
-  if (isCustomerSubscriptionLocked(customer)) {
-    return NextResponse.json(
-      { error: getSubscriptionLockMessage(customer) },
-      { status: 402 }
-    );
   }
 
   const { data: qrCode, error: qrError } = await admin
@@ -110,8 +112,32 @@ export async function POST(req: NextRequest) {
     console.error("QR LOOKUP ERROR:", qrError);
     return NextResponse.json({ error: "QR code not found" }, { status: 404 });
   }
+  const codeAccess = await deps.loadOrderLinkedQrAccess(admin, customer, qrCode.id);
+  if (!codeAccess.canEditDestination) {
+    return NextResponse.json({ error: "Your Included Access Has Ended", accessState: codeAccess.state }, { status: 403 });
+  }
+  if (isCustomerSubscriptionLocked(customer) && codeAccess.state !== "active_included_access") {
+    return NextResponse.json({ error: getSubscriptionLockMessage(customer) }, { status: 402 });
+  }
   if (qrCode.customer_can_edit_destination !== true) {
     return NextResponse.json({ error: "This QR destination cannot be edited." }, { status: 403 });
+  }
+  const parsedDestination = parseOrderLinkedDestination(rawDestination);
+  if (qr_type !== "connect_profile" && !parsedDestination) {
+    return NextResponse.json({ error: "Enter a valid http or https destination without credentials." }, { status: 400 });
+  }
+  if (codeAccess.state === "active_included_access") {
+    const includedUpdate = buildIncludedDestinationUpdate(rawDestination);
+    if (!includedUpdate) return NextResponse.json({ error: "Enter a valid http or https destination without credentials." }, { status: 400 });
+    const { error: destinationError } = await admin.from("qr_codes")
+      .update(includedUpdate)
+      .eq("id", id)
+      .eq("customer_id", customer.id);
+    if (destinationError) {
+      console.error("QR DESTINATION UPDATE ERROR:", destinationError);
+      return NextResponse.json({ error: "Failed to save QR code. Please try again." }, { status: 500 });
+    }
+    return NextResponse.json({ success: true });
   }
   const isTrackedPrintQr = qrCode.qr_type === "tracked_print";
 
@@ -169,7 +195,7 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(nextLogoPath).data.publicUrl;
   }
 
-  let resolvedDestination = destination_url;
+  let resolvedDestination = parsedDestination || destination_url;
   let profile_id: string | null = null;
 
   if (qr_type === "connect_profile") {
@@ -234,3 +260,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+}
+
+export const POST = createQrUpdateHandler();

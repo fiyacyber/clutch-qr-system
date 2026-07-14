@@ -24,7 +24,11 @@ const RESERVED_PATHS = new Set([
   "signout",
 ]);
 
-export async function GET(
+const defaultDependencies = { createSupabaseAdminClient };
+
+export function createQrRedirectHandler(dependencies: Partial<typeof defaultDependencies> = {}) {
+  const deps = { ...defaultDependencies, ...dependencies };
+  return async function handler(
   req: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
@@ -38,7 +42,7 @@ export async function GET(
     );
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = deps.createSupabaseAdminClient();
 
   const { data: qrCode, error } = await admin
     .from("qr_codes")
@@ -154,3 +158,6 @@ export async function GET(
 
   return NextResponse.redirect(redirectTarget);
 }
+}
+
+export const GET = createQrRedirectHandler();

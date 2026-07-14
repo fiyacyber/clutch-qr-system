@@ -14,7 +14,71 @@ export type NormalizedPrintProperties = {
   qrPlacementInstructions: string | null;
   validDestination: boolean;
   normalizedProperties: Record<string, string>;
+  clutchCodesAccessOptIn: boolean;
 };
+
+export type StrictIncludedAccessIntent = {
+  valid: boolean;
+  trackingMode: TrackingMode | null;
+  access: "included_90_days" | "none" | null;
+  optIn: boolean;
+  reason: string | null;
+};
+
+type RawProperties = Array<{ name?: unknown; key?: unknown; value?: unknown }> | Record<string, unknown> | null | undefined;
+
+const CANONICAL_TRACKING_PROPERTY = "Tracking Mode";
+const CANONICAL_ACCESS_PROPERTY = "Clutch Codes Access";
+const TRACKING_PROPERTY_ALIASES = ["tracking mode", "qr tracking", "clutch code option", "tracking"] as const;
+const ACCESS_PROPERTY_ALIASES = ["clutch codes access"] as const;
+
+function normalizedPropertyName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase().replace(/[\s_-]+/g, " ") : "";
+}
+
+export function hasIncludedAccessCriticalProperties(properties: RawProperties) {
+  const criticalNames = new Set<string>([...TRACKING_PROPERTY_ALIASES, ...ACCESS_PROPERTY_ALIASES]);
+  return exactPropertyEntries(properties).some((entry) => criticalNames.has(normalizedPropertyName(entry.name)));
+}
+
+function exactPropertyEntries(properties: RawProperties) {
+  if (Array.isArray(properties)) {
+    return properties.map((entry) => ({ name: entry?.name ?? entry?.key, value: entry?.value }));
+  }
+  return Object.entries(properties || {}).map(([name, value]) => ({ name, value }));
+}
+
+export function parseStrictIncludedAccessIntent(properties: RawProperties): StrictIncludedAccessIntent {
+  const entries = exactPropertyEntries(properties);
+  const criticalNames = new Set<string>([...TRACKING_PROPERTY_ALIASES, ...ACCESS_PROPERTY_ALIASES]);
+  const relevant = entries.filter((entry) => criticalNames.has(normalizedPropertyName(entry.name)));
+  const spoofedName = relevant.some((entry) =>
+    entry.name !== CANONICAL_TRACKING_PROPERTY && entry.name !== CANONICAL_ACCESS_PROPERTY
+  );
+  if (spoofedName) {
+    return { valid: false, trackingMode: null, access: null, optIn: false, reason: "Included-access properties must use exact canonical names without aliases." };
+  }
+  const invalidShape = relevant.some((entry) => typeof entry.value !== "string");
+  const tracking = relevant.filter((entry) => entry.name === CANONICAL_TRACKING_PROPERTY);
+  const access = relevant.filter((entry) => entry.name === CANONICAL_ACCESS_PROPERTY);
+  if (invalidShape || tracking.length !== 1 || access.length !== 1) {
+    return { valid: false, trackingMode: null, access: null, optIn: false, reason: "Included-access properties must appear exactly once as scalar strings." };
+  }
+  const trackingMode = (["none", "new_included_code", "existing_code"] as const).find((value) => value === tracking[0].value) || null;
+  const accessValue = (["included_90_days", "none"] as const).find((value) => value === access[0].value) || null;
+  if (!trackingMode || !accessValue) {
+    return { valid: false, trackingMode, access: accessValue, optIn: false, reason: "Included-access properties contain a non-canonical value." };
+  }
+  const validPair = (trackingMode === "new_included_code" && accessValue === "included_90_days") ||
+    (trackingMode !== "new_included_code" && accessValue === "none");
+  return {
+    valid: validPair,
+    trackingMode,
+    access: accessValue,
+    optIn: validPair && trackingMode === "new_included_code",
+    reason: validPair ? null : "Tracking mode and included-access value do not form an allowed pair.",
+  };
+}
 
 function clean(value: unknown, max = 1000) {
   return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
@@ -37,7 +101,7 @@ function first(map: Map<string, string>, aliases: string[], max = 1000) {
 
 export function normalizePrintLineProperties(properties: Parameters<typeof propertyMap>[0]): NormalizedPrintProperties {
   const map = propertyMap(properties);
-  const rawMode = first(map, ["tracking mode", "qr tracking", "clutch code option", "tracking"], 80)
+  const rawMode = first(map, [...TRACKING_PROPERTY_ALIASES], 80)
     .toLowerCase().replace(/[\s-]+/g, "_");
   const modeAliases: Record<string, TrackingMode> = {
     none: "none", no_tracking: "none", standard: "none",
@@ -45,6 +109,8 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     existing_code: "existing_code", use_existing_code: "existing_code", existing_qr: "existing_code",
   };
   const trackingMode = modeAliases[rawMode] || "none";
+  const strictAccess = parseStrictIncludedAccessIntent(properties);
+  const clutchCodesAccessOptIn = strictAccess.optIn;
   const campaignName = first(map, ["campaign name", "qr campaign", "campaign"], 160) || null;
   const destinationRaw = first(map, ["destination url", "qr destination", "destination", "url"], 2048);
   let destinationUrl: string | null = null;
@@ -88,6 +154,7 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     artwork_instructions: artworkInstructions,
     reorder_reference: reorderReference,
     qr_placement_instructions: qrPlacementInstructions,
+    clutch_codes_access: clutchCodesAccessOptIn ? "included_90_days" : "none",
   }).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0));
 
   return {
@@ -103,5 +170,6 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     qrPlacementInstructions,
     validDestination,
     normalizedProperties,
+    clutchCodesAccessOptIn,
   };
 }

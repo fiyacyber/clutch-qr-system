@@ -139,6 +139,7 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
       const immutableKeys = [
         "customer_id", "product_id", "variant_id", "sku", "material_type", "quantity",
         "tracking_mode", "destination_url", "existing_qr_code_id", "campaign_name",
+        "clutch_codes_access_opt_in",
         "artwork_method", "artwork_file_url", "artwork_instructions", "reorder_reference",
         "qr_placement_instructions",
       ];
@@ -163,6 +164,7 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
         p_destination_url: input.destinationUrl, p_campaign_name: input.campaignName,
         p_material_type: input.materialType, p_idempotency_key: input.idempotencyKey,
         p_existing_qr_code_id: input.existingQrCodeId,
+        p_source_type: input.sourceType,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;

@@ -18,6 +18,10 @@ export type StoredQrItem = {
   lastScannedAt: string | null;
   foregroundColor: string;
   backgroundColor: string;
+  canManage: boolean;
+  canViewAnalytics: boolean;
+  accessState: string;
+  accessExpiresAt: string | null;
 };
 
 interface StoredQrLibraryProps {
@@ -185,46 +189,51 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
             });
             const analyticsHref = `/portal/analytics/${item.id}`;
             const editHref = `/portal/qr/${item.id}/edit`;
+            const cardContent = <>
+              <span className={styles.qrPreviewWrap}>
+                <img
+                  src={qrServerImageUrl({
+                    url: publicLink,
+                    foreground_color: item.foregroundColor,
+                    background_color: item.backgroundColor,
+                    size: 170,
+                  })}
+                  alt={`${item.name} QR preview`}
+                  className={styles.qrPreview}
+                />
+              </span>
+              <span className={styles.cardInfo}>
+                <span className={styles.cardHeaderRow}>
+                  <strong className={styles.name}>{item.name}</strong>
+                  <span className={`${styles.status} ${item.status === "Active" && item.accessState !== "expired_included_access" ? styles.active : styles.archived}`}>
+                    {item.accessState === "expired_included_access" ? "Included access expired" : item.status}
+                  </span>
+                </span>
+                <span className={styles.url}>{destination}</span>
+                <span className={styles.metrics}>
+                  {item.canViewAnalytics ? <span><b>{item.scanCount}</b> scans</span> : null}
+                  {item.canViewAnalytics ? <span>Last scanned {formatDate(item.lastScannedAt)}</span> : null}
+                  {item.accessState === "expired_included_access" ? <span>Access expired {formatDate(item.accessExpiresAt)}</span> : null}
+                </span>
+              </span>
+            </>;
 
             return (
               <article key={item.id} className={styles.card}>
-                <Link href={editHref} className={styles.cardTapTarget} aria-label={`Open ${item.name}`}>
-                  <span className={styles.qrPreviewWrap}>
-                    <img
-                      src={qrServerImageUrl({
-                        url: publicLink,
-                        foreground_color: item.foregroundColor,
-                        background_color: item.backgroundColor,
-                        size: 170,
-                      })}
-                      alt={`${item.name} QR preview`}
-                      className={styles.qrPreview}
-                    />
-                  </span>
-
-                  <span className={styles.cardInfo}>
-                    <span className={styles.cardHeaderRow}>
-                      <strong className={styles.name}>{item.name}</strong>
-                      <span className={`${styles.status} ${item.status === "Active" ? styles.active : styles.archived}`}>{item.status}</span>
-                    </span>
-                    <span className={styles.url}>{destination}</span>
-                    <span className={styles.metrics}>
-                      <span><b>{item.scanCount}</b> scans</span>
-                      <span>Last scanned {formatDate(item.lastScannedAt)}</span>
-                    </span>
-                  </span>
-                </Link>
+                {item.canManage ? <Link href={editHref} className={styles.cardTapTarget} aria-label={`Open ${item.name}`}>
+                  {cardContent}
+                </Link> : <div className={styles.cardTapTarget}>{cardContent}</div>}
 
                 <div className={styles.actionsRow}>
-                  <Link className={styles.actionBtn} href={analyticsHref}>
+                  {item.canViewAnalytics ? <Link className={styles.actionBtn} href={analyticsHref}>
                     <BarChart3 size={16} />
                     <span>Analytics</span>
-                  </Link>
+                  </Link> : null}
 
-                  <Link className={styles.actionBtn} href={editHref}>
+                  {item.canManage ? <Link className={styles.actionBtn} href={editHref}>
                     <Pencil size={16} />
                     <span>Edit QR</span>
-                  </Link>
+                  </Link> : null}
 
                   <button
                     type="button"
@@ -255,14 +264,14 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
                     </button>
                     {openMenuFor === item.id ? (
                       <div className={styles.menu} role="menu">
-                        <Link role="menuitem" href={analyticsHref} onClick={closeMenu}>
+                        {item.canViewAnalytics ? <Link role="menuitem" href={analyticsHref} onClick={closeMenu}>
                           <BarChart3 size={15} />
                           <span>View analytics</span>
-                        </Link>
-                        <Link role="menuitem" href={editHref} onClick={closeMenu}>
+                        </Link> : null}
+                        {item.canManage ? <Link role="menuitem" href={editHref} onClick={closeMenu}>
                           <Pencil size={15} />
                           <span>Edit QR</span>
-                        </Link>
+                        </Link> : null}
                         <button
                           role="menuitem"
                           type="button"

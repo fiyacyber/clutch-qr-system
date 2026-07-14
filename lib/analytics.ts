@@ -290,8 +290,9 @@ export function toCsv(rows: Array<Record<string, string | number | null | undefi
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
   const escapeCell = (value: string | number | null | undefined) => {
-    const text = String(value ?? "");
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    let text = String(value ?? "");
+    if (/^[\s]*[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
 
   return [

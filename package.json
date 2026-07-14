@@ -13,8 +13,11 @@
     "test:tracked-print": "node --experimental-strip-types --test scripts/tracked-print.test.ts",
     "test:print-operations": "node --experimental-strip-types --test scripts/print-operations.test.ts",
     "test:tracked-print-hotfix": "node --experimental-strip-types --test scripts/tracked-print-hotfix.test.ts",
+    "test:order-linked-access": "node --experimental-strip-types --test scripts/order-linked-access.test.ts",
+    "test:order-linked-routes": "tsx --test scripts/order-linked-routes.test.ts",
+    "test:order-linked-portal": "node --experimental-strip-types --test scripts/order-linked-portal.test.ts",
     "validate:tracked-print-registry": "node --experimental-strip-types scripts/validate-tracked-print-registry.ts",
-    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix",
+    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix && npm run test:order-linked-access && npm run test:order-linked-routes && npm run test:order-linked-portal",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
     "preview:clutch-codes-email": "node --experimental-strip-types scripts/preview-clutch-codes-email.ts",
     "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"
@@ -49,6 +52,7 @@
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "tsx": "^4.23.1",
     "typescript": "latest"
   }
 }

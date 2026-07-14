@@ -29,6 +29,7 @@ export async function loadAccountAccess(
   const completedPrintProvisionings = printProvisioningsResult.data || [];
   const includedPrintProvisionings = completedPrintProvisionings.filter((row) => row.access_type === "included_permanent");
   const trackedPrintProvisionings = completedPrintProvisionings.filter((row) => row.source_type === "tracked_print");
+  const businessKitProvisionings = completedPrintProvisionings.filter((row) => row.source_type === "business_kit");
   const materialTypes = Array.from(new Set((printItemsResult.data || []).map((row) => row.material_type).filter(Boolean)));
 
   const access = resolveAccountAccess({
@@ -39,6 +40,7 @@ export async function loadAccountAccess(
     hasActiveProfile: (profileResult.count || 0) > 0,
     hasPrintOrders: (printItemsResult.count || 0) > 0,
     hasTrackedPrint: trackedPrintProvisionings.length > 0,
+    hasBusinessKit: businessKitProvisionings.length > 0,
     hasIncludedPrintQr: includedPrintProvisionings.length > 0,
     printOrderCount: printItemsResult.count || 0,
     includedPrintQrCount: includedPrintProvisionings.length,

@@ -19,6 +19,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import "../analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { analyticsScopeForCode, buildBasicCodeAnalytics } from "@/lib/order-linked-analytics";
 
 export default async function QRAnalyticsPage({
   params,
@@ -39,7 +41,6 @@ export default async function QRAnalyticsPage({
 
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canUseCampaignAnalytics) redirect("/portal?access=campaign-analytics-locked");
 
   // Get the QR code
   const { data: code, error: codeError } = await admin
@@ -61,6 +62,46 @@ export default async function QRAnalyticsPage({
       });
     }
     return <div className="analytics-error">QR code not found</div>;
+  }
+  const codeAccess = await loadOrderLinkedQrAccess(admin, customer, code.id);
+  const analyticsScope = analyticsScopeForCode({
+    isAdmin: customer.is_admin,
+    hasPaidAnalytics: hasActiveClutchCodesSubscription(customer),
+    codeAccess,
+  });
+  if (analyticsScope === "none") {
+    return (
+      <DashboardShell accountAccess={access} isAdmin={Boolean(customer.is_admin)}>
+        <main className="container analytics-error">
+          <h1>Your Included Access Has Ended</h1>
+          <p>Your printed Clutch Code is still active. Subscribe to Clutch Codes™ to edit its destination and view scan analytics again.</p>
+          <p><Link className="btn primary" href="/portal/subscription">View Clutch Codes™ Plans</Link></p>
+          <p><Link href="/portal/print-orders">Return to Print Orders</Link></p>
+        </main>
+      </DashboardShell>
+    );
+  }
+
+  if (analyticsScope === "basic_code") {
+    const { data: basicScans, error: basicError } = await admin.from("qr_scans")
+      .select("qr_code_id, created_at").eq("qr_code_id", qrId).order("created_at", { ascending: true });
+    if (basicError) return <div className="analytics-error">Failed to load analytics</div>;
+    const basic = buildBasicCodeAnalytics(code, basicScans || []);
+    return (
+      <DashboardShell accountAccess={access} isAdmin={Boolean(customer.is_admin)}>
+        <main className="container analytics-container">
+          <p><Link href="/portal/analytics">← Back to All Analytics</Link></p>
+          <h1>{basic.code.name}</h1>
+          <p>Basic included analytics show aggregate scan activity only.</p>
+          <div className="metrics-grid">
+            <div className="metric-card"><span className="metric-label">Total Scans</span><span className="metric-value">{basic.totalScans}</span></div>
+            <div className="metric-card"><span className="metric-label">First Scan</span><span className="metric-value">{basic.firstScanAt ? new Date(basic.firstScanAt).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—"}</span></div>
+            <div className="metric-card"><span className="metric-label">Last Scan</span><span className="metric-value">{basic.lastScanAt ? new Date(basic.lastScanAt).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—"}</span></div>
+          </div>
+          <div className="chart-container"><h2>Scans by UTC day</h2>{basic.scansByUtcDay.map((day) => <p key={day.date}>{day.date}: {day.count}</p>)}</div>
+        </main>
+      </DashboardShell>
+    );
   }
 
   // Get all scans for this QR code

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { analyticsScopeForCode, buildBasicAnalyticsCsvRows } from "@/lib/order-linked-analytics";
 import {
   applyAnalyticsFilters,
   getScanBrowser,
@@ -16,25 +18,43 @@ import {
 const CSV_HEADERS =
   "qr_name,qr_slug,created_at,device,browser,operating_system,location,referrer,utm_source,utm_medium,utm_campaign,utm_content,utm_term\n";
 
-export async function GET(req: NextRequest) {
-  const { user, customer } = await requireCustomer();
+const defaultDependencies = { requireCustomer, createSupabaseAdminClient, loadAccountAccess, loadOrderLinkedQrAccess };
+
+export function createAnalyticsExportHandler(dependencies: Partial<typeof defaultDependencies> = {}) {
+  const deps = { ...defaultDependencies, ...dependencies };
+  return async function handler(req: NextRequest) {
+  const { user, customer } = await deps.requireCustomer();
 
   if (!user || !customer) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const admin = createSupabaseAdminClient();
-  const access = await loadAccountAccess(admin, customer);
+  const admin = deps.createSupabaseAdminClient();
+  const access = await deps.loadAccountAccess(admin, customer);
   if (!access.canExportQr || !access.canUseCampaignAnalytics) {
     return NextResponse.json({ error: "Campaign export access is locked." }, { status: 403 });
   }
-  const { data: qrCodes } = await admin
+  const { data: qrCodes, error: qrCodesError } = await admin
     .from("qr_codes")
     .select("id, name, slug")
     .eq("customer_id", customer.id);
+  if (qrCodesError) return NextResponse.json({ error: "Failed to load analytics export." }, { status: 500 });
 
-  const codes = qrCodes || [];
+  const candidateCodes = qrCodes || [];
+  const codeAccess = await Promise.all(candidateCodes.map(async (code) => ({
+    code,
+    access: await deps.loadOrderLinkedQrAccess(admin, customer, code.id),
+  })));
+  const codes = codeAccess.filter((entry) => entry.access.canExportBasicAnalytics).map((entry) => entry.code);
   const qrIds = codes.map((code) => code.id);
+  const paid = hasActiveClutchCodesSubscription(customer);
+  const basicOnly = !customer.is_admin && !paid && codeAccess.some((entry) =>
+    analyticsScopeForCode({ isAdmin: false, hasPaidAnalytics: false, codeAccess: entry.access }) === "basic_code"
+  );
+
+  if (!qrIds.length && !customer.is_admin && !paid) {
+    return NextResponse.json({ error: "Your Included Access Has Ended" }, { status: 403 });
+  }
 
   if (!qrIds.length) {
     return new NextResponse(CSV_HEADERS, {
@@ -45,11 +65,21 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const { data: scanRows } = await admin
+  const { data: scanRows, error: scanRowsError } = await admin
     .from("qr_scans")
-    .select("*")
+    .select(basicOnly ? "qr_code_id, created_at" : "*")
     .in("qr_code_id", qrIds)
     .order("created_at", { ascending: false });
+  if (scanRowsError) return NextResponse.json({ error: "Failed to load analytics export." }, { status: 500 });
+  const normalizedScanRows = (scanRows || []) as any[];
+
+  if (basicOnly) {
+    const csv = toCsv(buildBasicAnalyticsCsvRows(codes, normalizedScanRows));
+    return new NextResponse(csv, { headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": "attachment; filename=clutch-qr-basic-analytics.csv",
+    } });
+  }
 
   const searchParams = req.nextUrl.searchParams;
   const filters: AnalyticsFilters = {
@@ -62,7 +92,7 @@ export async function GET(req: NextRequest) {
     referrer: searchParams.get("referrer") || undefined,
   };
   const codeById = new Map(codes.map((code) => [code.id, code]));
-  const filteredScans = applyAnalyticsFilters(scanRows || [], filters);
+  const filteredScans = applyAnalyticsFilters(normalizedScanRows, filters);
   const csv = toCsv(
     filteredScans.map((scan: any) => {
       const code = codeById.get(scan.qr_code_id);
@@ -93,3 +123,6 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+}
+
+export const GET = createAnalyticsExportHandler();
