@@ -47,6 +47,30 @@ const result = (state: OrderLinkedAccessState, input: ResolverInput): OrderLinke
   };
 };
 
+export const ORDER_LINKED_ACCESS_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function parseOrderLinkedDestination(value: unknown) {
+  if (typeof value !== "string" || !value || value !== value.trim()) return null;
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function buildIncludedDestinationUpdate(value: unknown) {
+  const destination = parseOrderLinkedDestination(value);
+  return destination ? { destination_url: destination } : null;
+}
+
+function finiteTimestamp(value: string | null | undefined) {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 export function hasActiveClutchCodesSubscription(customer: Record<string, unknown>) {
   return String(customer.clutch_codes_subscription_status || "").trim().toLowerCase() === "active" &&
     ["clutch_codes_starter", "clutch_codes_growth", "clutch_codes_pro"].includes(
@@ -60,14 +84,20 @@ export function resolveOrderLinkedAccess(input: ResolverInput): OrderLinkedAcces
   if (input.hasActivePaidSubscription) return result("paid_subscription_access", input);
   if (!input.isOrderLinkedIncludedCode) return result("view_only", input);
   if (!input.featureEnabled) {
-    return result(input.legacyOrderLinkedAccess ? "active_included_access" : "view_only", input);
+    const hasAnyTimedMetadata = input.accessStartedAt != null || input.accessExpiresAt != null;
+    return result(!hasAnyTimedMetadata && input.legacyOrderLinkedAccess ? "active_included_access" : "view_only", input);
   }
   if (input.provisioningStatus !== "completed" || !input.accessStartedAt || !input.accessExpiresAt) {
     return result("view_only", input);
   }
   const now = (input.now || new Date()).getTime();
-  const expires = new Date(input.accessExpiresAt).getTime();
-  return result(Number.isFinite(expires) && now < expires ? "active_included_access" : "expired_included_access", input);
+  const started = finiteTimestamp(input.accessStartedAt);
+  const expires = finiteTimestamp(input.accessExpiresAt);
+  const exactDuration = started !== null && expires !== null && expires - started === ORDER_LINKED_ACCESS_DURATION_MS;
+  return result(
+    exactDuration && started <= now && now < expires ? "active_included_access" : "expired_included_access",
+    input
+  );
 }
 
 export function orderLinkedAccessFeatureEnabled() {

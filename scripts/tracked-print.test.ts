@@ -15,7 +15,7 @@ const order = (item = line(), overrides: Record<string, unknown> = {}) => ({ id:
 
 function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean; importFailure?: boolean } = {}) {
   const items = new Map<string, any>(); const qrs = new Map<string, string>(); const activities = new Set<string>();
-  const importedArtwork = new Set<string>();
+  const importedArtwork = new Set<string>(); const provisionInputs: any[] = [];
   let authCustomers = 0;
   const dependencies: TrackedPrintDependencies = {
     async resolveCustomer() { return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
@@ -42,6 +42,7 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
       return { fileId: "file-1", imported };
     },
     async provisionQr(input) {
+      provisionInputs.push(input);
       if (options.rejectExisting && input.existingQrCodeId) throw new Error("selected QR is unavailable");
       if (!qrs.has(input.printOrderItemId)) qrs.set(input.printOrderItemId, input.existingQrCodeId || `qr-${qrs.size + 1}`);
       const included = [...qrs.values()].filter((id) => id.startsWith("qr-")).length;
@@ -50,8 +51,111 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
     async recordActivity(input) { activities.add(input.idempotencyKey); },
     async markAttention(orderId, reason) { for (const [key, item] of items) if (item.id === orderId) items.set(key, { ...item, provisioning_status: "needs_attention", attention_reason: reason }); },
   };
-  return { dependencies, items, qrs, activities, importedArtwork, get authCustomers() { return authCustomers; } };
+  return { dependencies, items, qrs, activities, importedArtwork, provisionInputs, get authCustomers() { return authCustomers; } };
 }
+
+test("Business Kit components provision at most one exact source-aware grant and replay does not duplicate", async () => {
+  const previous = {
+    registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
+    kitFlag: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
+    accessFlag: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
+  };
+  process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = "true";
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([{ productId: "900", sku: "STARTER-KIT", kitType: "starter", components: [
+    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Cards Tracking" },
+    { componentId: "flyers", materialType: "flyer", codeCount: 1, trackingPropertyName: "Flyers Tracking" },
+  ] }]);
+  try {
+    const h = harness();
+    const payload = order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: [
+      { name: "Cards Tracking", value: "new_included_code" },
+      { name: "Flyers Tracking", value: "none" },
+      { name: "Campaign Name", value: "Kit cards" },
+      { name: "Destination URL", value: "https://example.com/kit" },
+    ] }));
+    await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry: [] });
+    await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry: [] });
+    assert.equal(h.items.size, 1);
+    assert.equal(h.qrs.size, 1);
+    assert.equal(h.provisionInputs[0].sourceType, "business_kit");
+    assert.equal([...h.items.values()][0].clutch_codes_access_opt_in, true);
+  } finally {
+    if (previous.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = previous.registry;
+    if (previous.kitFlag === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = previous.kitFlag;
+    if (previous.accessFlag === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous.accessFlag;
+  }
+});
+
+test("known Business Kits never fall through to generic grants when either flag or the contract is invalid", async () => {
+  const original = {
+    registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
+    kit: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
+    global: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
+  };
+  const valid = [{ productId: "900", sku: "STARTER-KIT", kitType: "starter", components: [
+    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Cards Tracking" },
+  ] }];
+  const payload = order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: [
+    { name: "Cards Tracking", value: "new_included_code" },
+    { name: "Campaign Name", value: "Kit cards" },
+    { name: "Destination URL", value: "https://example.com/kit" },
+  ] }));
+  const genericKitRegistry = [{ sku: "STARTER-KIT", materialType: "other_print" as const, defaultTrackingAvailable: true }];
+  try {
+    for (const scenario of [
+      { global: "false", kit: "true", registry: valid },
+      { global: "true", kit: "false", registry: valid },
+      { global: "true", kit: "true", registry: [{ ...valid[0], components: [valid[0].components[0], valid[0].components[0]] }] },
+      { global: "true", kit: "true", registry: valid, properties: [{ name: "Cards Tracking", value: "unknown" }] },
+    ]) {
+      process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = scenario.global;
+      process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = scenario.kit;
+      process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify(scenario.registry);
+      const h = harness();
+      const scenarioPayload = scenario.properties
+        ? order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: scenario.properties }))
+        : payload;
+      const result = await provisionTrackedPrintOrder({ payload: scenarioPayload, webhookEventId: "w", dependencies: h.dependencies, registry: genericKitRegistry });
+      assert.equal(result.processedItems, 0);
+      assert.equal(h.qrs.size, 0);
+      assert.equal(h.items.size, 0);
+    }
+  } finally {
+    if (original.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = original.registry;
+    if (original.kit === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = original.kit;
+    if (original.global === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = original.global;
+  }
+});
+
+test("forged or duplicate entitlement properties never persist a timed opt-in", async () => {
+  const previous = process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS;
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  try {
+    for (const properties of [
+      [
+        { name: "Tracking Mode", value: "new_included_code" },
+        { name: "Clutch Codes Access", value: "included_90_days" },
+        { name: "tracking mode", value: "none" },
+        { name: "Campaign Name", value: "Campaign" },
+        { name: "Destination URL", value: "https://example.com" },
+      ],
+      [
+        { name: "Tracking Mode", value: "new_included_code" },
+        { name: "Tracking Mode", value: "new_included_code" },
+        { name: "Clutch Codes Access", value: "included_90_days" },
+        { name: "Campaign Name", value: "Campaign" },
+        { name: "Destination URL", value: "https://example.com" },
+      ],
+    ]) {
+      const h = harness();
+      await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "w", dependencies: h.dependencies, registry });
+      assert.equal([...h.items.values()][0].clutch_codes_access_opt_in, false);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous;
+  }
+});
 
 test("customer identity resolver reconciles email and Shopify matches explicitly", () => {
   const emailNoShopify = { id: "email", shopify_customer_id: null };

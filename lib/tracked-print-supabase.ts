@@ -164,6 +164,7 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
         p_destination_url: input.destinationUrl, p_campaign_name: input.campaignName,
         p_material_type: input.materialType, p_idempotency_key: input.idempotencyKey,
         p_existing_qr_code_id: input.existingQrCodeId,
+        p_source_type: input.sourceType,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;

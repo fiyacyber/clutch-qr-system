@@ -21,7 +21,8 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
-import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { buildBasicCodeAnalytics } from "@/lib/order-linked-analytics";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
@@ -53,6 +54,33 @@ export default async function AnalyticsPage({
   const access = await loadAccountAccess(admin, customer);
   if (!access.canUseCampaignAnalytics && !access.canUseProfileAnalytics) {
     redirect("/portal?access=analytics-locked");
+  }
+  if (!customer.is_admin && !hasActiveClutchCodesSubscription(customer)) {
+    const { data: basicCandidates } = await admin.from("qr_codes").select("id, name, slug").eq("customer_id", customer.id);
+    const basicCodes = (await Promise.all((basicCandidates || []).map(async (code) => ({
+      code,
+      grant: await loadOrderLinkedQrAccess(admin, customer, code.id),
+    })))).filter((entry) => entry.grant.state === "active_included_access").map((entry) => entry.code);
+    if (basicCodes.length) {
+      const { data: basicScans } = await admin.from("qr_scans").select("qr_code_id, created_at")
+        .in("qr_code_id", basicCodes.map((code) => code.id)).order("created_at", { ascending: true });
+      const rows = basicCodes.map((code) => buildBasicCodeAnalytics(code, basicScans || []));
+      return (
+        <DashboardShell accountAccess={access} isAdmin={false}>
+          <main className="container analytics-container">
+            <h1>Clutch Codes™ Basic Analytics</h1>
+            <p>Included access shows aggregate scan activity for each included code.</p>
+            {rows.map((row) => <section className="chart-container" key={row.code.id}>
+              <h2>{row.code.name}</h2>
+              <p><strong>{row.totalScans}</strong> total scans</p>
+              <p>First scan: {row.firstScanAt ? new Date(row.firstScanAt).toLocaleString("en-US", { timeZone: "UTC" }) : "—"}</p>
+              <p>Last scan: {row.lastScanAt ? new Date(row.lastScanAt).toLocaleString("en-US", { timeZone: "UTC" }) : "—"}</p>
+              {row.scansByUtcDay.map((day) => <p key={day.date}>{day.date}: {day.count}</p>)}
+            </section>)}
+          </main>
+        </DashboardShell>
+      );
+    }
   }
   const analyticsDataResult = await runGuardedDashboardTask({
     route: "/portal/analytics",

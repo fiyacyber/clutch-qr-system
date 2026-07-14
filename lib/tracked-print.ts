@@ -1,6 +1,14 @@
 import { classifyPrintProduct, type TrustedPrintProduct } from "./print-products.ts";
-import { normalizePrintLineProperties } from "./print-line-properties.ts";
+import { normalizePrintLineProperties, parseStrictIncludedAccessIntent } from "./print-line-properties.ts";
 import { isEnabledEnvironmentFlag } from "./env-flags.js";
+import {
+  businessKitOrderLinkedAccessEnabled,
+  identifiesConfiguredBusinessKit,
+  matchBusinessKitContract,
+  readBusinessKitContracts,
+  resolveBusinessKitComponentSelections,
+  validateBusinessKitContracts,
+} from "./business-kit-contracts.ts";
 
 export type PrintOrderPayload = {
   id?: string | number; order_id?: string | number; name?: string; order_number?: string | number;
@@ -22,7 +30,7 @@ export type TrackedPrintDependencies = {
   findPrintItem(orderId: string, lineItemId: string): Promise<Record<string, any> | null>;
   upsertPrintItem(input: Record<string, unknown>): Promise<Record<string, any> & { id: string; provisioning_status: string; immutableMatch: boolean }>;
   importArtwork(input: { printOrderItemId: string; customerId: string; sourceUrl: string; idempotencyKey: string }): Promise<{ fileId: string; imported: boolean }>;
-  provisionQr(input: { printOrderItemId: string; customerId: string; destinationUrl: string | null; campaignName: string | null; materialType: string; idempotencyKey: string; existingQrCodeId: string | null }): Promise<{ qrCodeId: string; includedQrAllowance: number }>;
+  provisionQr(input: { printOrderItemId: string; customerId: string; destinationUrl: string | null; campaignName: string | null; materialType: string; sourceType: "tracked_print" | "business_kit"; idempotencyKey: string; existingQrCodeId: string | null }): Promise<{ qrCodeId: string; includedQrAllowance: number }>;
   recordActivity(input: { orderId: string; action: string; idempotencyKey: string; reason?: string | null }): Promise<void>;
   markAttention(orderId: string, reason: string): Promise<void>;
 };
@@ -47,14 +55,71 @@ export async function provisionTrackedPrintOrder(input: {
   if (!orderId) return { eligibleItems: 0, processedItems: 0, results: [] };
   const results: Array<Record<string, unknown>> = [];
 
+  const businessKitContracts = readBusinessKitContracts();
+  const businessKitRegistryInvalid = Boolean(process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON) &&
+    validateBusinessKitContracts(process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON).errors.length > 0;
+  type ExpandedLineItem = {
+    lineItem: Record<string, any>;
+    businessKitComponent: ReturnType<typeof resolveBusinessKitComponentSelections>[number] | null;
+    suppressTimedAccess: boolean;
+  };
+  const expandedLineItems: ExpandedLineItem[] = [];
   for (const lineItem of input.payload.line_items || []) {
-    const classification = classifyPrintProduct(lineItem, input.registry);
+    const identifiedAsKit = identifiesConfiguredBusinessKit(lineItem.product_id, lineItem.sku);
+    if (businessKitRegistryInvalid) {
+      if (identifiedAsKit) continue;
+      expandedLineItems.push({ lineItem, businessKitComponent: null, suppressTimedAccess: true });
+      continue;
+    }
+    const contract = matchBusinessKitContract(lineItem.product_id, lineItem.sku, businessKitContracts);
+    if (!contract && !identifiedAsKit) {
+      expandedLineItems.push({ lineItem, businessKitComponent: null, suppressTimedAccess: false });
+      continue;
+    }
+    if (!contract) continue;
+    // A known Business Kit is never allowed to fall through to generic print rules.
+    if (!businessKitOrderLinkedAccessEnabled()) continue;
+    const selections = resolveBusinessKitComponentSelections(contract, lineItem.properties);
+    if (selections.some((selection) => !selection.selectionValid)) continue;
+    const rawEntries = Array.isArray(lineItem.properties)
+      ? lineItem.properties.map((property: any) => property?.name ?? property?.key)
+      : Object.keys(lineItem.properties || {});
+    const hasCustomerCriticalProperties = rawEntries.some((name) => name === "Tracking Mode" || name === "Clutch Codes Access");
+    if (hasCustomerCriticalProperties && !parseStrictIncludedAccessIntent(lineItem.properties).valid) continue;
+    for (const selection of selections.filter((selection) =>
+      selection.trackingMode === "existing_code" ||
+      (selection.trackingMode === "new_included_code" && selection.codeCount === 1)
+    )) {
+      const original = Array.isArray(lineItem.properties)
+        ? lineItem.properties.filter((property: any) => !["Tracking Mode", "Clutch Codes Access"].includes(property?.name ?? property?.key))
+        : Object.entries(lineItem.properties || {}).filter(([name]) => !["Tracking Mode", "Clutch Codes Access"].includes(name)).map(([name, value]) => ({ name, value }));
+      expandedLineItems.push({
+        lineItem: {
+          ...lineItem,
+          id: `${String(lineItem.id || "")}:${selection.componentId}`,
+          properties: [
+            ...original,
+            { name: "Tracking Mode", value: selection.trackingMode },
+            { name: "Clutch Codes Access", value: selection.trackingMode === "new_included_code" ? "included_90_days" : "none" },
+          ],
+        },
+        businessKitComponent: selection,
+        suppressTimedAccess: false,
+      });
+    }
+  }
+
+  for (const { lineItem, businessKitComponent, suppressTimedAccess } of expandedLineItems) {
+    const classification = businessKitComponent
+      ? { eligible: true, materialType: businessKitComponent.materialType, defaultTrackingAvailable: true }
+      : classifyPrintProduct(lineItem, input.registry);
     if (!classification.eligible || !classification.materialType) continue;
     const lineItemId = String(lineItem.id || "").trim();
     if (!lineItemId) continue;
 
     const properties = normalizePrintLineProperties(lineItem.properties);
-    const timedAccessEnabled = isEnabledEnvironmentFlag(process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS);
+    const strictAccess = parseStrictIncludedAccessIntent(lineItem.properties);
+    const timedAccessEnabled = !suppressTimedAccess && isEnabledEnvironmentFlag(process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS);
     const email = emailFor(input.payload);
     const requiresNew = properties.trackingMode === "new_included_code";
     const requiresExisting = properties.trackingMode === "existing_code";
@@ -136,7 +201,7 @@ export async function provisionTrackedPrintOrder(input: {
       material_type: classification.materialType,
       quantity: Math.max(1, Number(lineItem.quantity) || 1),
       tracking_mode: properties.trackingMode,
-      clutch_codes_access_opt_in: timedAccessEnabled && properties.clutchCodesAccessOptIn,
+      clutch_codes_access_opt_in: timedAccessEnabled && requiresNew && strictAccess.valid && properties.clutchCodesAccessOptIn,
       campaign_name: properties.campaignName,
       destination_url: properties.destinationUrl,
       existing_qr_code_id: existingQrCodeId,
@@ -249,6 +314,7 @@ export async function provisionTrackedPrintOrder(input: {
         destinationUrl: item.destination_url,
         campaignName: item.campaign_name,
         materialType: item.material_type,
+        sourceType: businessKitComponent ? "business_kit" : "tracked_print",
         idempotencyKey: operationKey,
         existingQrCodeId: item.existing_qr_code_id,
       });

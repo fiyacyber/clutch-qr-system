@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BarChart3 } from "lucide-react";
 import QRCodeEditForm from "@/components/QRCodeEditForm";
+import IncludedDestinationForm from "@/components/IncludedDestinationForm";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
@@ -91,7 +92,7 @@ export default async function EditQrCodePage({
       <main className="container create-studio-shell">
         <DashboardHeader
           title={`Edit QR: ${code.name}`}
-          subtitle="Update destination, style, and logo settings for this stored QR code."
+          subtitle={codeAccess.state === "active_included_access" ? "Update the destination for this included Clutch Code." : "Update destination, style, and logo settings for this stored QR code."}
           actions={(
             <div className="qr-studio-top-actions">
               <Link className="btn ghost" href="/portal/qr">Back to Stored QR Codes</Link>
@@ -100,7 +101,9 @@ export default async function EditQrCodePage({
           )}
         />
 
-        <QRCodeEditForm code={code as any} connectProfiles={(profiles || []) as any} />
+        {codeAccess.state === "active_included_access"
+          ? <IncludedDestinationForm code={code as any} />
+          : <QRCodeEditForm code={code as any} connectProfiles={(profiles || []) as any} />}
       </main>
     </DashboardShell>
   );

@@ -17,6 +17,49 @@ export type NormalizedPrintProperties = {
   clutchCodesAccessOptIn: boolean;
 };
 
+export type StrictIncludedAccessIntent = {
+  valid: boolean;
+  trackingMode: TrackingMode | null;
+  access: "included_90_days" | "none" | null;
+  optIn: boolean;
+  reason: string | null;
+};
+
+type RawProperties = Array<{ name?: unknown; key?: unknown; value?: unknown }> | Record<string, unknown> | null | undefined;
+
+function exactPropertyEntries(properties: RawProperties) {
+  if (Array.isArray(properties)) {
+    return properties.map((entry) => ({ name: entry?.name ?? entry?.key, value: entry?.value }));
+  }
+  return Object.entries(properties || {}).map(([name, value]) => ({ name, value }));
+}
+
+export function parseStrictIncludedAccessIntent(properties: RawProperties): StrictIncludedAccessIntent {
+  const entries = exactPropertyEntries(properties);
+  const permittedNames = new Set(["Tracking Mode", "Clutch Codes Access"]);
+  const relevant = entries.filter((entry) => typeof entry.name === "string" && permittedNames.has(entry.name));
+  const invalidShape = relevant.some((entry) => typeof entry.value !== "string");
+  const tracking = relevant.filter((entry) => entry.name === "Tracking Mode");
+  const access = relevant.filter((entry) => entry.name === "Clutch Codes Access");
+  if (invalidShape || tracking.length !== 1 || access.length !== 1) {
+    return { valid: false, trackingMode: null, access: null, optIn: false, reason: "Included-access properties must appear exactly once as scalar strings." };
+  }
+  const trackingMode = (["none", "new_included_code", "existing_code"] as const).find((value) => value === tracking[0].value) || null;
+  const accessValue = (["included_90_days", "none"] as const).find((value) => value === access[0].value) || null;
+  if (!trackingMode || !accessValue) {
+    return { valid: false, trackingMode, access: accessValue, optIn: false, reason: "Included-access properties contain a non-canonical value." };
+  }
+  const validPair = (trackingMode === "new_included_code" && accessValue === "included_90_days") ||
+    (trackingMode !== "new_included_code" && accessValue === "none");
+  return {
+    valid: validPair,
+    trackingMode,
+    access: accessValue,
+    optIn: validPair && trackingMode === "new_included_code",
+    reason: validPair ? null : "Tracking mode and included-access value do not form an allowed pair.",
+  };
+}
+
 function clean(value: unknown, max = 1000) {
   return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
@@ -46,8 +89,8 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     existing_code: "existing_code", use_existing_code: "existing_code", existing_qr: "existing_code",
   };
   const trackingMode = modeAliases[rawMode] || "none";
-  const accessValue = first(map, ["clutch codes access"], 80).toLowerCase();
-  const clutchCodesAccessOptIn = trackingMode === "new_included_code" && accessValue === "included_90_days";
+  const strictAccess = parseStrictIncludedAccessIntent(properties);
+  const clutchCodesAccessOptIn = strictAccess.optIn;
   const campaignName = first(map, ["campaign name", "qr campaign", "campaign"], 160) || null;
   const destinationRaw = first(map, ["destination url", "qr destination", "destination", "url"], 2048);
   let destinationUrl: string | null = null;
