@@ -18,13 +18,29 @@ export type PortalAnalyticsDependencies<T> = {
   resolveCodeAccess(codeId: string): Promise<OrderLinkedAccess>;
 };
 
+export function projectAuthorizedAnalyticsDomains<T extends {
+  qrCodes: unknown[];
+  qrScans: unknown[];
+  profiles: unknown[];
+  connectEvents: unknown[];
+}>(data: T, capabilities: { campaign: boolean; profile: boolean }): T {
+  return {
+    ...data,
+    qrCodes: capabilities.campaign ? data.qrCodes : [],
+    qrScans: capabilities.campaign ? data.qrScans : [],
+    profiles: capabilities.profile ? data.profiles : [],
+    connectEvents: capabilities.profile ? data.connectEvents : [],
+  };
+}
+
 export async function resolvePortalAnalyticsMode<T>(input: {
   isAdmin: boolean;
-  hasActivePaidSubscription: boolean;
+  hasFullCampaignAnalytics: boolean;
+  hasFullProfileAnalytics: boolean;
   accountAccess: Pick<AccountAccess, "canUseCampaignAnalytics" | "canUseProfileAnalytics">;
   dependencies: PortalAnalyticsDependencies<T>;
 }): Promise<PortalAnalyticsMode<T>> {
-  if (input.isAdmin || input.hasActivePaidSubscription) {
+  if (input.isAdmin || input.hasFullCampaignAnalytics || input.hasFullProfileAnalytics) {
     const full = await input.dependencies.fetchFull();
     return { kind: "full", data: full.data, failed: Boolean(full.failed) };
   }

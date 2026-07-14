@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolvePortalAnalyticsMode } from "../lib/order-linked-portal-analytics.ts";
+import { projectAuthorizedAnalyticsDomains, resolvePortalAnalyticsMode } from "../lib/order-linked-portal-analytics.ts";
 import { resolveOwnedQrLibrary, visibleLibraryScanCount } from "../lib/order-linked-library.ts";
 import { resolveOrderLinkedAccess, type OrderLinkedAccess } from "../lib/order-linked-access.ts";
 
@@ -51,7 +51,8 @@ test("included-only analytics is a terminal basic branch and never fetches unifi
   const h = analyticsHarness();
   const result = await resolvePortalAnalyticsMode({
     isAdmin: false,
-    hasActivePaidSubscription: false,
+    hasFullCampaignAnalytics: false,
+    hasFullProfileAnalytics: false,
     accountAccess: { canUseCampaignAnalytics: true, canUseProfileAnalytics: false },
     dependencies: h.dependencies,
   });
@@ -71,7 +72,8 @@ test("included analytics failures and zero active codes fail closed without full
     const h = analyticsHarness(overrides);
     const result = await resolvePortalAnalyticsMode({
       isAdmin: false,
-      hasActivePaidSubscription: false,
+      hasFullCampaignAnalytics: false,
+      hasFullProfileAnalytics: false,
       accountAccess: { canUseCampaignAnalytics: true, canUseProfileAnalytics: false },
       dependencies: h.dependencies,
     });
@@ -81,12 +83,18 @@ test("included analytics failures and zero active codes fail closed without full
   }
 });
 
-test("only paid or administrator analytics invokes the unified fetch", async () => {
-  for (const identity of [{ isAdmin: true, paid: false }, { isAdmin: false, paid: true }]) {
+test("admin and independently authorized campaign or profile analytics invoke the unified fetch", async () => {
+  for (const identity of [
+    { isAdmin: true, campaign: false, profile: false },
+    { isAdmin: false, campaign: true, profile: false },
+    { isAdmin: false, campaign: false, profile: true },
+    { isAdmin: false, campaign: true, profile: true },
+  ]) {
     const h = analyticsHarness();
     const result = await resolvePortalAnalyticsMode({
       isAdmin: identity.isAdmin,
-      hasActivePaidSubscription: identity.paid,
+      hasFullCampaignAnalytics: identity.campaign,
+      hasFullProfileAnalytics: identity.profile,
       accountAccess: { canUseCampaignAnalytics: true, canUseProfileAnalytics: true },
       dependencies: h.dependencies,
     });
@@ -96,11 +104,33 @@ test("only paid or administrator analytics invokes the unified fetch", async () 
   const locked = analyticsHarness();
   assert.equal((await resolvePortalAnalyticsMode({
     isAdmin: false,
-    hasActivePaidSubscription: false,
+    hasFullCampaignAnalytics: false,
+    hasFullProfileAnalytics: false,
     accountAccess: { canUseCampaignAnalytics: false, canUseProfileAnalytics: false },
     dependencies: locked.dependencies,
   })).kind, "locked");
   assert.equal(locked.fullFetches, 0);
+});
+
+test("portal full analytics projects campaign and profile domains independently", () => {
+  const full = {
+    qrCodes: [{ id: "campaign" }],
+    qrScans: [{ qr_code_id: "campaign" }],
+    profiles: [{ id: "profile" }],
+    connectEvents: [{ profile_id: "profile" }],
+    marker: true,
+  };
+  const connectOnly = projectAuthorizedAnalyticsDomains(full, { campaign: false, profile: true });
+  assert.deepEqual(connectOnly.qrCodes, []);
+  assert.deepEqual(connectOnly.qrScans, []);
+  assert.deepEqual(connectOnly.profiles, full.profiles);
+  assert.deepEqual(connectOnly.connectEvents, full.connectEvents);
+  const campaignOnly = projectAuthorizedAnalyticsDomains(full, { campaign: true, profile: false });
+  assert.deepEqual(campaignOnly.qrCodes, full.qrCodes);
+  assert.deepEqual(campaignOnly.qrScans, full.qrScans);
+  assert.deepEqual(campaignOnly.profiles, []);
+  assert.deepEqual(campaignOnly.connectEvents, []);
+  assert.deepEqual(projectAuthorizedAnalyticsDomains(full, { campaign: true, profile: true }), full);
 });
 
 test("owned active and expired tracked-print and Business Kit codes remain in the library", async () => {

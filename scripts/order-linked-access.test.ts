@@ -40,17 +40,42 @@ test("unrelated and other-customer codes receive no included rights", () => {
   assert.equal(resolveOrderLinkedAccess({ ...base, isOrderLinkedIncludedCode: false }).state, "view_only");
 });
 
-test("feature disabled preserves only pre-timestamp legacy management", () => {
-  const access = resolveOrderLinkedAccess({ ownsCode: true, isOrderLinkedIncludedCode: true, featureEnabled: false, legacyOrderLinkedAccess: true });
-  assert.equal(access.state, "active_included_access");
-  for (const timestamps of [
-    { accessStartedAt: start },
-    { accessExpiresAt: expires },
-    { accessStartedAt: "bad", accessExpiresAt: "also-bad" },
-    { accessStartedAt: start, accessExpiresAt: expires },
-  ]) {
-    assert.equal(resolveOrderLinkedAccess({ ownsCode: true, isOrderLinkedIncludedCode: true, featureEnabled: false, legacyOrderLinkedAccess: true, ...timestamps }).state, "view_only");
+test("genuine both-null legacy access is independent of the feature flag", () => {
+  for (const featureEnabled of [false, true]) {
+    assert.equal(resolveOrderLinkedAccess({
+      ownsCode: true,
+      isOrderLinkedIncludedCode: true,
+      featureEnabled,
+      legacyOrderLinkedAccess: true,
+      accessStartedAt: null,
+      accessExpiresAt: null,
+    }).state, "active_included_access");
+    assert.equal(resolveOrderLinkedAccess({
+      ownsCode: true,
+      isOrderLinkedIncludedCode: true,
+      featureEnabled,
+      legacyOrderLinkedAccess: false,
+      accessStartedAt: null,
+      accessExpiresAt: null,
+    }).state, "view_only");
   }
+});
+
+test("partial, malformed, disabled, and expired timed rows never use legacy fallback", () => {
+  const common = { ownsCode: true, isOrderLinkedIncludedCode: true, legacyOrderLinkedAccess: true };
+  for (const timestamps of [
+    { accessStartedAt: start, accessExpiresAt: null },
+    { accessStartedAt: null, accessExpiresAt: expires },
+    { accessStartedAt: "bad", accessExpiresAt: expires },
+    { accessStartedAt: start, accessExpiresAt: "bad" },
+  ]) {
+    assert.notEqual(resolveOrderLinkedAccess({ ...common, featureEnabled: true, ...timestamps }).state, "active_included_access");
+  }
+  assert.equal(resolveOrderLinkedAccess({ ...common, featureEnabled: false, accessStartedAt: start, accessExpiresAt: expires }).state, "view_only");
+  assert.equal(resolveOrderLinkedAccess({ ...common, featureEnabled: true, provisioningStatus: "completed", accessStartedAt: start, accessExpiresAt: expires, now: new Date(expires) }).state, "expired_included_access");
+  assert.equal(resolveOrderLinkedAccess({ ...common, featureEnabled: true, provisioningStatus: "completed", accessStartedAt: start, accessExpiresAt: expires, now: new Date("2026-02-01T00:00:00.000Z") }).state, "active_included_access");
+  assert.equal(resolveOrderLinkedAccess({ ...common, featureEnabled: false, hasActivePaidSubscription: true }).state, "paid_subscription_access");
+  assert.equal(resolveOrderLinkedAccess({ ...common, featureEnabled: false, isAdmin: true }).state, "admin");
 });
 
 test("timed access requires finite exact 90-day timestamps and a started window", () => {

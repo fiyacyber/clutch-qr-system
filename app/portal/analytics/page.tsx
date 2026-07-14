@@ -21,8 +21,8 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
-import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
-import { resolvePortalAnalyticsMode } from "@/lib/order-linked-portal-analytics";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { projectAuthorizedAnalyticsDomains, resolvePortalAnalyticsMode } from "@/lib/order-linked-portal-analytics";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
@@ -53,9 +53,12 @@ export default async function AnalyticsPage({
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
   const accessNow = new Date();
+  const hasFullCampaignAnalytics = access.hasClutchCodes;
+  const hasFullProfileAnalytics = access.canUseProfileAnalytics;
   const analyticsMode = await resolvePortalAnalyticsMode({
     isAdmin: Boolean(customer.is_admin),
-    hasActivePaidSubscription: hasActiveClutchCodesSubscription(customer),
+    hasFullCampaignAnalytics,
+    hasFullProfileAnalytics,
     accountAccess: access,
     dependencies: {
       fetchFull: async () => runGuardedDashboardTask({
@@ -99,7 +102,10 @@ export default async function AnalyticsPage({
       </DashboardShell>
     );
   }
-  const data = analyticsMode.data;
+  const data = projectAuthorizedAnalyticsDomains(analyticsMode.data, {
+    campaign: hasFullCampaignAnalytics || Boolean(customer.is_admin),
+    profile: hasFullProfileAnalytics || Boolean(customer.is_admin),
+  });
   const plan = getCustomerPlan(customer as any);
   const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type)));
   const campaignAccessEntries = await Promise.all(campaignCandidates.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));

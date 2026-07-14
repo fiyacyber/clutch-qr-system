@@ -83,10 +83,11 @@ export function resolveOrderLinkedAccess(input: ResolverInput): OrderLinkedAcces
   if (input.isAdmin) return result("admin", input);
   if (input.hasActivePaidSubscription) return result("paid_subscription_access", input);
   if (!input.isOrderLinkedIncludedCode) return result("view_only", input);
-  if (!input.featureEnabled) {
-    const hasAnyTimedMetadata = input.accessStartedAt != null || input.accessExpiresAt != null;
-    return result(!hasAnyTimedMetadata && input.legacyOrderLinkedAccess ? "active_included_access" : "view_only", input);
+  const hasAnyTimedMetadata = input.accessStartedAt != null || input.accessExpiresAt != null;
+  if (!hasAnyTimedMetadata) {
+    return result(input.legacyOrderLinkedAccess ? "active_included_access" : "view_only", input);
   }
+  if (!input.featureEnabled) return result("view_only", input);
   if (input.provisioningStatus !== "completed" || !input.accessStartedAt || !input.accessExpiresAt) {
     return result("view_only", input);
   }

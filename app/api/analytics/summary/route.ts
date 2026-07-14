@@ -3,7 +3,7 @@ import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { fetchUnifiedAnalyticsData, isCountedProfileView } from "@/lib/clutch-analytics";
 import { loadAccountAccess } from "@/lib/account-access-server";
-import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 import { analyticsScopeForCode, buildBasicCodeAnalytics } from "@/lib/order-linked-analytics";
 
 const defaultDependencies = { requireCustomer, createSupabaseAdminClient, loadAccountAccess, loadOrderLinkedQrAccess, fetchUnifiedAnalyticsData };
@@ -21,8 +21,9 @@ export function createAnalyticsSummaryHandler(dependencies: Partial<typeof defau
     const admin = deps.createSupabaseAdminClient();
     const access = await deps.loadAccountAccess(admin, customer);
     if (!access.canUseCampaignAnalytics && !access.canUseProfileAnalytics) return NextResponse.json({ error: "Analytics access is locked." }, { status: 403 });
-    const paid = hasActiveClutchCodesSubscription(customer);
-    if (!customer.is_admin && !paid) {
+    const hasFullCampaignAnalytics = Boolean(customer.is_admin) || access.hasClutchCodes;
+    const hasFullProfileAnalytics = Boolean(customer.is_admin) || access.canUseProfileAnalytics;
+    if (!hasFullCampaignAnalytics && !hasFullProfileAnalytics) {
       const { data: candidateCodes, error: codeError } = await admin.from("qr_codes")
         .select("id, name, slug").eq("customer_id", customer.id);
       if (codeError) throw codeError;
@@ -45,7 +46,7 @@ export function createAnalyticsSummaryHandler(dependencies: Partial<typeof defau
       });
     }
     const data = await deps.fetchUnifiedAnalyticsData(admin, customer as any);
-    const codeAccess = await Promise.all(data.qrCodes.map(async (code) => ({
+    const codeAccess = await Promise.all((hasFullCampaignAnalytics ? data.qrCodes : []).map(async (code) => ({
       code,
       access: await deps.loadOrderLinkedQrAccess(admin, customer, code.id),
     })));
@@ -53,23 +54,27 @@ export function createAnalyticsSummaryHandler(dependencies: Partial<typeof defau
       codeGrant.canViewBasicAnalytics || (code.qr_type === "smart_card" && access.canUseProfileAnalytics)
     ).map(({ code }) => code);
     const visibleCodeIds = new Set(visibleCodes.map((code) => code.id));
-    const visibleScans = data.qrScans.filter((scan) => visibleCodeIds.has(scan.qr_code_id));
+    const visibleScans = hasFullCampaignAnalytics
+      ? data.qrScans.filter((scan) => visibleCodeIds.has(scan.qr_code_id))
+      : [];
+    const visibleProfiles = hasFullProfileAnalytics ? data.profiles : [];
+    const visibleConnectEvents = hasFullProfileAnalytics ? data.connectEvents : [];
 
     const totalScans = visibleScans.length;
-    const connectViews = data.connectEvents.filter(isCountedProfileView).length;
-    const linkClicks = data.connectEvents.filter((row) => row.event_type === "link_click").length;
-    const leadsCaptured = data.connectEvents.filter((row) => row.event_type === "lead_submit").length;
+    const connectViews = visibleConnectEvents.filter(isCountedProfileView).length;
+    const linkClicks = visibleConnectEvents.filter((row) => row.event_type === "link_click").length;
+    const leadsCaptured = visibleConnectEvents.filter((row) => row.event_type === "lead_submit").length;
     const activeQrCodes = visibleCodes.filter((row) => row.is_active !== false).length;
     const uniqueVisitors = new Set(
-      [...visibleScans.map((row) => row.ip_hash), ...data.connectEvents.map((row) => row.ip_hash || row.visitor_id)].filter(Boolean)
+      [...visibleScans.map((row) => row.ip_hash), ...visibleConnectEvents.map((row) => row.ip_hash || row.visitor_id)].filter(Boolean)
     ).size;
 
     return NextResponse.json({
       scope: customer.is_admin ? "admin" : "full_account",
       codes: visibleCodes,
       scans: visibleScans,
-      profiles: data.profiles,
-      connectEvents: data.connectEvents,
+      profiles: visibleProfiles,
+      connectEvents: visibleConnectEvents,
       summary: {
         totalScans,
         connectViews,

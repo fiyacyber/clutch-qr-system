@@ -16,11 +16,11 @@ const order = (item = line(), overrides: Record<string, unknown> = {}) => ({ id:
 function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean; importFailure?: boolean } = {}) {
   const items = new Map<string, any>(); const qrs = new Map<string, string>(); const activities = new Set<string>();
   const importedArtwork = new Set<string>(); const provisionInputs: any[] = [];
-  let authCustomers = 0;
+  let customerResolutions = 0; let authCustomers = 0; let existingCodeResolutions = 0;
   const dependencies: TrackedPrintDependencies = {
-    async resolveCustomer() { return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
+    async resolveCustomer() { customerResolutions++; return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
     async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; return { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } }; },
-    async resolveExistingCode(_customerId, reference) { return options.rejectExisting ? null : reference === "owned" || reference === "owned-qr" ? "00000000-0000-4000-8000-000000000001" : null; },
+    async resolveExistingCode(_customerId, reference) { existingCodeResolutions++; return options.rejectExisting ? null : reference === "owned" || reference === "owned-qr" ? "00000000-0000-4000-8000-000000000001" : null; },
     async findPrintItem(orderId, lineItemId) { return items.get(`${orderId}:${lineItemId}`) || null; },
     async upsertPrintItem(input) {
       const key = `${input.shopify_order_id}:${input.shopify_line_item_id}`; const previous = items.get(key);
@@ -51,7 +51,12 @@ function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean
     async recordActivity(input) { activities.add(input.idempotencyKey); },
     async markAttention(orderId, reason) { for (const [key, item] of items) if (item.id === orderId) items.set(key, { ...item, provisioning_status: "needs_attention", attention_reason: reason }); },
   };
-  return { dependencies, items, qrs, activities, importedArtwork, provisionInputs, get authCustomers() { return authCustomers; } };
+  return {
+    dependencies, items, qrs, activities, importedArtwork, provisionInputs,
+    get customerResolutions() { return customerResolutions; },
+    get authCustomers() { return authCustomers; },
+    get existingCodeResolutions() { return existingCodeResolutions; },
+  };
 }
 
 test("Business Kit components provision at most one exact source-aware grant and replay does not duplicate", async () => {
@@ -170,30 +175,128 @@ test("valid individual print is unaffected and a contract collision cannot recla
   }
 });
 
-test("forged or duplicate entitlement properties never persist a timed opt-in", async () => {
+test("strict tracked-print authority rejects every invalid canonical shape before operational dependencies", async () => {
   const previous = process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS;
   process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
   try {
-    for (const properties of [
-      [
-        { name: "Tracking Mode", value: "new_included_code" },
-        { name: "Clutch Codes Access", value: "included_90_days" },
-        { name: "tracking mode", value: "none" },
-        { name: "Campaign Name", value: "Campaign" },
-        { name: "Destination URL", value: "https://example.com" },
-      ],
-      [
-        { name: "Tracking Mode", value: "new_included_code" },
-        { name: "Tracking Mode", value: "new_included_code" },
-        { name: "Clutch Codes Access", value: "included_90_days" },
-        { name: "Campaign Name", value: "Campaign" },
-        { name: "Destination URL", value: "https://example.com" },
-      ],
-    ]) {
+    const canonical = [
+      { name: "Tracking Mode", value: "new_included_code" },
+      { name: "Clutch Codes Access", value: "included_90_days" },
+    ];
+    const required = [
+      { name: "Campaign Name", value: "Campaign" },
+      { name: "Destination URL", value: "https://example.com" },
+    ];
+    for (const [label, properties] of [
+      ["alias only", [{ name: "tracking", value: "new code" }, ...required]],
+      ["alias before canonical", [{ name: "tracking", value: "new code" }, ...canonical, ...required]],
+      ["alias after canonical", [...canonical, { name: "tracking", value: "new code" }, ...required]],
+      ["canonical plus alias", [...canonical, { name: "QR Tracking", value: "none" }, ...required]],
+      ["lowercase canonical", [{ name: "tracking mode", value: "new_included_code" }, canonical[1], ...required]],
+      ["whitespace name", [{ name: " Tracking Mode", value: "new_included_code" }, canonical[1], ...required]],
+      ["value casing", [{ name: "Tracking Mode", value: "NEW_INCLUDED_CODE" }, canonical[1], ...required]],
+      ["value whitespace", [{ name: "Tracking Mode", value: "new_included_code " }, canonical[1], ...required]],
+      ["missing access", [canonical[0], ...required]],
+      ["duplicate canonical", [canonical[0], canonical[0], canonical[1], ...required]],
+      ["null scalar", [{ name: "Tracking Mode", value: null }, canonical[1], ...required]],
+      ["array scalar", [{ name: "Tracking Mode", value: ["new_included_code"] }, canonical[1], ...required]],
+      ["object scalar", [{ name: "Tracking Mode", value: { value: "new_included_code" } }, canonical[1], ...required]],
+    ] as Array<[string, any[]]>) {
       const h = harness();
-      await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "w", dependencies: h.dependencies, registry });
-      assert.equal([...h.items.values()][0].clutch_codes_access_opt_in, false);
+      const result = await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: `w-${label}`, dependencies: h.dependencies, registry });
+      assert.equal(result.results[0]?.status, "skipped", label);
+      assert.equal((result.results[0] as any)?.reason, "invalid_tracking_authority", label);
+      assert.equal(h.customerResolutions, 0, label);
+      assert.equal(h.authCustomers, 0, label);
+      assert.equal(h.existingCodeResolutions, 0, label);
+      assert.equal(h.items.size, 0, label);
+      assert.equal(h.qrs.size, 0, label);
+      assert.equal(h.provisionInputs.length, 0, label);
+      assert.equal("includedQrAllowance" in (result.results[0] || {}), false, label);
     }
+  } finally {
+    if (previous === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous;
+  }
+});
+
+test("strict canonical tracked-print pairs control new, existing, and no-tracking operations", async () => {
+  const previous = process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS;
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  try {
+    const newCode = harness();
+    const newResult = await provisionTrackedPrintOrder({ payload: order(line({ properties: [
+      { name: "Tracking Mode", value: "new_included_code" },
+      { name: "Clutch Codes Access", value: "included_90_days" },
+      { name: "Campaign Name", value: "Canonical campaign" },
+      { name: "Destination URL", value: "https://example.com/canonical" },
+    ] })), webhookEventId: "canonical-new", dependencies: newCode.dependencies, registry });
+    assert.equal(newCode.customerResolutions, 1);
+    assert.equal(newCode.authCustomers, 1);
+    assert.equal(newCode.items.size, 1);
+    assert.equal([...newCode.items.values()][0].tracking_mode, "new_included_code");
+    assert.equal([...newCode.items.values()][0].clutch_codes_access_opt_in, true);
+    assert.equal(newCode.provisionInputs.length, 1);
+    assert.equal(newCode.qrs.size, 1);
+    assert.equal((newResult.results[0] as any).includedQrAllowance, 1);
+
+    const existing = harness({ existingCustomer: true });
+    const existingResult = await provisionTrackedPrintOrder({ payload: order(line({ properties: [
+      { name: "Tracking Mode", value: "existing_code" },
+      { name: "Clutch Codes Access", value: "none" },
+      { name: "Existing QR Code ID", value: "owned" },
+    ] })), webhookEventId: "canonical-existing", dependencies: existing.dependencies, registry });
+    assert.equal(existing.authCustomers, 0);
+    assert.equal(existing.existingCodeResolutions, 1);
+    assert.equal([...existing.items.values()][0].tracking_mode, "existing_code");
+    assert.equal([...existing.items.values()][0].clutch_codes_access_opt_in, false);
+    assert.equal(existing.provisionInputs.length, 1);
+    assert.equal(existing.provisionInputs[0].existingQrCodeId, "00000000-0000-4000-8000-000000000001");
+    assert.equal((existingResult.results[0] as any).includedQrAllowance, 0);
+
+    const none = harness();
+    const noneResult = await provisionTrackedPrintOrder({ payload: order(line({ properties: [
+      { name: "Tracking Mode", value: "none" },
+      { name: "Clutch Codes Access", value: "none" },
+    ] })), webhookEventId: "canonical-none", dependencies: none.dependencies, registry });
+    assert.equal(none.customerResolutions, 1);
+    assert.equal(none.authCustomers, 0);
+    assert.equal(none.items.size, 1);
+    assert.equal([...none.items.values()][0].tracking_mode, "none");
+    assert.equal(none.provisionInputs.length, 0);
+    assert.equal(none.qrs.size, 0);
+    assert.equal("includedQrAllowance" in (noneResult.results[0] || {}), false);
+
+    const untrusted = harness();
+    const untrustedResult = await provisionTrackedPrintOrder({ payload: order(line({ sku: "UNTRUSTED", properties: [
+      { name: "Tracking Mode", value: "new_included_code" },
+      { name: "Clutch Codes Access", value: "included_90_days" },
+    ] })), webhookEventId: "untrusted", dependencies: untrusted.dependencies, registry });
+    assert.equal(untrustedResult.eligibleItems, 0);
+    assert.equal(untrusted.customerResolutions, 0);
+    assert.equal(untrusted.items.size, 0);
+    assert.equal(untrusted.qrs.size, 0);
+  } finally {
+    if (previous === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous;
+  }
+});
+
+test("feature-disabled tracked print preserves permissive legacy operational behavior", async () => {
+  const previous = process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS;
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "false";
+  try {
+    const h = harness();
+    const result = await provisionTrackedPrintOrder({ payload: order(line({ properties: {
+      tracking: "new code",
+      "Campaign Name": "Legacy campaign",
+      destination: "https://example.com/legacy",
+    } })), webhookEventId: "legacy", dependencies: h.dependencies, registry });
+    assert.equal(h.authCustomers, 1);
+    assert.equal(h.items.size, 1);
+    assert.equal([...h.items.values()][0].tracking_mode, "new_included_code");
+    assert.equal([...h.items.values()][0].clutch_codes_access_opt_in, false);
+    assert.equal(h.provisionInputs.length, 1);
+    assert.equal(h.qrs.size, 1);
+    assert.equal((result.results[0] as any).includedQrAllowance, 1);
   } finally {
     if (previous === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous;
   }

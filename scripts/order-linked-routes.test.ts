@@ -51,7 +51,7 @@ function mockAdmin(input: {
   return { client: { from, storage: { from: () => ({}) } } as any, updates };
 }
 
-const accountAccess = { canUseCampaignAnalytics: true, canUseProfileAnalytics: false, canExportQr: true, canEditOwnedQr: true, canUploadQrLogo: false, canCustomizeQr: false } as any;
+const accountAccess = { hasClutchCodes: false, canUseCampaignAnalytics: true, canUseProfileAnalytics: false, canExportQr: true, canEditOwnedQr: true, canUploadQrLogo: false, canCustomizeQr: false } as any;
 const request = (url = "https://qr.example.test/api") => new NextRequest(url);
 const context = (qrId = "qr-1") => ({ params: Promise.resolve({ qrId }) });
 
@@ -145,11 +145,60 @@ test("paid analytics handlers retain the full account projection", async () => {
   const paidGrant = { ...activeGrant, state: "paid_subscription_access" };
   const deps = {
     requireCustomer: async () => ({ user, customer: paidCustomer }), createSupabaseAdminClient: () => admin.client,
-    loadAccountAccess: async () => accountAccess, loadOrderLinkedQrAccess: async () => paidGrant,
+    loadAccountAccess: async () => ({ ...accountAccess, hasClutchCodes: true }), loadOrderLinkedQrAccess: async () => paidGrant,
     fetchUnifiedAnalyticsData: async () => fullData,
   } as any;
   assert.equal((await (await createQrAnalyticsListHandler(deps)()).json()).scope, "full_account");
   assert.equal((await (await createAnalyticsSummaryHandler(deps)()).json()).scope, "full_account");
+});
+
+test("summary analytics isolates independently authorized campaign and profile domains", async () => {
+  const admin = mockAdmin();
+  const fullData = {
+    qrCodes: [{ id: "qr-1", name: "Campaign", slug: "campaign", is_active: true }],
+    qrScans: [{ id: "scan-1", qr_code_id: "qr-1", created_at: "2026-02-01T00:00:00Z", ip_hash: "campaign-visitor" }],
+    profiles: [{ id: "profile-1", display_name: "Profile" }],
+    connectEvents: [
+      { id: "event-1", event_type: "profile_view", ip_hash: "profile-visitor" },
+      { id: "event-2", event_type: "link_click", visitor_id: "profile-visitor" },
+      { id: "event-3", event_type: "lead_submit", visitor_id: "lead-visitor" },
+    ],
+    isAdmin: false,
+  };
+  const paidGrant = { ...activeGrant, state: "paid_subscription_access", canViewBasicAnalytics: true };
+
+  for (const scenario of [
+    { label: "Connect+", customer: { ...customer, plan_code: "connect_plus", subscription_status: "active" }, campaign: false, profile: true, admin: false },
+    { label: "Clutch Codes", customer: { ...customer, clutch_codes_plan_code: "clutch_codes_starter", clutch_codes_subscription_status: "active" }, campaign: true, profile: false, admin: false },
+    { label: "combined", customer: { ...customer, clutch_codes_plan_code: "clutch_codes_starter", clutch_codes_subscription_status: "active", plan_code: "connect_plus", subscription_status: "active" }, campaign: true, profile: true, admin: false },
+    { label: "admin", customer: { ...customer, is_admin: true }, campaign: true, profile: true, admin: true },
+  ]) {
+    let fullFetches = 0;
+    const response = await createAnalyticsSummaryHandler({
+      requireCustomer: async () => ({ user, customer: scenario.customer }),
+      createSupabaseAdminClient: () => admin.client,
+      loadAccountAccess: async () => ({
+        ...accountAccess,
+        hasClutchCodes: scenario.campaign,
+        canUseCampaignAnalytics: scenario.campaign,
+        canUseProfileAnalytics: scenario.profile,
+      }),
+      loadOrderLinkedQrAccess: async () => paidGrant,
+      fetchUnifiedAnalyticsData: async () => { fullFetches++; return fullData; },
+    } as any)();
+    assert.equal(response.status, 200, scenario.label);
+    const body = await response.json();
+    assert.equal(fullFetches, 1, scenario.label);
+    assert.equal(body.scope, scenario.admin ? "admin" : "full_account", scenario.label);
+    assert.equal(body.codes.length, scenario.campaign ? 1 : 0, scenario.label);
+    assert.equal(body.scans.length, scenario.campaign ? 1 : 0, scenario.label);
+    assert.equal(body.summary.totalScans, scenario.campaign ? 1 : 0, scenario.label);
+    assert.equal(body.profiles.length, scenario.profile ? 1 : 0, scenario.label);
+    assert.equal(body.connectEvents.length, scenario.profile ? 3 : 0, scenario.label);
+    assert.equal(body.summary.connectViews, scenario.profile ? 1 : 0, scenario.label);
+    assert.equal(body.summary.linkClicks, scenario.profile ? 1 : 0, scenario.label);
+    assert.equal(body.summary.leadsCaptured, scenario.profile ? 1 : 0, scenario.label);
+  }
 });
 
 function updateRequest(destination: string, extra: Record<string, string> = {}) {

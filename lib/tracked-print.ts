@@ -112,10 +112,17 @@ export async function provisionTrackedPrintOrder(input: {
     const properties = normalizePrintLineProperties(lineItem.properties);
     const strictAccess = parseStrictIncludedAccessIntent(lineItem.properties);
     const timedAccessEnabled = isEnabledEnvironmentFlag(process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS);
+    if (timedAccessEnabled && !strictAccess.valid) {
+      results.push({ lineItemId, status: "skipped", reason: "invalid_tracking_authority" });
+      continue;
+    }
+    const operationalTrackingMode = timedAccessEnabled
+      ? strictAccess.trackingMode!
+      : properties.trackingMode;
     const email = emailFor(input.payload);
-    const requiresNew = properties.trackingMode === "new_included_code";
-    const requiresExisting = properties.trackingMode === "existing_code";
-    const trackingUnavailable = properties.trackingMode !== "none" && classification.defaultTrackingAvailable === false;
+    const requiresNew = operationalTrackingMode === "new_included_code";
+    const requiresExisting = operationalTrackingMode === "existing_code";
+    const trackingUnavailable = operationalTrackingMode !== "none" && classification.defaultTrackingAvailable === false;
     const artworkReason = artworkValidationReason(properties);
     const existingItem = await input.dependencies.findPrintItem(orderId, lineItemId);
     let invalid = Boolean(
@@ -162,7 +169,7 @@ export async function provisionTrackedPrintOrder(input: {
 
     const provisioningStatus = identityConflict || trackingUnavailable || invalid
       ? "needs_attention"
-      : properties.trackingMode === "none"
+      : operationalTrackingMode === "none"
         ? "not_required"
         : "pending";
     const attentionReason = identityConflict
@@ -192,8 +199,8 @@ export async function provisionTrackedPrintOrder(input: {
       variant_title: lineItem.variant_title || null,
       material_type: classification.materialType,
       quantity: Math.max(1, Number(lineItem.quantity) || 1),
-      tracking_mode: properties.trackingMode,
-      clutch_codes_access_opt_in: timedAccessEnabled && strictAccess.valid && strictAccess.trackingMode === "new_included_code" && strictAccess.optIn,
+      tracking_mode: operationalTrackingMode,
+      clutch_codes_access_opt_in: timedAccessEnabled && strictAccess.optIn,
       campaign_name: properties.campaignName,
       destination_url: properties.destinationUrl,
       existing_qr_code_id: existingQrCodeId,
