@@ -319,14 +319,21 @@ test("registry validation fails closed for ambiguous and conflicting entries", (
   assert.ok(validatePrintProductRegistry([
     { productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
     { productId: "1", materialType: "flyer", defaultTrackingAvailable: true },
-  ]).errors.some((error) => error.includes("duplicates productId")));
+  ]).errors.some((error) => error.includes("conflicts")));
   assert.ok(validatePrintProductRegistry([
     { sku: "KIT", materialType: "other_print", defaultTrackingAvailable: true, sourceType: "business_kit" },
   ]).errors.some((error) => error.includes("require both")));
   assert.ok(validatePrintProductRegistry([
     { sku: "A", productId: "1", materialType: "postcard", defaultTrackingAvailable: true, sourceType: "tracked_print" },
-    { sku: "B", productId: "1", materialType: "flyer", defaultTrackingAvailable: true, sourceType: "business_kit" },
-  ]).errors.some((error) => error.includes("duplicates productId")));
+    { sku: "A", productId: "1", materialType: "postcard", defaultTrackingAvailable: true, sourceType: "business_kit" },
+  ]).errors.some((error) => error.includes("duplicates productId/SKU identity")));
+  const variants = validatePrintProductRegistry([
+    { sku: "POSTCARD-100", productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
+    { sku: "POSTCARD-500", productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
+  ]);
+  assert.equal(variants.errors.length, 0);
+  assert.equal(classifyPrintProduct({ sku: "POSTCARD-500", product_id: "1" }, variants.entries).eligible, true);
+  assert.equal(classifyPrintProduct({ product_id: "1" }, variants.entries).eligible, false);
 });
 
 test("existing Clutch Code references normalize UUID, slug, and canonical redirect URL", () => {

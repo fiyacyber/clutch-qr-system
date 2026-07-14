@@ -49,7 +49,7 @@ export function validatePrintProductRegistry(value: unknown): PrintProductRegist
   const entries: TrustedPrintProduct[] = [];
   const errors: string[] = [];
   const seenSkus = new Set<string>();
-  const seenProductIds = new Set<string>();
+  const productMaterials = new Map<string, string>();
   const seenIdentities = new Set<string>();
 
   parsed.forEach((raw, index) => {
@@ -85,9 +85,12 @@ export function validatePrintProductRegistry(value: unknown): PrintProductRegist
       if (seenSkus.has(sku)) errors.push(`${label} duplicates SKU ${sku}.`);
       seenSkus.add(sku);
     }
-    if (productId) {
-      if (seenProductIds.has(productId)) errors.push(`${label} duplicates productId ${productId}.`);
-      seenProductIds.add(productId);
+    if (productId && materialType) {
+      const previousMaterial = productMaterials.get(productId);
+      if (previousMaterial && previousMaterial !== materialType) {
+        errors.push(`${label} conflicts with another materialType for productId ${productId}.`);
+      }
+      productMaterials.set(productId, materialType);
     }
     if (sku && productId) {
       const identity = `${productId}\u0000${sku}`;
@@ -126,11 +129,14 @@ export function classifyPrintProduct(
   const sku = String(item.sku ?? "").trim().toUpperCase();
   const productId = String(item.product_id ?? "").trim();
   const skuMatch = sku ? registry.find((entry) => entry.sku === sku) : undefined;
-  const productMatch = productId ? registry.find((entry) => entry.productId === productId) : undefined;
-  if (skuMatch && productMatch && skuMatch !== productMatch) {
+  const productMatches = productId ? registry.filter((entry) => entry.productId === productId) : [];
+  if (skuMatch && productMatches.length && !productMatches.includes(skuMatch)) {
     return { eligible: false, materialType: null, defaultTrackingAvailable: false, sourceType: "tracked_print", warnings: ["SKU and product ID resolve to different trusted identities."] };
   }
-  const match = skuMatch || productMatch;
+  if (!skuMatch && productMatches.length > 1) {
+    return { eligible: false, materialType: null, defaultTrackingAvailable: false, sourceType: "tracked_print", warnings: ["Product ID matches multiple trusted variant identities; an exact SKU is required."] };
+  }
+  const match = skuMatch || productMatches[0];
   if (!match) return { eligible: false, materialType: null, defaultTrackingAvailable: false, sourceType: "tracked_print", warnings: [] };
   if (match.sourceType === "business_kit" && (match.sku !== sku || match.productId !== productId)) {
     return { eligible: false, materialType: null, defaultTrackingAvailable: false, sourceType: "business_kit", warnings: ["Business Kit identity requires exact SKU and product ID agreement."] };
