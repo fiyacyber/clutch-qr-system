@@ -8,18 +8,42 @@ import { resolveAccountAccess } from "../lib/account-access.ts";
 import { buildSafeExistingCustomerLinkagePatch, resolveCustomerIdentityRows } from "../lib/tracked-print-supabase.ts";
 import { isEligibleExistingClutchCode, normalizeExistingClutchCodeReference } from "../lib/existing-clutch-code.ts";
 import { downloadShopifyArtwork, importShopifyArtwork } from "../lib/shopify-artwork-import.ts";
+import { BUSINESS_KIT_COMPONENT_PROPERTY_CONTRACT } from "../lib/business-kit-contracts.ts";
 
 const registry = [{ sku: "POSTCARD-4X6", materialType: "postcard" as const, defaultTrackingAvailable: true }];
 const line = (overrides: Record<string, unknown> = {}) => ({ id: "line-1", sku: "POSTCARD-4X6", product_id: "p1", title: "Postcards", quantity: 1, properties: [], ...overrides });
 const order = (item = line(), overrides: Record<string, unknown> = {}) => ({ id: "order-1", name: "#1001", email: "buyer@example.com", customer: { id: "customer-1", email: "buyer@example.com" }, line_items: [item], ...overrides });
 
+const businessKitComponents = BUSINESS_KIT_COMPONENT_PROPERTY_CONTRACT.map((component) => ({ ...component }));
+
+function kitContract(productId = "900", sku = "STARTER-KIT", kitType: "starter" | "growth" = "starter") {
+  return { productId, sku, kitType, components: businessKitComponents };
+}
+
+function kitProperties(modes: Record<string, "new_included_code" | "existing_code" | "none">) {
+  return businessKitComponents.flatMap((component, index) => {
+    const mode = modes[component.componentId] || "none";
+    if (mode === "new_included_code") return [
+      { name: component.trackingPropertyName, value: mode },
+      { name: component.campaignPropertyName, value: `Campaign ${component.componentId}` },
+      { name: component.destinationPropertyName, value: `https://example.com/${component.componentId}` },
+    ];
+    if (mode === "existing_code") return [
+      { name: component.trackingPropertyName, value: mode },
+      { name: component.existingCodePropertyName, value: index === 0 ? "owned" : "owned-qr" },
+    ];
+    return [{ name: component.trackingPropertyName, value: mode }];
+  });
+}
+
 function harness(options: { existingCustomer?: boolean; rejectExisting?: boolean; identityConflict?: boolean; concurrentConflict?: boolean; importFailure?: boolean } = {}) {
   const items = new Map<string, any>(); const qrs = new Map<string, string>(); const activities = new Set<string>();
   const importedArtwork = new Set<string>(); const provisionInputs: any[] = [];
   let customerResolutions = 0; let authCustomers = 0; let existingCodeResolutions = 0;
+  let createdCustomer = false;
   const dependencies: TrackedPrintDependencies = {
-    async resolveCustomer() { customerResolutions++; return options.identityConflict ? { status: "conflict" } : options.existingCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
-    async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; return { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } }; },
+    async resolveCustomer() { customerResolutions++; return options.identityConflict ? { status: "conflict" } : options.existingCustomer || createdCustomer ? { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } } : { status: "not_found" }; },
+    async ensureNeutralCustomer() { if (options.concurrentConflict) return { status: "conflict" }; authCustomers++; createdCustomer = true; return { status: "found", customer: { id: "customer-db-1", auth_user_id: "auth-1" } }; },
     async resolveExistingCode(_customerId, reference) { existingCodeResolutions++; return options.rejectExisting ? null : reference === "owned" || reference === "owned-qr" ? "00000000-0000-4000-8000-000000000001" : null; },
     async findPrintItem(orderId, lineItemId) { return items.get(`${orderId}:${lineItemId}`) || null; },
     async upsertPrintItem(input) {
@@ -67,18 +91,10 @@ test("Business Kit components provision at most one exact source-aware grant and
   };
   process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = "true";
   process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
-  process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([{ productId: "900", sku: "STARTER-KIT", kitType: "starter", components: [
-    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Cards Tracking" },
-    { componentId: "flyers", materialType: "flyer", codeCount: 1, trackingPropertyName: "Flyers Tracking" },
-  ] }]);
+  process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([kitContract()]);
   try {
     const h = harness();
-    const payload = order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: [
-      { name: "Cards Tracking", value: "new_included_code" },
-      { name: "Flyers Tracking", value: "none" },
-      { name: "Campaign Name", value: "Kit cards" },
-      { name: "Destination URL", value: "https://example.com/kit" },
-    ] }));
+    const payload = order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: kitProperties({ business_cards: "new_included_code" }) }));
     const kitIdentity = [{ sku: "STARTER-KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
     await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry: kitIdentity });
     await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry: kitIdentity });
@@ -93,19 +109,185 @@ test("Business Kit components provision at most one exact source-aware grant and
   }
 });
 
+test("Starter and Growth expand independent component selections without sharing details", async () => {
+  const previous = {
+    registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
+    kitFlag: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
+    accessFlag: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
+  };
+  process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = "true";
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  try {
+    for (const identity of [
+      { productId: "900", sku: "STARTER-KIT", kitType: "starter" as const },
+      { productId: "901", sku: "GROWTH-KIT", kitType: "growth" as const },
+    ]) {
+      process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([kitContract(identity.productId, identity.sku, identity.kitType)]);
+      const trusted = [{ sku: identity.sku, productId: identity.productId, materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
+
+      const none = harness();
+      const noneResult = await provisionTrackedPrintOrder({
+        payload: order(line({ id: "kit-none", product_id: identity.productId, sku: identity.sku, properties: kitProperties({}) })),
+        webhookEventId: "none",
+        dependencies: none.dependencies,
+        registry: trusted,
+      });
+      assert.equal(noneResult.processedItems, 0);
+      assert.equal(none.customerResolutions, 0);
+      assert.equal(none.authCustomers, 0);
+      assert.equal(none.items.size, 0);
+
+      for (const component of businessKitComponents) {
+        const single = harness();
+        const modes = { [component.componentId]: "new_included_code" as const };
+        await provisionTrackedPrintOrder({
+          payload: order(line({ id: `kit-${component.componentId}`, product_id: identity.productId, sku: identity.sku, properties: kitProperties(modes) })),
+          webhookEventId: component.componentId,
+          dependencies: single.dependencies,
+          registry: trusted,
+        });
+        assert.equal(single.items.size, 1);
+        assert.equal(single.qrs.size, 1);
+        assert.equal(single.provisionInputs[0].materialType, component.materialType);
+        assert.equal(single.provisionInputs[0].destinationUrl, `https://example.com/${component.componentId}`);
+        assert.equal(single.provisionInputs[0].campaignName, `Campaign ${component.componentId}`);
+        assert.equal(single.provisionInputs[0].sourceType, "business_kit");
+      }
+
+      const allNew = harness();
+      const allNewPayload = order(line({
+        id: "kit-all-new",
+        product_id: identity.productId,
+        sku: identity.sku,
+        properties: [
+          ...kitProperties({ business_cards: "new_included_code", door_hangers: "new_included_code", flyers: "new_included_code" }),
+          { name: "Artwork Method", value: "upload_later" },
+          { name: "Artwork Instructions", value: "Shared kit artwork" },
+        ],
+      }));
+      await provisionTrackedPrintOrder({ payload: allNewPayload, webhookEventId: "all-new", dependencies: allNew.dependencies, registry: trusted });
+      await provisionTrackedPrintOrder({ payload: allNewPayload, webhookEventId: "all-new-replay", dependencies: allNew.dependencies, registry: trusted });
+      assert.equal(allNew.items.size, 3);
+      assert.equal(allNew.qrs.size, 3);
+      assert.equal(allNew.authCustomers, 1);
+      assert.equal(allNew.provisionInputs.length, 6);
+      assert.deepEqual([...allNew.items.values()].map((item) => item.material_type).sort(), ["business_card", "door_hanger", "flyer"]);
+      assert.deepEqual([...allNew.items.values()].map((item) => item.destination_url).sort(), [
+        "https://example.com/business_cards",
+        "https://example.com/door_hangers",
+        "https://example.com/flyers",
+      ]);
+      assert.equal([...allNew.items.values()].every((item) => item.clutch_codes_access_opt_in === true), true);
+      assert.equal([...allNew.items.values()].every((item) => item.artwork_method === "upload_later" && item.artwork_instructions === "Shared kit artwork"), true);
+      assert.equal([...allNew.items.values()].every((item) => !JSON.stringify(item.normalized_properties).includes("Business Cards Tracking Mode")), true);
+
+      const mixed = harness({ existingCustomer: true });
+      await provisionTrackedPrintOrder({
+        payload: order(line({
+          id: "kit-mixed",
+          product_id: identity.productId,
+          sku: identity.sku,
+          properties: kitProperties({ business_cards: "new_included_code", door_hangers: "existing_code", flyers: "none" }),
+        })),
+        webhookEventId: "mixed",
+        dependencies: mixed.dependencies,
+        registry: trusted,
+      });
+      assert.equal(mixed.items.size, 2);
+      assert.equal(mixed.provisionInputs.length, 2);
+      assert.equal(mixed.provisionInputs.filter((entry) => entry.existingQrCodeId).length, 1);
+      assert.equal([...mixed.items.values()].filter((item) => item.clutch_codes_access_opt_in).length, 1);
+
+      const allExisting = harness({ existingCustomer: true });
+      await provisionTrackedPrintOrder({
+        payload: order(line({
+          id: "kit-existing",
+          product_id: identity.productId,
+          sku: identity.sku,
+          properties: kitProperties({ business_cards: "existing_code", door_hangers: "existing_code", flyers: "existing_code" }),
+        })),
+        webhookEventId: "existing",
+        dependencies: allExisting.dependencies,
+        registry: trusted,
+      });
+      assert.equal(allExisting.items.size, 3);
+      assert.equal(allExisting.existingCodeResolutions, 3);
+      assert.equal([...allExisting.items.values()].every((item) => item.clutch_codes_access_opt_in === false), true);
+    }
+  } finally {
+    if (previous.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = previous.registry;
+    if (previous.kitFlag === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = previous.kitFlag;
+    if (previous.accessFlag === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous.accessFlag;
+  }
+});
+
+test("invalid Business Kit component payloads fail atomically before customer or provisioning work", async () => {
+  const previous = {
+    registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
+    kitFlag: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
+    accessFlag: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
+  };
+  process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = "true";
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([kitContract()]);
+  const trusted = [{ sku: "STARTER-KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
+  const validNew = kitProperties({ business_cards: "new_included_code" });
+  const cards = businessKitComponents[0];
+  const invalidCases: Array<[string, any[]]> = [
+    ["missing mode", validNew.filter((entry) => entry.name !== businessKitComponents[2].trackingPropertyName)],
+    ["duplicate mode", [...validNew, { name: cards.trackingPropertyName, value: "new_included_code" }]],
+    ["missing campaign", validNew.filter((entry) => entry.name !== cards.campaignPropertyName)],
+    ["missing destination", validNew.filter((entry) => entry.name !== cards.destinationPropertyName)],
+    ["invalid destination", validNew.map((entry) => entry.name === cards.destinationPropertyName ? { ...entry, value: "ftp://example.com" } : entry)],
+    ["credential destination", validNew.map((entry) => entry.name === cards.destinationPropertyName ? { ...entry, value: "https://user:pass@example.com" } : entry)],
+    ["missing existing reference", kitProperties({ business_cards: "existing_code" }).filter((entry) => entry.name !== cards.existingCodePropertyName)],
+    ["campaign with existing", [...kitProperties({ business_cards: "existing_code" }), { name: cards.campaignPropertyName, value: "conflict" }]],
+    ["existing reference with new", [...validNew, { name: cards.existingCodePropertyName, value: "owned" }]],
+    ["details with none", [...kitProperties({}), { name: cards.campaignPropertyName, value: "conflict" }]],
+    ["duplicate campaign", [...validNew, { name: cards.campaignPropertyName, value: "duplicate" }]],
+    ["duplicate destination", [...validNew, { name: cards.destinationPropertyName, value: "https://example.com/duplicate" }]],
+    ["duplicate existing", [...kitProperties({ business_cards: "existing_code" }), { name: cards.existingCodePropertyName, value: "owned" }]],
+    ["array mode", validNew.map((entry) => entry.name === cards.trackingPropertyName ? { ...entry, value: ["new_included_code"] } : entry)],
+    ["object mode", validNew.map((entry) => entry.name === cards.trackingPropertyName ? { ...entry, value: { mode: "new_included_code" } } : entry)],
+    ["null mode", validNew.map((entry) => entry.name === cards.trackingPropertyName ? { ...entry, value: null } : entry)],
+    ["case spoof", validNew.map((entry) => entry.name === cards.trackingPropertyName ? { ...entry, name: cards.trackingPropertyName.toLowerCase() } : entry)],
+    ["whitespace spoof", validNew.map((entry) => entry.name === cards.trackingPropertyName ? { ...entry, name: ` ${cards.trackingPropertyName}` } : entry)],
+    ["generic authority", [...validNew, { name: "Tracking Mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }]],
+  ];
+  try {
+    for (const [label, properties] of invalidCases) {
+      const h = harness({ existingCustomer: true });
+      const result = await provisionTrackedPrintOrder({
+        payload: order(line({ id: `invalid-${label}`, product_id: "900", sku: "STARTER-KIT", properties })),
+        webhookEventId: label,
+        dependencies: h.dependencies,
+        registry: trusted,
+      });
+      assert.equal(result.processedItems, 0, label);
+      assert.equal(result.results[0]?.reason, "invalid_business_kit_component_contract", label);
+      assert.equal(h.customerResolutions, 0, label);
+      assert.equal(h.authCustomers, 0, label);
+      assert.equal(h.existingCodeResolutions, 0, label);
+      assert.equal(h.items.size, 0, label);
+      assert.equal(h.qrs.size, 0, label);
+      assert.equal(h.provisionInputs.length, 0, label);
+    }
+  } finally {
+    if (previous.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = previous.registry;
+    if (previous.kitFlag === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = previous.kitFlag;
+    if (previous.accessFlag === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = previous.accessFlag;
+  }
+});
+
 test("known Business Kits never fall through to generic grants when either flag or the contract is invalid", async () => {
   const original = {
     registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
     kit: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
     global: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
   };
-  const valid = [{ productId: "900", sku: "STARTER-KIT", kitType: "starter", components: [
-    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Cards Tracking" },
-  ] }];
+  const valid = [kitContract()];
   const payload = order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: [
-    { name: "Cards Tracking", value: "new_included_code" },
-    { name: "Campaign Name", value: "Kit cards" },
-    { name: "Destination URL", value: "https://example.com/kit" },
+    ...kitProperties({ business_cards: "new_included_code" }),
   ] }));
   const trustedKitRegistry = [{ sku: "STARTER-KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
   try {
@@ -117,7 +299,7 @@ test("known Business Kits never fall through to generic grants when either flag 
       { global: "true", kit: "true", registry: "malformed" },
       { global: "true", kit: "true", registry: [] },
       { global: "true", kit: "true", registry: [{ ...valid[0], components: [valid[0].components[0], valid[0].components[0]] }] },
-      { global: "true", kit: "true", registry: valid, properties: [{ name: "Cards Tracking", value: "unknown" }] },
+      { global: "true", kit: "true", registry: valid, properties: [{ name: "Business Cards Tracking Mode", value: "unknown" }] },
     ]) {
       process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = scenario.global;
       process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = scenario.kit;
@@ -160,9 +342,7 @@ test("valid individual print is unaffected and a contract collision cannot recla
     assert.equal(individual.qrs.size, 1);
     assert.equal(individual.provisionInputs[0].sourceType, "tracked_print");
 
-    process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([{ productId: "901", sku: "POSTCARD-4X6", kitType: "starter", components: [
-      { componentId: "cards", materialType: "postcard", codeCount: 1, trackingPropertyName: "Cards Tracking" },
-    ] }]);
+    process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([{ ...kitContract("901", "POSTCARD-4X6"), components: [{ ...businessKitComponents[0], materialType: "postcard" }] }]);
     const collision = harness();
     const result = await provisionTrackedPrintOrder({ payload: order(line({ product_id: "901", properties })), webhookEventId: "collision", dependencies: collision.dependencies, registry });
     assert.equal(result.processedItems, 0);

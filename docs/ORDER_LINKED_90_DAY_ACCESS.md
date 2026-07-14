@@ -11,6 +11,20 @@ This release adds an optional, per-provisioning management window for eligible p
 - Business Kit identity is resolved before and independently of component parsing. An identified Kit never enters generic tracked-print provisioning. It additionally requires both feature flags and an exact `BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON` contract containing the same product ID/SKU, kit type, unique component IDs/material types, `codeCount` of zero or one, and a unique exact customer-selection property name per component. Missing, malformed, structurally invalid, unmatched, or colliding contracts and invalid selections fail closed without a print item, QR, provisioning, or timed grant.
 - Entitlement-critical aliases are defined once for both parsers. The strict parser rejects every critical alias or spoofed case/whitespace variant whether it appears before or after a canonical property. Internally synthesized Kit properties are added only after the trusted identity, component contract, exact selections, and original-property spoof checks pass.
 
+### Business Kit component property contract
+
+Starter and Growth Kits use one Shopify cart line and twelve exact component properties. The registry owns these names; customer properties cannot define or alter the contract.
+
+| Component | Tracking mode | Campaign | Destination | Existing code |
+| --- | --- | --- | --- | --- |
+| Business cards | `Business Cards Tracking Mode` | `Business Cards Campaign Name` | `Business Cards Destination URL` | `Business Cards Existing Clutch Code` |
+| Door hangers | `Door Hangers Tracking Mode` | `Door Hangers Campaign Name` | `Door Hangers Destination URL` | `Door Hangers Existing Clutch Code` |
+| Flyers | `Flyers Tracking Mode` | `Flyers Campaign Name` | `Flyers Destination URL` | `Flyers Existing Clutch Code` |
+
+Each tracking property must appear exactly once with `new_included_code`, `existing_code`, or `none`. New-code selections require only their matching campaign and credential-free HTTP(S) destination. Existing-code selections require only their matching owned-code reference. `none` permits no component details. A missing, duplicated, aliased, conflicting, or malformed property invalidates the whole Kit before customer lookup or persistence.
+
+After atomic validation, the service removes all twelve component properties and canonical generic entitlement properties from each copied line. It then creates one internal component item per selected material and synthesizes the established canonical properties for the existing provisioning pipeline. New components receive `Tracking Mode=new_included_code`, `Clutch Codes Access=included_90_days`, and their isolated campaign/destination. Existing components receive `Tracking Mode=existing_code`, `Clutch Codes Access=none`, and their isolated owned-code reference. These synthesized values never create additional Shopify cart lines.
+
 ## Access lifecycle
 
 `clutch_codes_access_opt_in` records the normalized order decision. A database trigger sets `platform_access_started_at` on the first successful completed included provisioning and sets expiry to exactly 2,160 UTC hours (90 × 24 hours) later. Existing-code links receive no grant. The original timestamps are retained on replay and cannot be extended by an update.

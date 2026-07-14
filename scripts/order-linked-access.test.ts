@@ -159,8 +159,8 @@ test("all approved physical material types are supported by trusted print regist
 test("Business Kits fail closed without exact trusted product, SKU, and component contract", () => {
   assert.equal(matchBusinessKitContract("1", "KIT", []), null);
   const value = [{ productId: "123", sku: "STARTER-KIT", kitType: "starter", components: [
-    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Kit Tracking: Cards" },
-    { componentId: "flyers", materialType: "flyer", codeCount: 1, trackingPropertyName: "Kit Tracking: Flyers" },
+    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Business Cards Tracking Mode", campaignPropertyName: "Business Cards Campaign Name", destinationPropertyName: "Business Cards Destination URL", existingCodePropertyName: "Business Cards Existing Clutch Code" },
+    { componentId: "flyers", materialType: "flyer", codeCount: 1, trackingPropertyName: "Flyers Tracking Mode", campaignPropertyName: "Flyers Campaign Name", destinationPropertyName: "Flyers Destination URL", existingCodePropertyName: "Flyers Existing Clutch Code" },
   ] }];
   const parsed = validateBusinessKitContracts(value);
   assert.equal(parsed.errors.length, 0);
@@ -168,8 +168,10 @@ test("Business Kits fail closed without exact trusted product, SKU, and componen
   assert.equal(matchBusinessKitContract("123", "starter-kit", parsed.contracts), null);
   assert.equal(matchBusinessKitContract("123", "WRONG", parsed.contracts), null);
   const selections = resolveBusinessKitComponentSelections(parsed.contracts[0], {
-    "Kit Tracking: Cards": "new_included_code",
-    "Kit Tracking: Flyers": "unknown",
+    "Business Cards Tracking Mode": "new_included_code",
+    "Business Cards Campaign Name": "Cards",
+    "Business Cards Destination URL": "https://example.com/cards",
+    "Flyers Tracking Mode": "unknown",
   });
   assert.equal(selections.filter((item) => item.timedAccessEligible).length, 1);
   assert.equal(selections[1].trackingMode, "none");
@@ -177,12 +179,20 @@ test("Business Kits fail closed without exact trusted product, SKU, and componen
 
 test("Business Kit registry rejects duplicate contracts, component IDs, property names, and coercive values", () => {
   const baseContract = { productId: "123", sku: "KIT", kitType: "starter", components: [
-    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Cards Tracking" },
+    { componentId: "cards", materialType: "business_card", codeCount: 1, trackingPropertyName: "Business Cards Tracking Mode", campaignPropertyName: "Business Cards Campaign Name", destinationPropertyName: "Business Cards Destination URL", existingCodePropertyName: "Business Cards Existing Clutch Code" },
   ] };
   assert.ok(validateBusinessKitContracts([baseContract, baseContract]).errors.length);
   assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [baseContract.components[0], baseContract.components[0]] }]).errors.length);
   assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [baseContract.components[0], { ...baseContract.components[0], componentId: "flyer" }] }]).errors.length);
   assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], codeCount: "1" }] }]).errors.length);
+  for (const field of ["trackingPropertyName", "campaignPropertyName", "destinationPropertyName", "existingCodePropertyName"]) {
+    assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], [field]: undefined }] }]).errors.length, field);
+  }
+  assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], campaignPropertyName: "business cards tracking mode" }] }]).errors.length);
+  assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], campaignPropertyName: " Business Cards Campaign Name" }] }]).errors.length);
+  assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], trackingPropertyName: "Tracking Mode" }] }]).errors.length);
+  assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], destinationPropertyName: "QR Destination" }] }]).errors.length);
+  assert.ok(validateBusinessKitContracts([{ ...baseContract, components: [{ ...baseContract.components[0], componentId: "Customer Cards" }] }]).errors.length);
 });
 
 test("basic analytics exposes only aggregate code data and explicit scope", () => {
