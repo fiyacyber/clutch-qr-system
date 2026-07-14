@@ -26,6 +26,8 @@ export type TrackedPrintDependencies = {
   markAttention(orderId: string, reason: string): Promise<void>;
 };
 
+const CHECKOUT_ARTWORK_IMPORT_FAILURE = "Checkout artwork could not be imported securely.";
+
 function emailFor(order: PrintOrderPayload) {
   return String(order.customer?.email || order.email || order.contact_email || order.billing_address?.email || "").trim().toLowerCase();
 }
@@ -179,7 +181,11 @@ export async function provisionTrackedPrintOrder(input: {
 
     const acceptedStatus = item.provisioning_status;
     const operationKey = `${itemKey}:${item.tracking_mode}`;
-    if (acceptedStatus === "needs_attention") {
+    const canResumeArtworkImport = acceptedStatus === "needs_attention" &&
+      item.attention_reason === CHECKOUT_ARTWORK_IMPORT_FAILURE &&
+      properties.artworkMethod === "upload_now" &&
+      Boolean(properties.artworkFileUrl);
+    if (acceptedStatus === "needs_attention" && !canResumeArtworkImport) {
       await input.dependencies.recordActivity({
         orderId: item.id,
         action: "needs_attention",
@@ -192,7 +198,7 @@ export async function provisionTrackedPrintOrder(input: {
 
     if (properties.artworkMethod === "upload_now" && properties.artworkFileUrl) {
       if (!customer) {
-        await input.dependencies.markAttention(item.id, "Checkout artwork could not be imported securely.");
+        await input.dependencies.markAttention(item.id, CHECKOUT_ARTWORK_IMPORT_FAILURE);
         results.push({ lineItemId, status: "needs_attention" });
         continue;
       }
@@ -204,7 +210,7 @@ export async function provisionTrackedPrintOrder(input: {
           idempotencyKey: `${itemKey}:artwork-import`,
         });
       } catch {
-        const reason = "Checkout artwork could not be imported securely.";
+        const reason = CHECKOUT_ARTWORK_IMPORT_FAILURE;
         await input.dependencies.markAttention(item.id, reason);
         await input.dependencies.recordActivity({
           orderId: item.id,

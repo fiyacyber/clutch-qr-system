@@ -387,7 +387,8 @@ test("upload_now imports artwork once and duplicate webhook delivery does not du
 });
 
 test("artwork import failure creates needs_attention without failing the webhook or provisioning a QR", async () => {
-  const h = harness({ importFailure: true });
+  const options = { importFailure: true };
+  const h = harness(options);
   const payload = order(line({ properties: {
     "Tracking Mode": "new_included_code",
     "Campaign Name": "Launch campaign",
@@ -399,6 +400,60 @@ test("artwork import failure creates needs_attention without failing the webhook
   assert.equal((result.results[0] as any).status, "needs_attention");
   assert.equal(h.qrs.size, 0);
   assert.equal([...h.items.values()][0].attention_reason, "Checkout artwork could not be imported securely.");
+});
+
+test("an identical replay resumes only the exact checkout artwork import failure", async () => {
+  const options = { importFailure: true };
+  const h = harness(options);
+  const payload = order(line({ properties: {
+    "Tracking Mode": "new_included_code",
+    "Campaign Name": "Launch campaign",
+    "Destination URL": "https://example.com/launch",
+    "Artwork Method": "upload_now",
+    "Artwork Upload URL": "https://cdn.shopify.com/artwork.pdf",
+  } }));
+
+  const failed = await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry });
+  options.importFailure = false;
+  const resumed = await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
+  const duplicate = await provisionTrackedPrintOrder({ payload, webhookEventId: "w3", dependencies: h.dependencies, registry });
+
+  assert.equal((failed.results[0] as any).status, "needs_attention");
+  assert.equal((resumed.results[0] as any).status, "completed");
+  assert.equal((duplicate.results[0] as any).status, "completed");
+  assert.equal(h.items.size, 1);
+  assert.equal(h.importedArtwork.size, 1);
+  assert.equal(h.qrs.size, 1);
+});
+
+test("other needs_attention reasons remain blocked even with identical upload inputs", async () => {
+  for (const attentionReason of [
+    "Customer account identifiers require review.",
+    "QR tracking is not available for this product configuration.",
+    "Tracking request requires a campaign name and valid destination.",
+  ]) {
+    const h = harness({ existingCustomer: true });
+    h.items.set("order-1:line-1", {
+      id: "item-1", customer_id: "customer-db-1", product_id: "p1", variant_id: null,
+      sku: "POSTCARD-4X6", material_type: "postcard", quantity: 1, tracking_mode: "new_included_code",
+      destination_url: "https://example.com/launch", existing_qr_code_id: null, campaign_name: "Launch campaign",
+      artwork_method: "upload_now", artwork_file_url: "https://cdn.shopify.com/artwork.pdf",
+      artwork_instructions: null, reorder_reference: null, qr_placement_instructions: null,
+      provisioning_status: "needs_attention", attention_reason: attentionReason,
+    });
+    const payload = order(line({ properties: {
+      "Tracking Mode": "new_included_code",
+      "Campaign Name": "Launch campaign",
+      "Destination URL": "https://example.com/launch",
+      "Artwork Method": "upload_now",
+      "Artwork Upload URL": "https://cdn.shopify.com/artwork.pdf",
+    } }));
+
+    const result = await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry });
+    assert.equal((result.results[0] as any).status, "needs_attention");
+    assert.equal(h.importedArtwork.size, 0);
+    assert.equal(h.qrs.size, 0);
+  }
 });
 
 for (const [method, extra] of [
