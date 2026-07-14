@@ -33,6 +33,9 @@ export default async function AdminPrintOrderDetailPage({ params }: { params: Pr
         <h2>Order details</h2>
         <p>Customer: {order.customer_name || order.customer_email || "Guest"}</p>
         <p>{order.material_type} · Quantity {order.quantity} · SKU {order.sku || "—"}</p>
+        <p>Artwork method: {order.artwork_method || "Not specified"}{order.reorder_reference ? ` · Reorder ${order.reorder_reference}` : ""}</p>
+        {order.artwork_instructions ? <p>Artwork instructions: {order.artwork_instructions}</p> : null}
+        {order.qr_placement_instructions ? <p>QR placement: {order.qr_placement_instructions}</p> : null}
         <p>Artwork: {order.artwork_status} · Proof: {order.proof_status} · Production: {order.production_status} · Fulfillment: {order.fulfillment_status}</p>
         <p>Supplier: {order.supplier || "—"} · Supplier order: {order.supplier_order_id || "—"}</p>
         <p>Shipment: {order.carrier || "—"} · {order.tracking_number || "No tracking number"}</p>

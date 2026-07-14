@@ -51,6 +51,7 @@ const ALLOWED_MIME_EXTENSIONS = new Map([
   ["application/pdf", "pdf"],
   ["image/png", "png"],
   ["image/jpeg", "jpg"],
+  ["image/tiff", "tiff"],
   ["image/webp", "webp"],
   ["image/svg+xml", "svg"],
   ["application/postscript", "eps"],

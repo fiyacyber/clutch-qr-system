@@ -4,20 +4,26 @@ Phase 2 adds normalized, order-linked print records and one permanent included C
 
 ## Trusted classification
 
-Eligibility is server-controlled by `TRACKED_PRINT_PRODUCT_REGISTRY_JSON`. The value is a JSON array of objects with `sku` and/or `productId`, `materialType`, and optional `defaultTrackingAvailable`. With no registry, no product is eligible. Product titles and customer properties never establish eligibility or override the trusted material type.
+Eligibility is server-controlled by `TRACKED_PRINT_PRODUCT_REGISTRY_JSON`. The value is a JSON array of objects with `sku` and/or numeric `productId`, `materialType`, and an explicit boolean `defaultTrackingAvailable`. With no valid registry, no product is eligible. Invalid JSON or any invalid/ambiguous entry fails the whole registry closed. Product titles, tags, metafields, and customer properties never establish server eligibility or override the trusted material type.
 
 Example configuration (identifiers are placeholders and must be replaced with verified Shopify production identifiers):
 
 ```json
 [
-  {"sku":"VERIFIED-POSTCARD-SKU","materialType":"Postcard","defaultTrackingAvailable":true},
-  {"productId":"VERIFIED-SHOPIFY-PRODUCT-ID","materialType":"Flyer","defaultTrackingAvailable":true}
+  {"sku":"VERIFIED-POSTCARD-SKU","materialType":"postcard","defaultTrackingAvailable":true},
+  {"productId":"VERIFIED-SHOPIFY-PRODUCT-ID","materialType":"flyer","defaultTrackingAvailable":true}
 ]
 ```
 
 ## Line-item property contract
 
-Canonical properties are `Tracking Mode`, `Campaign Name`, `Destination URL`, `Existing QR Code ID`, `Artwork Method`, `Artwork Upload URL`, `Artwork Instructions`, and `QR Placement Instructions`. Reasonable spacing, case, underscore, and legacy aliases are normalized centrally. Tracking modes are `none`, `new_included_code`, and `existing_code`. Only HTTP(S) destinations are accepted. Stored properties are a sanitized allowlist; raw webhook payloads, unrelated checkout data, tokens, and secrets are excluded.
+Canonical visible properties are `Tracking Mode`, `Campaign Name`, `Destination URL`, `Existing Clutch Code`, `Artwork Method`, `Artwork Upload URL`, `Artwork Instructions`, `Reorder Reference`, and `QR Placement Instructions`. Reasonable spacing, case, underscore, and legacy aliases including `Existing QR Code ID` are normalized centrally. Tracking modes are `none`, `new_included_code`, and `existing_code`; artwork methods are `upload_now`, `upload_later`, `request_design`, and `reorder_existing`. Only HTTP(S) destinations are accepted. Stored properties are a sanitized, length-limited allowlist; raw webhook payloads, material claims, unrelated checkout data, tokens, and secrets are excluded.
+
+`Existing Clutch Code` accepts a UUID, slug, or canonical `https://qr.clutchprintshop.com/qr/{slug}` URL. Resolution occurs only after customer identity is unambiguous. The selected row must be owned by that customer, active, non-system, subscription-capacity-counting, editable, and not a Smart Card, tracked-print, Business Kit, or system-exempt code. Failure produces one sanitized needs-attention result without a new QR, provisioning, or allowance change.
+
+For `upload_now`, the application accepts only HTTPS Shopify-controlled hosts, rejects credentials/ports and private or reserved DNS results, follows at most three allowlisted redirects, times out, streams at most 25 MB, and validates MIME, extension, and file signature. PDF, PNG, JPEG, TIFF, and EPS are supported; SVG, HTML/script, and executable signatures are rejected. A validated file is copied to a deterministic private path in `print-order-files`, registered as version 1/current customer artwork through the Phase 3 RPC, and removed if database registration fails. An import failure preserves the paid order item in `needs_attention` and does not fail the entire webhook.
+
+`upload_later` leaves artwork unreceived for the secure portal uploader. `request_design` stores sanitized instructions and creates no file. `reorder_existing` stores its length-constrained reference in the normalized `reorder_reference` field but never reuses a prior file without administrator review. The admin queue and order detail surface the artwork method, instructions, placement notes, and reorder reference.
 
 ## Provisioning and idempotency
 
@@ -53,6 +59,12 @@ Existing-code selection accepts only an active, editable, non-system, capacity-c
 
 ## Required next Shopify work
 
-Before enabling production processing, verify every eligible production SKU/product ID and configure `TRACKED_PRINT_PRODUCT_REGISTRY_JSON` in the intended Vercel environments. The next Shopify/theme phase must add product-page controls that emit the canonical properties, restrict choices to eligible variants, provide destination/existing-code selection UX, and upload artwork through an approved mechanism. This PR does not change Shopify, the theme, webhook registrations, or environment variables.
+The storefront renders controls only when the merchant-owned product boolean `custom.tracked_print_enabled` is true. The optional `custom.tracked_print_material_type` single-line text value is for merchant review/display consistency only and is never submitted or trusted by the server. Define both metafield definitions for products in Shopify Admin, then set them only after the theme and application PRs are reviewed. Recommended material values are `postcard`, `flyer`, `door_hanger`, `business_card`, `brochure`, `rack_card`, `mailer`, `yard_sign`, `banner`, and `other_print`.
+
+Deployment order is: merge and deploy the application while the production registry remains empty; validate its migration; publish the reviewed theme while all tracked-print metafields remain unset; create the two merchant-owned metafield definitions; set values on an explicitly approved test product; configure the reviewed exact registry in a non-production environment; run the controlled purchase procedure; then separately approve production registry configuration. Rollback is fail-closed: remove/unset the product display boolean to hide controls and remove/empty the server registry to stop ingestion. Existing paid order records and private artwork must be preserved.
+
+The controlled test must cover each tracking/artwork method, malformed input, quantity 500/one QR, duplicate webhook delivery, private artwork import, cart drawer/page presentation, mobile/keyboard behavior, unchanged variants/selling plans/engraving, and a deliberate import failure. Do not enable application email sending during that test.
+
+The reviewed product inventory and proposed value are in `TRACKED_PRINT_PRODUCT_REGISTRY_CANDIDATE.md`. Production remains empty throughout Phase 4; this PR does not change Shopify, Vercel, webhook registrations, email flags, or production data.
 
 The application-side Phase 3 artwork, proof, production, and fulfillment workflow is documented in `PRINT_OPERATIONS_WORKFLOW.md`. Shopify product-page controls remain separate and are not part of that application workflow.

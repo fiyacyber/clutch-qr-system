@@ -1,5 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { CustomerIdentityResolution, TrackedPrintCustomer, TrackedPrintDependencies } from "@/lib/tracked-print";
+import { resolveExistingClutchCode, type ExistingClutchCodeReference } from "./existing-clutch-code.ts";
+import { importShopifyArtwork } from "./shopify-artwork-import.ts";
 
 export function resolveCustomerIdentityRows(
   emailCustomer: TrackedPrintCustomer | null,
@@ -83,7 +85,7 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
           const { error } = await admin.from("customers").update(safePatch).eq("id", existing.id);
           if (error) throw error;
         }
-        return { status: "found", customer: existing };
+        return { status: "found", customer: { ...existing, ...safePatch } };
       }
 
       const neutral = {
@@ -105,6 +107,22 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
       if (linkError) throw linkError;
       return { status: "found", customer: { ...data, auth_user_id: user.id } };
     },
+    async resolveExistingCode(customerId, reference) {
+      return resolveExistingClutchCode(reference, customerId, async (normalized: ExistingClutchCodeReference, ownerId) => {
+        let query = admin.from("qr_codes")
+          .select("id, customer_id, slug, is_system, capacity_source, counts_toward_capacity, customer_can_edit_destination, is_active, qr_type")
+          .eq("customer_id", ownerId)
+          .eq("is_system", false)
+          .eq("capacity_source", "subscription")
+          .eq("counts_toward_capacity", true)
+          .eq("customer_can_edit_destination", true)
+          .eq("is_active", true);
+        query = normalized.kind === "id" ? query.eq("id", normalized.value) : query.eq("slug", normalized.value);
+        const { data, error } = await query.limit(1).maybeSingle();
+        if (error) throw error;
+        return data;
+      });
+    },
     async findPrintItem(orderId, lineItemId) {
       const { data, error } = await admin.from("print_order_items").select("*").eq("shopify_order_id", orderId)
         .eq("shopify_line_item_id", lineItemId).limit(1).maybeSingle();
@@ -118,9 +136,26 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
       const { data: existing, error: readError } = await admin.from("print_order_items").select("*")
         .eq("shopify_order_id", input.shopify_order_id).eq("shopify_line_item_id", input.shopify_line_item_id).single();
       if (readError || !existing) throw readError || new Error("Unable to reuse print order item.");
-      const immutableKeys = ["customer_id","product_id","variant_id","sku","material_type","quantity","tracking_mode","destination_url","existing_qr_code_id","campaign_name"];
+      const immutableKeys = [
+        "customer_id", "product_id", "variant_id", "sku", "material_type", "quantity",
+        "tracking_mode", "destination_url", "existing_qr_code_id", "campaign_name",
+        "artwork_method", "artwork_file_url", "artwork_instructions", "reorder_reference",
+        "qr_placement_instructions",
+      ];
       const immutableMatch = immutableKeys.every((key) => (existing[key] ?? null) === (input[key] ?? null));
       return { ...existing, immutableMatch };
+    },
+    async importArtwork(input) {
+      const { data: customer, error } = await admin.from("customers").select("auth_user_id").eq("id", input.customerId).limit(1).maybeSingle();
+      if (error) throw error;
+      if (!customer?.auth_user_id) throw new Error("checkout_artwork_customer_unavailable");
+      return importShopifyArtwork({
+        admin,
+        printOrderItemId: input.printOrderItemId,
+        actorAuthUserId: String(customer.auth_user_id),
+        sourceUrl: input.sourceUrl,
+        idempotencyKey: input.idempotencyKey,
+      });
     },
     async provisionQr(input) {
       const { data, error } = await admin.rpc("provision_tracked_print_qr", {
@@ -142,7 +177,7 @@ export function createTrackedPrintSupabaseDependencies(admin: SupabaseClient): T
     },
     async markAttention(orderId, reason) {
       const { error } = await admin.from("print_order_items").update({ provisioning_status: "needs_attention", attention_reason: reason })
-        .eq("id", orderId).in("provisioning_status", ["pending", "needs_attention", "failed"]);
+        .eq("id", orderId).in("provisioning_status", ["pending", "not_required", "needs_attention", "failed"]);
       if (error) throw error;
     },
   };
