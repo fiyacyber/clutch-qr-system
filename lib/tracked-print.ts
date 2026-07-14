@@ -1,10 +1,10 @@
 import { classifyPrintProduct, readPrintProductRegistry, type PrintProductClassification, type TrustedPrintProduct } from "./print-products.ts";
-import { hasIncludedAccessCriticalProperties, normalizePrintLineProperties, parseStrictIncludedAccessIntent } from "./print-line-properties.ts";
+import { normalizePrintLineProperties, parseStrictIncludedAccessIntent } from "./print-line-properties.ts";
 import { isEnabledEnvironmentFlag } from "./env-flags.js";
 import {
   businessKitOrderLinkedAccessEnabled,
   matchBusinessKitContract,
-  resolveBusinessKitComponentSelections,
+  validateBusinessKitComponentPayload,
   validateBusinessKitContracts,
   validateBusinessKitIdentityContracts,
 } from "./business-kit-contracts.ts";
@@ -53,6 +53,7 @@ export async function provisionTrackedPrintOrder(input: {
   const orderId = String(input.payload.id || input.payload.order_id || "").trim();
   if (!orderId) return { eligibleItems: 0, processedItems: 0, results: [] };
   const results: Array<Record<string, unknown>> = [];
+  const rejectedKitResults: Array<Record<string, unknown>> = [];
 
   const productRegistry = input.registry || readPrintProductRegistry();
   const contractValidation = validateBusinessKitContracts(process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON || "[]");
@@ -76,25 +77,54 @@ export async function provisionTrackedPrintOrder(input: {
     }
     // Explicit Business Kit identities fail closed unless both trusted registries agree exactly.
     if (businessKitConfigurationInvalid || !contract || !businessKitOrderLinkedAccessEnabled()) continue;
-    const selections = resolveBusinessKitComponentSelections(contract, lineItem.properties);
-    if (selections.some((selection) => !selection.selectionValid)) continue;
-    if (hasIncludedAccessCriticalProperties(lineItem.properties) && !parseStrictIncludedAccessIntent(lineItem.properties).valid) continue;
-    for (const selection of selections.filter((selection) =>
+    const kitLineItemId = String(lineItem.id || "").trim();
+    if (!kitLineItemId) {
+      rejectedKitResults.push({ lineItemId: "", status: "skipped", reason: "invalid_business_kit_component_contract" });
+      continue;
+    }
+    const componentPayload = validateBusinessKitComponentPayload(contract, lineItem.properties);
+    if (!componentPayload.valid) {
+      rejectedKitResults.push({
+        lineItemId: String(lineItem.id || ""),
+        status: "skipped",
+        reason: "invalid_business_kit_component_contract",
+      });
+      continue;
+    }
+    const contractPropertyNames = new Set(contract.components.flatMap((component) => [
+      component.trackingPropertyName,
+      component.campaignPropertyName,
+      component.destinationPropertyName,
+      component.existingCodePropertyName,
+    ]));
+    const removedGenericNames = new Set(["Tracking Mode", "Clutch Codes Access", "Campaign Name", "Destination URL", "Existing Clutch Code"]);
+    for (const selection of componentPayload.selections.filter((selection) =>
       selection.trackingMode === "existing_code" ||
       (selection.trackingMode === "new_included_code" && selection.codeCount === 1)
     )) {
       const original = Array.isArray(lineItem.properties)
-        ? lineItem.properties.filter((property: any) => !["Tracking Mode", "Clutch Codes Access"].includes(property?.name ?? property?.key))
-        : Object.entries(lineItem.properties || {}).filter(([name]) => !["Tracking Mode", "Clutch Codes Access"].includes(name)).map(([name, value]) => ({ name, value }));
+        ? lineItem.properties.filter((property: any) => {
+          const name = property?.name ?? property?.key;
+          return typeof name !== "string" || (!contractPropertyNames.has(name) && !removedGenericNames.has(name));
+        })
+        : Object.entries(lineItem.properties || {}).filter(([name]) => !contractPropertyNames.has(name) && !removedGenericNames.has(name)).map(([name, value]) => ({ name, value }));
+      const canonicalProperties = selection.trackingMode === "new_included_code"
+        ? [
+          { name: "Tracking Mode", value: "new_included_code" },
+          { name: "Clutch Codes Access", value: "included_90_days" },
+          { name: "Campaign Name", value: selection.campaignName },
+          { name: "Destination URL", value: selection.destinationUrl },
+        ]
+        : [
+          { name: "Tracking Mode", value: "existing_code" },
+          { name: "Clutch Codes Access", value: "none" },
+          { name: "Existing Clutch Code", value: selection.existingCodeReference },
+        ];
       expandedLineItems.push({
         lineItem: {
           ...lineItem,
-          id: `${String(lineItem.id || "")}:${selection.componentId}`,
-          properties: [
-            ...original,
-            { name: "Tracking Mode", value: selection.trackingMode },
-            { name: "Clutch Codes Access", value: selection.trackingMode === "new_included_code" ? "included_90_days" : "none" },
-          ],
+          id: `${kitLineItemId}:${selection.componentId}`,
+          properties: [...original, ...canonicalProperties],
         },
         classification: {
           ...classification,
@@ -337,5 +367,9 @@ export async function provisionTrackedPrintOrder(input: {
       includedQrAllowance: provisioned.includedQrAllowance,
     });
   }
-  return { eligibleItems: results.length, processedItems: results.length, results };
+  return {
+    eligibleItems: results.length + rejectedKitResults.length,
+    processedItems: results.length,
+    results: [...rejectedKitResults, ...results],
+  };
 }
