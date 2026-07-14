@@ -12,8 +12,9 @@
     "test:account-access": "node --experimental-strip-types --test scripts/account-access.test.ts",
     "test:tracked-print": "node --experimental-strip-types --test scripts/tracked-print.test.ts",
     "test:print-operations": "node --experimental-strip-types --test scripts/print-operations.test.ts",
+    "test:tracked-print-hotfix": "node --experimental-strip-types --test scripts/tracked-print-hotfix.test.ts",
     "validate:tracked-print-registry": "node --experimental-strip-types scripts/validate-tracked-print-registry.ts",
-    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations",
+    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
     "preview:clutch-codes-email": "node --experimental-strip-types scripts/preview-clutch-codes-email.ts",
     "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"
