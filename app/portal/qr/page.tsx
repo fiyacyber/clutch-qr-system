@@ -14,7 +14,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import StoredQrLibrary from "./stored-qr-library";
 import type { StoredQrItem } from "./stored-qr-library";
 import { loadAccountAccess } from "@/lib/account-access-server";
-import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
+import { resolveOwnedQrLibrary, visibleLibraryScanCount, type OwnedQrLibraryCode } from "@/lib/order-linked-library";
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -31,37 +32,21 @@ export default async function StoredQrCodesPage() {
   if (customer.must_change_password) redirect("/change-password");
 
   const admin = createSupabaseAdminClient();
-
-  const qrCodesResult = await runGuardedDashboardTask({
-    route: "/portal/qr",
-    endpoint: "supabase:qr_codes.select",
-    customerId: customer.id,
-    fallback: [] as Array<{
-      id: string;
-      name: string;
-      slug: string;
-      destination_url: string;
-      scan_count: number | null;
-      is_active: boolean | null;
-      created_at: string | null;
-      updated_at: string | null;
-      foreground_color: string | null;
-      background_color: string | null;
-    }>,
-    task: () =>
-      admin
-        .from("qr_codes")
-        .select("id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color, qr_type")
-        .eq("customer_id", customer.id)
-        .or("is_system.eq.false,qr_type.eq.tracked_print")
-        .order("created_at", { ascending: false }),
-  });
-
-  const qrCodes = qrCodesResult.data || [];
   const access = await loadAccountAccess(admin, customer);
+  const accessNow = new Date();
   if (!access.canEditOwnedQr && !access.hasClutchCodes) redirect("/portal?access=qr-library-locked");
-  const codeAccessEntries = await Promise.all(qrCodes.map(async (code) => [code.id, await loadOrderLinkedQrAccess(admin, customer, code.id)] as const));
-  const codeAccessById = new Map(codeAccessEntries);
+  const libraryResult = await resolveOwnedQrLibrary({
+    customerId: customer.id,
+    hasPaidOrAdminAccess: Boolean(customer.is_admin) || hasActiveClutchCodesSubscription(customer),
+    listOwnedCodes: async () => admin
+        .from("qr_codes")
+        .select("id, customer_id, name, slug, destination_url, scan_count, is_active, created_at, updated_at, foreground_color, background_color, is_system, qr_type, capacity_source, print_order_item_id")
+        .eq("customer_id", customer.id)
+        .order("created_at", { ascending: false }),
+    resolveCodeAccess: (codeId) => loadOrderLinkedQrAccess(admin, customer, codeId, accessNow, { throwOnError: true }),
+  });
+  const qrCodes = libraryResult.entries.map((entry) => entry.code);
+  const codeAccessById = new Map(libraryResult.entries.map((entry) => [entry.code.id, entry.access] as const));
   const qrIds = qrCodes.filter((item) => codeAccessById.get(item.id)?.canViewBasicAnalytics).map((item) => item.id);
 
   const qrScansResult = qrIds.length
@@ -81,7 +66,7 @@ export default async function StoredQrCodesPage() {
     : { data: [] as Array<{ qr_code_id: string; created_at: string | null }>, failed: false };
 
   const panelIssues: string[] = [];
-  if (qrCodesResult.failed) panelIssues.push("Stored QR code list is temporarily unavailable.");
+  if (libraryResult.failed) panelIssues.push("Stored QR code list is temporarily unavailable.");
   if (qrScansResult.failed) panelIssues.push("Recent scan timestamps are temporarily unavailable.");
 
   const lastScanByQrId = new Map<string, string | null>();
@@ -105,18 +90,22 @@ export default async function StoredQrCodesPage() {
         ? `${used} / Unlimited QR codes used`
         : `${used} / ${limit} QR codes used`;
 
-  const libraryRows: StoredQrItem[] = qrCodes.map((code) => ({
+  const libraryRows: StoredQrItem[] = qrCodes.map((code: OwnedQrLibraryCode) => ({
     id: code.id,
-    name: code.name,
-    slug: code.slug,
-    destinationUrl: code.destination_url,
-    scanCount: codeAccessById.get(code.id)?.canViewBasicAnalytics ? code.scan_count || 0 : 0,
+    name: String(code.name || "Clutch Code"),
+    slug: String(code.slug || ""),
+    destinationUrl: String(code.destination_url || ""),
+    scanCount: visibleLibraryScanCount(code, codeAccessById.get(code.id)!),
     status: code.is_active === false ? "Archived" : "Active",
-    createdAt: code.created_at,
-    updatedAt: code.updated_at,
-    foregroundColor: code.foreground_color || "#384862",
-    backgroundColor: code.background_color || "#FFFFFF",
+    createdAt: typeof code.created_at === "string" ? code.created_at : null,
+    updatedAt: typeof code.updated_at === "string" ? code.updated_at : null,
+    foregroundColor: typeof code.foreground_color === "string" ? code.foreground_color : "#384862",
+    backgroundColor: typeof code.background_color === "string" ? code.background_color : "#FFFFFF",
     lastScannedAt: lastScanByQrId.get(code.id) || null,
+    canManage: Boolean(codeAccessById.get(code.id)?.canEditDestination),
+    canViewAnalytics: Boolean(codeAccessById.get(code.id)?.canViewBasicAnalytics),
+    accessState: codeAccessById.get(code.id)?.state || "denied",
+    accessExpiresAt: codeAccessById.get(code.id)?.accessExpiresAt || null,
   }));
 
   return (

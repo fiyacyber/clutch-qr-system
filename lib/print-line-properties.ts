@@ -27,6 +27,20 @@ export type StrictIncludedAccessIntent = {
 
 type RawProperties = Array<{ name?: unknown; key?: unknown; value?: unknown }> | Record<string, unknown> | null | undefined;
 
+const CANONICAL_TRACKING_PROPERTY = "Tracking Mode";
+const CANONICAL_ACCESS_PROPERTY = "Clutch Codes Access";
+const TRACKING_PROPERTY_ALIASES = ["tracking mode", "qr tracking", "clutch code option", "tracking"] as const;
+const ACCESS_PROPERTY_ALIASES = ["clutch codes access"] as const;
+
+function normalizedPropertyName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase().replace(/[\s_-]+/g, " ") : "";
+}
+
+export function hasIncludedAccessCriticalProperties(properties: RawProperties) {
+  const criticalNames = new Set<string>([...TRACKING_PROPERTY_ALIASES, ...ACCESS_PROPERTY_ALIASES]);
+  return exactPropertyEntries(properties).some((entry) => criticalNames.has(normalizedPropertyName(entry.name)));
+}
+
 function exactPropertyEntries(properties: RawProperties) {
   if (Array.isArray(properties)) {
     return properties.map((entry) => ({ name: entry?.name ?? entry?.key, value: entry?.value }));
@@ -36,11 +50,17 @@ function exactPropertyEntries(properties: RawProperties) {
 
 export function parseStrictIncludedAccessIntent(properties: RawProperties): StrictIncludedAccessIntent {
   const entries = exactPropertyEntries(properties);
-  const permittedNames = new Set(["Tracking Mode", "Clutch Codes Access"]);
-  const relevant = entries.filter((entry) => typeof entry.name === "string" && permittedNames.has(entry.name));
+  const criticalNames = new Set<string>([...TRACKING_PROPERTY_ALIASES, ...ACCESS_PROPERTY_ALIASES]);
+  const relevant = entries.filter((entry) => criticalNames.has(normalizedPropertyName(entry.name)));
+  const spoofedName = relevant.some((entry) =>
+    entry.name !== CANONICAL_TRACKING_PROPERTY && entry.name !== CANONICAL_ACCESS_PROPERTY
+  );
+  if (spoofedName) {
+    return { valid: false, trackingMode: null, access: null, optIn: false, reason: "Included-access properties must use exact canonical names without aliases." };
+  }
   const invalidShape = relevant.some((entry) => typeof entry.value !== "string");
-  const tracking = relevant.filter((entry) => entry.name === "Tracking Mode");
-  const access = relevant.filter((entry) => entry.name === "Clutch Codes Access");
+  const tracking = relevant.filter((entry) => entry.name === CANONICAL_TRACKING_PROPERTY);
+  const access = relevant.filter((entry) => entry.name === CANONICAL_ACCESS_PROPERTY);
   if (invalidShape || tracking.length !== 1 || access.length !== 1) {
     return { valid: false, trackingMode: null, access: null, optIn: false, reason: "Included-access properties must appear exactly once as scalar strings." };
   }
@@ -81,7 +101,7 @@ function first(map: Map<string, string>, aliases: string[], max = 1000) {
 
 export function normalizePrintLineProperties(properties: Parameters<typeof propertyMap>[0]): NormalizedPrintProperties {
   const map = propertyMap(properties);
-  const rawMode = first(map, ["tracking mode", "qr tracking", "clutch code option", "tracking"], 80)
+  const rawMode = first(map, [...TRACKING_PROPERTY_ALIASES], 80)
     .toLowerCase().replace(/[\s-]+/g, "_");
   const modeAliases: Record<string, TrackingMode> = {
     none: "none", no_tracking: "none", standard: "none",

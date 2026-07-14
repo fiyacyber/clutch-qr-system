@@ -266,7 +266,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     ...scan, city: null, region: null, country: null, device_type: null, browser: null, operating_system: null,
   }))].sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
   const campaignCodes = codes.filter((code: any) =>
-    (code.is_system !== true || code.qr_type === "tracked_print") && dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics
+    (code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type))) && dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics
   );
   const campaignCodeIds = new Set(campaignCodes.map((code) => code.id));
   const campaignScans = scans.filter((scan) => campaignCodeIds.has(scan.qr_code_id));

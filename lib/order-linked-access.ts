@@ -108,19 +108,22 @@ export async function loadOrderLinkedQrAccess(
   admin: SupabaseClient,
   customer: Record<string, any>,
   qrId: string,
-  now = new Date()
+  now = new Date(),
+  options: { throwOnError?: boolean } = {}
 ): Promise<OrderLinkedAccess> {
-  const { data: code } = await admin.from("qr_codes")
+  const { data: code, error: codeError } = await admin.from("qr_codes")
     .select("id, customer_id, print_order_item_id, capacity_source, customer_can_edit_destination")
     .eq("id", qrId).eq("customer_id", customer.id).limit(1).maybeSingle();
+  if (codeError && options.throwOnError) throw codeError;
   if (!code) return resolveOrderLinkedAccess({ ownsCode: false });
   if (!code.print_order_item_id || code.capacity_source !== "included_print") {
     const paid = hasActiveClutchCodesSubscription(customer);
     return resolveOrderLinkedAccess({ ownsCode: true, isAdmin: customer.is_admin, hasActivePaidSubscription: paid });
   }
-  const { data: provisioning } = await admin.from("print_qr_provisionings")
+  const { data: provisioning, error: provisioningError } = await admin.from("print_qr_provisionings")
     .select("access_type, provisioning_status, platform_access_started_at, platform_access_expires_at")
     .eq("qr_code_id", qrId).eq("customer_id", customer.id).limit(1).maybeSingle();
+  if (provisioningError && options.throwOnError) throw provisioningError;
   return resolveOrderLinkedAccess({
     ownsCode: true,
     isAdmin: customer.is_admin,

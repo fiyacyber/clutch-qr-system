@@ -85,6 +85,13 @@ test("strict entitlement parser rejects aliases, casing, whitespace, duplicates,
   ]).optIn, true);
   for (const properties of [
     [{ name: "tracking mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: "QR Tracking", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: "tracking_mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: " Tracking Mode ", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: "Tracking Mode", value: "new_included_code" }, { name: "clutch codes access", value: "included_90_days" }],
+    [{ name: "QR Tracking", value: "new_included_code" }, { name: "tracking", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: "QR Tracking", value: "new_included_code" }, { name: "Tracking Mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
+    [{ name: "Tracking Mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }, { name: "tracking", value: "none" }],
     [{ name: "Tracking Mode", value: "NEW_INCLUDED_CODE" }, { name: "Clutch Codes Access", value: "included_90_days" }],
     [{ name: "Tracking Mode", value: " new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
     [{ name: "Tracking Mode", value: "new_included_code" }, { name: "Tracking Mode", value: "new_included_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
@@ -93,6 +100,29 @@ test("strict entitlement parser rejects aliases, casing, whitespace, duplicates,
     [{ name: "Tracking Mode", value: { value: "new_included_code" } }, { name: "Clutch Codes Access", value: "included_90_days" }],
     [{ name: "Tracking Mode", value: "existing_code" }, { name: "Clutch Codes Access", value: "included_90_days" }],
   ]) assert.equal(parseStrictIncludedAccessIntent(properties).optIn, false);
+});
+
+test("every permissive tracking alias is rejected before and after a canonical pair", () => {
+  const canonical = [
+    { name: "Tracking Mode", value: "new_included_code" },
+    { name: "Clutch Codes Access", value: "included_90_days" },
+  ];
+  for (const alias of ["tracking mode", "Tracking Mode ", " Tracking Mode", "Tracking  Mode", "QR Tracking", "tracking", "clutch code option", "clutch codes access", "CLUTCH CODES ACCESS", "Clutch Codes Access "]) {
+    const value = alias.toLowerCase().includes("access") ? "included_90_days" : "none";
+    assert.equal(parseStrictIncludedAccessIntent([{ name: alias, value }, ...canonical]).valid, false, `${alias} before canonical`);
+    assert.equal(parseStrictIncludedAccessIntent([...canonical, { name: alias, value }]).valid, false, `${alias} after canonical`);
+  }
+  for (const pair of [
+    ["existing_code", "none"],
+    ["none", "none"],
+  ]) {
+    const parsed = parseStrictIncludedAccessIntent([
+      { name: "Tracking Mode", value: pair[0] },
+      { name: "Clutch Codes Access", value: pair[1] },
+    ]);
+    assert.equal(parsed.valid, true);
+    assert.equal(parsed.optIn, false);
+  }
 });
 
 test("all approved physical material types are supported by trusted print registry", () => {

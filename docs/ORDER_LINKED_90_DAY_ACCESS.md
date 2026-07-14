@@ -6,8 +6,9 @@ This release adds an optional, per-provisioning management window for eligible p
 
 - Shopify submits the exact scalar property names `Tracking Mode` and `Clutch Codes Access`. Entitlement authorization does not trim or normalize their names or values and rejects missing, duplicated, aliased, case-modified, whitespace-modified, array, object, and null values.
 - Only exact `Tracking Mode=new_included_code` plus exact `Clutch Codes Access=included_90_days` authorizes an opt-in. The permissive print-display parser is never entitlement authority.
-- The paid-order service must also match the existing trusted `TRACKED_PRINT_PRODUCT_REGISTRY_JSON`. Storefront metafields and customer properties cannot establish eligibility.
-- Business Kits additionally require both feature flags and an exact `BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON` contract containing product ID, SKU, kit type, unique component IDs/material types, `codeCount` of zero or one, and a unique exact customer-selection property name per component. Component properties must appear exactly once with an exact canonical scalar value. Invalid contracts and selections fail closed. The registry is parsed even while the Kit flag is disabled so a known Kit can never fall through to generic tracked-print provisioning.
+- The paid-order service must also match the existing trusted `TRACKED_PRINT_PRODUCT_REGISTRY_JSON`. Storefront metafields and customer properties cannot establish eligibility. This registry independently classifies every product as `tracked_print` or `business_kit`; legacy individual-print entries may omit `sourceType` and default only to `tracked_print`, while every Business Kit must explicitly declare `sourceType=business_kit` with exact product ID and SKU.
+- Business Kit identity is resolved before and independently of component parsing. An identified Kit never enters generic tracked-print provisioning. It additionally requires both feature flags and an exact `BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON` contract containing the same product ID/SKU, kit type, unique component IDs/material types, `codeCount` of zero or one, and a unique exact customer-selection property name per component. Missing, malformed, structurally invalid, unmatched, or colliding contracts and invalid selections fail closed without a print item, QR, provisioning, or timed grant.
+- Entitlement-critical aliases are defined once for both parsers. The strict parser rejects every critical alias or spoofed case/whitespace variant whether it appears before or after a canonical property. Internally synthesized Kit properties are added only after the trusted identity, component contract, exact selections, and original-property spoof checks pass.
 
 ## Access lifecycle
 
@@ -20,6 +21,10 @@ Redirect and scan collection do not use the management resolver and continue aft
 ## Basic analytics boundary
 
 Included access receives the explicit `basic_code` scope for each currently active owned included code. Its projection contains only code ID/name, total scans, first and last scan timestamps, and UTC-day aggregate counts. It does not fetch or return raw scans, IP-related data, geography, technology, referrer/UTM data, heatmaps, comparisons, profile/Connect events, clicks, or leads. Basic CSV uses the same aggregate projection and neutralizes spreadsheet formula prefixes before CSV escaping. Paid accounts retain `full_account`; administrators retain `admin`.
+
+The analytics page classifies administrator, paid, included-only, and unentitled accounts before any analytics fetch. Included-only access is a terminal basic branch: success, zero-active-code, candidate-query failure, resolver failure, and scan-query failure all return a basic-only response and can never invoke the unified full-account analytics loader.
+
+The QR library first queries only rows owned by the authenticated customer, then applies the centralized per-code resolver. Active and expired included-print codes remain visible for both individual print and Business Kit components. Expired rows retain metadata and redirect/download access but expose no scan counts, last-scan data, editing, or analytics links. Unrelated profile/internal system codes and other customers' codes remain excluded.
 
 An active paid Starter, Growth, or Pro subscription restores permitted management without changing `capacity_source`, the order relationship, deletion policy, or the timed timestamps. Included codes remain non-deletable.
 

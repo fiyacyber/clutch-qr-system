@@ -74,8 +74,9 @@ test("Business Kit components provision at most one exact source-aware grant and
       { name: "Campaign Name", value: "Kit cards" },
       { name: "Destination URL", value: "https://example.com/kit" },
     ] }));
-    await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry: [] });
-    await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry: [] });
+    const kitIdentity = [{ sku: "STARTER-KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
+    await provisionTrackedPrintOrder({ payload, webhookEventId: "w1", dependencies: h.dependencies, registry: kitIdentity });
+    await provisionTrackedPrintOrder({ payload, webhookEventId: "w2", dependencies: h.dependencies, registry: kitIdentity });
     assert.equal(h.items.size, 1);
     assert.equal(h.qrs.size, 1);
     assert.equal(h.provisionInputs[0].sourceType, "business_kit");
@@ -101,26 +102,67 @@ test("known Business Kits never fall through to generic grants when either flag 
     { name: "Campaign Name", value: "Kit cards" },
     { name: "Destination URL", value: "https://example.com/kit" },
   ] }));
-  const genericKitRegistry = [{ sku: "STARTER-KIT", materialType: "other_print" as const, defaultTrackingAvailable: true }];
+  const trustedKitRegistry = [{ sku: "STARTER-KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const }];
   try {
     for (const scenario of [
+      { global: "false", kit: "false", registry: valid },
       { global: "false", kit: "true", registry: valid },
       { global: "true", kit: "false", registry: valid },
+      { global: "true", kit: "true", registry: undefined },
+      { global: "true", kit: "true", registry: "malformed" },
+      { global: "true", kit: "true", registry: [] },
       { global: "true", kit: "true", registry: [{ ...valid[0], components: [valid[0].components[0], valid[0].components[0]] }] },
       { global: "true", kit: "true", registry: valid, properties: [{ name: "Cards Tracking", value: "unknown" }] },
     ]) {
       process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = scenario.global;
       process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = scenario.kit;
-      process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify(scenario.registry);
+      if (scenario.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON;
+      else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = scenario.registry === "malformed" ? "{" : JSON.stringify(scenario.registry);
       const h = harness();
       const scenarioPayload = scenario.properties
         ? order(line({ id: "kit-line", product_id: "900", sku: "STARTER-KIT", properties: scenario.properties }))
         : payload;
-      const result = await provisionTrackedPrintOrder({ payload: scenarioPayload, webhookEventId: "w", dependencies: h.dependencies, registry: genericKitRegistry });
+      const result = await provisionTrackedPrintOrder({ payload: scenarioPayload, webhookEventId: "w", dependencies: h.dependencies, registry: trustedKitRegistry });
       assert.equal(result.processedItems, 0);
       assert.equal(h.qrs.size, 0);
       assert.equal(h.items.size, 0);
     }
+  } finally {
+    if (original.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = original.registry;
+    if (original.kit === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = original.kit;
+    if (original.global === undefined) delete process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS; else process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = original.global;
+  }
+});
+
+test("valid individual print is unaffected and a contract collision cannot reclassify it as a Kit", async () => {
+  const original = {
+    registry: process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON,
+    kit: process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS,
+    global: process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS,
+  };
+  process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS = "true";
+  process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = "true";
+  try {
+    const properties = [
+      { name: "Tracking Mode", value: "new_included_code" },
+      { name: "Clutch Codes Access", value: "included_90_days" },
+      { name: "Campaign Name", value: "Individual" },
+      { name: "Destination URL", value: "https://example.com/individual" },
+    ];
+    delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON;
+    const individual = harness();
+    await provisionTrackedPrintOrder({ payload: order(line({ properties })), webhookEventId: "individual", dependencies: individual.dependencies, registry });
+    assert.equal(individual.qrs.size, 1);
+    assert.equal(individual.provisionInputs[0].sourceType, "tracked_print");
+
+    process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = JSON.stringify([{ productId: "901", sku: "POSTCARD-4X6", kitType: "starter", components: [
+      { componentId: "cards", materialType: "postcard", codeCount: 1, trackingPropertyName: "Cards Tracking" },
+    ] }]);
+    const collision = harness();
+    const result = await provisionTrackedPrintOrder({ payload: order(line({ product_id: "901", properties })), webhookEventId: "collision", dependencies: collision.dependencies, registry });
+    assert.equal(result.processedItems, 0);
+    assert.equal(collision.items.size, 0);
+    assert.equal(collision.qrs.size, 0);
   } finally {
     if (original.registry === undefined) delete process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON; else process.env.BUSINESS_KIT_ORDER_LINKED_REGISTRY_JSON = original.registry;
     if (original.kit === undefined) delete process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS; else process.env.ENABLE_BUSINESS_KIT_ORDER_LINKED_ACCESS = original.kit;
@@ -207,6 +249,17 @@ test("trusted SKU is eligible and title-only or customer properties are insuffic
   assert.equal(classifyPrintProduct({ sku: "UNKNOWN", title: "Postcards" }, registry).eligible, false);
 });
 
+test("Business Kit classification requires exact product ID and SKU without cross-identity ambiguity", () => {
+  const trusted = [
+    { sku: "KIT", productId: "900", materialType: "other_print" as const, defaultTrackingAvailable: true, sourceType: "business_kit" as const },
+    { sku: "POSTCARD", productId: "901", materialType: "postcard" as const, defaultTrackingAvailable: true, sourceType: "tracked_print" as const },
+  ];
+  assert.equal(classifyPrintProduct({ sku: "KIT", product_id: "900" }, trusted).sourceType, "business_kit");
+  assert.equal(classifyPrintProduct({ sku: "KIT", product_id: "wrong" }, trusted).eligible, false);
+  assert.equal(classifyPrintProduct({ sku: "wrong", product_id: "900" }, trusted).eligible, false);
+  assert.equal(classifyPrintProduct({ sku: "POSTCARD", product_id: "900" }, trusted).eligible, false);
+});
+
 test("property parser normalizes canonical values, aliases, and capitalization", () => {
   assert.equal(normalizePrintLineProperties({ "Tracking Mode": "New Included Code" }).trackingMode, "new_included_code");
   assert.equal(normalizePrintLineProperties({ tracking: "USE EXISTING CODE" }).trackingMode, "existing_code");
@@ -266,7 +319,14 @@ test("registry validation fails closed for ambiguous and conflicting entries", (
   assert.ok(validatePrintProductRegistry([
     { productId: "1", materialType: "postcard", defaultTrackingAvailable: true },
     { productId: "1", materialType: "flyer", defaultTrackingAvailable: true },
-  ]).errors.some((error) => error.includes("conflicts")));
+  ]).errors.some((error) => error.includes("duplicates productId")));
+  assert.ok(validatePrintProductRegistry([
+    { sku: "KIT", materialType: "other_print", defaultTrackingAvailable: true, sourceType: "business_kit" },
+  ]).errors.some((error) => error.includes("require both")));
+  assert.ok(validatePrintProductRegistry([
+    { sku: "A", productId: "1", materialType: "postcard", defaultTrackingAvailable: true, sourceType: "tracked_print" },
+    { sku: "B", productId: "1", materialType: "flyer", defaultTrackingAvailable: true, sourceType: "business_kit" },
+  ]).errors.some((error) => error.includes("duplicates productId")));
 });
 
 test("existing Clutch Code references normalize UUID, slug, and canonical redirect URL", () => {

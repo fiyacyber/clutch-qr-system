@@ -1,4 +1,8 @@
-import { TRACKED_PRINT_MATERIAL_TYPES, type TrackedPrintMaterialType } from "./print-products.ts";
+import {
+  TRACKED_PRINT_MATERIAL_TYPES,
+  type TrackedPrintMaterialType,
+  type TrustedPrintProduct,
+} from "./print-products.ts";
 import { isEnabledEnvironmentFlag } from "./env-flags.js";
 
 export type BusinessKitComponent = {
@@ -112,4 +116,29 @@ export function matchBusinessKitContract(productId: unknown, sku: unknown, contr
   const id = typeof productId === "string" || typeof productId === "number" ? String(productId) : "";
   const normalizedSku = typeof sku === "string" ? sku : "";
   return contracts.find((contract) => contract.productId === id && contract.sku === normalizedSku) || null;
+}
+
+export function validateBusinessKitIdentityContracts(
+  identities: TrustedPrintProduct[],
+  contracts: TrustedBusinessKitContract[]
+) {
+  const errors: string[] = [];
+  const businessKitIdentities = identities.filter((identity) => identity.sourceType === "business_kit");
+  const identityKeys = new Set(businessKitIdentities.map((identity) => `${identity.productId || ""}\u0000${identity.sku || ""}`));
+  const contractKeys = new Set(contracts.map((contract) => `${contract.productId}\u0000${contract.sku}`));
+
+  for (const contract of contracts) {
+    const key = `${contract.productId}\u0000${contract.sku}`;
+    if (!identityKeys.has(key)) {
+      errors.push(`Business Kit contract ${contract.productId}/${contract.sku} has no matching business_kit product identity.`);
+    }
+  }
+  for (const identity of businessKitIdentities) {
+    const key = `${identity.productId || ""}\u0000${identity.sku || ""}`;
+    if (!contractKeys.has(key)) {
+      errors.push(`Business Kit identity ${identity.productId || ""}/${identity.sku || ""} has no matching component contract.`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
