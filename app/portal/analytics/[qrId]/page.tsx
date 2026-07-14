@@ -19,6 +19,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import "../analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export default async function QRAnalyticsPage({
   params,
@@ -39,7 +40,6 @@ export default async function QRAnalyticsPage({
 
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canUseCampaignAnalytics) redirect("/portal?access=campaign-analytics-locked");
 
   // Get the QR code
   const { data: code, error: codeError } = await admin
@@ -61,6 +61,19 @@ export default async function QRAnalyticsPage({
       });
     }
     return <div className="analytics-error">QR code not found</div>;
+  }
+  const codeAccess = await loadOrderLinkedQrAccess(admin, customer, code.id);
+  if (!codeAccess.canViewBasicAnalytics) {
+    return (
+      <DashboardShell accountAccess={access} isAdmin={Boolean(customer.is_admin)}>
+        <main className="container analytics-error">
+          <h1>Your Included Access Has Ended</h1>
+          <p>Your printed Clutch Code is still active. Subscribe to Clutch Codes™ to edit its destination and view scan analytics again.</p>
+          <p><Link className="btn primary" href="/portal/subscription">View Clutch Codes™ Plans</Link></p>
+          <p><Link href="/portal/print-orders">Return to Print Orders</Link></p>
+        </main>
+      </DashboardShell>
+    );
   }
 
   // Get all scans for this QR code

@@ -14,6 +14,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import StoredQrLibrary from "./stored-qr-library";
 import type { StoredQrItem } from "./stored-qr-library";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -59,7 +60,9 @@ export default async function StoredQrCodesPage() {
   const qrCodes = qrCodesResult.data || [];
   const access = await loadAccountAccess(admin, customer);
   if (!access.canEditOwnedQr && !access.hasClutchCodes) redirect("/portal?access=qr-library-locked");
-  const qrIds = qrCodes.map((item) => item.id);
+  const codeAccessEntries = await Promise.all(qrCodes.map(async (code) => [code.id, await loadOrderLinkedQrAccess(admin, customer, code.id)] as const));
+  const codeAccessById = new Map(codeAccessEntries);
+  const qrIds = qrCodes.filter((item) => codeAccessById.get(item.id)?.canViewBasicAnalytics).map((item) => item.id);
 
   const qrScansResult = qrIds.length
     ? await runGuardedDashboardTask({
@@ -107,7 +110,7 @@ export default async function StoredQrCodesPage() {
     name: code.name,
     slug: code.slug,
     destinationUrl: code.destination_url,
-    scanCount: code.scan_count || 0,
+    scanCount: codeAccessById.get(code.id)?.canViewBasicAnalytics ? code.scan_count || 0 : 0,
     status: code.is_active === false ? "Archived" : "Active",
     createdAt: code.created_at,
     updatedAt: code.updated_at,

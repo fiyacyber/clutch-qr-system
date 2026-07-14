@@ -7,6 +7,7 @@ import { loadAccountAccess } from "@/lib/account-access-server";
 import { requireCustomer } from "@/lib/auth";
 import { formatPrintWorkflowState } from "@/lib/print-operations";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export default async function CustomerPrintOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,13 +19,17 @@ export default async function CustomerPrintOrderDetailPage({ params }: { params:
   if (!access.canViewPrintOrders) redirect("/portal?access=print-orders-locked");
   const orderResult = await admin.from("print_order_items").select("*").eq("id", id).eq("customer_id", customer.id).limit(1).maybeSingle();
   if (orderResult.error || !orderResult.data) notFound();
-  const [filesResult, proofsResult, activityResult] = await Promise.all([
+  const [filesResult, proofsResult, activityResult, provisioningResult] = await Promise.all([
     admin.from("print_order_files").select("id,file_kind,original_filename,is_current,created_at").eq("print_order_item_id", id).eq("is_current", true).order("created_at", { ascending: false }),
     admin.from("print_proofs").select("id,proof_file_id,revision,status,is_current,sent_at,approved_at,changes_requested_at,customer_notes").eq("print_order_item_id", id).order("revision", { ascending: false }),
     admin.from("order_activity").select("id,action,actor_type,reason,created_at").eq("order_type", "print_order").eq("order_id", id).order("created_at", { ascending: false }),
+    admin.from("print_qr_provisionings").select("qr_code_id").eq("print_order_item_id", id).limit(1).maybeSingle(),
   ]);
   if (filesResult.error || proofsResult.error || activityResult.error) throw new Error("Unable to load your print order.");
   const order = orderResult.data;
+  const codeAccess = provisioningResult.data?.qr_code_id
+    ? await loadOrderLinkedQrAccess(admin, customer, provisioningResult.data.qr_code_id)
+    : null;
   const visibleFiles = (filesResult.data || []).filter((file) => file.file_kind === "customer_artwork" || file.file_kind === "admin_proof");
 
   return <DashboardShell accountAccess={access}>
@@ -37,6 +42,13 @@ export default async function CustomerPrintOrderDetailPage({ params }: { params:
         <p>Production: {order.production_status} · Fulfillment: {order.fulfillment_status}</p>
         {order.tracking_url ? <p><a href={order.tracking_url} target="_blank" rel="noreferrer">Track shipment</a></p> : null}
       </section>
+      {codeAccess ? <section className="dashboard-card"><h2>Clutch Codes™ access</h2>
+        {codeAccess.state === "expired_included_access" || codeAccess.state === "view_only" ? <>
+          <h3>Your Included Access Has Ended</h3>
+          <p>Your printed Clutch Code is still active. Subscribe to Clutch Codes™ to edit its destination and view scan analytics again.</p>
+          <p><Link className="btn primary" href="/portal/subscription">View Clutch Codes™ Plans</Link> <Link href="/portal/print-orders">Return to Print Orders</Link></p>
+        </> : <p>Management access is active{codeAccess.accessExpiresAt ? ` through ${new Date(codeAccess.accessExpiresAt).toLocaleString()}` : ""}.</p>}
+      </section> : null}
       <PrintOrderWorkflowActions orderId={id} actorType="customer" workflowState={order.workflow_state} />
       <section className="dashboard-card"><h2>Artwork and proofs</h2>
         {visibleFiles.map((file) => <p key={file.id}><Link href={`/api/print-order-files/${file.id}`}>{file.original_filename}</Link> · {file.file_kind === "admin_proof" ? "Proof" : "Artwork"}</p>)}

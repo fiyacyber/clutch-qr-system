@@ -1,5 +1,6 @@
 import { classifyPrintProduct, type TrustedPrintProduct } from "./print-products.ts";
 import { normalizePrintLineProperties } from "./print-line-properties.ts";
+import { isEnabledEnvironmentFlag } from "./env-flags.js";
 
 export type PrintOrderPayload = {
   id?: string | number; order_id?: string | number; name?: string; order_number?: string | number;
@@ -53,6 +54,7 @@ export async function provisionTrackedPrintOrder(input: {
     if (!lineItemId) continue;
 
     const properties = normalizePrintLineProperties(lineItem.properties);
+    const timedAccessEnabled = isEnabledEnvironmentFlag(process.env.ENABLE_ORDER_LINKED_90_DAY_ACCESS);
     const email = emailFor(input.payload);
     const requiresNew = properties.trackingMode === "new_included_code";
     const requiresExisting = properties.trackingMode === "existing_code";
@@ -134,6 +136,7 @@ export async function provisionTrackedPrintOrder(input: {
       material_type: classification.materialType,
       quantity: Math.max(1, Number(lineItem.quantity) || 1),
       tracking_mode: properties.trackingMode,
+      clutch_codes_access_opt_in: timedAccessEnabled && properties.clutchCodesAccessOptIn,
       campaign_name: properties.campaignName,
       destination_url: properties.destinationUrl,
       existing_qr_code_id: existingQrCodeId,

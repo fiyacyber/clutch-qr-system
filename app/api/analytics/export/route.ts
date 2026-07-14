@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 import {
   applyAnalyticsFilters,
   getScanBrowser,
@@ -33,7 +34,12 @@ export async function GET(req: NextRequest) {
     .select("id, name, slug")
     .eq("customer_id", customer.id);
 
-  const codes = qrCodes || [];
+  const candidateCodes = qrCodes || [];
+  const codeAccess = await Promise.all(candidateCodes.map(async (code) => ({
+    code,
+    access: await loadOrderLinkedQrAccess(admin, customer, code.id),
+  })));
+  const codes = codeAccess.filter((entry) => entry.access.canExportBasicAnalytics).map((entry) => entry.code);
   const qrIds = codes.map((code) => code.id);
 
   if (!qrIds.length) {

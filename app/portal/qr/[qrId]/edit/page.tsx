@@ -8,6 +8,7 @@ import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/compo
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export default async function EditQrCodePage({
   params,
@@ -30,7 +31,6 @@ export default async function EditQrCodePage({
   const { qrId } = await params;
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
-  if (!access.canEditOwnedQr) redirect("/portal?access=qr-edit-locked");
   const hasDynamicQr = access.canEditOwnedQr;
   const hasHeatmap = access.canUseCampaignAnalytics;
 
@@ -74,6 +74,8 @@ export default async function EditQrCodePage({
   if (!code) {
     redirect("/portal/qr");
   }
+  const codeAccess = await loadOrderLinkedQrAccess(admin, customer, code.id);
+  if (!codeAccess.canEditDestination) redirect(`/portal/qr?access=${codeAccess.state}`);
   if (code.customer_can_edit_destination !== true) redirect("/portal/qr");
 
   return (

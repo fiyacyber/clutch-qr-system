@@ -3,6 +3,7 @@ import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { fetchUnifiedAnalyticsData } from "@/lib/clutch-analytics";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export async function GET() {
   const { user, customer } = await requireCustomer();
@@ -24,7 +25,8 @@ export async function GET() {
 
   const profileById = new Map(data.profiles.map((row) => [row.id, row]));
 
-  const rows = data.qrCodes.map((code) => {
+  const accessRows = await Promise.all(data.qrCodes.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));
+  const rows = accessRows.filter(({ access: codeAccess }) => codeAccess.canViewBasicAnalytics).map(({ code }) => {
     const scans = scansByQr.get(code.id) || [];
     const uniqueVisitors = new Set(scans.map((scan) => scan.ip_hash).filter(Boolean)).size;
     const lastScan = scans[0]?.created_at || null;

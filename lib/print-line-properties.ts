@@ -14,6 +14,7 @@ export type NormalizedPrintProperties = {
   qrPlacementInstructions: string | null;
   validDestination: boolean;
   normalizedProperties: Record<string, string>;
+  clutchCodesAccessOptIn: boolean;
 };
 
 function clean(value: unknown, max = 1000) {
@@ -45,6 +46,8 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     existing_code: "existing_code", use_existing_code: "existing_code", existing_qr: "existing_code",
   };
   const trackingMode = modeAliases[rawMode] || "none";
+  const accessValue = first(map, ["clutch codes access"], 80).toLowerCase();
+  const clutchCodesAccessOptIn = trackingMode === "new_included_code" && accessValue === "included_90_days";
   const campaignName = first(map, ["campaign name", "qr campaign", "campaign"], 160) || null;
   const destinationRaw = first(map, ["destination url", "qr destination", "destination", "url"], 2048);
   let destinationUrl: string | null = null;
@@ -88,6 +91,7 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     artwork_instructions: artworkInstructions,
     reorder_reference: reorderReference,
     qr_placement_instructions: qrPlacementInstructions,
+    clutch_codes_access: clutchCodesAccessOptIn ? "included_90_days" : "none",
   }).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0));
 
   return {
@@ -103,5 +107,6 @@ export function normalizePrintLineProperties(properties: Parameters<typeof prope
     qrPlacementInstructions,
     validDestination,
     normalizedProperties,
+    clutchCodesAccessOptIn,
   };
 }

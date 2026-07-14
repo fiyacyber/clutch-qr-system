@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 export async function GET(
   req: NextRequest,
@@ -29,6 +30,10 @@ export async function GET(
 
     if (codeError || !code) {
       return NextResponse.json({ error: "QR code not found" }, { status: 404 });
+    }
+    const codeAccess = await loadOrderLinkedQrAccess(admin, customer, code.id);
+    if (!codeAccess.canViewBasicAnalytics) {
+      return NextResponse.json({ error: "Your Included Access Has Ended", accessState: codeAccess.state }, { status: 403 });
     }
 
     // Get all scans for this QR code

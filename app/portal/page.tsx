@@ -38,6 +38,7 @@ import {
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { resolveAccountAccess } from "@/lib/account-access";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 interface PortalPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -224,7 +225,13 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   if (shopifyOrdersResult.failed) panelIssues.push("Shopify order tracking is temporarily unavailable.");
 
   const codes = qrCodesResult.data || [];
-  const qrIds = codes.map((code) => code.id);
+  const dashboardCodeAccess = new Map(await Promise.all(codes.map(async (code) => [
+    code.id,
+    await loadOrderLinkedQrAccess(admin, customer, code.id),
+  ] as const)));
+  const qrIds = codes.filter((code) =>
+    dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics || code.qr_type === "smart_card"
+  ).map((code) => code.id);
   const scanRowsResult = qrIds.length
     ? await runGuardedDashboardTask({
         route: "/portal",
@@ -243,7 +250,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   if (scanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
 
   const scans = scanRowsResult.data || [];
-  const campaignCodes = codes.filter((code: any) => code.is_system !== true);
+  const campaignCodes = codes.filter((code: any) =>
+    (code.is_system !== true || code.qr_type === "tracked_print") && dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics
+  );
   const campaignCodeIds = new Set(campaignCodes.map((code) => code.id));
   const campaignScans = scans.filter((scan) => campaignCodeIds.has(scan.qr_code_id));
   const smartCardCodes = codes.filter((code: any) => code.is_system === true && code.qr_type === "smart_card");

@@ -21,6 +21,7 @@ import RetryNotice from "@/components/dashboard/RetryNotice";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import "./analytics.css";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 const VALID_TABS = [
   "overview", "qr-codes", "campaign-performance", "clutch-connect", "analytics",
@@ -68,15 +69,18 @@ export default async function AnalyticsPage({
   });
   const data = analyticsDataResult.data;
   const plan = getCustomerPlan(customer as any);
-  const hasHeatmap = access.canUseProfileAnalytics || access.canUseCampaignAnalytics;
-  const hasDynamicQr = access.canUseCampaignAnalytics;
+  const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || code.qr_type === "tracked_print");
+  const campaignAccessEntries = await Promise.all(campaignCandidates.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));
+  const accessibleCampaignCodes = campaignAccessEntries.filter((entry) => entry.access.canViewBasicAnalytics).map((entry) => entry.code);
+  const hasDynamicQr = accessibleCampaignCodes.length > 0;
+  const hasHeatmap = access.canUseProfileAnalytics || hasDynamicQr;
   const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
   const isCampaignUnlocked = isCampaignTab && hasDynamicQr;
   const isAnalyticsUnlocked = !isCampaignTab && hasHeatmap;
   const showLockedCampaign = isCampaignTab && !hasDynamicQr;
   const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
   const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
-  const campaignQrCodes = data.qrCodes.filter((code) => code.is_system !== true || code.qr_type === "tracked_print");
+  const campaignQrCodes = accessibleCampaignCodes;
   const qrUsageUsed = campaignQrCodes.length;
   const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
   const latestQrCode = campaignQrCodes[0] || null;

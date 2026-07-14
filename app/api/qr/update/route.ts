@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import { getSubscriptionLockMessage, isCustomerSubscriptionLocked } from "@/lib/plans";
 import { loadAccountAccess } from "@/lib/account-access-server";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
@@ -92,13 +93,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Logo customization requires an active Clutch Codes subscription." }, { status: 403 });
   }
 
-  if (isCustomerSubscriptionLocked(customer)) {
-    return NextResponse.json(
-      { error: getSubscriptionLockMessage(customer) },
-      { status: 402 }
-    );
-  }
-
   const { data: qrCode, error: qrError } = await admin
     .from("qr_codes")
     .select("id, name, qr_type, logo_path, logo_url, foreground_color, background_color, dot_style, corner_style, customer_can_edit_destination")
@@ -109,6 +103,13 @@ export async function POST(req: NextRequest) {
   if (qrError || !qrCode) {
     console.error("QR LOOKUP ERROR:", qrError);
     return NextResponse.json({ error: "QR code not found" }, { status: 404 });
+  }
+  const codeAccess = await loadOrderLinkedQrAccess(admin, customer, qrCode.id);
+  if (!codeAccess.canEditDestination) {
+    return NextResponse.json({ error: "Your Included Access Has Ended", accessState: codeAccess.state }, { status: 403 });
+  }
+  if (isCustomerSubscriptionLocked(customer) && codeAccess.state !== "active_included_access") {
+    return NextResponse.json({ error: getSubscriptionLockMessage(customer) }, { status: 402 });
   }
   if (qrCode.customer_can_edit_destination !== true) {
     return NextResponse.json({ error: "This QR destination cannot be edited." }, { status: 403 });
