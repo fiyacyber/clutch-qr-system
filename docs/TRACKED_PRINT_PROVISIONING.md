@@ -68,3 +68,7 @@ The controlled test must cover each tracking/artwork method, malformed input, qu
 The reviewed product inventory and proposed value are in `TRACKED_PRINT_PRODUCT_REGISTRY_CANDIDATE.md`. Production remains empty throughout Phase 4; this PR does not change Shopify, Vercel, webhook registrations, email flags, or production data.
 
 The application-side Phase 3 artwork, proof, production, and fulfillment workflow is documented in `PRINT_OPERATIONS_WORKFLOW.md`. Shopify product-page controls remain separate and are not part of that application workflow.
+
+## Workflow RPC authorization hotfix
+
+Migration `20260714015753_fix_tracked_print_service_rpc_authorization_and_activity_idempotency.sql` removes the redundant legacy `request.jwt.claim.role` body check from the four service-only tracked-print RPCs. Their `SECURITY DEFINER`, empty search path, actor and ownership validation, and service-role-only execute grants remain unchanged. The migration also replaces the partial `order_activity.idempotency_key` index with a normal unique index so PostgREST can infer the application's existing `on_conflict=idempotency_key` request. It aborts without changing the index if duplicate non-null keys require manual review.
