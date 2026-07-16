@@ -87,7 +87,7 @@ Paid Shopify order handling is centralized in `app/api/webhooks/shopify/orders-p
 - A new included code receives an immutable `tracked-<uuid>` slug before customer configuration. An existing-code choice is accepted only when the code is active, subscription-owned by the same customer, editable, and not a system/order-linked code.
 - Business Kit components use the strict trusted registry/property contract in `lib/business-kit-contracts.ts`. Each eligible component gets its own `print_order_items` row, provisioning record, QR relationship, material type, and print workflow. `source_type = business_kit` is preserved.
 - `/portal/print-orders/[id]` enforces `customer_id`, shows signed private file links, and exposes the existing customer artwork/proof actions.
-- `PrintOrderWorkflowActions.tsx` treats `customer_artwork` as the primary artwork upload and manages proof approval/change requests.
+- `PrintOrderWorkflowActions.tsx` treats `customer_artwork` as the primary artwork upload; `CustomerProofReview.tsx` provides the complete image/PDF proof viewer, metadata, change requests, and explicit production approval.
 - `/admin/print-orders/[id]` uses the same authorized order loader and supports artwork review, proofs, production files, supplier submission, production, and shipping.
 
 Missing workflow: there is no independent order-linked QR design draft/submission/version state or admin-visible frozen QR asset. It must be added without conflating it with `customer_artwork`.
@@ -175,7 +175,7 @@ All new tables require RLS enabled, authenticated `SELECT` only through customer
 - **Allowance leakage:** order-linked codes and Business Kit components remain `included_print`; they do not increment subscription creation rights or imply Connect+.
 - **Expiration:** draft/save/submit and protected analytics must use the per-code order-linked access result. Expired users retain read-only order/submitted-asset visibility.
 - **Frozen artwork:** a mutable `qr_codes.style_config` cannot be the submitted source of truth. Each submission must capture an immutable snapshot and immutable private file. Later edits do not alter that revision.
-- **Revision races:** submission must lock/check the print item, allocate the next revision transactionally, use a unique idempotency key, and reject/supersede revisions after proof approval according to workflow rules.
+- **Revision races:** submission must lock/check the print item before storage, re-lock during registration, allocate the next revision transactionally, use deterministic idempotent storage, clean newly created objects after registration failure, return the original file on successful retry, and reject new revisions once the complete proof is sent.
 - **Storage:** use the private `print-order-files` bucket, non-overwriting versioned paths, checksum/size/type validation, and short-lived signed URLs. Logo reads used during rendering must be server-authorized and scan-safe.
 - **Webhook replay:** retain HMAC verification, immutable Shopify keys, unique order/line-item constraints, provisioning idempotency keys, and `order_activity` uniqueness. Portal work must not change paid-order eligibility semantics.
 - **Service role:** provisioning, version registration, and private storage writes stay server-only. Client code receives no service key.

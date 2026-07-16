@@ -51,9 +51,17 @@ test("migration separates QR artwork from primary artwork and makes revisions ap
   assert.match(migration, /'qr_artwork_asset'/);
   assert.match(migration, /unique \(print_order_item_id, revision\)/);
   assert.match(migration, /where print_order_item_id = p_print_order_item_id and is_current for update/);
-  assert.match(migration, /QR revisions are locked after proof approval/);
-  assert.match(migration, /service role required/);
+  assert.match(migration, /QR revisions are locked after the complete artwork proof is sent/);
+  const registrationBody = migration.slice(migration.indexOf("create or replace function public.register_print_qr_artwork_submission"));
+  assert.doesNotMatch(registrationBody, /current_setting\('request\.jwt\.claim\.role'/);
+  assert.doesNotMatch(registrationBody, /service role required/);
+  assert.match(migration, /language plpgsql security definer set search_path = ''/);
   assert.match(migration, /revoke all on function public\.register_print_qr_artwork_submission/);
+  assert.match(migration, /grant execute on function public\.register_print_qr_artwork_submission[\s\S]+to service_role/);
+  assert.match(migration, /where id = p_print_order_item_id and customer_id = p_customer_id for update/);
+  assert.match(migration, /c\.auth_user_id = p_actor_auth_user_id/);
+  assert.match(migration, /placement_snapshot jsonb not null/);
+  assert.match(migration, /submitted QR artwork snapshots are immutable/);
   assert.match(migration, /enable row level security/);
 });
 
@@ -65,6 +73,26 @@ test("submission route binds order, customer, QR, and immutable slug and never t
   assert.match(route, /getExportShortUrl\(code\.slug\)/);
   assert.doesNotMatch(route, /file_kind:\s*["']customer_artwork/);
   assert.match(route, /qr_artwork_submitted|register_print_qr_artwork_submission/);
+  assert.match(route, /prepare_print_qr_artwork_submission/);
+  assert.match(route, /createdStorageObject/);
+  assert.match(route, /if \(createdStorageObject\) await admin\.storage/);
+  assert.match(route, /createHash\("sha256"\)\.update\(idempotencyKey\)/);
+  assert.doesNotMatch(route, /renderedAt/);
+});
+
+test("placement and full-proof review use production-safe customer wording", () => {
+  const setup = fs.readFileSync(new URL("../components/print-orders/OrderQrSetup.tsx", import.meta.url), "utf8");
+  const review = fs.readFileSync(new URL("../components/print-orders/CustomerProofReview.tsx", import.meta.url), "utf8");
+  assert.match(setup, /Let Clutch choose the best placement/);
+  assert.match(setup, /I have a placement preference/);
+  assert.match(setup, /Send QR to Artwork/);
+  assert.match(setup, /Send this QR to the artwork team\?/);
+  assert.match(setup, /Nothing will be printed until you approve that proof/);
+  assert.doesNotMatch(setup, /final print approval/i);
+  assert.match(review, /Approve Artwork for Production/);
+  assert.match(review, /including the QR code’s destination, size, placement, spelling, and design/);
+  assert.match(review, /application\/pdf/);
+  assert.match(review, /Scan validation/);
 });
 
 test("unified portal has exactly five primary destinations and mobile bottom navigation", () => {

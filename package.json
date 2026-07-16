@@ -17,6 +17,7 @@
     "test:order-linked-routes": "tsx --test scripts/order-linked-routes.test.ts",
     "test:order-linked-portal": "node --experimental-strip-types --test scripts/order-linked-portal.test.ts",
     "test:print-qr-artwork": "node --experimental-strip-types --test scripts/print-qr-artwork.test.ts",
+    "test:print-qr-artwork:integration": "tsx --test scripts/print-qr-artwork-service-role.integration.test.ts",
     "validate:tracked-print-registry": "node --experimental-strip-types scripts/validate-tracked-print-registry.ts",
     "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix && npm run test:order-linked-access && npm run test:order-linked-routes && npm run test:order-linked-portal && npm run test:print-qr-artwork",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",

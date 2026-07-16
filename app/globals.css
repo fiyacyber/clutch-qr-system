@@ -428,7 +428,9 @@
 .order-qr-form label { display: grid; gap: 7px; color: var(--clutch-navy); font-size: 0.72rem; font-weight: 750; }
 .order-qr-form label > small { color: var(--clutch-muted); font-size: 0.65rem; font-weight: 500; line-height: 1.45; }
 .order-qr-form input,
-.order-qr-form select { width: 100%; min-height: 44px; padding: 10px 11px; border: 1px solid var(--clutch-border); border-radius: 10px; background: #fff; color: var(--clutch-text); }
+.order-qr-form select,
+.order-qr-form textarea { width: 100%; min-height: 44px; padding: 10px 11px; border: 1px solid var(--clutch-border); border-radius: 10px; background: #fff; color: var(--clutch-text); }
+.order-qr-form textarea { min-height: 96px; resize: vertical; }
 .order-qr-form input[type="color"] { padding: 4px; cursor: pointer; }
 .order-qr-form input:focus-visible,
 .order-qr-form select:focus-visible { outline: 3px solid rgba(255, 166, 101, 0.28); border-color: var(--clutch-orange); }
@@ -446,6 +448,31 @@
 .order-qr-preview > strong { color: var(--clutch-navy); font-size: 0.82rem; }
 .order-qr-preview > small { color: var(--clutch-muted); font-size: 0.67rem; line-height: 1.5; }
 .order-qr-preview .btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.order-qr-placement { display: grid; gap: 10px; margin: 2px 0; padding: 14px; border: 1px solid var(--clutch-border); border-radius: 14px; }
+.order-qr-placement legend { padding: 0 6px; color: var(--clutch-navy); font-size: 0.78rem; font-weight: 850; }
+.order-qr-placement > label { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 9px; }
+.order-qr-placement input[type="radio"] { width: 18px; min-height: 18px; accent-color: var(--clutch-orange-strong); }
+.order-qr-placement-instructions { grid-column: 1 / -1; }
+.order-qr-explanation { margin: 0; padding: 13px 14px; border-left: 3px solid var(--clutch-orange); background: var(--clutch-orange-soft); color: var(--clutch-navy); font-size: 0.75rem; line-height: 1.55; }
+.order-qr-dialog-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(20, 34, 53, 0.58); }
+.order-qr-dialog { width: min(100%, 560px); padding: 22px; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(11, 31, 53, 0.2); }
+.order-qr-dialog h3 { margin-top: 0; color: var(--clutch-navy); }
+.order-qr-dialog p { color: var(--clutch-muted); line-height: 1.6; }
+.proof-review { overflow: hidden; }
+.proof-review-labels { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; }
+.proof-review-labels span { padding: 6px 9px; border-radius: 999px; background: #eef2f6; color: var(--clutch-navy); font-size: 0.68rem; font-weight: 800; }
+.proof-review-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.proof-review-toolbar output { min-width: 54px; text-align: center; color: var(--clutch-navy); font-size: 0.72rem; font-weight: 800; }
+.proof-review-viewport { min-height: 440px; max-height: 720px; overflow: auto; border: 1px solid var(--clutch-border); border-radius: 14px; background: #e9edf2; }
+.proof-review-viewport iframe { min-height: 680px; border: 0; transform-origin: top left; }
+.proof-review-viewport img { display: block; max-width: none; height: auto; margin: 0 auto; }
+.proof-review-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.proof-review-details div { padding: 11px 12px; border: 1px solid var(--clutch-border); border-radius: 10px; }
+.proof-review-details dt { color: var(--clutch-muted); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; }
+.proof-review-details dd { margin: 5px 0 0; overflow-wrap: anywhere; color: var(--clutch-navy); font-size: 0.75rem; }
+.proof-review-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; }
+.proof-approval-confirmation { display: flex; align-items: flex-start; gap: 10px; color: var(--clutch-navy); font-size: 0.78rem; line-height: 1.55; }
+.proof-approval-confirmation input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--clutch-orange-strong); }
 .spin { animation: unified-spin 900ms linear infinite; }
 @keyframes unified-spin { to { transform: rotate(360deg); } }
 
@@ -970,6 +997,9 @@
   .unified-bar-chart { overflow-x: auto; grid-template-columns: repeat(14, minmax(30px, 1fr)); }
   .order-qr-layout { grid-template-columns: 1fr; }
   .order-qr-preview { position: static; order: -1; }
+  .proof-review-details,
+  .proof-review-actions { grid-template-columns: 1fr; }
+  .proof-review-viewport { min-height: 360px; }
 
   .ds-page-header-actions {
     width: 100%;

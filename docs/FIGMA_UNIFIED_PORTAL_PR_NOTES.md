@@ -8,7 +8,7 @@ This change redesigns the existing authenticated application in place. `Dashboar
 
 The Dashboard uses owned Supabase records for every metric and state. No Figma placeholder customer, order, notification, metric, or chart value is included.
 
-The print workflow adds a distinct order-linked QR setup and submission path. Drafts update the live QR record after strict authorization. Submission renders a scan-safe SVG from the permanent short URL, stores it in private print storage, and transactionally registers an immutable revision. It is not a `customer_artwork` upload. Later style edits do not mutate submitted revisions; proof approval locks resubmission.
+The print workflow adds a distinct order-linked QR setup and “Send QR to Artwork” path. Draft saves atomically update only the working QR and order-linked placement preferences. Submission first performs a service-only locked preflight, stores a deterministic idempotency-key asset, then re-locks and transactionally updates the working QR, snapshots placement, and registers an immutable revision. Failed registration removes an object created by that request. It is not a `customer_artwork` upload. Later draft edits cannot mutate submitted revisions; sending the complete artwork proof locks new QR revisions while an identical successful retry still returns its original revision and file.
 
 ## Route mapping
 
@@ -37,11 +37,15 @@ The print workflow adds a distinct order-linked QR setup and submission path. Dr
 `20260715213000_add_print_qr_artwork_submissions.sql`:
 
 - adds QR setup state to `print_order_items`;
+- adds order-linked placement mode, side, position, instructions, and optional print-size preferences;
 - adds the append-only `print_qr_artwork_versions` table;
 - adds the distinct `qr_artwork_asset` private file kind;
 - enables RLS and owned-order/admin read policies;
 - keeps all writes service-role-only;
-- registers a frozen file, version, item state, and idempotent order activity in one RPC;
+- removes the unreliable legacy JWT-claim role check while retaining `SECURITY DEFINER`, empty search paths, explicit revokes, service-role-only execute grants, and strict actor/ownership validation;
+- performs locked preflight and final validation, then registers the working QR update, placement snapshot, frozen file/version, item state, and idempotent activity in one transaction;
+- associates each proof with the QR revision, destination, placement note, page labels, and scan-validation state it contains;
+- prevents any non-proof-approval transition from moving an order to `ready_for_production`;
 - marks a newly provisioned eligible item as setup-required;
 - synchronizes artwork-use state when a proof is sent or approved.
 
@@ -59,6 +63,8 @@ Authenticated implementation screenshots require a staging environment with the 
 
 - `npm ci` — passed; npm reports 9 dependency audit findings (4 moderate, 5 high) in the existing latest-version dependency graph.
 - `npm test` — passed, including subscription, Connect, account access, tracked-print, Business Kit, print production, order-linked expiry/redirect, route ownership, QR draft/render/submission, migration, and five-nav assertions.
+- `npm run test:print-qr-artwork:integration` against a fresh local Supabase stack — passed for service-role PostgREST execution without the legacy claim, same-key duplicate/concurrent submission, distinct concurrent revisions, proof-approval races, placement persistence, frozen draft separation, QR-to-proof association, and owner/admin/wrong-customer access.
+- Fresh `supabase db reset --local --no-seed` — passed for the complete migration chain; `supabase db lint --local --level warning` reported no schema errors.
 - `npx tsc --noEmit` — passed.
 - `npm run lint` — passed with 48 pre-existing warnings and zero errors; changed files add no lint warnings.
 - `npm run build` — passed with Next.js 16.2.9.
@@ -82,8 +88,8 @@ Authenticated implementation screenshots require a staging environment with the 
 7. For each Business Kit component, verify one ordinary order row and one independent QR setup task tied to its item/provisioning/QR/material.
 8. Validate a destination, save a QR draft, refresh, and confirm the saved design and immutable slug.
 9. Submit revision 1; download the private SVG as customer and admin; verify a different customer receives 404.
-10. Change the draft style after submission and confirm revision 1's SVG/checksum is unchanged. Resubmit before proof approval and confirm revision 2 supersedes revision 1 without deleting history.
-11. Send a proof and confirm the current QR version is marked placed in artwork. Approve the proof and confirm it is proof-locked and further QR submission returns 409.
+10. Change the working draft after submission and confirm revision 1's design, placement snapshot, SVG, and checksum are unchanged. Resubmit before the proof is sent and confirm revision 2 supersedes revision 1 without deleting history.
+11. Upload a complete proof with front/back or page labels and passed QR scan validation. Confirm inline image/PDF viewing, zoom, destination, placement note, and QR revision association. Send it, then approve through the complete-artwork acknowledgment; confirm only that approval reaches `ready_for_production` and new QR submissions return 409.
 12. Expire order-linked access and confirm order/submitted asset/redirect remain visible while editing and analytics lock. Scan the printed short URL and confirm redirect and ingestion continue.
 13. Replay the paid Shopify webhook and confirm no duplicate print item, QR, allowance, provisioning, activity, or setup task.
 14. Verify customer and operations submission emails in a staging environment with Resend and `PRINT_OPERATIONS_EMAIL` configured.

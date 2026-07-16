@@ -70,5 +70,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
 
   const row = Array.isArray(data) ? data[0] : data;
+  if (kind === "admin_proof" && row?.proof_id) {
+    const pageLabels = String(form.get("page_labels") || "").split(",").map((label) => label.trim()).filter(Boolean).slice(0, 20);
+    const scanStatus = String(form.get("qr_scan_validation_status") || "pending");
+    const { error: metadataError } = await admin.rpc("update_print_proof_review_metadata", {
+      p_print_order_item_id: id,
+      p_proof_id: row.proof_id,
+      p_actor_auth_user_id: actor.userId,
+      p_page_labels: pageLabels,
+      p_qr_placement_note: String(form.get("qr_placement_note") || "").trim().slice(0, 500),
+      p_scan_validation_status: ["pending", "passed", "failed", "not_required"].includes(scanStatus) ? scanStatus : "pending",
+    });
+    if (metadataError) return NextResponse.json({ error: safePrintOperationsError(metadataError) }, { status: 409 });
+  }
   return NextResponse.json({ ok: true, fileId: row?.file_id, proofId: row?.proof_id, workflowState: row?.workflow_state });
 }
