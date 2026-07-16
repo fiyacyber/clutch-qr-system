@@ -8,7 +8,6 @@ import {
   Mail,
   Palette,
   ShieldCheck,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 
@@ -99,10 +98,10 @@ export default function PortalSettingsCenter({
       <div className="ca-content ca-settings-content">
         <section className="ca-card ca-settings-hero-card">
           <div className="ca-settings-hero-copy">
-            <p className="ca-settings-kicker"><Sparkles size={14} /> Premium Account Center</p>
-            <h2>{accountName || "Your account"}</h2>
+            <p className="ca-settings-kicker">Account</p>
+            <h2>Workspace settings</h2>
             <p>
-              Manage billing, profile controls, QR defaults, security, and support for Clutch Connect and Clutch QR from one place.
+              Manage your profile, plan, and team preferences for {accountName || "your account"}.
             </p>
           </div>
 

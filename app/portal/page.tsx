@@ -233,7 +233,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
       />
 
       <div className="unified-dashboard-grid">
-        <section className="unified-panel unified-action-panel">
+        <section className="unified-panel unified-action-panel" id="actions">
           <div className="unified-section-heading"><div><p className="unified-kicker">Next steps</p><h2>Action Required</h2></div><Clock3 size={20} /></div>
           {actionTasks.length ? <ul className="unified-list">{actionTasks.map((task) => (
             <li key={task.id}><span className="unified-list-icon"><PackageCheck size={18} /></span><span><small>{task.priority}</small><strong>{task.label}</strong><span>{task.detail}</span></span><Link href={task.href} aria-label={`${task.label}: ${task.detail}`}><ArrowRight size={18} /></Link></li>

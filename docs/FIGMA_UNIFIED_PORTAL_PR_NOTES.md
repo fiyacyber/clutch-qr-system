@@ -55,9 +55,9 @@ Apply the migration before serving this application revision.
 
 Visual source: [approved Figma Make customer dashboard](https://www.figma.com/make/bWJAoxU376B9Tb7Gq2srUN/Interactive-Customer-Dashboard-Prototype).
 
-The implementation follows the approved navy `#384862`, orange `#FFA665`, Exo 2/Montserrat type system, restrained cards, desktop sidebar proportions, responsive metric cards, full-screen mobile Create New sheet, mobile bottom navigation, 44px targets, focus states, reduced motion, loading skeletons, empty states, errors, and live status notices.
+The implementation now follows the exported Make `App.tsx` shell directly: a 214px solid navy sidebar, compact five-item navigation, white active row, plan usage card, Help/Support/Log out utilities, sticky 72px top bar, mobile bottom navigation, and the source card/spacing hierarchy. It uses the approved navy `#384862`, orange `#FFA665`, background `#F5F7FA`, border `#E3E8EF`, muted text `#667085`, Exo 2 headings, Montserrat body, restrained shadows, 8–16px radii, 44px targets, focus states, and reduced motion.
 
-Authenticated implementation screenshots require a staging environment with the new migration and representative owned customer/order data. No repository secrets or demo records were introduced merely to manufacture screenshots. Capture the dashboard and workflow screenshots in the manual staging pass below before moving the PR out of draft.
+Local source-to-implementation comparisons are checked in at [1440px](../artifacts/figma-visual-comparison/side-by-side-1440.png) and [390px](../artifacts/figma-visual-comparison/side-by-side-390.png), with the Figma Make export on the left and the application shell/layout fixture on the right. The fixture intentionally omits authenticated values; production routes continue to use the existing application queries. Authenticated workflow screenshots still require representative staging data and remain part of the manual staging pass.
 
 ## Automated validation
 
@@ -72,7 +72,7 @@ Authenticated implementation screenshots require a staging environment with the 
 
 ## Known limitations
 
-- Authenticated visual screenshots were not generated locally because this checkout intentionally contains no Supabase credentials, migrated staging database, or test customer login. The build and source-level responsive checks are complete; the data-backed visual pass remains a staging gate.
+- Local 390px and 1440px comparisons validate the shell, type hierarchy, cards, navigation, responsive behavior, touch targets, and absence of horizontal overflow. The data-backed authenticated workflow pass remains a staging gate because no test customer records were added merely to manufacture screenshots.
 - Transactional email delivery depends on the existing Resend configuration. Submission remains committed if a notification provider fails, and the idempotent order activity remains available for operational retry/audit.
 - General campaign grouping remains backed by existing QR/profile/order records; this change does not invent a new campaign table.
 - QR artwork output is a 2400px-equivalent vector SVG. PNG/PDF customer exports remain available through the existing QR exporter; the frozen production source is SVG.
