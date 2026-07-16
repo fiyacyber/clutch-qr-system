@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ fileId
   if (error || !file) return NextResponse.json({ error: "file_not_found" }, { status: 404 });
   const order = await loadAuthorizedPrintOrder(admin, actor, file.print_order_item_id, "id");
   if (!order) return NextResponse.json({ error: "file_not_found" }, { status: 404 });
-  if (!actor.isAdmin && !["customer_artwork", "admin_proof"].includes(file.file_kind)) {
+  if (!actor.isAdmin && !["customer_artwork", "admin_proof", "qr_artwork_asset"].includes(file.file_kind)) {
     return NextResponse.json({ error: "file_not_found" }, { status: 404 });
   }
 

@@ -327,8 +327,9 @@ export default async function PortalConnectLeadsPage() {
     >
       <main className="container connect-center-shell">
         <DashboardHeader
-          title="Lead Inbox"
-          subtitle="Review contact requests from your Clutch Connect profile and smart card."
+          pretitle="Contacts"
+          title="Leads"
+          subtitle="Review, qualify, and export contacts captured by your eligible profiles and lead forms."
           actions={
             <div className="connect-center-header-actions">
               <Link className="btn primary" href={publicProfileUrl} target="_blank">View Public Profile</Link>

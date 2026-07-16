@@ -1,976 +1,266 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  BarChart3,
+  ArrowRight,
   CheckCircle2,
-  Circle,
   Clock3,
-  Globe2,
-  Link2,
-  Map as MapIcon,
+  ContactRound,
+  Megaphone,
+  PackageCheck,
   QrCode,
-  Sparkles,
-  Users,
+  ShoppingBag,
 } from "lucide-react";
-import CustomerLogoUpload from "@/components/CustomerLogoUpload";
-import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import EmptyState from "@/components/dashboard/EmptyState";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
-import StatCard from "@/components/dashboard/StatCard";
-import SmartCardQrCard from "@/components/dashboard/SmartCardQrCard";
-import { AccountWarnings, ActiveProducts, QrCapacity } from "@/components/dashboard/AccountAccessCards";
-import CopyPublicProfileButton from "@/components/connect/CopyPublicProfileButton";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
-import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import UnifiedDashboardInteractive, { type PerformancePoint } from "@/components/dashboard/UnifiedDashboardInteractive";
 import { requireCustomer } from "@/lib/auth";
-import { isConnectProfilePublished, isConnectSetupComplete } from "@/lib/connect";
+import { loadAccountAccess } from "@/lib/account-access-server";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
-import {
-  getCustomerPlan,
-  getCustomerSubscriptionStatus,
-  getEffectiveQrLimit,
-  getSubscriptionLockMessage,
-  isCustomerSubscriptionLocked,
-} from "@/lib/plans";
-import { clutchConnectDisplayUrl, clutchConnectProfileUrl, qrUrl } from "@/lib/qr";
+import { loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { resolveAccountAccess } from "@/lib/account-access";
-import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 
 interface PortalPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return "Just now";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Just now";
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(parsed);
+function firstName(value?: string | null) {
+  const token = String(value || "").replace(/[._-]+/g, " ").trim().split(/\s+/)[0];
+  return token ? token.charAt(0).toUpperCase() + token.slice(1).toLowerCase() : "there";
 }
 
-function formatDateTime(value?: string | null) {
-  if (!value) return "No taps yet";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "No taps yet";
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
+function formatDate(value?: string | null, includeTime = false) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Recently";
+  return new Intl.DateTimeFormat("en", includeTime
+    ? { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }
+    : { month: "short", day: "numeric" }).format(date);
 }
 
-function formatLabel(value?: string | null, fallback = "Pending") {
-  const normalized = String(value || "")
-    .replace(/_/g, " ")
-    .trim();
-  if (!normalized) return fallback;
-  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+function humanize(value?: string | null, fallback = "In progress") {
+  const text = String(value || "").replace(/_/g, " ").trim();
+  return text ? text.replace(/\b\w/g, (letter) => letter.toUpperCase()) : fallback;
 }
 
-function firstNameFromValue(value?: string | null) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-
-  const normalized = raw
-    .replace(/^['"\s]+|['"\s]+$/g, "")
-    .replace(/[._-]+/g, " ");
-  const token = normalized.split(/\s+/).find(Boolean) || "";
-
-  if (!token) return "";
-  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+function buildPerformancePoints(scans: Array<{ created_at: string | null; qr_code_id: string }>, smartCardIds: Set<string>): PerformancePoint[] {
+  const points = new Map<string, PerformancePoint>();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let offset = 13; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const key = date.toISOString().slice(0, 10);
+    points.set(key, {
+      date: key,
+      label: new Intl.DateTimeFormat("en", { weekday: "short" }).format(date),
+      qr: 0,
+      nfc: 0,
+    });
+  }
+  for (const scan of scans) {
+    const key = String(scan.created_at || "").slice(0, 10);
+    const point = points.get(key);
+    if (!point) continue;
+    if (smartCardIds.has(scan.qr_code_id)) point.nfc += 1;
+    else point.qr += 1;
+  }
+  return [...points.values()];
 }
 
 export default async function PortalPage({ searchParams }: PortalPageProps) {
   const { user, customer, customerLookupError } = await requireCustomer();
-
   if (!user) redirect("/login");
+  if (customerLookupError) return <DashboardShell><PortalCustomerLookupUnavailable /></DashboardShell>;
+  if (!customer) return <PortalAccountNotActive />;
+  if (customer.must_change_password) redirect("/change-password");
 
-  if (customerLookupError) {
-    return (
-      <DashboardShell>
-        <PortalCustomerLookupUnavailable />
-      </DashboardShell>
-    );
-  }
-
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const errorMessage = Array.isArray(resolvedSearchParams?.error)
-    ? resolvedSearchParams?.error[0]
-    : resolvedSearchParams?.error;
-  const setupMessage = Array.isArray(resolvedSearchParams?.setup)
-    ? resolvedSearchParams?.setup[0]
-    : resolvedSearchParams?.setup;
-
-  if (!customer) {
-    return <PortalAccountNotActive />;
-  }
-
-  if (customer.must_change_password) {
-    redirect("/change-password");
-  }
-
+  const params = searchParams ? await searchParams : {};
+  const errorMessage = Array.isArray(params.error) ? params.error[0] : params.error;
+  const setupMessage = Array.isArray(params.setup) ? params.setup[0] : params.setup;
   const admin = createSupabaseAdminClient();
-  const { data: connectProfile, error: connectProfileError } = await admin
-    .from("profiles")
-    .select("id, business_name, contact_name, title, slug, is_active, phone, email, website, builder_config, theme_color")
-    .eq("customer_id", customer.id)
-    .maybeSingle();
+  const accountAccess = await loadAccountAccess(admin, customer);
 
-  if (connectProfileError) {
-    console.error("[portal-data-error]", {
-      route: "/portal",
-      endpoint: "supabase:profiles.maybeSingle",
-      code: connectProfileError.code ?? null,
-      message: connectProfileError.message ?? "Unknown error",
-      details: connectProfileError.details ?? null,
-      hint: connectProfileError.hint ?? null,
-    });
-  }
-
-  const [qrCodesResult, connectProfilesResult] = await Promise.all([
+  const [codesResult, profilesResult, printOrdersResult, cardOrdersResult] = await Promise.all([
     runGuardedDashboardTask({
-      route: "/portal",
-      endpoint: "supabase:qr_codes.select",
-      customerId: customer.id,
-      fallback: [] as Array<{ id: string; name: string; slug: string | null; scan_count: number | null; created_at: string | null; updated_at: string | null; is_active: boolean | null; is_system?: boolean | null; qr_type?: string | null; card_order_id?: string | null; destination_url?: string | null; profile_id?: string | null; connect_profile_id?: string | null; foreground_color?: string | null; background_color?: string | null; style_config?: Record<string, unknown> | null }>,
-      task: () =>
-        admin
-          .from("qr_codes")
-          .select("id, name, slug, scan_count, created_at, updated_at, is_active, is_system, qr_type, card_order_id, destination_url, profile_id, connect_profile_id, foreground_color, background_color, style_config")
-          .eq("customer_id", customer.id)
-          .order("created_at", { ascending: false }),
+      route: "/portal", endpoint: "supabase:qr_codes.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+      task: () => admin.from("qr_codes")
+        .select("id, name, slug, destination_url, scan_count, is_active, is_system, qr_type, created_at, updated_at, print_order_item_id")
+        .eq("customer_id", customer.id).order("updated_at", { ascending: false }),
     }),
     runGuardedDashboardTask({
-      route: "/portal",
-      endpoint: "supabase:profiles.select",
-      customerId: customer.id,
-      fallback: [] as Array<{ id: string; slug: string | null; business_name: string | null; contact_name: string | null }>,
-      task: () =>
-        admin
-          .from("profiles")
-          .select("id, slug, business_name, contact_name")
-          .eq("customer_id", customer.id)
-          .order("created_at", { ascending: false }),
+      route: "/portal", endpoint: "supabase:profiles.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+      task: () => admin.from("profiles").select("id, business_name, contact_name, slug, is_active, updated_at")
+        .eq("customer_id", customer.id).order("updated_at", { ascending: false }),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal", endpoint: "supabase:print_order_items.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+      task: () => admin.from("print_order_items")
+        .select("id, shopify_order_number, product_title, material_type, tracking_mode, provisioning_status, workflow_state, artwork_status, proof_status, production_status, fulfillment_status, qr_setup_status, qr_setup_submitted_at, created_at, updated_at")
+        .eq("customer_id", customer.id).order("created_at", { ascending: false }).limit(50),
+    }),
+    runGuardedDashboardTask({
+      route: "/portal", endpoint: "supabase:card_orders.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+      task: () => admin.from("card_orders")
+        .select("id, shopify_order_number, product_title, status, fulfillment_status, approval_status, created_at")
+        .eq("customer_id", customer.id).order("created_at", { ascending: false }).limit(25),
     }),
   ]);
 
-  const cardOrdersResult = await runGuardedDashboardTask({
-    route: "/portal",
-    endpoint: "supabase:card_orders.select",
-    customerId: customer.id,
-    fallback: [] as Array<{
-      id: string;
-      shopify_order_id: string | null;
-      shopify_order_number: string | null;
-      product_title: string | null;
-      variant_title: string | null;
-      status: string | null;
-      fulfillment_status: string | null;
-      approval_status: string | null;
-      engraving_requested: boolean | null;
-      engraving_business_name: string | null;
-      engraving_title: string | null;
-      engraving_phone: string | null;
-      engraving_email: string | null;
-      proof_url: string | null;
-      tracking_url: string | null;
-      tracking_number: string | null;
-      created_at: string | null;
-    }>,
-    task: () =>
-      admin
-        .from("card_orders")
-        .select(
-          "id, shopify_order_id, shopify_order_number, product_title, variant_title, status, fulfillment_status, approval_status, engraving_requested, engraving_business_name, engraving_title, engraving_phone, engraving_email, proof_url, tracking_url, tracking_number, created_at"
-        )
-        .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false })
-        .limit(12),
-  });
+  const issues: string[] = [];
+  if (codesResult.failed) issues.push("Marketing asset totals are temporarily unavailable.");
+  if (profilesResult.failed) issues.push("Profile data is temporarily unavailable.");
+  if (printOrdersResult.failed || cardOrdersResult.failed) issues.push("Order data is temporarily unavailable.");
 
-  const shopifyOrdersResult = await runGuardedDashboardTask({
-    route: "/portal",
-    endpoint: "supabase:shopify_orders.select",
-    customerId: customer.id,
-    fallback: [] as Array<{
-      shopify_order_id: string;
-      raw_payload: { order_status_url?: string | null } | null;
-    }>,
-    task: () =>
-      admin
-        .from("shopify_orders")
-        .select("shopify_order_id, raw_payload")
-        .eq("customer_id", customer.id)
-        .order("created_at", { ascending: false })
-        .limit(25),
-  });
-
-  const panelIssues: string[] = [];
-  if (qrCodesResult.failed) panelIssues.push("Campaign statistics are temporarily unavailable.");
-  if (connectProfilesResult.failed) panelIssues.push("Clutch Connect profile status is temporarily unavailable.");
-  if (cardOrdersResult.failed) panelIssues.push("Order details are temporarily unavailable.");
-  if (shopifyOrdersResult.failed) panelIssues.push("Shopify order tracking is temporarily unavailable.");
-
-  const codes = qrCodesResult.data || [];
-  const dashboardCodeAccess = new Map(await Promise.all(codes.map(async (code) => [
+  const allCodes = codesResult.data || [];
+  const accessPairs = await Promise.all(allCodes.map(async (code: any) => [
     code.id,
     await loadOrderLinkedQrAccess(admin, customer, code.id),
-  ] as const)));
-  const qrIds = codes.filter((code) =>
-    dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics || code.qr_type === "smart_card"
-  ).map((code) => code.id);
-  const fullAccountAnalytics = Boolean(customer.is_admin || hasActiveClutchCodesSubscription(customer));
-  const fullScanIds = codes.filter((code) => qrIds.includes(code.id) && (fullAccountAnalytics || code.qr_type === "smart_card")).map((code) => code.id);
-  const basicScanIds = qrIds.filter((id) => !fullScanIds.includes(id));
-  const fullScanRowsResult = fullScanIds.length
-    ? await runGuardedDashboardTask({
-        route: "/portal",
-        endpoint: "supabase:qr_scans.select",
-        customerId: customer.id,
-        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null; device_type?: string | null; browser?: string | null; operating_system?: string | null }>,
-        task: () =>
-          admin
-            .from("qr_scans")
-            .select("id, qr_code_id, created_at, city, region, country, device_type, browser, operating_system")
-            .in("qr_code_id", fullScanIds)
-            .order("created_at", { ascending: false })
-            .limit(250),
-      })
-    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null; city: string | null; region: string | null; country: string | null; device_type?: string | null; browser?: string | null; operating_system?: string | null }>, failed: false };
-  const basicScanRowsResult = basicScanIds.length
-    ? await runGuardedDashboardTask({
-        route: "/portal",
-        endpoint: "supabase:qr_scans.basic-select",
-        customerId: customer.id,
-        fallback: [] as Array<{ id: string; qr_code_id: string; created_at: string | null }>,
-        task: () => admin.from("qr_scans").select("id, qr_code_id, created_at").in("qr_code_id", basicScanIds)
-          .order("created_at", { ascending: false }).limit(250),
-      })
-    : { data: [] as Array<{ id: string; qr_code_id: string; created_at: string | null }>, failed: false };
-  if (fullScanRowsResult.failed || basicScanRowsResult.failed) panelIssues.push("Recent scan activity is temporarily unavailable.");
+  ] as const));
+  const codeAccess = new Map(accessPairs);
+  const visibleCodes = allCodes.filter((code: any) => code.qr_type === "smart_card" || codeAccess.get(code.id)?.canView);
+  const analyticsCodes = visibleCodes.filter((code: any) => code.qr_type === "smart_card" || codeAccess.get(code.id)?.canViewBasicAnalytics);
+  const analyticsIds = analyticsCodes.map((code: any) => code.id);
+  const scansResult = analyticsIds.length ? await runGuardedDashboardTask({
+    route: "/portal", endpoint: "supabase:qr_scans.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+    task: () => admin.from("qr_scans").select("id, qr_code_id, created_at")
+      .in("qr_code_id", analyticsIds).order("created_at", { ascending: false }).limit(1000),
+  }) : { data: [] as any[], failed: false };
+  if (scansResult.failed) issues.push("Performance and recent scan activity are temporarily unavailable.");
 
-  const scans = [...(fullScanRowsResult.data || []), ...(basicScanRowsResult.data || []).map((scan) => ({
-    ...scan, city: null, region: null, country: null, device_type: null, browser: null, operating_system: null,
-  }))].sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
-  const campaignCodes = codes.filter((code: any) =>
-    (code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type))) && dashboardCodeAccess.get(code.id)?.canViewBasicAnalytics
-  );
-  const campaignCodeIds = new Set(campaignCodes.map((code) => code.id));
-  const campaignScans = scans.filter((scan) => campaignCodeIds.has(scan.qr_code_id));
-  const smartCardCodes = codes.filter((code: any) => code.is_system === true && code.qr_type === "smart_card");
-  const smartCardCodeIds = new Set(smartCardCodes.map((code) => code.id));
-  const smartCardScans = scans.filter((scan) => smartCardCodeIds.has(scan.qr_code_id));
-  const smartCardTotalTaps = smartCardScans.length || smartCardCodes.reduce((sum, code) => sum + (code.scan_count || 0), 0);
-  const smartCardLastTap = smartCardScans[0]?.created_at || null;
-  const used = campaignCodes.length;
-  const activeQrCodes = campaignCodes.filter((code) => code.is_active !== false).length;
-  const limit = getEffectiveQrLimit(customer);
-  const plan = getCustomerPlan(customer);
-  const subscriptionStatus = getCustomerSubscriptionStatus(customer);
-  const subscriptionLocked = isCustomerSubscriptionLocked(customer);
-  const subscriptionLockMessage = getSubscriptionLockMessage(customer);
-  const totalScans = campaignCodes.reduce((sum, code) => sum + (code.scan_count || 0), 0);
-  const access = resolveAccountAccess({
-    customer,
-    usedQrCount: used,
-    hasSmartCardOrder: (cardOrdersResult.data || []).length > 0,
-    hasSmartCardSystemQr: smartCardCodes.length > 0,
-    hasActiveProfile: Boolean(connectProfile?.id && connectProfile?.is_active),
-  });
-  const remaining = access.remainingQrCapacity || 0;
-  const remainingLabel = access.remainingQrCapacity === null ? "Unlimited" : String(remaining);
-  const isConnectBasicPlan = access.dashboardVariant === "smart-card";
-  const showCampaignDashboard = access.hasClutchCodes || access.hasTrackedPrint || access.hasBusinessKit || access.isAdmin;
-  const hasDynamicQr = access.canCreateQr || access.canEditOwnedQr;
-  const hasHeatmap = access.canUseCampaignHeatmap;
-  const hasConnectProfile = Boolean(connectProfile?.id);
-  const setupChecklistComplete = isConnectSetupComplete(customer, connectProfile || null, { requirePublished: false });
-  const hasPublicProfile = isConnectProfilePublished(connectProfile || null) && Boolean(connectProfile?.slug);
-  const setupComplete = hasPublicProfile;
-  const smartCardPrimaryCtaHref = hasPublicProfile ? "/portal/connect" : "/portal/connect/setup";
-  const connectProfileId = connectProfile?.id ? String(connectProfile.id) : "";
-  const publicProfileUrl = hasPublicProfile ? clutchConnectProfileUrl(String(connectProfile?.slug || "")) : "";
-  const welcomeFirstName =
-    firstNameFromValue((connectProfile as any)?.customer_name) ||
-    firstNameFromValue((connectProfile as any)?.name) ||
-    firstNameFromValue((customer as any)?.name) ||
-    firstNameFromValue(String(user.email || "").split("@")[0]) ||
-    "there";
-  const smartCardSubtitle = hasPublicProfile && setupChecklistComplete
-    ? "Your profile is live. Manage your smart card, profile, leads, and order status."
-    : "Let’s finish setting up your smart card profile before your card goes live.";
+  const profiles = profilesResult.data || [];
+  const profileIds = profiles.map((profile: any) => profile.id);
+  const leadsResult = profileIds.length ? await runGuardedDashboardTask({
+    route: "/portal", endpoint: "supabase:profile_leads.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+    task: () => admin.from("profile_leads").select("id, profile_id, name, email, status, created_at")
+      .in("profile_id", profileIds).order("created_at", { ascending: false }).limit(100),
+  }) : { data: [] as any[], failed: false };
+  if (leadsResult.failed) issues.push("Lead totals are temporarily unavailable.");
 
-  function summarizeRows(values: Array<string | null | undefined>) {
-    return Object.entries(values.reduce<Record<string, number>>((acc, value) => {
-      const label = String(value || "Unknown").trim() || "Unknown";
-      if (label !== "Unknown") acc[label] = (acc[label] || 0) + 1;
-      return acc;
-    }, {}))
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-  }
-
-  const smartCardRecentActivity = smartCardScans.slice(0, 6).map((scan) => {
-    const location = [scan.city, scan.region, scan.country].filter(Boolean).join(", ");
-    return {
-      id: scan.id,
-      title: "Smart card tap",
-      date: formatDateTime(scan.created_at),
-      location: location || "Location unavailable",
-    };
-  });
-  const smartCardDeviceRows = summarizeRows(smartCardScans.map((scan) => scan.device_type)).slice(0, 4);
-  const smartCardBrowserRows = summarizeRows(smartCardScans.map((scan) => scan.browser)).slice(0, 4);
-  const smartCardOsRows = summarizeRows(smartCardScans.map((scan) => scan.operating_system)).slice(0, 4);
-  const smartCardLocationRows = summarizeRows(smartCardScans.map((scan) => [scan.city, scan.region, scan.country].filter(Boolean).join(", "))).slice(0, 5);
-
-  let leadInboxCount = 0;
-  let profileViewCount = 0;
-  if (connectProfile?.id) {
-    const [{ count: leadCount, error: leadError }, { count: viewsCount, error: viewsError }] = await Promise.all([
-      admin
-        .from("profile_leads")
-        .select("id", { count: "exact", head: true })
-        .eq("profile_id", connectProfile.id),
-      admin
-        .from("profile_click_events")
-        .select("id", { count: "exact", head: true })
-        .eq("profile_id", connectProfile.id)
-        .eq("event_type", "profile_view"),
-    ]);
-
-    if (!leadError) {
-      leadInboxCount = leadCount || 0;
-    } else {
-      panelIssues.push("Lead Inbox totals are temporarily unavailable.");
-    }
-
-    if (!viewsError) {
-      profileViewCount = viewsCount || 0;
-    } else {
-      panelIssues.push("Profile view totals are temporarily unavailable.");
-    }
-  }
-
-  const usageLabel = access.effectiveQrCapacity === null
-    ? `${used} / Unlimited QR codes used`
-    : `${used} / ${access.effectiveQrCapacity} active codes`;
-
-  const nextStepCard = plan.code === "connect_plus"
-      ? {
-          title: "Unlock QR Pro",
-          description: "Create and track up to 100 dynamic QR campaigns.",
-          requiredPlan: "QR Pro",
-          requiredPlanPrice: "$14.99/mo",
-          ctaLabel: "Upgrade for $14.99/mo",
-          ctaHref: "/portal/settings",
-          featureList: [
-            "100 dynamic QR codes",
-            "Editable destinations",
-            "QR customization",
-            "QR exports",
-            "Campaign analytics",
-          ],
-          variant: "qr_pro" as const,
-        }
-      : plan.code === "qr_pro" && used >= 90
-        ? {
-            title: "Need more QR codes?",
-            description: "Agency unlocks 250+ QR codes, higher-volume tracking, and client reporting.",
-            requiredPlan: "Agency",
-            requiredPlanPrice: "Custom",
-            ctaLabel: "Request Agency Access",
-            ctaHref: "/portal/settings",
-            featureList: [
-              "250+ QR codes",
-              "Client reporting",
-              "Advanced campaign reports",
-              "Priority setup",
-            ],
-            variant: "agency" as const,
-          }
-        : null;
-
-  const qrNameMap = new Map(campaignCodes.map((code) => [code.id, code.name]));
-  const recentActivity = campaignScans.map((scan) => {
-    const location = [scan.city, scan.region, scan.country].filter(Boolean).join(", ");
-    return {
-      id: scan.id,
-      title: qrNameMap.get(scan.qr_code_id) || "QR Campaign",
-      date: formatDate(scan.created_at),
-      location: location || "Location unavailable",
-    };
-  });
-
-  const profiles = connectProfilesResult.data || [];
+  const printOrders = printOrdersResult.data || [];
   const cardOrders = cardOrdersResult.data || [];
-  const latestCardOrder = cardOrders[0] || null;
-  const matchedSmartCardQr = latestCardOrder?.id
-    ? smartCardCodes.find((code: any) => code.card_order_id && String(code.card_order_id) === String(latestCardOrder.id))
-    : null;
-  const selectedSmartCardQr = matchedSmartCardQr || smartCardCodes[0] || null;
-  const associatedCardOrder = selectedSmartCardQr?.card_order_id
-    ? cardOrders.find((order) => String(order.id) === String(selectedSmartCardQr.card_order_id)) || null
-    : null;
-  const smartCardScanUrl = selectedSmartCardQr?.slug ? qrUrl(String(selectedSmartCardQr.slug)) : "";
-  const smartCardScanUrlDisplay = selectedSmartCardQr?.slug ? smartCardScanUrl.replace(/^https?:\/\//, "") : "";
-  const smartCardDestinationUrl = hasPublicProfile && connectProfile?.slug
-    ? clutchConnectProfileUrl(String(connectProfile.slug))
-    : String(selectedSmartCardQr?.destination_url || "");
-  const smartCardDestinationDisplay = smartCardDestinationUrl
-    ? smartCardDestinationUrl.replace(/^https?:\/\//, "")
-    : hasPublicProfile && connectProfile?.slug
-      ? clutchConnectDisplayUrl(String(connectProfile.slug))
-      : "Not connected yet";
-  const smartCardQrDate = selectedSmartCardQr?.updated_at || selectedSmartCardQr?.created_at || null;
-  const shopifyOrderStatusUrlById = new Map(
-    (shopifyOrdersResult.data || []).map((order) => [
-      String(order.shopify_order_id),
-      typeof order.raw_payload?.order_status_url === "string" ? order.raw_payload.order_status_url : null,
-    ])
-  );
-  const checklistItems = [
-    { label: "Create your first campaign", done: used > 0 },
-    { label: "Add your company logo", done: Boolean(customer.logo_url) },
-    { label: "Set up your Clutch Connect profile", done: profiles.length > 0 },
-    { label: "View insights after your first scan", done: totalScans > 0 },
-  ];
+  const orderIds = printOrders.map((order: any) => order.id);
+  const activityResult = orderIds.length ? await runGuardedDashboardTask({
+    route: "/portal", endpoint: "supabase:order_activity.unified-dashboard", customerId: customer.id, fallback: [] as any[],
+    task: () => admin.from("order_activity").select("id, order_id, action, actor_type, created_at")
+      .eq("order_type", "print_order").in("order_id", orderIds).order("created_at", { ascending: false }).limit(25),
+  }) : { data: [] as any[], failed: false };
+  if (activityResult.failed) issues.push("Recent order activity is temporarily unavailable.");
 
-  const smartCardChecklistItems = [
-    { label: "Guided setup is included with your smart card.", done: true },
-    { label: "Finish Guided Setup to publish your smart card profile.", done: hasPublicProfile },
-    { label: "Share your profile link from this dashboard.", done: hasPublicProfile },
-    { label: "Lead Inbox is ready for customer submissions.", done: setupChecklistComplete },
-  ];
-  const visibleCardOrders = cardOrders.slice(0, 3);
-  const overflowCardOrders = cardOrders.slice(3);
-  const latestOrderStatus = formatLabel(latestCardOrder?.status, "Setup Pending");
-  const smartCardLaunchChecklistItems = [
-    { label: "Profile published", done: hasPublicProfile },
-    { label: "Lead Inbox active", done: setupChecklistComplete },
-    { label: "Smart card QR connected", done: Boolean(selectedSmartCardQr?.slug) },
-    { label: "Profile link ready", done: hasPublicProfile },
-  ];
-  const smartCardLaunchChecklistComplete = smartCardLaunchChecklistItems.every((item) => item.done);
+  const scans = scansResult.data || [];
+  const smartCardIds = new Set(visibleCodes.filter((code: any) => code.qr_type === "smart_card").map((code: any) => code.id));
+  const performance = buildPerformancePoints(scans, smartCardIds);
+  const totalScans = analyticsCodes.reduce((sum: number, code: any) => sum + Number(code.scan_count || 0), 0);
+  const activeAssets = visibleCodes.filter((code: any) => code.is_active !== false).length + profiles.filter((profile: any) => profile.is_active !== false).length;
+  const leads = leadsResult.data || [];
+  const openPrintOrders = printOrders.filter((order: any) => !["delivered", "cancelled"].includes(String(order.workflow_state)));
+  const openCardOrders = cardOrders.filter((order: any) => !["fulfilled", "delivered", "cancelled"].includes(String(order.fulfillment_status || order.status)));
+  const currentOrderCount = openPrintOrders.length + openCardOrders.length;
+  const recentCampaigns = visibleCodes.filter((code: any) => code.qr_type !== "smart_card").slice(0, 5);
+  const orderById = new Map(printOrders.map((order: any) => [order.id, order]));
+  const qrTasks = printOrders.filter((order: any) => order.tracking_mode !== "none" && ["setup_required", "draft"].includes(String(order.qr_setup_status)));
+  const proofTasks = printOrders.filter((order: any) => order.proof_status === "sent");
+  const actionTasks = [
+    ...qrTasks.map((order: any) => ({
+      id: `qr-${order.id}`, label: "Set up QR for artwork", detail: order.product_title || humanize(order.material_type), href: `/portal/print-orders/${order.id}#qr-setup`, priority: "QR setup",
+    })),
+    ...proofTasks.map((order: any) => ({
+      id: `proof-${order.id}`, label: "Review your print proof", detail: order.product_title || humanize(order.material_type), href: `/portal/print-orders/${order.id}#proof`, priority: "Proof ready",
+    })),
+  ].slice(0, 6);
+  const qrName = new Map(visibleCodes.map((code: any) => [code.id, code.name]));
+  const recentActivity = [
+    ...scans.slice(0, 8).map((scan: any) => ({
+      id: `scan-${scan.id}`, label: smartCardIds.has(scan.qr_code_id) ? "NFC item tapped" : "Clutch Code scanned", detail: qrName.get(scan.qr_code_id) || "Marketing asset", at: scan.created_at,
+    })),
+    ...(activityResult.data || []).slice(0, 8).map((event: any) => ({
+      id: `order-${event.id}`, label: humanize(event.action), detail: orderById.get(event.order_id)?.product_title || "Print order", at: event.created_at,
+    })),
+  ].sort((a, b) => Date.parse(b.at || "") - Date.parse(a.at || "")).slice(0, 8);
+  const displayName = firstName((customer as any).first_name || (customer as any).name || String(user.email || "").split("@")[0]);
 
   return (
-    <DashboardShell
-      accountAccess={access}
-      isAdmin={Boolean(customer.is_admin)}
-      navVariant={isConnectBasicPlan ? "connect-basic" : "default"}
-      showGuidedSetup={!hasPublicProfile}
-      showLeadInbox={hasConnectProfile}
-      navLocks={{
-        qr: !hasDynamicQr,
-        analytics: !hasHeatmap,
-        heatmap: !hasHeatmap,
-      }}
-    >
-      <main className="container portal-overview-shell">
-        {errorMessage ? (
-          <div className="alert">
-            <strong>Error:</strong> {errorMessage}
-          </div>
-        ) : null}
-
-        {setupMessage === "complete" ? (
-          <div className="success-message">Clutch Connect setup complete. Your dashboard is now unlocked.</div>
-        ) : null}
-
-        {panelIssues.length ? (
-          <RetryNotice
-            title="Some dashboard data is temporarily unavailable"
-            description={panelIssues[0]}
-            details={panelIssues.slice(1)}
+    <DashboardShell accountAccess={accountAccess} isAdmin={customer.is_admin}>
+      <DashboardHeader
+        pretitle="Clutch Print Shop"
+        title={`Welcome back, ${displayName}`}
+        subtitle="See what is working, finish important setup tasks, and keep your marketing moving."
+        actions={(
+          <UnifiedDashboardInteractive
+            performance={performance}
+            showChart={false}
+            createCapabilities={{
+              clutchCode: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "Requires an active Clutch Codes plan" },
+              campaign: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "Requires general Clutch Codes capacity" },
+              nfc: { href: "/portal/connect", enabled: accountAccess.hasSmartCard || accountAccess.hasConnectPlus, reason: "Available with an eligible NFC product" },
+              leadForm: { href: "/portal/connect/build", enabled: accountAccess.canUseProfileBuilder, reason: "Available with Clutch Connect+" },
+              profile: { href: "/portal/connect/setup", enabled: accountAccess.hasConnectBasic || accountAccess.hasConnectPlus, reason: "Available with Smart Card or Connect access" },
+            }}
           />
-        ) : null}
+        )}
+      />
 
-        <DashboardHeader
-          pretitle={isConnectBasicPlan ? `Welcome, ${welcomeFirstName}` : undefined}
-          title={access.dashboardTitle}
-          subtitle={
-            isConnectBasicPlan
-              ? smartCardSubtitle
-              : "Launch campaigns, track scans, capture leads, and see where your marketing works."
-          }
-          actions={(
-            <div className="portal-overview-header-actions">
-              {isConnectBasicPlan ? (
-                <>
-                  <Link className="btn secondary" href={smartCardPrimaryCtaHref}>
-                    Edit Profile
-                  </Link>
-                  <Link className="btn ghost" href="/portal/connect/leads">Lead Inbox</Link>
-                </>
-              ) : showCampaignDashboard ? (
-                <>
-                  {access.canCreateQr ? <Link className="btn primary" href="/portal/create">Create QR Code</Link> : null}
-                  <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
-                  <Link className="btn secondary" href="/portal/analytics">View Insights</Link>
-                  {access.canUseProfileBuilder ? <Link className="btn ghost" href="/portal/connect/build">Edit Clutch Connect</Link> : null}
-                </>
-              ) : <Link className="btn ghost" href="/portal/settings">Account Settings</Link>}
-            </div>
-          )}
-        />
+      {errorMessage ? <RetryNotice title="Something needs attention" description={errorMessage} /> : null}
+      {setupMessage ? <RetryNotice title="Setup update" description={setupMessage} /> : null}
+      {issues.length ? <RetryNotice title="Some dashboard data could not load" description="Your account is still available. Retry to refresh the affected panels." details={issues} /> : null}
 
-        <AccountWarnings warnings={access.warnings} />
-        <ActiveProducts access={access} />
-        <QrCapacity access={access} />
+      <section className="unified-metric-grid" aria-label="Account overview">
+        <Link href="/portal/analytics" className="unified-metric-card">
+          <span className="unified-metric-icon"><QrCode size={20} /></span><span>Total Scans & Taps</span><strong>{totalScans.toLocaleString()}</strong><small>Across assets you can currently analyze</small>
+        </Link>
+        <Link href="/portal/qr" className="unified-metric-card">
+          <span className="unified-metric-icon"><Megaphone size={20} /></span><span>Active Marketing Assets</span><strong>{activeAssets.toLocaleString()}</strong><small>Live codes and profiles</small>
+        </Link>
+        <Link href="/portal/connect/leads" className="unified-metric-card">
+          <span className="unified-metric-icon"><ContactRound size={20} /></span><span>Leads Captured</span><strong>{leads.length.toLocaleString()}</strong><small>From your connected lead forms</small>
+        </Link>
+        <Link href="/portal/print-orders" className="unified-metric-card">
+          <span className="unified-metric-icon"><ShoppingBag size={20} /></span><span>Current Orders</span><strong>{currentOrderCount.toLocaleString()}</strong><small>Open print and NFC orders</small>
+        </Link>
+      </section>
 
-        {isConnectBasicPlan ? (
-          <section className="portal-overview-plan-mini">
-            <strong>Plan: Basic</strong>
-            <span>Free</span>
-            <span>{subscriptionStatus}</span>
-          </section>
-        ) : access.hasClutchCodes ? (
-          <CurrentPlanBadge
-            planCode={access.clutchCodesPlanCode || "clutch_codes"}
-            planName={access.clutchCodesPlanName || "Clutch Codes"}
-            priceLabel={access.clutchCodesPrice || "Shopify subscription"}
-            description="Dynamic QR campaigns, editable destinations, customization, exports, and campaign analytics."
-            usageLabel={usageLabel}
-            subscriptionStatus={String(customer.clutch_codes_subscription_status || "inactive")}
-            locked={subscriptionLocked}
-            trialStatus={String(customer.trial_status || "none")}
-          />
-        ) : null}
+      <UnifiedDashboardInteractive
+        performance={performance}
+        showButton={false}
+        createCapabilities={{
+          clutchCode: { href: "/portal/create", enabled: accountAccess.canCreateQr },
+          campaign: { href: "/portal/create", enabled: accountAccess.canCreateQr },
+          nfc: { href: "/portal/connect", enabled: accountAccess.hasSmartCard || accountAccess.hasConnectPlus },
+          leadForm: { href: "/portal/connect/build", enabled: accountAccess.canUseProfileBuilder },
+          profile: { href: "/portal/connect/setup", enabled: accountAccess.hasConnectBasic || accountAccess.hasConnectPlus },
+        }}
+      />
 
-        {showCampaignDashboard && nextStepCard ? <LockedFeatureCard {...nextStepCard} /> : null}
+      <div className="unified-dashboard-grid">
+        <section className="unified-panel unified-action-panel">
+          <div className="unified-section-heading"><div><p className="unified-kicker">Next steps</p><h2>Action Required</h2></div><Clock3 size={20} /></div>
+          {actionTasks.length ? <ul className="unified-list">{actionTasks.map((task) => (
+            <li key={task.id}><span className="unified-list-icon"><PackageCheck size={18} /></span><span><small>{task.priority}</small><strong>{task.label}</strong><span>{task.detail}</span></span><Link href={task.href} aria-label={`${task.label}: ${task.detail}`}><ArrowRight size={18} /></Link></li>
+          ))}</ul> : <div className="unified-complete-state"><CheckCircle2 size={24} /><div><strong>You are all caught up</strong><span>New setup, artwork, and proof tasks will appear here.</span></div></div>}
+        </section>
 
-        {access.canViewPrintOrders ? (
-          <AnalyticsCard title="Recent Order Status">
-            {visibleCardOrders.length ? (
-              <ul className="portal-overview-order-list">
-                {visibleCardOrders.map((order) => {
-                  const shopifyStatusUrl = order.shopify_order_id
-                    ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
-                    : null;
-                  const engravingDetails = order.engraving_requested
-                    ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
-                      ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
-                          .filter(Boolean)
-                          .join(" • ")
-                      : "Requested"
-                    : "Not requested";
+        <section className="unified-panel">
+          <div className="unified-section-heading"><div><p className="unified-kicker">Marketing</p><h2>Active Campaigns</h2></div><Link href="/portal/qr">View all</Link></div>
+          {recentCampaigns.length ? <ul className="unified-list">{recentCampaigns.map((code: any) => (
+            <li key={code.id}><span className="unified-list-icon"><QrCode size={18} /></span><span><small>{humanize(code.qr_type, "Clutch Code")}</small><strong>{code.name}</strong><span>{Number(code.scan_count || 0).toLocaleString()} scans · {code.is_active === false ? "Paused" : "Active"}</span></span><Link href={`/portal/analytics/${code.id}`} aria-label={`View analytics for ${code.name}`}><ArrowRight size={18} /></Link></li>
+          ))}</ul> : <EmptyState title="No active campaigns" description={accountAccess.canCreateQr ? "Create a Clutch Code to start measuring your marketing." : "Eligible order-linked codes and marketing assets will appear here."} />}
+        </section>
 
-                  return (
-                    <li key={order.id} className="portal-overview-order-row">
-                      <div className="portal-overview-order-row-head">
-                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                        <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                      </div>
-                      <div className="portal-overview-order-row-grid">
-                        <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                        <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                        <p><strong>Engraving:</strong> {engravingDetails}</p>
-                        <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
-                        <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
-                        <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
-                      </div>
+        <section className="unified-panel">
+          <div className="unified-section-heading"><div><p className="unified-kicker">Contacts</p><h2>Recent Leads</h2></div><Link href="/portal/connect/leads">View all</Link></div>
+          {leads.length ? <ul className="unified-list">{leads.slice(0, 5).map((lead: any) => (
+            <li key={lead.id}><span className="unified-list-icon"><ContactRound size={18} /></span><span><small>{humanize(lead.status, "New lead")}</small><strong>{lead.name || lead.email || "New contact"}</strong><span>{formatDate(lead.created_at, true)}</span></span></li>
+          ))}</ul> : <EmptyState title="No leads yet" description="New contacts captured through your eligible lead forms will appear here." />}
+        </section>
 
-                      <div className="portal-overview-order-row-actions">
-                        {shopifyStatusUrl ? <Link className="btn ghost" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
-            )}
-            {overflowCardOrders.length ? (
-              <details className="portal-overview-order-more">
-                <summary>View all orders</summary>
-                <ul className="portal-overview-order-list portal-overview-order-list-more">
-                  {overflowCardOrders.map((order) => (
-                    <li key={order.id} className="portal-overview-order-row">
-                      <div className="portal-overview-order-row-head">
-                        <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                        <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                      </div>
-                      <div className="portal-overview-order-row-grid">
-                        <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                        <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
-          </AnalyticsCard>
-        ) : null}
-
-        {subscriptionLocked ? (
-          <section className="locked-upgrade-card">
-            <div>
-              <p className="eyebrow">Billing Attention</p>
-              <h2>Paid QR features are locked.</h2>
-              <p>{subscriptionLockMessage}</p>
-            </div>
-            <Link className="btn primary" href="https://clutchprintshop.com/pages/qr-pro">
-              View Plans
-            </Link>
-          </section>
-        ) : null}
-
-        {isConnectBasicPlan ? (
-          <>
-            <section className="portal-overview-live-strip">
-              <div>
-                <span className={hasPublicProfile ? "is-live" : "is-draft"}>{hasPublicProfile ? "LIVE" : "DRAFT"}</span>
-                <strong>{hasPublicProfile ? clutchConnectDisplayUrl(String(connectProfile?.slug || "")) : "Finish setup to publish your profile."}</strong>
-              </div>
-              <div className="portal-overview-live-strip-actions">
-                {hasPublicProfile ? (
-                  <>
-                    <CopyPublicProfileButton url={publicProfileUrl} />
-                    <Link className="btn ghost" href={publicProfileUrl} target="_blank" rel="noreferrer">View Public Profile</Link>
-                  </>
-                ) : (
-                  <Link className="btn secondary" href="/portal/connect/setup">Continue Guided Setup</Link>
-                )}
-              </div>
-            </section>
-
-            <AnalyticsCard className="portal-overview-smart-qr-card">
-              <div className="portal-overview-section-head">
-                <h2>Your Smart Card QR</h2>
-                <p>This QR/NFC link was created for your smart card order.</p>
-              </div>
-
-              {selectedSmartCardQr?.slug ? (
-                <SmartCardQrCard
-                  qrId={String(selectedSmartCardQr.id)}
-                  slug={String(selectedSmartCardQr.slug)}
-                  scanUrl={smartCardScanUrl}
-                  scanUrlDisplay={smartCardScanUrlDisplay}
-                  destinationDisplay={smartCardDestinationDisplay}
-                  connectedProfileText={hasPublicProfile ? "Connected to your live profile" : "Finish setup to connect this QR to your live profile"}
-                  orderAssociation={associatedCardOrder?.shopify_order_number || associatedCardOrder?.id || "Not linked to a specific order"}
-                  lastUpdated={formatDateTime(smartCardQrDate)}
-                  initialForegroundColor={selectedSmartCardQr.foreground_color || "#384862"}
-                  initialBackgroundColor={selectedSmartCardQr.background_color || "#ffffff"}
-                  initialStyleConfig={(selectedSmartCardQr as any).style_config || {}}
-                />
-              ) : (
-                <div className="portal-overview-smart-empty">
-                  <QrCode size={22} />
-                  <h3>Smart card QR not ready yet</h3>
-                  <p>Your smart card QR will appear here after your order is created.</p>
-                </div>
-              )}
-            </AnalyticsCard>
-
-            <section id="recent-order-status">
-              <AnalyticsCard title="Recent Order Status">
-                {visibleCardOrders.length ? (
-                <ul className="portal-overview-order-list">
-                  {visibleCardOrders.map((order) => {
-                    const shopifyStatusUrl = order.shopify_order_id
-                      ? shopifyOrderStatusUrlById.get(String(order.shopify_order_id)) || null
-                      : null;
-                    const engravingDetails = order.engraving_requested
-                      ? order.engraving_business_name || order.engraving_title || order.engraving_phone || order.engraving_email
-                        ? [order.engraving_business_name, order.engraving_title, order.engraving_phone, order.engraving_email]
-                            .filter(Boolean)
-                            .join(" • ")
-                        : "Requested"
-                      : "Not requested";
-
-                    return (
-                      <li key={order.id} className="portal-overview-order-row">
-                        <div className="portal-overview-order-row-head">
-                          <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                          <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                        </div>
-                        <div className="portal-overview-order-row-grid">
-                          <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                          <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                          <p><strong>Engraving:</strong> {engravingDetails}</p>
-                          <p><strong>Proof:</strong> {formatLabel(order.approval_status, "Not Ready")}</p>
-                          <p><strong>Fulfillment:</strong> {formatLabel(order.fulfillment_status, "Not Sent")}</p>
-                          <p><strong>Status:</strong> {formatLabel(order.status, "Setup Pending")}</p>
-                        </div>
-
-                        <div className="portal-overview-order-row-actions">
-                          {shopifyStatusUrl ? <Link className="btn ghost portal-overview-card-btn" href={shopifyStatusUrl} target="_blank" rel="noreferrer">View Order Details</Link> : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <EmptyState description="No smart card orders found yet. Once an order is processed, details and status updates will appear here." />
-              )}
-                {overflowCardOrders.length ? (
-                <details className="portal-overview-order-more">
-                  <summary>View all orders</summary>
-                  <ul className="portal-overview-order-list portal-overview-order-list-more">
-                    {overflowCardOrders.map((order) => (
-                      <li key={order.id} className="portal-overview-order-row">
-                        <div className="portal-overview-order-row-head">
-                          <strong className="portal-overview-order-number">{order.shopify_order_number || "Order in progress"}</strong>
-                          <span className="portal-overview-order-chip">{formatLabel(order.status, "Setup Pending")}</span>
-                        </div>
-                        <div className="portal-overview-order-row-grid">
-                          <p><strong>Product:</strong> {order.product_title || "Clutch Smart Business Card"}{order.variant_title ? ` (${order.variant_title})` : ""}</p>
-                          <p><strong>Placed:</strong> {formatDate(order.created_at)}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-                ) : null}
-              </AnalyticsCard>
-            </section>
-
-            <section className="ds-stat-grid">
-              <StatCard
-                label="Profile Views"
-                value={profileViewCount.toLocaleString()}
-              />
-              <StatCard
-                label="Card Taps"
-                value={smartCardTotalTaps.toLocaleString()}
-              />
-              <StatCard
-                label="Leads"
-                value={leadInboxCount.toLocaleString()}
-              />
-              <StatCard
-                label="Order Status"
-                value={latestOrderStatus}
-                description={latestCardOrder?.shopify_order_number ? String(latestCardOrder.shopify_order_number) : undefined}
-              />
-            </section>
-
-            <AnalyticsCard className="portal-overview-smart-card-activity-card">
-              <div className="portal-overview-section-head">
-                <h2>Smart Card Activity</h2>
-                <p>Latest smart card taps and profile activity.</p>
-              </div>
-
-              {smartCardTotalTaps ? (
-                <div className="portal-overview-smart-panel portal-overview-smart-panel-compact">
-                  <div className="portal-overview-smart-panel-head"><Clock3 size={16} /><h3>Recent taps</h3></div>
-                  <ul className="portal-overview-activity-list">
-                    {smartCardRecentActivity.slice(0, 6).map((item) => {
-                      const scan = smartCardScans.find((row) => row.id === item.id);
-                      const device = scan?.device_type ? formatLabel(scan.device_type, "Unknown") : "Unknown device";
-                      return (
-                        <li key={item.id}>
-                          <div>
-                            <strong>{item.title}</strong>
-                            <p>{device} • {item.location}</p>
-                          </div>
-                          <span>{item.date}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : (
-                <div className="portal-overview-smart-empty">
-                  <QrCode size={22} />
-                  <p>No card taps yet. Taps will appear after your smart card is scanned.</p>
-                </div>
-              )}
-            </AnalyticsCard>
-
-            <AnalyticsCard className="portal-overview-actions-card">
-              <div className="portal-overview-section-head">
-                <h2>Quick Actions</h2>
-                <p>Secondary tools for wallet cards, order tracking, and support.</p>
-              </div>
-
-              <div className="portal-overview-actions-grid portal-overview-actions-grid-smart portal-overview-actions-grid-compact">
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Sparkles size={17} /></div>
-                  <h3>Wallet Card</h3>
-                  <p>Save your contact card to Apple Wallet or Google Wallet for fast sharing.</p>
-                  {hasConnectProfile && connectProfileId ? (
-                    <div className="portal-overview-wallet-actions">
-                      <a className="btn ghost portal-overview-card-btn" href={`/api/wallet/apple/${connectProfileId}`}>Apple Wallet</a>
-                      <a className="btn ghost portal-overview-card-btn" href={`/api/wallet/google/${connectProfileId}`}>Google Wallet</a>
-                    </div>
-                  ) : (
-                    <p className="portal-overview-inline-note">Finish Guided Setup to enable wallet cards.</p>
-                  )}
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Link2 size={17} /></div>
-                  <h3>Order Tracking</h3>
-                  <p>Review order proof, fulfillment status, and shipment updates.</p>
-                  <a className="btn ghost portal-overview-card-btn" href="#recent-order-status">Jump to Orders</a>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><CheckCircle2 size={17} /></div>
-                  <h3>Support</h3>
-                  <p>Need help with setup or publishing? Our team is ready to help.</p>
-                  <Link className="btn ghost portal-overview-card-btn" href="mailto:support@clutchprintshop.com">Contact Support</Link>
-                </article>
-              </div>
-            </AnalyticsCard>
-
-            <section className="portal-overview-lower-grid">
-              <AnalyticsCard title={smartCardLaunchChecklistComplete ? "Setup Complete" : "Setup Checklist"}>
-                <ul className="portal-overview-checklist portal-overview-checklist-compact">
-                  {smartCardLaunchChecklistItems.map((item) => (
-                    <li key={item.label} className={item.done ? "done" : "pending"}>
-                      {item.done ? <CheckCircle2 size={16} /> : <Circle size={16} />}
-                      <span>{item.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </AnalyticsCard>
-
-              <AnalyticsCard title="Upgrade to Clutch Connect+" className="portal-overview-upgrade-card">
-                <div className="portal-overview-brand-card">
-                  <p>Unlock advanced profile customization, deeper engagement analytics, enhanced lead tools, and premium profile sections.</p>
-                  <Link className="btn ghost portal-overview-card-btn" href="/portal/settings">Try Connect+</Link>
-                  <span className="portal-overview-inline-note">14 Day Free Trial · Cancel Anytime</span>
-                </div>
-              </AnalyticsCard>
-            </section>
-          </>
-        ) : showCampaignDashboard ? (
-          <>
-            <section className="ds-stat-grid">
-              <StatCard
-                label="Active Campaigns"
-                value={activeQrCodes}
-                description="Live trackable campaigns currently active in your account."
-              />
-              <StatCard
-                label="Total Scans"
-                value={totalScans.toLocaleString()}
-                description="Lifetime scans across all QR campaigns."
-              />
-              <StatCard
-                label="Remaining Campaign Limit"
-                value={<span className="portal-overview-limit-value">{remainingLabel}</span>}
-                description={
-                  plan.code === "admin"
-                    ? "Admin includes unlimited active campaigns."
-                    : `${remaining} of ${limit} campaigns remaining.`
-                }
-              />
-              <StatCard
-                label="Account Plan"
-                value={plan.shortName}
-                description={`${plan.name} • ${subscriptionStatus}`}
-              />
-            </section>
-
-            <AnalyticsCard className="portal-overview-actions-card">
-              <div className="portal-overview-section-head">
-                <h2>Launch Your Next Campaign</h2>
-                <p>Everything you need to create, publish, and measure campaigns in one place.</p>
-              </div>
-              <div className="portal-overview-actions-grid">
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><QrCode size={17} /></div>
-                  <h3>Create Campaign</h3>
-                  <p>Start a new dynamic QR campaign with full tracking.</p>
-                  <Link className="btn primary" href="/portal/create">Open Studio</Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><QrCode size={17} /></div>
-                  <h3>Stored QR Library</h3>
-                  <p>Search, filter, and manage all saved QR campaigns.</p>
-                  <Link className="btn secondary" href="/portal/qr">Open Library</Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Link2 size={17} /></div>
-                  <h3>Build Clutch Connect Profile</h3>
-                  <p>Update your smart profile, links, and public details.</p>
-                  <Link className="btn secondary" href="/portal/connect/build">Open Profile Builder</Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><BarChart3 size={17} /></div>
-                  <h3>View Insights</h3>
-                  <p>Track marketing performance, geography, and engagement trends.</p>
-                  <Link className="btn secondary" href="/portal/analytics">Open Insights</Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><MapIcon size={17} /></div>
-                  <h3>Open Heatmap</h3>
-                  <p>Review where your print campaigns are generating engagement.</p>
-                  <Link className="btn secondary" href="/portal/heatmap">Open Heatmap</Link>
-                </article>
-
-                <article className="portal-overview-action-item">
-                  <div className="portal-overview-action-icon"><Users size={17} /></div>
-                  <h3>Capture Leads</h3>
-                  <p>Review profile submissions and follow up with prospects.</p>
-                  <Link className="btn secondary" href="/portal/connect/leads">View Leads</Link>
-                </article>
-              </div>
-            </AnalyticsCard>
-
-            <section className="portal-overview-lower-grid">
-              <AnalyticsCard title="Recent Activity">
-                {recentActivity.length ? (
-                  <ul className="portal-overview-activity-list">
-                    {recentActivity.slice(0, 6).map((item) => (
-                      <li key={item.id}>
-                        <div>
-                          <strong>{item.title}</strong>
-                          <p>{item.location}</p>
-                        </div>
-                        <span>{item.date}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyState description="No activity yet. Create and scan your first campaign to start tracking." />
-                )}
-              </AnalyticsCard>
-
-              <AnalyticsCard title="Setup Checklist">
-                <ul className="portal-overview-checklist">
-                  {checklistItems.map((item) => (
-                    <li key={item.label} className={item.done ? "done" : "pending"}>
-                      {item.done ? <CheckCircle2 size={16} /> : <Circle size={16} />}
-                      <span>{item.label}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="portal-overview-brand-card">
-                  <div className="portal-overview-brand-title">
-                    <Sparkles size={15} />
-                    <h3>Brand Assets</h3>
-                  </div>
-                  <p>Upload your logo once and apply it across QR designs.</p>
-                  <CustomerLogoUpload customerLogoUrl={customer.logo_url} />
-                </div>
-              </AnalyticsCard>
-            </section>
-          </>
-        ) : null}
-      </main>
+        <section className="unified-panel">
+          <div className="unified-section-heading"><div><p className="unified-kicker">Timeline</p><h2>Recent Activity</h2></div></div>
+          {recentActivity.length ? <ul className="unified-list">{recentActivity.map((event) => (
+            <li key={event.id}><span className="unified-list-icon"><CheckCircle2 size={18} /></span><span><small>{formatDate(event.at, true)}</small><strong>{event.label}</strong><span>{event.detail}</span></span></li>
+          ))}</ul> : <EmptyState title="No recent activity" description="Scans, taps, and order updates will appear here." />}
+        </section>
+      </div>
     </DashboardShell>
   );
 }
