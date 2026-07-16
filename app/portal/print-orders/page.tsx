@@ -19,7 +19,7 @@ export default async function CustomerPrintOrdersPage() {
   if (error) throw new Error("Unable to load your print orders.");
   return <DashboardShell accountAccess={access}>
     <main className="container">
-      <DashboardHeader title="Print Orders" subtitle="Track artwork, proof, production, fulfillment, and order-linked Clutch Codes." />
+      <DashboardHeader title="Orders" subtitle="Track QR setup, artwork, proofs, production, and shipping in one place." />
       {!data?.length ? <section className="dashboard-card"><h2>No print orders yet</h2><p>Eligible paid print orders will appear here.</p></section> : null}
       {(data || []).map((item: any) => {
         const qr = item.print_qr_provisionings?.[0]?.qr_codes;
@@ -28,8 +28,9 @@ export default async function CustomerPrintOrdersPage() {
           <p>Tracking: {item.tracking_mode} · Campaign: {item.campaign_name || "—"}</p>
           {item.destination_url ? <p>Destination: <a href={item.destination_url} rel="noreferrer" target="_blank">{item.destination_url}</a></p> : null}
           <p>Artwork: {item.artwork_status} · Proof: {item.proof_status} · Production: {item.production_status} · Fulfillment: {item.fulfillment_status}</p>
+          {item.tracking_mode !== "none" ? <p>QR setup: {String(item.qr_setup_status || "setup_required").replace(/_/g, " ")}{item.qr_setup_current_revision ? ` · Revision ${item.qr_setup_current_revision}` : ""}</p> : null}
           {item.attention_reason ? <p className="alert">Needs attention: {item.attention_reason}</p> : null}
-          {qr?.slug ? <Link href={`/portal/qr/${item.print_qr_provisionings[0].qr_code_id}/edit`}>Manage Clutch Code</Link> : null}
+          {qr?.slug ? <Link className={item.qr_setup_status === "submitted" ? "btn ghost" : "btn primary"} href={`/portal/print-orders/${item.id}#qr-setup`}>{item.qr_setup_status === "submitted" ? "Review QR setup" : "Set up QR for artwork"}</Link> : null}
           {item.tracking_url ? <p><a href={item.tracking_url} rel="noreferrer" target="_blank">Track shipment</a></p> : null}
           <p><Link href={`/portal/print-orders/${item.id}`}>View order workflow</Link></p>
         </section>;

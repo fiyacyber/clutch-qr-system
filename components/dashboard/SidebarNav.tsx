@@ -1,376 +1,211 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
-  BarChart3,
-  Map,
+  CircleHelp,
+  ContactRound,
+  FileText,
   LayoutDashboard,
-  Link2,
+  LifeBuoy,
   LogOut,
-  Menu,
+  Megaphone,
+  Nfc,
+  Plus,
   QrCode,
   Settings,
   Shield,
-  Sparkles,
-  Users,
+  ShoppingBag,
+  UserRound,
   X,
-  CreditCard,
-  PackageCheck,
-  UserRoundCog,
 } from "lucide-react";
-import { Suspense, useState } from "react";
+import ClutchCodesWordmark from "@/components/dashboard/ClutchCodesWordmark";
 import type { DashboardNavVariant } from "@/components/dashboard/DashboardShell";
-import { ACCOUNT_MODULE_ROUTES, type AccountAccess, type AccountModuleKey } from "@/lib/account-access";
-import { getActiveAccountModule } from "@/lib/account-navigation";
+import type { AccountAccess } from "@/lib/account-access";
 
 interface SidebarNavProps {
   accountAccess?: AccountAccess;
   isAdmin?: boolean;
-  navLocks?: {
-    qr?: boolean;
-    analytics?: boolean;
-    heatmap?: boolean;
-  };
+  navLocks?: { qr?: boolean; analytics?: boolean; heatmap?: boolean };
   navVariant?: DashboardNavVariant;
   showGuidedSetup?: boolean;
   showLeadInbox?: boolean;
 }
 
-type LegacyNavKey = "overview" | "campaign-performance" | "connect" | "guided-setup" | "lead-inbox" | "qr" | "analytics" | "heatmap" | "admin" | "settings";
+export type PortalSection = "dashboard" | "marketing" | "contacts" | "orders" | "account";
 
-type NavItem = {
-  key: LegacyNavKey;
+const primaryItems: Array<{
+  key: PortalSection;
   label: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  match: (pathname: string, tab: string | null) => boolean;
-  adminOnly?: boolean;
-  lockKey?: "qr" | "analytics" | "heatmap";
-};
-
-const moduleLabels: Record<AccountModuleKey, { label: string; icon: NavItem["icon"] }> = {
-  overview: { label: "Overview", icon: LayoutDashboard },
-  "print-orders": { label: "Print Orders", icon: PackageCheck },
-  "smart-card": { label: "Smart Card", icon: CreditCard },
-  "clutch-connect": { label: "Clutch Connect", icon: Link2 },
-  "guided-setup": { label: "Guided Setup", icon: Sparkles },
-  "profile-builder": { label: "Profile Builder", icon: UserRoundCog },
-  "lead-inbox": { label: "Lead Inbox", icon: Users },
-  "profile-analytics": { label: "Profile Analytics", icon: BarChart3 },
-  "qr-codes": { label: "QR Codes", icon: QrCode },
-  "campaign-analytics": { label: "Campaign Analytics", icon: BarChart3 },
-  "campaign-heatmap": { label: "Campaign Heatmap", icon: Map },
-  subscription: { label: "Subscription", icon: CreditCard },
-  settings: { label: "Settings", icon: Settings },
-  admin: { label: "Admin", icon: Shield },
-};
-
-const navItems: NavItem[] = [
-  {
-    key: "overview",
-    label: "Overview",
-    href: "/portal",
-    icon: LayoutDashboard,
-    match: (pathname) => pathname === "/portal",
-  },
-  {
-    key: "campaign-performance",
-    label: "Campaign Performance",
-    href: "/portal/analytics?tab=campaign-performance",
-    icon: QrCode,
-    match: (pathname, tab) => pathname === "/portal/analytics" && tab === "campaign-performance",
-    lockKey: "qr",
-  },
-  {
-    key: "connect",
-    label: "Clutch Connect",
-    href: "/portal/connect",
-    icon: Link2,
-    match: (pathname) =>
-      pathname === "/portal/connect" ||
-      pathname === "/portal/connect/build" ||
-      pathname === "/portal/connect/edit" ||
-      pathname === "/portal/connect/links" ||
-      pathname.startsWith("/clutch-connect"),
-  },
-  {
-    key: "guided-setup",
-    label: "Guided Setup",
-    href: "/portal/connect/setup",
-    icon: Sparkles,
-    match: (pathname) => pathname.startsWith("/portal/connect/setup") || pathname.startsWith("/setup/guided"),
-  },
-  {
-    key: "lead-inbox",
-    label: "Lead Inbox",
-    href: "/portal/connect/leads",
-    icon: Users,
-    match: (pathname) => pathname.startsWith("/portal/connect/leads"),
-  },
-  {
-    key: "qr",
-    label: "QR Codes",
-    href: "/portal/qr",
-    icon: QrCode,
-    match: (pathname) => pathname === "/portal/qr" || pathname.startsWith("/portal/qr/"),
-    lockKey: "qr",
-  },
-  {
-    key: "analytics",
-    label: "Analytics",
-    href: "/portal/analytics",
-    icon: BarChart3,
-    match: (pathname, tab) => pathname === "/portal/analytics" && (!tab || tab === "analytics" || tab === "overview"),
-    lockKey: "analytics",
-  },
-  {
-    key: "heatmap",
-    label: "Heatmap",
-    href: "/portal/heatmap",
-    icon: Map,
-    match: (pathname) => pathname === "/portal/heatmap",
-    lockKey: "heatmap",
-  },
-  {
-    key: "admin",
-    label: "Admin",
-    href: "/admin",
-    icon: Shield,
-    match: (pathname) => pathname.startsWith("/admin"),
-    adminOnly: true,
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    href: "/portal/settings",
-    icon: Settings,
-    match: (pathname) => pathname === "/portal/settings",
-  },
+  icon: typeof LayoutDashboard;
+}> = [
+  { key: "dashboard", label: "Dashboard", href: "/portal", icon: LayoutDashboard },
+  { key: "marketing", label: "Marketing", href: "/portal/qr", icon: Megaphone },
+  { key: "contacts", label: "Contacts", href: "/portal/connect/leads", icon: ContactRound },
+  { key: "orders", label: "Orders", href: "/portal/print-orders", icon: ShoppingBag },
+  { key: "account", label: "Account", href: "/portal/settings", icon: Settings },
 ];
 
-function itemByKey(key: NavItem["key"]): NavItem {
-  const item = navItems.find((entry) => entry.key === key);
-  if (!item) {
-    throw new Error(`Missing nav item: ${key}`);
-  }
-  return item;
+export function getPortalSection(pathname: string): PortalSection {
+  if (pathname.startsWith("/portal/print-orders")) return "orders";
+  if (pathname.startsWith("/portal/connect/leads")) return "contacts";
+  if (
+    pathname.startsWith("/portal/settings") ||
+    pathname.startsWith("/portal/subscription") ||
+    pathname.startsWith("/portal/pricing")
+  ) return "account";
+  if (
+    pathname.startsWith("/portal/qr") ||
+    pathname.startsWith("/portal/create") ||
+    pathname.startsWith("/portal/analytics") ||
+    pathname.startsWith("/portal/heatmap") ||
+    pathname.startsWith("/portal/connect")
+  ) return "marketing";
+  return "dashboard";
 }
 
-function getNavSections({
-  navVariant,
-  isAdmin,
-  showGuidedSetup,
-  showLeadInbox,
-}: {
-  navVariant: DashboardNavVariant;
-  isAdmin?: boolean;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
-  const shouldShowGuidedSetup = showGuidedSetup === true;
-  const shouldShowLeadInbox = showLeadInbox !== false;
-  const guidedSetupKey: NavItem["key"][] = shouldShowGuidedSetup ? ["guided-setup"] : [];
-  const leadInboxKey: NavItem["key"][] = shouldShowLeadInbox ? ["lead-inbox"] : [];
-  const primaryKeysByVariant: Record<DashboardNavVariant, NavItem["key"][]> = {
-    default: ["overview", "campaign-performance", "connect", ...guidedSetupKey, "qr", "analytics", "heatmap", "settings"],
-    "connect-basic": ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
-    onboarding: ["overview", "connect", ...guidedSetupKey, ...leadInboxKey, "settings"],
+function PrimaryNavigation({ mobile = false }: { mobile?: boolean }) {
+  const pathname = usePathname();
+  const activeSection = getPortalSection(pathname);
+
+  return (
+    <nav className={mobile ? "ds-bottom-nav" : "ds-sidebar-nav"} aria-label="Primary">
+      {primaryItems.map((item) => {
+        const Icon = item.icon;
+        const active = item.key === activeSection;
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            className={`${mobile ? "ds-bottom-nav-item" : "ds-nav-item"}${active ? " is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
+          >
+            <Icon size={mobile ? 20 : 17} strokeWidth={1.8} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+const createOptions = [
+  { key: "clutchCode" as const, label: "Create Clutch Code", description: "Set up a dynamic destination", href: "/portal/create", icon: QrCode },
+  { key: "campaign" as const, label: "Start Campaign", description: "Organize connected marketing", href: "/portal/create", icon: Megaphone },
+  { key: "nfc" as const, label: "Add NFC Item", description: "Connect a tap-enabled product", href: "/portal/connect", icon: Nfc },
+  { key: "leadForm" as const, label: "Create Lead Form", description: "Collect details after a scan", href: "/portal/connect/build", icon: FileText },
+  { key: "profile" as const, label: "Set Up Profile", description: "Publish a Clutch Connect profile", href: "/portal/connect/setup", icon: UserRound },
+];
+
+function MobileCreateMenu({ accountAccess, onClose }: { accountAccess?: AccountAccess; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const enabled = {
+    clutchCode: accountAccess?.canCreateQr ?? false,
+    campaign: accountAccess?.canCreateQr ?? false,
+    nfc: Boolean(accountAccess?.hasSmartCard || accountAccess?.hasConnectPlus),
+    leadForm: accountAccess?.canUseProfileBuilder ?? false,
+    profile: Boolean(accountAccess?.hasConnectBasic || accountAccess?.hasConnectPlus),
   };
 
-  const primary = primaryKeysByVariant[navVariant].map(itemByKey);
-  if (isAdmin) {
-    primary.splice(primary.length - 1, 0, itemByKey("admin"));
-  }
-
-  const secondaryKeys: NavItem["key"][] = ["campaign-performance", "qr", "analytics", "heatmap"];
-  const secondary = navVariant === "connect-basic"
-    ? secondaryKeys.map(itemByKey)
-    : [];
-
-  return { primary, secondary };
-}
-
-function SidebarListInner({
-  accountAccess,
-  isAdmin,
-  onNavigate,
-  navLocks,
-  navVariant,
-  showGuidedSetup,
-  showLeadInbox,
-}: {
-  accountAccess?: AccountAccess;
-  isAdmin?: boolean;
-  onNavigate?: () => void;
-  navLocks?: SidebarNavProps["navLocks"];
-  navVariant: DashboardNavVariant;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tab = searchParams.get("tab");
-
-  if (accountAccess) {
-    const moduleEntries = (Object.keys(accountAccess.modules) as AccountModuleKey[])
-      .filter((key) => accountAccess.modules[key] !== "hidden")
-      .map((key) => ({ key, state: accountAccess.modules[key], ...moduleLabels[key], href: ACCOUNT_MODULE_ROUTES[key] || "/portal" }));
-    const activeKey = getActiveAccountModule(pathname, searchParams, moduleEntries.map((item) => item.key));
-    return (
-      <>
-        <div className="ds-logo-wrap"><Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority /></div>
-        <nav className="ds-sidebar-nav" aria-label="Primary">
-          {moduleEntries.map((item) => {
-            const Icon = item.icon;
-            const active = item.key === activeKey;
-            if (item.state === "locked") {
-              return (
-                <button key={item.key} type="button" className="ds-nav-item" disabled aria-disabled="true">
-                  <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
-                  <small className="ds-nav-lock-pill">Locked</small>
-                </button>
-              );
-            }
-            return (
-              <Link key={item.key} href={item.href} className={`ds-nav-item${active ? " is-active" : ""}`} onClick={onNavigate}>
-                <Icon size={16} strokeWidth={1.8} /><span>{item.label}</span>
+  return (
+    <div className="ds-create-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="ds-create-menu" role="dialog" aria-modal="true" aria-labelledby="mobile-create-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="ds-create-menu-head">
+          <div>
+            <h2 id="mobile-create-title">Create New</h2>
+            <p>Choose what you want to make.</p>
+          </div>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close Create New menu"><X size={19} /></button>
+        </div>
+        <div className="ds-create-menu-list">
+          {createOptions.map((option) => {
+            const Icon = option.icon;
+            return enabled[option.key] ? (
+              <Link key={option.key} href={option.href} onClick={onClose}>
+                <span><Icon size={19} aria-hidden="true" /></span>
+                <span><strong>{option.label}</strong><small>{option.description}</small></span>
               </Link>
+            ) : (
+              <div key={option.key} className="is-locked" aria-disabled="true">
+                <span><Icon size={19} aria-hidden="true" /></span>
+                <span><strong>{option.label}</strong><small>Not included with your current access</small></span>
+              </div>
             );
           })}
-        </nav>
-        <form action="/auth/signout" method="get" className="ds-logout-wrap"><button type="submit" className="ds-nav-item ds-logout-btn"><LogOut size={16} strokeWidth={1.8} /><span>Logout</span></button></form>
-      </>
-    );
-  }
-  const navSections = getNavSections({ navVariant, isAdmin, showGuidedSetup, showLeadInbox });
-  const orderedVisibleItems = [...navSections.primary, ...navSections.secondary];
-  const activeKey = orderedVisibleItems.find((item) => item.match(pathname, tab))?.key || null;
-
-  function renderItem(item: NavItem, secondary = false) {
-    const active = item.key === activeKey;
-    const Icon = item.icon;
-    const isLocked = item.lockKey ? navLocks?.[item.lockKey] === true : false;
-
-    if (isLocked) {
-      return (
-        <button
-          key={`${secondary ? "secondary" : "primary"}-${item.label}`}
-          type="button"
-          className={`ds-nav-item${secondary ? " is-secondary" : ""}`}
-          disabled
-          aria-disabled="true"
-        >
-          <Icon size={16} strokeWidth={1.8} />
-          <span>{item.label}</span>
-          <small className="ds-nav-lock-pill">Locked</small>
-        </button>
-      );
-    }
-
-    return (
-      <Link
-        key={`${secondary ? "secondary" : "primary"}-${item.label}`}
-        href={item.href}
-        className={`ds-nav-item${secondary ? " is-secondary" : ""}${active ? " is-active" : ""}`}
-        onClick={onNavigate}
-      >
-        <Icon size={16} strokeWidth={1.8} />
-        <span>{item.label}</span>
-      </Link>
-    );
-  }
-
-  return (
-    <>
-      <div className="ds-logo-wrap">
-        <Image src="/clutch-sidebar-logo.svg" alt="Clutch" className="ds-sidebar-logo" width={180} height={48} priority />
-      </div>
-
-      <nav className="ds-sidebar-nav" aria-label="Primary">
-        {navSections.primary.map((item) => renderItem(item))}
-
-        {navSections.secondary.length ? (
-          <>
-            <p className="ds-sidebar-section-label">Upgrade tools</p>
-            {navSections.secondary.map((item) => renderItem(item, true))}
-          </>
-        ) : null}
-      </nav>
-
-      <form action="/auth/signout" method="get" className="ds-logout-wrap">
-        <button type="submit" className="ds-nav-item ds-logout-btn">
-          <LogOut size={16} strokeWidth={1.8} />
-          <span>Logout</span>
-        </button>
-      </form>
-    </>
-  );
-}
-
-function SidebarList(props: {
-  accountAccess?: AccountAccess;
-  isAdmin?: boolean;
-  onNavigate?: () => void;
-  navLocks?: SidebarNavProps["navLocks"];
-  navVariant: DashboardNavVariant;
-  showGuidedSetup?: boolean;
-  showLeadInbox?: boolean;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <SidebarListInner {...props} />
-    </Suspense>
-  );
-}
-
-export default function SidebarNav({ accountAccess, isAdmin, navLocks, navVariant, showGuidedSetup, showLeadInbox }: SidebarNavProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const inferredConnectBasic = !isAdmin && navLocks?.qr === true && navLocks?.analytics === true && navLocks?.heatmap === true;
-  const resolvedVariant: DashboardNavVariant = navVariant || (inferredConnectBasic ? "connect-basic" : "default");
-
-  return (
-    <>
-      <button
-        type="button"
-        className="ds-mobile-toggle"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
-      >
-        <Menu size={18} />
-      </button>
-
-      <aside className="ds-sidebar desktop" aria-label="Dashboard sidebar">
-        <SidebarList
-          accountAccess={accountAccess}
-          isAdmin={isAdmin}
-          navLocks={navLocks}
-          navVariant={resolvedVariant}
-          showGuidedSetup={showGuidedSetup}
-          showLeadInbox={showLeadInbox}
-        />
-      </aside>
-
-      {mobileOpen ? <div className="ds-mobile-backdrop" onClick={() => setMobileOpen(false)} /> : null}
-
-      <aside className={`ds-sidebar mobile${mobileOpen ? " open" : ""}`} aria-label="Mobile dashboard sidebar">
-        <div className="ds-mobile-head">
-          <span>Navigation</span>
-          <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">
-            <X size={16} />
-          </button>
         </div>
-        <SidebarList
-          accountAccess={accountAccess}
-          isAdmin={isAdmin}
-          navLocks={navLocks}
-          navVariant={resolvedVariant}
-          showGuidedSetup={showGuidedSetup}
-          showLeadInbox={showLeadInbox}
-          onNavigate={() => setMobileOpen(false)}
-        />
+      </section>
+    </div>
+  );
+}
+
+export default function SidebarNav({ accountAccess, isAdmin }: SidebarNavProps) {
+  const canUseAdmin = accountAccess?.canUseAdmin || isAdmin === true;
+  const [createOpen, setCreateOpen] = useState(false);
+  const used = accountAccess?.usedQrCount ?? 0;
+  const capacity = accountAccess?.effectiveQrCapacity;
+  const progress = capacity && capacity > 0 ? Math.min(100, Math.round((used / capacity) * 100)) : 0;
+  const planName = accountAccess?.clutchCodesPlanName?.replace(/^Clutch Codes\s+/i, "")
+    || accountAccess?.activeProductLabels?.[0]
+    || (canUseAdmin ? "Administrator" : "Account access");
+  const usage = accountAccess
+    ? capacity === null
+      ? `${used} codes · Unlimited`
+      : capacity && capacity > 0
+        ? `${used} of ${capacity} codes`
+        : "No code allowance"
+    : "View account details";
+
+  return (
+    <>
+      <aside className="ds-sidebar desktop" aria-label="Customer portal sidebar">
+        <Link href="/portal" className="ds-logo-wrap"><ClutchCodesWordmark /></Link>
+        <PrimaryNavigation />
+        <div className="ds-sidebar-utilities">
+          <Link href="/portal/settings" className="ds-plan-card">
+            <small>Clutch Codes™ plan</small>
+            <span><strong>{planName}</strong><em>{usage}</em></span>
+            <i aria-hidden="true"><b style={{ width: `${progress}%` }} /></i>
+          </Link>
+          {canUseAdmin ? (
+            <Link href="/admin" className="ds-nav-item">
+              <Shield size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span>Admin tools</span>
+            </Link>
+          ) : null}
+          <Link href="/portal/settings" className="ds-nav-item ds-utility-item">
+            <CircleHelp size={17} strokeWidth={1.8} aria-hidden="true" />
+            <span>Help center</span>
+          </Link>
+          <a href="mailto:support@clutchprintshop.com" className="ds-nav-item ds-utility-item">
+            <LifeBuoy size={17} strokeWidth={1.8} aria-hidden="true" />
+            <span>Support</span>
+          </a>
+          <form action="/auth/signout" method="get" className="ds-logout-wrap">
+            <button type="submit" className="ds-nav-item ds-logout-btn">
+              <LogOut size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span>Log out</span>
+            </button>
+          </form>
+        </div>
       </aside>
+
+      <PrimaryNavigation mobile />
+      <button type="button" className="ds-mobile-create" onClick={() => setCreateOpen(true)} aria-label="Open Create New menu">
+        <Plus size={24} aria-hidden="true" />
+      </button>
+      {createOpen ? <MobileCreateMenu accountAccess={accountAccess} onClose={() => setCreateOpen(false)} /> : null}
     </>
   );
 }

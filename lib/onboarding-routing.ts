@@ -110,8 +110,9 @@ export async function resolvePostLoginRedirect({
     setupCompleted = await getProfileSetupCompleted(customer.id);
 
     if (customer.onboarding_status === "password_required" || customer.must_change_password) {
-      finalRedirect = `/account/change-password?next=${encodeURIComponent(GUIDED_SETUP_ENTRY_PATH)}`;
-    } else if (guidedSetupRequired === true || setupCompleted === false) {
+      const afterPassword = guidedSetupRequired === true ? GUIDED_SETUP_ENTRY_PATH : "/portal";
+      finalRedirect = `/account/change-password?next=${encodeURIComponent(afterPassword)}`;
+    } else if (guidedSetupRequired === true) {
       finalRedirect = GUIDED_SETUP_ROUTE;
     } else {
       const requestedGuided =

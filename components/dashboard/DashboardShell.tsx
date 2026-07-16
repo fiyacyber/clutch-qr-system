@@ -1,6 +1,7 @@
 "use client";
 
 import SidebarNav from "@/components/dashboard/SidebarNav";
+import DashboardTopbar from "@/components/dashboard/DashboardTopbar";
 import type { AccountAccess } from "@/lib/account-access";
 
 export type DashboardNavVariant = "default" | "connect-basic" | "onboarding";
@@ -38,7 +39,10 @@ export default function DashboardShell({
         showGuidedSetup={showGuidedSetup}
         showLeadInbox={showLeadInbox}
       />
-      <div className="ds-main-shell">{children}</div>
+      <div className="ds-main-shell">
+        <DashboardTopbar />
+        <div className="ds-main-content">{children}</div>
+      </div>
     </div>
   );
 }

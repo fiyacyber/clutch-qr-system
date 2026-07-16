@@ -128,8 +128,9 @@ export default async function StoredQrCodesPage() {
         ) : null}
 
         <DashboardHeader
-          title="QR Codes"
-          subtitle="Create, manage, and analyze your QR campaign library."
+          pretitle="Marketing"
+          title="Marketing Assets"
+          subtitle="Manage Clutch Codes, printed campaigns, connected profiles, and their performance."
           actions={(
             <div className="qr-studio-top-actions">
               <Link className="btn ghost" href="/portal">Back to Dashboard</Link>

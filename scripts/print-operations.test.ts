@@ -165,7 +165,7 @@ test("workflow route authorizes before invoking the service-only state machine",
 test("signed file access is short-lived and requires order authorization", () => {
   assert.ok(signedRoute.indexOf("loadAuthorizedPrintOrder") < signedRoute.indexOf("createSignedUrl"));
   assert.match(signedRoute, /createSignedUrl\(file\.storage_path, 300/);
-  assert.match(signedRoute, /!actor\.isAdmin && !\["customer_artwork", "admin_proof"\]\.includes\(file\.file_kind\)/);
+  assert.match(signedRoute, /!actor\.isAdmin && !\["customer_artwork", "admin_proof", "qr_artwork_asset"\]\.includes\(file\.file_kind\)/);
   assert.doesNotMatch(signedRoute, /getPublicUrl/);
 });
 

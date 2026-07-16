@@ -83,17 +83,15 @@ export default function PrintOrderWorkflowActions({ orderId, actorType, workflow
       <button type="submit" disabled={busy}>Upload artwork</button>
     </form> : null}
 
-    {actorType === "customer" && workflowState === "proof_sent" ? <div className="admin-form-grid">
-      <button type="button" disabled={busy} onClick={() => void transition("approve_proof")}>Approve proof</button>
-      {actionForm("request_proof_revision", "Request proof revision", "reason")}
-    </div> : null}
-
     {actorType === "admin" ? <div className="admin-form-grid">
       {workflowState === "artwork_received" ? <button type="button" disabled={busy} onClick={() => void transition("begin_artwork_review")}>Begin artwork review</button> : null}
       {["artwork_received", "artwork_review"].includes(workflowState) ? actionForm("request_artwork_changes", "Request artwork changes", "reason") : null}
       {["artwork_received", "artwork_review"].includes(workflowState) ? <button type="button" disabled={busy} onClick={() => void transition("approve_artwork")}>Approve artwork</button> : null}
       {adminCanUploadProof ? <form className="admin-form" onSubmit={(event) => void upload(event, "admin_proof")}>
         <label>Proof file<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg" required /></label>
+        <label>Page or side labels<input name="page_labels" placeholder="Front, Back" maxLength={500} /></label>
+        <label>QR placement note<textarea name="qr_placement_note" maxLength={500} placeholder="Final QR size and position shown in this proof" /></label>
+        <label>QR scan validation<select name="qr_scan_validation_status" defaultValue="pending"><option value="pending">Pending</option><option value="passed">Passed</option><option value="failed">Failed</option><option value="not_required">Not required</option></select></label>
         <button type="submit" disabled={busy}>Upload proof revision</button>
       </form> : null}
       {["ready_for_production", "submitted_to_supplier", "in_production"].includes(workflowState) ? <form className="admin-form" onSubmit={(event) => void upload(event, "production_artwork")}>
