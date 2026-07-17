@@ -43,6 +43,7 @@ test("Smart Card only grants basic profile tools without campaign creation", () 
 });
 
 test("only smart_card system QR records prove Smart Card ownership", () => {
+  assert.equal(hasSmartCardSystemQrEvidence({ is_system: true, qr_type: "smart_card" }), true);
   assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "smart_card" }]), true);
   assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "tracked_print" }]), false);
   assert.equal(hasSmartCardSystemQrEvidence([{ is_system: true, qr_type: "business_kit" }]), false);
@@ -50,10 +51,14 @@ test("only smart_card system QR records prove Smart Card ownership", () => {
 });
 
 test("only explicitly active profiles count as ownership evidence", () => {
+  assert.equal(hasActiveProfileEvidence({ is_active: true }), true);
   assert.equal(hasActiveProfileEvidence([{ is_active: true }]), true);
+  assert.equal(hasActiveProfileEvidence({ is_active: false }), false);
   assert.equal(hasActiveProfileEvidence([{ is_active: false }]), false);
   assert.equal(hasActiveProfileEvidence([{ is_active: null }]), false);
   assert.equal(hasActiveProfileEvidence([{}]), false);
+  assert.equal(hasActiveProfileEvidence(null), false);
+  assert.equal(hasActiveProfileEvidence(undefined), false);
 });
 
 test("server and admin apply strict Smart Card and active-profile evidence", () => {
