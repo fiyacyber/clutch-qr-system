@@ -5,8 +5,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import PrintOrderWorkflowActions from "@/components/print-orders/PrintOrderWorkflowActions";
 import { requireCustomer } from "@/lib/auth";
-import { formatPrintWorkflowState } from "@/lib/print-operations";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { formatAdminLabel } from "@/lib/admin-operations";
 
 export default async function AdminPrintOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,35 +27,35 @@ export default async function AdminPrintOrderDetailPage({ params }: { params: Pr
 
   return <DashboardShell isAdmin>
     <main className="container admin-page">
-      <DashboardHeader title={order.product_title} subtitle={`Order ${order.shopify_order_number || order.shopify_order_id} · ${formatPrintWorkflowState(order.workflow_state)}`} />
+      <DashboardHeader title={order.product_title} subtitle={`Order ${order.shopify_order_number || order.shopify_order_id} · ${formatAdminLabel(order.workflow_state)}`} />
       <AdminDashboardTabs activeTab="print-orders" />
       <p><Link href="/admin/print-orders">← Back to print orders</Link></p>
       <section className="dashboard-card">
         <h2>Order details</h2>
         <p>Customer: {order.customer_name || order.customer_email || "Guest"}</p>
-        <p>{order.material_type} · Quantity {order.quantity} · SKU {order.sku || "—"}</p>
-        <p>Artwork method: {order.artwork_method || "Not specified"}{order.reorder_reference ? ` · Reorder ${order.reorder_reference}` : ""}</p>
+        <p>{formatAdminLabel(order.material_type)} · Quantity {order.quantity} · SKU {order.sku || "—"}</p>
+        <p>Artwork method: {formatAdminLabel(order.artwork_method, "Not specified")}{order.reorder_reference ? ` · Reorder ${order.reorder_reference}` : ""}</p>
         {order.artwork_instructions ? <p>Artwork instructions: {order.artwork_instructions}</p> : null}
         {order.qr_placement_instructions ? <p>QR placement: {order.qr_placement_instructions}</p> : null}
-        <p>Artwork: {order.artwork_status} · Proof: {order.proof_status} · Production: {order.production_status} · Fulfillment: {order.fulfillment_status}</p>
+        <p>Artwork: {formatAdminLabel(order.artwork_status)} · Proof: {formatAdminLabel(order.proof_status)} · Production: {formatAdminLabel(order.production_status)} · Fulfillment: {formatAdminLabel(order.fulfillment_status)}</p>
         <p>Supplier: {order.supplier || "—"} · Supplier order: {order.supplier_order_id || "—"}</p>
         <p>Shipment: {order.carrier || "—"} · {order.tracking_number || "No tracking number"}</p>
       </section>
       <PrintOrderWorkflowActions orderId={id} actorType="admin" workflowState={order.workflow_state} />
       <section className="dashboard-card"><h2>QR ready for artwork</h2>
-        {(qrVersionsResult.data || []).map((version) => <p key={version.id}>Revision {version.revision} · {version.status} · {version.artwork_use_status} · {version.is_current ? "Current" : "Superseded"} · <Link href={`/api/print-order-files/${version.print_order_file_id}`}>Download frozen SVG</Link></p>)}
+        {(qrVersionsResult.data || []).map((version) => <p key={version.id}>Revision {version.revision} · {formatAdminLabel(version.status)} · {formatAdminLabel(version.artwork_use_status)} · {version.is_current ? "Current" : "Superseded"} · <Link href={`/api/print-order-files/${version.print_order_file_id}`}>Download frozen SVG</Link></p>)}
         {!qrVersionsResult.data?.length ? <p>The customer has not submitted a QR asset yet.</p> : null}
       </section>
       <section className="dashboard-card"><h2>Private files</h2>
-        {(filesResult.data || []).map((file) => <p key={file.id}><Link href={`/api/print-order-files/${file.id}`}>{file.original_filename}</Link> · {file.file_kind} · {file.is_current ? "Current" : "Superseded"}</p>)}
+        {(filesResult.data || []).map((file) => <p key={file.id}><Link href={`/api/print-order-files/${file.id}`}>{file.original_filename}</Link> · {formatAdminLabel(file.file_kind)} · {file.is_current ? "Current" : "Superseded"}</p>)}
         {!filesResult.data?.length ? <p>No files uploaded.</p> : null}
       </section>
       <section className="dashboard-card"><h2>Proof history</h2>
-        {(proofsResult.data || []).map((proof) => <p key={proof.id}>Revision {proof.revision} · {proof.status}{proof.customer_notes ? ` · ${proof.customer_notes}` : ""}</p>)}
+        {(proofsResult.data || []).map((proof) => <p key={proof.id}>Revision {proof.revision} · {formatAdminLabel(proof.status)}{proof.customer_notes ? ` · ${proof.customer_notes}` : ""}</p>)}
         {!proofsResult.data?.length ? <p>No proofs created.</p> : null}
       </section>
       <section className="dashboard-card"><h2>Audit activity</h2>
-        {(activityResult.data || []).map((event) => <p key={event.id}>{new Date(event.created_at).toLocaleString()} · {event.action} · {event.actor_type}{event.reason ? ` · ${event.reason}` : ""}</p>)}
+        {(activityResult.data || []).map((event) => <p key={event.id}>{new Date(event.created_at).toLocaleString()} · {formatAdminLabel(event.action)} · {formatAdminLabel(event.actor_type)}{event.reason ? ` · ${formatAdminLabel(event.reason)}` : ""}</p>)}
       </section>
     </main>
   </DashboardShell>;
