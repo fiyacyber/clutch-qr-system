@@ -39,3 +39,11 @@ export function formatOrderAge(value: string, now = new Date()) {
   const days = Math.floor(hours / 24);
   return `${days} ${days === 1 ? "day" : "days"}`;
 }
+
+export function buildAdminOrderSearchHref(value: FormDataEntryValue | null | undefined) {
+  const query = String(value || "").trim();
+  if (!query) return "/admin/print-orders";
+
+  const params = new URLSearchParams({ q: query });
+  return `/admin/print-orders?${params.toString()}`;
+}

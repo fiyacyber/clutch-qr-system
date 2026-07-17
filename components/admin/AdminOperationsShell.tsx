@@ -1,7 +1,8 @@
 "use client";
 
+import type { FormEvent } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -22,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import ClutchCodesWordmark from "@/components/dashboard/ClutchCodesWordmark";
+import { buildAdminOrderSearchHref } from "@/lib/admin-operations";
 import styles from "./AdminOperationsShell.module.css";
 
 type NavItem = {
@@ -71,8 +73,15 @@ function isActivePath(pathname: string, item: NavItem, attentionView: boolean) {
 
 export default function AdminOperationsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const attentionView = searchParams.get("view") === "attention";
+
+  function submitGlobalSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    router.push(buildAdminOrderSearchHref(formData.get("q")));
+  }
 
   return (
     <div className={styles.shell}>
@@ -115,9 +124,22 @@ export default function AdminOperationsShell({ children }: { children: React.Rea
 
       <div className={styles.mainColumn}>
         <header className={styles.topbar}>
-          <form className={styles.search} action="/admin/print-orders" method="get">
+          <form
+            className={styles.search}
+            action="/admin/print-orders"
+            method="get"
+            onSubmit={submitGlobalSearch}
+          >
             <Search size={17} aria-hidden="true" />
-            <input name="q" type="search" placeholder="Search orders or customers" aria-label="Search orders or customers" />
+            <input
+              key={searchParams.get("q") || ""}
+              name="q"
+              type="search"
+              defaultValue={searchParams.get("q") || ""}
+              placeholder="Search orders or customers"
+              aria-label="Search orders or customers"
+            />
+            <button type="submit" className={styles.searchSubmit}>Search</button>
           </form>
           <div className={styles.topbarActions}>
             <Link href="/portal" className={styles.customerPortalLink}>Customer Portal</Link>

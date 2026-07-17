@@ -149,6 +149,31 @@
   font-size: 12px;
 }
 
+.searchSubmit {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #384862;
+  color: #ffffff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.searchSubmit:hover {
+  background: #2f3d55;
+}
+
+.searchSubmit:focus-visible {
+  outline: 3px solid rgba(255, 166, 101, 0.35);
+  outline-offset: 2px;
+}
+
 .topbarActions {
   display: flex;
   align-items: center;

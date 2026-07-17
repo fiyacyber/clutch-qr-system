@@ -4,11 +4,13 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import AdminDashboardTabs from "@/components/admin/AdminDashboardTabs";
 import PlanLimitFields from "@/components/admin/PlanLimitFields";
+import { assertAdminCustomerQueriesSucceeded } from "@/lib/admin-customer-data";
 import { requireCustomer } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { getCustomerPlan, normalizePlanCode, PLAN_DEFINITIONS } from "@/lib/plans";
 import { resolveAccountAccess } from "@/lib/account-access";
 import { hasActiveProfileEvidence, hasSmartCardSystemQrEvidence } from "@/lib/account-evidence";
+import styles from "./page.module.css";
 
 interface AdminPageProps {
   searchParams?: Promise<{ q?: string }>;
@@ -59,17 +61,16 @@ export default async function AdminCustomersPage({ searchParams }: AdminPageProp
   const admin = createSupabaseAdminClient();
 
   const [
-    { data: customers },
-    { data: groups },
-    { data: qrCodes },
-    { data: recentScans },
-    { data: connectProfiles },
-    { data: connectLeads },
-    { count: connectLeadCount },
-    { data: connectEvents },
-    { count: connectEventCount },
-  ] =
-    await Promise.all([
+    customersResult,
+    groupsResult,
+    qrCodesResult,
+    recentScansResult,
+    connectProfilesResult,
+    connectLeadsResult,
+    connectLeadCountResult,
+    connectEventsResult,
+    connectEventCountResult,
+  ] = await Promise.all([
       admin
         .from("customers")
         .select("*, customer_groups(id, name), qr_codes(id, name, slug, scan_count, is_active, is_system, qr_type, updated_at), card_orders(id), profiles(id, is_active)")
@@ -106,7 +107,19 @@ export default async function AdminCustomersPage({ searchParams }: AdminPageProp
         .select("id", { count: "exact", head: true }),
     ]);
 
-  const allCustomerRows = customers || [];
+  assertAdminCustomerQueriesSucceeded([
+    { name: "customers", error: customersResult.error },
+    { name: "customer groups", error: groupsResult.error },
+    { name: "QR codes", error: qrCodesResult.error },
+    { name: "recent scans", error: recentScansResult.error },
+    { name: "Connect profiles", error: connectProfilesResult.error },
+    { name: "Connect leads", error: connectLeadsResult.error },
+    { name: "Connect lead count", error: connectLeadCountResult.error },
+    { name: "Connect events", error: connectEventsResult.error },
+    { name: "Connect event count", error: connectEventCountResult.error },
+  ]);
+
+  const allCustomerRows = customersResult.data ?? [];
   const customerRows = searchQuery
     ? allCustomerRows.filter((c: any) =>
         [c.email, c.company_name, c.shopify_customer_id, c.shopify_order_id]
@@ -114,12 +127,14 @@ export default async function AdminCustomersPage({ searchParams }: AdminPageProp
           .some((value: string) => value.toLowerCase().includes(searchQuery))
       )
     : allCustomerRows;
-  const groupRows = groups || [];
-  const qrRows = qrCodes || [];
-  const scanRows = recentScans || [];
-  const connectProfileRows = connectProfiles || [];
-  const connectLeadRows = connectLeads || [];
-  const connectEventRows = connectEvents || [];
+  const groupRows = groupsResult.data ?? [];
+  const qrRows = qrCodesResult.data ?? [];
+  const scanRows = recentScansResult.data ?? [];
+  const connectProfileRows = connectProfilesResult.data ?? [];
+  const connectLeadRows = connectLeadsResult.data ?? [];
+  const connectLeadCount = connectLeadCountResult.count ?? 0;
+  const connectEventRows = connectEventsResult.data ?? [];
+  const connectEventCount = connectEventCountResult.count ?? 0;
   const filteredConnectProfileRows = searchQuery
     ? connectProfileRows.filter((profile: any) =>
         [
@@ -194,7 +209,7 @@ export default async function AdminCustomersPage({ searchParams }: AdminPageProp
 
   return (
     <DashboardShell isAdmin>
-      <main className="container admin-page">
+      <main className={`${styles.page} container admin-page`}>
         <DashboardHeader
           title="Customers"
           subtitle="Manage customer access, plans, onboarding, groups, and account configuration."
