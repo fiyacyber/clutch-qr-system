@@ -71,7 +71,7 @@ test("customer-management query failures cannot render as an empty state", () =>
 test("customer_groups permission migration stays service-role only", () => {
   const migration = readFileSync(
     new URL(
-      "../supabase/migrations/20260717030659_restore_customer_groups_service_role_privileges.sql",
+      "../supabase/migrations/20260717031126_restore_customer_groups_service_role_privileges.sql",
       import.meta.url
     ),
     "utf8"
