@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -138,6 +138,11 @@ export default function AdminOperationsShell({ children }: { children: React.Rea
               defaultValue={searchParams.get("q") || ""}
               placeholder="Search orders or customers"
               aria-label="Search orders or customers"
+              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+                if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }}
             />
             <button type="submit" className={styles.searchSubmit}>Search</button>
           </form>
