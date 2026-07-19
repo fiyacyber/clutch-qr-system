@@ -19,17 +19,30 @@ export default function PrintOrderWorkflowActions({ orderId, actorType, workflow
 
   async function upload(event: FormEvent<HTMLFormElement>, kind: PrintFileKind) {
     event.preventDefault();
-    setBusy(true);
-    setMessage("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     form.set("file_kind", kind);
-    const response = await fetch(`/api/print-orders/${orderId}/files`, { method: "POST", body: form });
-    const result = await response.json().catch(() => ({}));
-    setBusy(false);
-    if (!response.ok) return setMessage(result.error || "Upload failed.");
-    setMessage("File saved.");
-    event.currentTarget.reset();
-    router.refresh();
+
+    setBusy(true);
+    setMessage("Uploading file…");
+
+    try {
+      const response = await fetch(`/api/print-orders/${orderId}/files`, { method: "POST", body: form });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setMessage(result.error || "Upload failed. Please try again.");
+        return;
+      }
+
+      formElement.reset();
+      setMessage("File saved.");
+      router.refresh();
+    } catch {
+      setMessage("Upload failed. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function transition(action: PrintWorkflowAction, form?: HTMLFormElement) {
