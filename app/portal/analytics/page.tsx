@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireCustomer } from "@/lib/auth";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
-import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
-import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import {
   buildHourlyHeatmap,
@@ -53,8 +50,9 @@ export default async function AnalyticsPage({
   const admin = createSupabaseAdminClient();
   const access = await loadAccountAccess(admin, customer);
   const accessNow = new Date();
-  const hasFullCampaignAnalytics = access.hasClutchCodes;
-  const hasFullProfileAnalytics = access.canUseProfileAnalytics;
+  const isClutchCustomer = access.isAdmin || access.activeProductLabels.length > 0;
+  const hasFullCampaignAnalytics = isClutchCustomer;
+  const hasFullProfileAnalytics = isClutchCustomer;
   const analyticsMode = await resolvePortalAnalyticsMode({
     isAdmin: Boolean(customer.is_admin),
     hasFullCampaignAnalytics,
@@ -85,8 +83,8 @@ export default async function AnalyticsPage({
     return (
       <DashboardShell accountAccess={access} isAdmin={false}>
         <main className="container analytics-container">
-          <h1>Clutch Codes™ Basic Analytics</h1>
-          <p>Included access shows aggregate scan activity for each included code.</p>
+          <h1>Analytics</h1>
+          <p>See scan activity for every included Clutch Code.</p>
           {analyticsMode.status === "error" ? (
             <RetryNotice title="Included analytics are temporarily unavailable" description={analyticsMode.message} />
           ) : null}
@@ -103,13 +101,14 @@ export default async function AnalyticsPage({
     );
   }
   const data = projectAuthorizedAnalyticsDomains(analyticsMode.data, {
-    campaign: hasFullCampaignAnalytics || Boolean(customer.is_admin),
-    profile: hasFullProfileAnalytics || Boolean(customer.is_admin),
+    campaign: isClutchCustomer,
+    profile: isClutchCustomer,
   });
-  const plan = getCustomerPlan(customer as any);
-  const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || ["tracked_print", "business_kit"].includes(String(code.qr_type)));
+  const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || ["tracked_print", "business_kit", "smart_card"].includes(String(code.qr_type)));
   const campaignAccessEntries = await Promise.all(campaignCandidates.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));
-  const accessibleCampaignCodes = campaignAccessEntries.filter((entry) => entry.access.canViewBasicAnalytics).map((entry) => entry.code);
+  const accessibleCampaignCodes = campaignAccessEntries
+    .filter((entry) => entry.access.canViewBasicAnalytics || (access.hasSmartCard && entry.code.qr_type === "smart_card"))
+    .map((entry) => entry.code);
   const hasDynamicQr = accessibleCampaignCodes.length > 0;
   const hasHeatmap = access.canUseProfileAnalytics || hasDynamicQr;
   const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
@@ -119,12 +118,8 @@ export default async function AnalyticsPage({
   const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
   const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
   const campaignQrCodes = accessibleCampaignCodes;
-  const qrUsageUsed = campaignQrCodes.length;
-  const qrUsageLimit = plan.code === "admin" ? null : getEffectiveQrLimit(customer as any);
-  const latestQrCode = campaignQrCodes[0] || null;
   const campaignQrIds = new Set(campaignQrCodes.map((code) => code.id));
   const campaignQrScans = data.qrScans.filter((scan) => campaignQrIds.has(scan.qr_code_id));
-  const planLabel = plan.code === "admin" ? "Admin" : plan.code === "agency" ? "Agency" : "Clutch Connect";
 
   /* ── KPI metrics ── */
   const totalScans     = campaignQrScans.length;
@@ -157,10 +152,13 @@ export default async function AnalyticsPage({
     const scans = scansByQr.get(code.id) || [];
     const pid = (code as any).connect_profile_id || code.profile_id || null;
     const profile = pid ? profileById.get(pid) : null;
+    const assetType: "NFC Card" | "Clutch Connect Profile" | "Website" =
+      code.qr_type === "smart_card" ? "NFC Card" : profile ? "Clutch Connect Profile" : "Website";
     return {
       id: code.id,
       name: code.name,
       destination: code.destination_url,
+      assetType,
       totalScans: scans.length,
       uniqueVisitors: new Set(scans.map(s => s.ip_hash).filter(Boolean)).size,
       lastScan: scans[0]?.created_at || null,
@@ -349,54 +347,11 @@ export default async function AnalyticsPage({
             }
           />
         ) : null}
-        <CurrentPlanBadge
-          planCode={plan.code}
-          planName={plan.name}
-          priceLabel={plan.price}
-          description={plan.description}
-          usageLabel={isCampaignTab ? (hasDynamicQr ? "Campaign analytics unlocked" : "Campaign analytics locked") : (hasHeatmap ? "Analytics dashboard unlocked" : "Analytics dashboard locked")}
-          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
-          trialStatus={String(customer.trial_status || "none")}
-        />
-        {showLockedCampaign ? (
-          <LockedFeatureCard
-            title="Upgrade Available"
-            description="Compare campaign performance and optimize top-performing QR destinations."
-            requiredPlan="QR Pro"
-            requiredPlanPrice="$14.99/mo"
-            ctaLabel="Upgrade to QR Pro"
-            ctaHref={PLAN_DEFINITIONS.qr_pro.checkoutUrl}
-            featureList={[
-              "Campaign comparison",
-              "Best-performing QR codes",
-              "Scan trends",
-              "Source-aware reporting",
-              "Conversion tracking",
-            ]}
-            variant="qr_pro"
-          />
-        ) : null}
-        {showLockedAnalytics ? (
-          <LockedFeatureCard
-            title="Upgrade Available"
-            description="Advanced analytics and heatmaps are available on Clutch Connect+ and higher tiers."
-            requiredPlan="Clutch Connect+"
-            requiredPlanPrice="$9.99/mo"
-            ctaLabel="Try Connect+"
-            ctaHref={PLAN_DEFINITIONS.connect_plus.checkoutUrl}
-            featureList={[
-              "Profile engagement analytics",
-              "Device and browser breakdown",
-              "Visitor behavior insights",
-              "Geography and heatmap reporting",
-            ]}
-            variant="connect_plus"
-          />
-        ) : null}
-        {showLockedAnalytics ? (
-          <p className="muted" style={{ margin: "8px 4px 0", fontSize: "0.82rem", fontWeight: 700 }}>
-            14 Day Free Trial · Cancel Anytime
-          </p>
+        {showLockedCampaign || showLockedAnalytics ? (
+          <section className="dashboard-card">
+            <h2>No analytics yet</h2>
+            <p>Your analytics dashboard will fill in when your first Clutch Code, NFC card, or profile is active.</p>
+          </section>
         ) : null}
       </main>
       {shouldRenderAnalyticsDashboard ? (

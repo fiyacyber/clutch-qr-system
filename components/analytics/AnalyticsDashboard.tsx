@@ -17,6 +17,7 @@ const DeviceDonut   = dynamic(() => import("./DeviceDonut"),    { ssr: false, lo
 /* ─────────────── Types ─────────────── */
 interface QrRow {
   id: string; name: string; destination: string;
+  assetType: "NFC Card" | "Clutch Connect Profile" | "Website";
   totalScans: number; uniqueVisitors: number;
   lastScan: string | null; linkedProfileName: string | null;
 }
@@ -133,7 +134,7 @@ export default function AnalyticsDashboard(props: DashboardProps) {
 
   const qrRows = useMemo(() => {
     return props.qrRows.map((row) => {
-      const type = row.linkedProfileName ? "Clutch Connect Profile" : "Website";
+      const type = row.assetType;
       const status = row.totalScans > 0 ? "Active" : "Idle";
       return { ...row, type, status };
     });

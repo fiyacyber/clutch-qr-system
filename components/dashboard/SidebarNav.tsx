@@ -94,8 +94,8 @@ function PrimaryNavigation({ mobile = false }: { mobile?: boolean }) {
 const createOptions = [
   { key: "clutchCode" as const, label: "Create Clutch Code", description: "Set up a dynamic destination", href: "/portal/create", icon: QrCode },
   { key: "campaign" as const, label: "Start Campaign", description: "Organize connected marketing", href: "/portal/create", icon: Megaphone },
-  { key: "nfc" as const, label: "Add NFC Item", description: "Connect a tap-enabled product", href: "/portal/connect", icon: Nfc },
-  { key: "leadForm" as const, label: "Create Lead Form", description: "Collect details after a scan", href: "/portal/connect/build", icon: FileText },
+  { key: "nfc" as const, label: "Add NFC Item", description: "Coming soon", href: "/portal/connect", icon: Nfc },
+  { key: "leadForm" as const, label: "Create Lead Form", description: "Collect details after a scan", href: "/portal/connect/setup", icon: FileText },
   { key: "profile" as const, label: "Set Up Profile", description: "Publish a Clutch Connect profile", href: "/portal/connect/setup", icon: UserRound },
 ];
 
@@ -111,12 +111,13 @@ function MobileCreateMenu({ accountAccess, onClose }: { accountAccess?: AccountA
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
+  const hasCustomerTools = Boolean(accountAccess?.isAdmin || accountAccess?.activeProductLabels.length);
   const enabled = {
     clutchCode: accountAccess?.canCreateQr ?? false,
     campaign: accountAccess?.canCreateQr ?? false,
-    nfc: Boolean(accountAccess?.hasSmartCard || accountAccess?.hasConnectPlus),
-    leadForm: accountAccess?.canUseProfileBuilder ?? false,
-    profile: Boolean(accountAccess?.hasConnectBasic || accountAccess?.hasConnectPlus),
+    nfc: false,
+    leadForm: hasCustomerTools,
+    profile: hasCustomerTools,
   };
 
   return (
@@ -140,7 +141,7 @@ function MobileCreateMenu({ accountAccess, onClose }: { accountAccess?: AccountA
             ) : (
               <div key={option.key} className="is-locked" aria-disabled="true">
                 <span><Icon size={19} aria-hidden="true" /></span>
-                <span><strong>{option.label}</strong><small>Not included with your current access</small></span>
+                <span><strong>{option.label}</strong><small>{option.key === "nfc" ? "Coming soon" : "QR code limit reached"}</small></span>
               </div>
             );
           })}

@@ -149,8 +149,8 @@ const CLUTCH_CODES_ENTITLEMENTS: Partial<PlanEntitlements> = {
 const CANONICAL_PLAN_DEFINITIONS: Record<CanonicalPlanCode, PlanDefinition> = {
   connect_basic: {
     code: "connect_basic",
-    name: "Clutch Connect Basic",
-    shortName: "Basic",
+    name: "Clutch Connect",
+    shortName: "Connect",
     price: "Free",
     profileLimit: 1,
     qrLimit: 0,
@@ -158,7 +158,7 @@ const CANONICAL_PLAN_DEFINITIONS: Record<CanonicalPlanCode, PlanDefinition> = {
     checkoutUrl: "https://qr.clutchprintshop.com/login",
     features: [
       "1 profile",
-      "Basic public profile and contact actions",
+      "Public profile and contact actions",
       "Lead Inbox starter capture",
       "No dynamic QR campaigns",
     ],
@@ -179,7 +179,7 @@ const CANONICAL_PLAN_DEFINITIONS: Record<CanonicalPlanCode, PlanDefinition> = {
       process.env.NEXT_PUBLIC_CONNECT_PLUS_CHECKOUT_URL ||
       "https://www.clutchprintshop.com/products/clutch-connect-plus",
     features: [
-      "Everything in Clutch Connect Basic",
+      "Everything in Clutch Connect",
       "Advanced Builder and premium themes",
       "Custom banner uploads and form controls",
       "Lead statuses and source tracking",
