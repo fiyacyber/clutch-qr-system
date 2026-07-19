@@ -32,6 +32,7 @@ test("quick actions expose standard customer tools while NFC creation remains co
 test("mobile uses only the raised plus action and the order list is grouped and humanized", () => {
   assert.match(globals, /\.ds-page-header-actions \.unified-dashboard-actions \{[\s\S]*display: none/);
   assert.match(globals, /\.ds-mobile-create \{[\s\S]*bottom: 52px/);
+  assert.match(globals, /\.customer-order-item \{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(ordersPage, /const groups = new Map<string, PrintOrderItem\[\]>/);
   assert.match(ordersPage, /customer-order-progress/);
   assert.match(ordersPage, /humanize\(item\.material_type/);

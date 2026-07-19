@@ -15729,11 +15729,13 @@ input.saas-font-search:focus-visible {
 
 .customer-order-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
 .customer-order-card,
 .customer-orders-empty {
+  min-width: 0;
   border: 1px solid var(--clutch-border);
   border-radius: 12px;
   background: #fff;
@@ -15791,10 +15793,13 @@ input.saas-font-search:focus-visible {
 
 .customer-order-items {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .customer-order-item {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 18px;
   padding: 22px;
   border-bottom: 1px solid var(--clutch-border);
@@ -16009,6 +16014,9 @@ input.saas-font-search:focus-visible {
   }
 
   .customer-order-progress {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     grid-template-columns: repeat(5, minmax(74px, 1fr));
     padding-bottom: 4px;
