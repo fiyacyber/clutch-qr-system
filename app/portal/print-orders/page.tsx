@@ -90,7 +90,7 @@ export default async function CustomerPrintOrdersPage() {
           return <section className="customer-order-card" key={orderNumber}>
             <header className="customer-order-head">
               <div>
-                <span>Order #{orderNumber}</span>
+                <span>Order #{orderNumber.replace(/^#/, "")}</span>
                 <h2>{first.product_title || "Clutch Print Order"}</h2>
                 <p>{items.length} {items.length === 1 ? "item" : "items"}{first.created_at ? ` · Placed ${formatDate(first.created_at)}` : ""}</p>
               </div>
