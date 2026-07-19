@@ -16017,8 +16017,7 @@ input.saas-font-search:focus-visible {
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: auto;
-    grid-template-columns: repeat(5, minmax(74px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     padding-bottom: 4px;
   }
 
