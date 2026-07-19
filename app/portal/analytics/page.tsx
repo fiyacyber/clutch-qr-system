@@ -105,16 +105,15 @@ export default async function AnalyticsPage({
     profile: isClutchCustomer,
   });
   const campaignCandidates = data.qrCodes.filter((code) => code.is_system !== true || ["tracked_print", "business_kit", "smart_card"].includes(String(code.qr_type)));
-  const campaignAccessEntries = await Promise.all(campaignCandidates.map(async (code) => ({ code, access: await loadOrderLinkedQrAccess(admin, customer, code.id) })));
-  const accessibleCampaignCodes = campaignAccessEntries
-    .filter((entry) => entry.access.canViewBasicAnalytics || (access.hasSmartCard && entry.code.qr_type === "smart_card"))
-    .map((entry) => entry.code);
-  const hasDynamicQr = accessibleCampaignCodes.length > 0;
-  const hasHeatmap = access.canUseProfileAnalytics || hasDynamicQr;
+  // Unified analytics data is already scoped to this customer. Once an account has
+  // any active Clutch product, every owned marketing asset belongs in analytics.
+  // Re-checking per-code plan entitlements here hid valid customer-owned codes.
+  const accessibleCampaignCodes = campaignCandidates;
+  const hasHeatmap = isClutchCustomer;
   const isCampaignTab = activeTab === "campaign-performance" || activeTab === "qr-codes";
-  const isCampaignUnlocked = isCampaignTab && hasDynamicQr;
+  const isCampaignUnlocked = isCampaignTab && isClutchCustomer;
   const isAnalyticsUnlocked = !isCampaignTab && hasHeatmap;
-  const showLockedCampaign = isCampaignTab && !hasDynamicQr;
+  const showLockedCampaign = isCampaignTab && !isClutchCustomer;
   const showLockedAnalytics = !isCampaignTab && !hasHeatmap;
   const shouldRenderAnalyticsDashboard = isCampaignUnlocked || isAnalyticsUnlocked;
   const campaignQrCodes = accessibleCampaignCodes;
@@ -323,7 +322,7 @@ export default async function AnalyticsPage({
       accountAccess={access}
       isAdmin={Boolean(customer.is_admin)}
       navLocks={{
-        qr: !hasDynamicQr,
+        qr: !isClutchCustomer,
         analytics: !hasHeatmap,
         heatmap: !hasHeatmap,
       }}

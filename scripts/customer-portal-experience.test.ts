@@ -14,7 +14,9 @@ test("verified Clutch customers receive the full analytics dashboard including o
   assert.match(analyticsPage, /const isClutchCustomer = access\.isAdmin \|\| access\.activeProductLabels\.length > 0/);
   assert.match(analyticsPage, /const hasFullCampaignAnalytics = isClutchCustomer/);
   assert.match(analyticsPage, /\["tracked_print", "business_kit", "smart_card"\]/);
-  assert.match(analyticsPage, /access\.hasSmartCard && entry\.code\.qr_type === "smart_card"/);
+  assert.match(analyticsPage, /const accessibleCampaignCodes = campaignCandidates/);
+  assert.match(analyticsPage, /const hasHeatmap = isClutchCustomer/);
+  assert.match(analyticsPage, /qr: !isClutchCustomer/);
   assert.match(analyticsPage, /const assetType:[\s\S]*code\.qr_type === "smart_card" \? "NFC Card"/);
   assert.doesNotMatch(analyticsPage, /Basic Analytics/);
 });
