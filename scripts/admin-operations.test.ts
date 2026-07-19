@@ -259,23 +259,72 @@ test("customer detail is admin guarded, UUID scoped, bounded, read-only, and fai
     detailPage,
     /\.from\("customers"\)[\s\S]*?\.eq\("id", id\)\s*\.limit\(1\)\s*\.maybeSingle\(\)/
   );
-  for (const table of ["qr_codes", "profiles", "print_order_items", "print_qr_provisionings", "card_orders", "shopify_orders", "shopify_entitlement_events"]) {
+  for (const table of ["qr_codes", "profiles", "print_order_items", "print_qr_provisionings", "card_orders", "shopify_orders", "shopify_entitlement_events", "admin_customer_activity"]) {
     assert.match(detailPage, new RegExp(`\\.from\\("${table}"\\)[\\s\\S]*?\\.eq\\("customer_id", id\\)`));
   }
   assert.match(detailPage, /if \(!customerResult\.data\) notFound\(\)/);
   assert.match(detailPage, /assertAdminCustomerQueriesSucceeded\(/);
   for (const table of ["qr_codes", "profiles", "print_order_items", "print_qr_provisionings", "card_orders", "shopify_orders", "shopify_entitlement_events"]) {
     const boundedList = new RegExp(
-      `\\.from\\("${table}"\\)\\.select\\([^\\n]+\\{ count: "exact" \\}\\)[^\\n]+\\.limit\\(CUSTOMER_DETAIL_LIST_LIMIT\\)`
+      `\\.from\\("${table}"\\)\\.select\\([^\\n]+\\{ count: "exact" \\}\\)[^\\n]+\\.order\\("created_at", \\{ ascending: false \\}\\)\\.order\\("id", \\{ ascending: false \\}\\)\\.limit\\(CUSTOMER_DETAIL_LIST_LIMIT\\)`
     );
     assert.match(detailPage, boundedList);
   }
+  assert.match(
+    detailPage,
+    /\.from\("admin_customer_activity"\)\.select\([^\n]+\{ count: "exact" \}\)[^\n]+\.order\("created_at", \{ ascending: false \}\)\.order\("id", \{ ascending: false \}\)\.limit\(CUSTOMER_ACTIVITY_LIMIT\)/
+  );
+  assert.match(detailPage, /Showing \{activity\.length\} of \{activityCount\} events/);
+  assert.doesNotMatch(detailPage, /printOrderIds|emptyResult|\.in\("order_id"/);
+  assert.doesNotMatch(detailPage, /orderActivityResult|visibleActivityCount/);
   assert.match(detailPage, /formatRecordSummary\(/);
   assert.match(detailPage, /exact:\s*\{[\s\S]*?usedQrCodes: usedQrCountResult\.count \?\? 0/);
   assert.doesNotMatch(detailPage, /\.from\("profile_leads"\)/);
   assert.doesNotMatch(detailPage, /\.from\("profile_click_events"\)/);
   assert.doesNotMatch(detailPage, /\.(insert|update|upsert|delete)\(/);
   assert.doesNotMatch(detailPage, /<form/);
+});
+
+test("admin customer activity view is read-only and service-role only", () => {
+  const migration = readFileSync(
+    new URL(
+      "../supabase/migrations/20260719042131_admin_customer_activity.sql",
+      import.meta.url
+    ),
+    "utf8"
+  ).toLowerCase();
+
+  assert.match(
+    migration,
+    /create view public\.admin_customer_activity\s+with \(security_invoker = true\)/
+  );
+  assert.match(
+    migration,
+    /order_activity[\s\S]*inner join public\.print_order_items[\s\S]*order_type = 'print_order'/
+  );
+  assert.match(
+    migration,
+    /union all[\s\S]*public\.shopify_entitlement_events/
+  );
+  assert.match(
+    migration,
+    /revoke all privileges on table public\.admin_customer_activity\s+from public, anon, authenticated;/
+  );
+  assert.match(
+    migration,
+    /grant select on table public\.admin_customer_activity to service_role;/
+  );
+  assert.match(
+    migration,
+    /order_activity\(order_type, order_id, created_at desc, id desc\)/
+  );
+  assert.match(
+    migration,
+    /shopify_entitlement_events\(customer_id, created_at desc, id desc\)/
+  );
+  assert.doesNotMatch(migration, /raw_payload/);
+  assert.doesNotMatch(migration, /\b(insert|update|delete|merge)\b/);
+  assert.doesNotMatch(migration, /\b(create|alter|drop)\s+policy\b/);
 });
 
 test("customer workflow markup remains pre-PR structure and admin cancellation is confirmed", () => {

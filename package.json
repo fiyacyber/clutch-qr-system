@@ -11,6 +11,7 @@
     "test:clutch-codes": "node --experimental-strip-types --test scripts/clutch-codes-subscription.test.ts",
     "test:account-access": "node --experimental-strip-types --test scripts/account-access.test.ts",
     "test:admin-operations": "node --experimental-strip-types --test scripts/admin-operations.test.ts",
+    "test:admin-customer-activity:integration": "tsx --test scripts/admin-customer-activity.integration.test.ts",
     "test:tracked-print": "node --experimental-strip-types --test scripts/tracked-print.test.ts",
     "test:print-operations": "node --experimental-strip-types --test scripts/print-operations.test.ts",
     "test:tracked-print-hotfix": "node --experimental-strip-types --test scripts/tracked-print-hotfix.test.ts",
