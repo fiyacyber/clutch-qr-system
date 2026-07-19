@@ -223,7 +223,7 @@ export function verifyShopifyWebhook(rawBody: string, hmacHeader: string | null)
 export function detectPlanFromShopifyPayload(payload: any): ProvisioningPlan | null {
   const lineText = buildPayloadSearchText(payload);
 
-  // Priority: Agency > QR Pro > Connect+ > Connect Basic > no qualifying plan.
+  // Priority: Agency > QR Pro > Connect+ > Connect > no qualifying plan.
   if (includesKeyword(lineText, AGENCY_PRODUCT_KEYWORDS)) return "agency";
   if (includesKeyword(lineText, QR_PRO_PRODUCT_KEYWORDS)) return "qr_pro";
   if (includesKeyword(lineText, CONNECT_PLUS_PRODUCT_KEYWORDS)) return "connect_plus";
@@ -322,7 +322,7 @@ export async function sendCustomerOnboardingEmail({
 
   const introByPlan: Record<ProvisioningPlan, string> = {
     connect_basic:
-      "Your order includes a free Clutch Connect Basic profile. Use it with your NFC card, QR code, or social bio.",
+      "Your order includes a Clutch Connect profile. Use it with your NFC card, QR code, or social bio.",
     connect_plus:
       "Your Clutch Connect+ account is ready. You now have access to advanced profile customization, lead capture, and profile analytics.",
     qr_pro:
@@ -332,7 +332,7 @@ export async function sendCustomerOnboardingEmail({
   };
 
   const subjectByPlan: Record<ProvisioningPlan, string> = {
-    connect_basic: "Welcome to Clutch Connect Basic",
+    connect_basic: "Welcome to Clutch Connect",
     connect_plus: "Welcome to Clutch Connect+",
     qr_pro: "Welcome to QR Pro",
     agency: "Welcome to Clutch Agency",

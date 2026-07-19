@@ -9,7 +9,7 @@ type PlanOption = {
 };
 
 const PLAN_OPTIONS: PlanOption[] = [
-  { value: "connect_basic", label: "Clutch Connect Basic" },
+  { value: "connect_basic", label: "Clutch Connect" },
   { value: "connect_plus", label: "Clutch Connect+" },
   { value: "qr_pro", label: "QR Pro" },
   { value: "agency", label: "Agency" },

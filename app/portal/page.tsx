@@ -179,6 +179,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
     })),
   ].sort((a, b) => Date.parse(b.at || "") - Date.parse(a.at || "")).slice(0, 8);
   const displayName = firstName((customer as any).first_name || (customer as any).name || String(user.email || "").split("@")[0]);
+  const hasCustomerTools = accountAccess.isAdmin || accountAccess.activeProductLabels.length > 0;
 
   return (
     <DashboardShell accountAccess={accountAccess} isAdmin={customer.is_admin}>
@@ -191,11 +192,11 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
             performance={performance}
             showChart={false}
             createCapabilities={{
-              clutchCode: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "Requires an active Clutch Codes plan" },
-              campaign: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "Requires general Clutch Codes capacity" },
-              nfc: { href: "/portal/connect", enabled: accountAccess.hasSmartCard || accountAccess.hasConnectPlus, reason: "Available with an eligible NFC product" },
-              leadForm: { href: "/portal/connect/build", enabled: accountAccess.canUseProfileBuilder, reason: "Available with Clutch Connect+" },
-              profile: { href: "/portal/connect/setup", enabled: accountAccess.hasConnectBasic || accountAccess.hasConnectPlus, reason: "Available with Smart Card or Connect access" },
+              clutchCode: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "QR code limit reached" },
+              campaign: { href: "/portal/create", enabled: accountAccess.canCreateQr, reason: "QR code limit reached" },
+              nfc: { href: "/portal/connect", enabled: false, reason: "Coming soon" },
+              leadForm: { href: "/portal/connect/setup", enabled: hasCustomerTools },
+              profile: { href: "/portal/connect/setup", enabled: hasCustomerTools },
             }}
           />
         )}
@@ -226,9 +227,9 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
         createCapabilities={{
           clutchCode: { href: "/portal/create", enabled: accountAccess.canCreateQr },
           campaign: { href: "/portal/create", enabled: accountAccess.canCreateQr },
-          nfc: { href: "/portal/connect", enabled: accountAccess.hasSmartCard || accountAccess.hasConnectPlus },
-          leadForm: { href: "/portal/connect/build", enabled: accountAccess.canUseProfileBuilder },
-          profile: { href: "/portal/connect/setup", enabled: accountAccess.hasConnectBasic || accountAccess.hasConnectPlus },
+          nfc: { href: "/portal/connect", enabled: false, reason: "Coming soon" },
+          leadForm: { href: "/portal/connect/setup", enabled: hasCustomerTools },
+          profile: { href: "/portal/connect/setup", enabled: hasCustomerTools },
         }}
       />
 

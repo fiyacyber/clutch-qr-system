@@ -42,7 +42,7 @@ interface UnifiedDashboardInteractiveProps {
 const createOptions = [
   { key: "clutchCode" as const, label: "Create Clutch Code", description: "A trackable, editable QR code", icon: QrCode },
   { key: "campaign" as const, label: "Start Campaign", description: "Group assets and measure results", icon: Megaphone },
-  { key: "nfc" as const, label: "Add NFC Item", description: "Connect a tap-enabled product", icon: Nfc },
+  { key: "nfc" as const, label: "Add NFC Item", description: "Coming soon", icon: Nfc },
   { key: "leadForm" as const, label: "Create Lead Form", description: "Capture contact details", icon: ContactRound },
   { key: "profile" as const, label: "Set Up Profile", description: "Publish your Clutch Connect profile", icon: UserRound },
 ];
@@ -146,7 +146,7 @@ export default function UnifiedDashboardInteractive({ performance, createCapabil
                 );
               })}
             </div>
-            <p className="unified-create-footnote"><FilePlus2 size={15} /> Capabilities reflect your current products and plan.</p>
+            <p className="unified-create-footnote"><FilePlus2 size={15} /> Create and manage your Clutch tools from one place.</p>
           </section>
         </div>
       ) : null}
