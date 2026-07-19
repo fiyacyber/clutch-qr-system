@@ -10,6 +10,8 @@
     "test:connect:directions": "node --experimental-strip-types --test scripts/connect-directions.test.mjs",
     "test:clutch-codes": "node --experimental-strip-types --test scripts/clutch-codes-subscription.test.ts",
     "test:account-access": "node --experimental-strip-types --test scripts/account-access.test.ts",
+    "test:admin-operations": "node --experimental-strip-types --test scripts/admin-operations.test.ts",
+    "test:admin-customer-activity:integration": "tsx --test scripts/admin-customer-activity.integration.test.ts",
     "test:tracked-print": "node --experimental-strip-types --test scripts/tracked-print.test.ts",
     "test:print-operations": "node --experimental-strip-types --test scripts/print-operations.test.ts",
     "test:tracked-print-hotfix": "node --experimental-strip-types --test scripts/tracked-print-hotfix.test.ts",
@@ -20,7 +22,7 @@
     "test:print-qr-artwork:integration": "tsx --test scripts/print-qr-artwork-service-role.integration.test.ts",
     "test:service-role-read-privileges": "node --experimental-strip-types --test scripts/service-role-read-privileges.test.ts",
     "validate:tracked-print-registry": "node --experimental-strip-types scripts/validate-tracked-print-registry.ts",
-    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix && npm run test:order-linked-access && npm run test:order-linked-routes && npm run test:order-linked-portal && npm run test:print-qr-artwork && npm run test:service-role-read-privileges",
+    "test": "npm run test:connect:directions && npm run test:clutch-codes && npm run test:account-access && npm run test:admin-operations && npm run test:tracked-print && npm run test:print-operations && npm run test:tracked-print-hotfix && npm run test:order-linked-access && npm run test:order-linked-routes && npm run test:order-linked-portal && npm run test:print-qr-artwork && npm run test:service-role-read-privileges",
     "test:webhook:orders-paid": "node scripts/test-shopify-orders-paid-webhook.mjs",
     "preview:clutch-codes-email": "node --experimental-strip-types scripts/preview-clutch-codes-email.ts",
     "preflight:webhook:tables": "node scripts/preflight-supabase-webhook-tables.mjs"

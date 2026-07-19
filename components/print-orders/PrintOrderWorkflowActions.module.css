@@ -1,0 +1,134 @@
+.panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(31, 43, 61, 0.05);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.heading p {
+  margin: 0 0 4px;
+  color: #667085;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  margin: 0;
+  color: #384862;
+  font-family: var(--font-exo2), sans-serif;
+  font-size: 17px;
+}
+
+.heading > span {
+  color: #667085;
+  font-size: 9px;
+  text-transform: capitalize;
+}
+
+.groups { display: grid; gap: 12px; }
+
+.group {
+  min-width: 0;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+}
+
+.group legend {
+  padding: 0 5px;
+  color: #384862;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.group > p {
+  margin: 0 0 10px;
+  color: #667085;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.form {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.form label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid #d8e0e9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 11px;
+}
+
+.form input[type="file"] { padding: 8px; }
+.form textarea { min-height: 78px; resize: vertical; }
+.form p { grid-column: 1 / -1; margin: 0; color: #667085; font-size: 9px; }
+
+.form input:focus-visible,
+.form select:focus-visible,
+.form textarea:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible {
+  outline: 3px solid rgba(255, 166, 101, 0.48);
+  outline-offset: 2px;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primaryButton { border: 1px solid #ffa665; background: #ffa665; color: #29374d; }
+.secondaryButton { border: 1px solid #d8e0e9; background: #ffffff; color: #384862; }
+.dangerButton { border: 1px solid #e2aaa4; background: #ffffff; color: #9f3229; }
+.primaryButton:disabled, .secondaryButton:disabled, .dangerButton:disabled { cursor: wait; opacity: 0.55; }
+
+.dangerGroup { border-color: #efd7d4; background: #fffbfa; }
+.message { margin: 0 0 12px; padding: 9px 10px; border-radius: 7px; background: #edf8f1; color: #286641; font-size: 10px; }
+.noAction { margin: 0; padding: 12px; border-radius: 8px; background: #f7f9fb; color: #667085; font-size: 10px; }

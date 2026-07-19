@@ -63,7 +63,7 @@ test("only explicitly active profiles count as ownership evidence", () => {
 
 test("server and admin apply strict Smart Card and active-profile evidence", () => {
   const serverSource = fs.readFileSync(new URL("../lib/account-access-server.ts", import.meta.url), "utf8");
-  const adminSource = fs.readFileSync(new URL("../app/admin/page.tsx", import.meta.url), "utf8");
+  const adminSource = fs.readFileSync(new URL("../app/admin/customers/page.tsx", import.meta.url), "utf8");
   assert.match(serverSource, /\.eq\("is_system", true\)\.eq\("qr_type", "smart_card"\)/);
   assert.match(serverSource, /\.eq\("is_active", true\)/);
   assert.match(adminSource, /hasSmartCardSystemQrEvidence\(c\.qr_codes\)/);

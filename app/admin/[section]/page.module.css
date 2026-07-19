@@ -1,0 +1,45 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page h1 {
+  margin: 0 0 20px;
+  color: #384862;
+  font-family: var(--font-exo2), sans-serif;
+  font-size: 28px;
+}
+
+.page section {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(31, 43, 61, 0.05);
+}
+
+.page strong {
+  color: #384862;
+  font-size: 12px;
+}
+
+.page p {
+  max-width: 680px;
+  margin: 10px 0 18px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.page a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #ffa665;
+  color: #29374d;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
