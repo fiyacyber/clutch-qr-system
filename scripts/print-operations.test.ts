@@ -21,6 +21,7 @@ const migration = fs.readFileSync(new URL("../supabase/migrations/20260713043811
 const uploadRoute = fs.readFileSync(new URL("../app/api/print-orders/[id]/files/route.ts", import.meta.url), "utf8");
 const workflowRoute = fs.readFileSync(new URL("../app/api/print-orders/[id]/workflow/route.ts", import.meta.url), "utf8");
 const signedRoute = fs.readFileSync(new URL("../app/api/print-order-files/[fileId]/route.ts", import.meta.url), "utf8");
+const workflowActions = fs.readFileSync(new URL("../components/print-orders/PrintOrderWorkflowActions.tsx", import.meta.url), "utf8");
 
 test("print operations use one private bucket and a 25 MB limit", () => {
   assert.equal(PRINT_ORDER_FILE_BUCKET, "print-order-files");
@@ -154,6 +155,16 @@ test("upload route authorizes the order, hashes files, and removes objects after
   assert.match(uploadRoute, /register_print_order_file/);
   assert.match(uploadRoute, /if \(error\) \{[\s\S]*\.remove\(\[storagePath\]\)/);
   assert.doesNotMatch(uploadRoute, /RESEND|sendEmail|send\(/i);
+});
+
+test("upload UI keeps a stable form reference and always releases its busy state", () => {
+  assert.match(workflowActions, /const formElement = event\.currentTarget;/);
+  assert.match(workflowActions, /new FormData\(formElement\)/);
+  assert.match(workflowActions, /formElement\.reset\(\);[\s\S]*router\.refresh\(\);/);
+  assert.doesNotMatch(workflowActions, /event\.currentTarget\.reset\(\)/);
+  assert.match(workflowActions, /setMessage\("Uploading file…"\);[\s\S]*try \{/);
+  assert.match(workflowActions, /catch \{[\s\S]*Upload failed\. Check your connection and try again\./);
+  assert.match(workflowActions, /finally \{[\s\S]*setBusy\(false\);/);
 });
 
 test("workflow route authorizes before invoking the service-only state machine", () => {
