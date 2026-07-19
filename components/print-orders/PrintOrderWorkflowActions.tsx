@@ -56,6 +56,13 @@ export default function PrintOrderWorkflowActions({ orderId, actorType, workflow
     router.refresh();
   }
 
+  function confirmCancellation() {
+    const confirmed = window.confirm(
+      "Cancel this order workflow? This stops the operational workflow and cannot be undone from this screen."
+    );
+    if (confirmed) void transition("cancel");
+  }
+
   function actionForm(action: PrintWorkflowAction, label: string, fields?: "reason" | "supplier" | "shipping") {
     const fieldId = `${orderId}-${action}`;
     return <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void transition(action, event.currentTarget); }}>
@@ -74,22 +81,30 @@ export default function PrintOrderWorkflowActions({ orderId, actorType, workflow
   }
 
   const customerCanUpload = ["awaiting_artwork", "artwork_changes_requested", "proof_changes_requested"].includes(workflowState);
+
+  if (actorType !== "admin") {
+    return <section className="dashboard-card" aria-busy={busy}>
+      <h2>Your actions</h2>
+      {message ? <p role="status">{message}</p> : null}
+
+      {customerCanUpload ? <form className="admin-form" onSubmit={(event) => void upload(event, "customer_artwork")}>
+        <label>Artwork file<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.eps,.ai" required /></label>
+        <p>PDF, PNG, JPEG, WebP, SVG, EPS, or AI. Maximum 25 MB.</p>
+        <button type="submit" disabled={busy}>Upload artwork</button>
+      </form> : null}
+    </section>;
+  }
+
   const adminCanUploadProof = ["proof_preparing", "proof_changes_requested"].includes(workflowState);
 
   return <section className={styles.panel} aria-busy={busy}>
     <div className={styles.heading}>
-      <div><p>Workflow actions</p><h2>{actorType === "admin" ? "Manage this order" : "Your actions"}</h2></div>
+      <div><p>Workflow actions</p><h2>Manage this order</h2></div>
       <span>Current state: {formatAdminLabel(workflowState)}</span>
     </div>
     {message ? <p className={styles.message} role="status">{message}</p> : null}
 
-    {actorType === "customer" && customerCanUpload ? <form className={styles.form} onSubmit={(event) => void upload(event, "customer_artwork")}>
-      <label htmlFor={`${orderId}-customer-artwork`}>Artwork file<input id={`${orderId}-customer-artwork`} name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.eps,.ai" required /></label>
-      <p>PDF, PNG, JPEG, WebP, SVG, EPS, or AI. Maximum 25 MB.</p>
-      <button className={styles.primaryButton} type="submit" disabled={busy}>Upload artwork</button>
-    </form> : null}
-
-    {actorType === "admin" ? <div className={styles.groups}>
+    <div className={styles.groups}>
       {["artwork_received", "artwork_review"].includes(workflowState) ? <fieldset className={styles.group}>
         <legend>Artwork review</legend>
         <p>Review the customer artwork and either request a revision or approve it for proof preparation.</p>
@@ -146,10 +161,10 @@ export default function PrintOrderWorkflowActions({ orderId, actorType, workflow
       {!["delivered", "cancelled"].includes(workflowState) ? <fieldset className={`${styles.group} ${styles.dangerGroup}`}>
         <legend>Cancel order workflow</legend>
         <p>This stops the operational workflow. Use only when the order should not continue.</p>
-        <button className={styles.dangerButton} type="button" disabled={busy} onClick={() => void transition("cancel")}>Cancel workflow</button>
+        <button className={styles.dangerButton} type="button" disabled={busy} onClick={confirmCancellation}>Cancel workflow</button>
       </fieldset> : null}
 
       {["awaiting_artwork", "artwork_changes_requested", "proof_sent", "proof_changes_requested", "delivered", "cancelled"].includes(workflowState) ? <p className={styles.noAction}>No admin transition is available for this state. Customer or external action may be required.</p> : null}
-    </div> : null}
+    </div>
   </section>;
 }

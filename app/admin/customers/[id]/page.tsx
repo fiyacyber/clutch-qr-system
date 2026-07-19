@@ -6,9 +6,13 @@ import { assertAdminCustomerQueriesSucceeded } from "@/lib/admin-customer-data";
 import { formatAdminLabel, getAdminStatusTone } from "@/lib/admin-operations";
 import { normalizeRelation } from "@/lib/account-evidence";
 import { requireCustomer } from "@/lib/auth";
+import { isCanonicalCustomerId } from "@/lib/customer-identifiers";
 import { getCustomerPlan } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import styles from "./page.module.css";
+
+const CUSTOMER_DETAIL_LIST_LIMIT = 50;
+const CUSTOMER_ACTIVITY_LIMIT = 25;
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -23,20 +27,38 @@ function StatusBadge({ value }: { value?: string | null }) {
   return <span className={`${styles.status} ${styles[tone]}`}>{formatAdminLabel(value)}</span>;
 }
 
+function formatRecordSummary(visible: number, total: number, label: string) {
+  return total > visible ? `Showing ${visible} of ${total} ${label}` : `${total} ${label}`;
+}
+
 export default async function AdminCustomerDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: routeId } = await params;
   const { user, customer: currentCustomer } = await requireCustomer();
   if (!user) redirect("/login");
   if (currentCustomer?.must_change_password) redirect("/change-password");
   if (!currentCustomer?.is_admin) redirect("/portal");
+  if (!isCanonicalCustomerId(routeId)) notFound();
 
+  const id = routeId;
   const admin = createSupabaseAdminClient();
+  const customerResult = await admin
+    .from("customers")
+    .select("*, customer_groups(id, name)")
+    .eq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  assertAdminCustomerQueriesSucceeded([
+    { name: "customer account", error: customerResult.error },
+  ]);
+
+  if (!customerResult.data) notFound();
+
   const [
-    customerResult,
     qrCodesResult,
     profilesResult,
     printOrdersResult,
@@ -44,19 +66,31 @@ export default async function AdminCustomerDetailPage({
     cardOrdersResult,
     shopifyOrdersResult,
     entitlementEventsResult,
+    usedQrCountResult,
+    smartCardQrCountResult,
+    activeProfileCountResult,
+    completedProvisioningCountResult,
+    includedProvisioningCountResult,
+    trackedProvisioningCountResult,
+    businessKitProvisioningCountResult,
   ] = await Promise.all([
-    admin.from("customers").select("*, customer_groups(id, name)").eq("id", id).limit(1).maybeSingle(),
-    admin.from("qr_codes").select("id,name,slug,destination_url,scan_count,is_active,is_system,qr_type,counts_toward_capacity,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("profiles").select("id,slug,business_name,contact_name,is_active,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("print_order_items").select("id,shopify_order_number,product_title,material_type,workflow_state,provisioning_status,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("print_qr_provisionings").select("id,print_order_item_id,qr_code_id,source_type,access_type,material_type,provisioning_status,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("card_orders").select("id,shopify_order_number,product_title,status,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("shopify_orders").select("id,shopify_order_number,total_price,financial_status,created_at").eq("customer_id", id).order("created_at", { ascending: false }),
-    admin.from("shopify_entitlement_events").select("id,action,plan_code,status,error_message,created_at").eq("customer_id", id).order("created_at", { ascending: false }).limit(50),
+    admin.from("qr_codes").select("id,name,slug,destination_url,scan_count,is_active,is_system,qr_type,counts_toward_capacity,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("profiles").select("id,slug,business_name,contact_name,is_active,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("print_order_items").select("id,shopify_order_number,product_title,material_type,workflow_state,provisioning_status,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("print_qr_provisionings").select("id,print_order_item_id,qr_code_id,source_type,access_type,material_type,provisioning_status,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("card_orders").select("id,shopify_order_number,product_title,status,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("shopify_orders").select("id,shopify_order_number,total_price,financial_status,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("shopify_entitlement_events").select("id,action,plan_code,status,error_message,created_at", { count: "exact" }).eq("customer_id", id).order("created_at", { ascending: false }).limit(CUSTOMER_DETAIL_LIST_LIMIT),
+    admin.from("qr_codes").select("id", { count: "exact", head: true }).eq("customer_id", id).or("counts_toward_capacity.is.null,counts_toward_capacity.eq.true"),
+    admin.from("qr_codes").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("is_system", true).eq("qr_type", "smart_card"),
+    admin.from("profiles").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("is_active", true),
+    admin.from("print_qr_provisionings").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("provisioning_status", "completed"),
+    admin.from("print_qr_provisionings").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("provisioning_status", "completed").eq("access_type", "included_permanent"),
+    admin.from("print_qr_provisionings").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("provisioning_status", "completed").eq("source_type", "tracked_print"),
+    admin.from("print_qr_provisionings").select("id", { count: "exact", head: true }).eq("customer_id", id).eq("provisioning_status", "completed").eq("source_type", "business_kit"),
   ]);
 
   assertAdminCustomerQueriesSucceeded([
-    { name: "customer account", error: customerResult.error },
     { name: "customer QR codes", error: qrCodesResult.error },
     { name: "customer profiles", error: profilesResult.error },
     { name: "customer print orders", error: printOrdersResult.error },
@@ -64,28 +98,22 @@ export default async function AdminCustomerDetailPage({
     { name: "customer card orders", error: cardOrdersResult.error },
     { name: "customer Shopify orders", error: shopifyOrdersResult.error },
     { name: "customer entitlement events", error: entitlementEventsResult.error },
+    { name: "customer used QR count", error: usedQrCountResult.error },
+    { name: "customer Smart Card QR count", error: smartCardQrCountResult.error },
+    { name: "customer active profile count", error: activeProfileCountResult.error },
+    { name: "customer completed provisioning count", error: completedProvisioningCountResult.error },
+    { name: "customer included provisioning count", error: includedProvisioningCountResult.error },
+    { name: "customer tracked print evidence", error: trackedProvisioningCountResult.error },
+    { name: "customer Business Kit evidence", error: businessKitProvisioningCountResult.error },
   ]);
 
-  if (!customerResult.data) notFound();
-
-  const profileIds = (profilesResult.data || []).map((profile) => profile.id);
   const printOrderIds = (printOrdersResult.data || []).map((order) => order.id);
   const emptyResult = { data: [], error: null };
-  const [leadsResult, profileEventsResult, orderActivityResult] = await Promise.all([
-    profileIds.length
-      ? admin.from("profile_leads").select("id,profile_id,name,email,created_at").in("profile_id", profileIds).order("created_at", { ascending: false }).limit(50)
-      : Promise.resolve(emptyResult),
-    profileIds.length
-      ? admin.from("profile_click_events").select("id,profile_id,event_type,created_at").in("profile_id", profileIds).order("created_at", { ascending: false }).limit(100)
-      : Promise.resolve(emptyResult),
-    printOrderIds.length
-      ? admin.from("order_activity").select("id,order_id,action,actor_type,reason,created_at").eq("order_type", "print_order").in("order_id", printOrderIds).order("created_at", { ascending: false }).limit(100)
-      : Promise.resolve(emptyResult),
-  ]);
+  const orderActivityResult = printOrderIds.length
+    ? await admin.from("order_activity").select("id,order_id,action,actor_type,reason,created_at").eq("order_type", "print_order").in("order_id", printOrderIds).order("created_at", { ascending: false }).limit(CUSTOMER_ACTIVITY_LIMIT)
+    : emptyResult;
 
   assertAdminCustomerQueriesSucceeded([
-    { name: "customer profile leads", error: leadsResult.error },
-    { name: "customer profile activity", error: profileEventsResult.error },
     { name: "customer order activity", error: orderActivityResult.error },
   ]);
 
@@ -97,9 +125,14 @@ export default async function AdminCustomerDetailPage({
   const cardOrders = cardOrdersResult.data || [];
   const shopifyOrders = shopifyOrdersResult.data || [];
   const entitlementEvents = entitlementEventsResult.data || [];
-  const leads = leadsResult.data || [];
-  const profileEvents = profileEventsResult.data || [];
   const orderActivity = orderActivityResult.data || [];
+  const qrCodeCount = qrCodesResult.count ?? 0;
+  const profileCount = profilesResult.count ?? 0;
+  const printOrderCount = printOrdersResult.count ?? 0;
+  const provisioningCount = provisioningsResult.count ?? 0;
+  const cardOrderCount = cardOrdersResult.count ?? 0;
+  const shopifyOrderCount = shopifyOrdersResult.count ?? 0;
+  const entitlementEventCount = entitlementEventsResult.count ?? 0;
   const group = normalizeRelation(customer.customer_groups)[0];
   const plan = getCustomerPlan(customer);
   const evidence = summarizeAdminCustomerEvidence({
@@ -109,7 +142,22 @@ export default async function AdminCustomerDetailPage({
     cardOrders,
     printOrders,
     provisionings,
+    exact: {
+      qrCodes: qrCodeCount,
+      usedQrCodes: usedQrCountResult.count ?? 0,
+      activeProfiles: activeProfileCountResult.count ?? 0,
+      cardOrders: cardOrderCount,
+      printOrders: printOrderCount,
+      completedProvisionings: completedProvisioningCountResult.count ?? 0,
+      includedPrintQr: includedProvisioningCountResult.count ?? 0,
+      hasSmartCardSystemQr: (smartCardQrCountResult.count ?? 0) > 0,
+      hasTrackedPrint: (trackedProvisioningCountResult.count ?? 0) > 0,
+      hasBusinessKit: (businessKitProvisioningCountResult.count ?? 0) > 0,
+    },
   });
+  const visibleOrderRecords = printOrders.length + cardOrders.length + shopifyOrders.length;
+  const totalOrderRecords = printOrderCount + cardOrderCount + shopifyOrderCount;
+  const visibleActivityCount = orderActivity.length + Math.min(entitlementEvents.length, CUSTOMER_ACTIVITY_LIMIT);
 
   return (
     <DashboardShell isAdmin>
@@ -135,7 +183,10 @@ export default async function AdminCustomerDetailPage({
         <div className={styles.columns}>
           <div className={styles.primaryColumn}>
             <section className={styles.card}>
-              <div className={styles.sectionHeading}><h2>Orders</h2><span>{printOrders.length + cardOrders.length + shopifyOrders.length} records</span></div>
+              <div className={styles.sectionHeading}>
+                <h2>Orders</h2>
+                <span>{formatRecordSummary(visibleOrderRecords, totalOrderRecords, "records")}</span>
+              </div>
               {printOrders.length ? (
                 <div className={styles.tableRegion} role="region" aria-label="Customer print orders" tabIndex={0}>
                   <table>
@@ -162,7 +213,14 @@ export default async function AdminCustomerDetailPage({
             </section>
 
             <section className={styles.card}>
-              <div className={styles.sectionHeading}><h2>QR and profile evidence</h2><span>{qrCodes.length} QR codes</span></div>
+              <div className={styles.sectionHeading}>
+                <h2>QR and profile evidence</h2>
+                <span>
+                  {formatRecordSummary(qrCodes.length, qrCodeCount, "QR codes")}
+                  {" · "}
+                  {formatRecordSummary(profiles.length, profileCount, "profiles")}
+                </span>
+              </div>
               {qrCodes.length ? <div className={styles.recordList}>{qrCodes.map((qr) => (
                 <article key={qr.id}>
                   <strong>{qr.name}</strong>
@@ -170,18 +228,19 @@ export default async function AdminCustomerDetailPage({
                   <span className={styles.destination}>{qr.destination_url}</span>
                 </article>
               ))}</div> : <p className={styles.empty}>No QR codes are linked to this customer.</p>}
-              {profiles.length ? <div className={styles.recordList}>{profiles.map((profile) => {
-                const profileLeadCount = leads.filter((lead) => lead.profile_id === profile.id).length;
-                const eventCount = profileEvents.filter((event) => event.profile_id === profile.id).length;
-                return <article key={profile.id}>
+              {profiles.length ? <div className={styles.recordList}>{profiles.map((profile) => (
+                <article key={profile.id}>
                   <strong>{profile.business_name || profile.contact_name || profile.slug}</strong>
-                  <span>{profile.slug} · {profile.is_active ? "Active" : "Inactive"} · {profileLeadCount} leads · {eventCount} events</span>
-                </article>;
-              })}</div> : <p className={styles.empty}>No Clutch Connect profile evidence is linked to this customer.</p>}
+                  <span>{profile.slug} · {profile.is_active ? "Active" : "Inactive"} · Created {formatDate(profile.created_at)}</span>
+                </article>
+              ))}</div> : <p className={styles.empty}>No Clutch Connect profile evidence is linked to this customer.</p>}
             </section>
 
             <section className={styles.card}>
-              <div className={styles.sectionHeading}><h2>Recent activity</h2><span>{orderActivity.length + entitlementEvents.length} events</span></div>
+              <div className={styles.sectionHeading}>
+                <h2>Recent activity</h2>
+                <span>{visibleActivityCount} recent events from listed orders and entitlements</span>
+              </div>
               {(orderActivity.length || entitlementEvents.length) ? <div className={styles.timeline}>
                 {orderActivity.slice(0, 25).map((event) => <article key={event.id}>
                   <span>{formatDate(event.created_at)}</span>
@@ -226,7 +285,10 @@ export default async function AdminCustomerDetailPage({
             </section>
 
             <section className={styles.card}>
-              <h2>Provisioning evidence</h2>
+              <div className={styles.sectionHeading}>
+                <h2>Provisioning evidence</h2>
+                <span>{formatRecordSummary(provisionings.length, provisioningCount, "records")}</span>
+              </div>
               {provisionings.length ? <div className={styles.recordList}>{provisionings.map((row) => (
                 <article key={row.id}>
                   <strong>{formatAdminLabel(row.source_type)} · {formatAdminLabel(row.access_type)}</strong>
@@ -236,7 +298,10 @@ export default async function AdminCustomerDetailPage({
             </section>
 
             <section className={styles.card}>
-              <h2>Subscription evidence</h2>
+              <div className={styles.sectionHeading}>
+                <h2>Subscription evidence</h2>
+                <span>{formatRecordSummary(entitlementEvents.length, entitlementEventCount, "events")}</span>
+              </div>
               {entitlementEvents.length ? <div className={styles.recordList}>{entitlementEvents.map((event) => (
                 <article key={event.id}>
                   <strong>{formatAdminLabel(event.action)}</strong>

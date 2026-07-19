@@ -9,6 +9,10 @@ import {
   formatOrderAge,
   getAdminStatusTone,
 } from "../lib/admin-operations.ts";
+import { isCanonicalCustomerId } from "../lib/customer-identifiers.ts";
+
+const EXISTING_CUSTOMER_ID = "41802ffc-0389-4184-afca-e9dbb67d0c96";
+const UNKNOWN_CUSTOMER_ID = "11b580c5-4f42-4e72-b4f6-1ffb0c074327";
 
 test("admin labels never expose raw enum formatting", () => {
   assert.equal(formatAdminLabel("new_included_code"), "New Included Code");
@@ -167,9 +171,79 @@ test("customer evidence summary accepts populated, empty, object, array, and nul
     printOrders: 0,
     completedProvisionings: 0,
   });
+
+  const exact = summarizeAdminCustomerEvidence({
+    customer,
+    qrCodes: [{ counts_toward_capacity: true }],
+    profiles: [{ is_active: true }],
+    cardOrders: [{}],
+    printOrders: [{ material_type: "postcard" }],
+    provisionings: [{
+      access_type: "included_permanent",
+      source_type: "tracked_print",
+      provisioning_status: "completed",
+    }],
+    exact: {
+      qrCodes: 75,
+      usedQrCodes: 72,
+      activeProfiles: 4,
+      cardOrders: 8,
+      printOrders: 120,
+      completedProvisionings: 110,
+      includedPrintQr: 105,
+      hasSmartCardSystemQr: true,
+      hasTrackedPrint: true,
+      hasBusinessKit: true,
+    },
+  });
+  assert.deepEqual(exact.counts, {
+    qrCodes: 75,
+    activeProfiles: 4,
+    cardOrders: 8,
+    printOrders: 120,
+    completedProvisionings: 110,
+  });
+  assert.equal(exact.access.usedQrCount, 72);
+  assert.equal(exact.access.printOrderCount, 120);
+  assert.equal(exact.access.includedPrintQrCount, 105);
+  assert.equal(exact.access.hasTrackedPrint, true);
+  assert.equal(exact.access.hasBusinessKit, true);
 });
 
-test("customer detail is admin guarded, UUID scoped, read-only, and fail closed", () => {
+test("customer IDs accept only canonical version 4 UUIDs used by public.customers", () => {
+  assert.equal(isCanonicalCustomerId(EXISTING_CUSTOMER_ID), true);
+  assert.equal(isCanonicalCustomerId(UNKNOWN_CUSTOMER_ID), true);
+  assert.equal(isCanonicalCustomerId("not-a-customer"), false);
+  assert.equal(isCanonicalCustomerId("41802ffc-0389-4184-afca-e9dbb67d0c9"), false);
+  assert.equal(isCanonicalCustomerId(`x${EXISTING_CUSTOMER_ID}`), false);
+  assert.equal(isCanonicalCustomerId(`${EXISTING_CUSTOMER_ID}x`), false);
+  assert.equal(isCanonicalCustomerId(EXISTING_CUSTOMER_ID.toUpperCase()), false);
+  assert.equal(isCanonicalCustomerId("41802ffc-0389-1184-afca-e9dbb67d0c96"), false);
+  assert.equal(isCanonicalCustomerId("41802ffc-0389-4184-7fca-e9dbb67d0c96"), false);
+  assert.equal(isCanonicalCustomerId(null), false);
+});
+
+test("customer detail rejects malformed IDs before creating a Supabase customer query", () => {
+  const detailPage = readFileSync(
+    new URL("../app/admin/customers/[id]/page.tsx", import.meta.url),
+    "utf8"
+  );
+  const adminGuard = detailPage.indexOf('if (!currentCustomer?.is_admin) redirect("/portal")');
+  const identifierGuard = detailPage.indexOf("if (!isCanonicalCustomerId(routeId)) notFound()");
+  const clientCreation = detailPage.indexOf("createSupabaseAdminClient()");
+  const customerQuery = detailPage.indexOf('.from("customers")');
+
+  assert.ok(adminGuard >= 0);
+  assert.ok(identifierGuard > adminGuard);
+  assert.ok(clientCreation > identifierGuard);
+  assert.ok(customerQuery > clientCreation);
+  assert.match(
+    detailPage,
+    /assertAdminCustomerQueriesSucceeded\(\[\s*\{ name: "customer account", error: customerResult\.error \},\s*\]\);\s*if \(!customerResult\.data\) notFound\(\)/
+  );
+});
+
+test("customer detail is admin guarded, UUID scoped, bounded, read-only, and fail closed", () => {
   const listPage = readFileSync(
     new URL("../app/admin/customers/page.tsx", import.meta.url),
     "utf8"
@@ -181,12 +255,51 @@ test("customer detail is admin guarded, UUID scoped, read-only, and fail closed"
 
   assert.match(listPage, /href=\{`\/admin\/customers\/\$\{c\.id\}`\}/);
   assert.match(detailPage, /if \(!currentCustomer\?\.is_admin\) redirect\("\/portal"\)/);
-  assert.match(detailPage, /\.from\("customers"\)[\s\S]*?\.eq\("id", id\)\.limit\(1\)\.maybeSingle\(\)/);
+  assert.match(
+    detailPage,
+    /\.from\("customers"\)[\s\S]*?\.eq\("id", id\)\s*\.limit\(1\)\s*\.maybeSingle\(\)/
+  );
   for (const table of ["qr_codes", "profiles", "print_order_items", "print_qr_provisionings", "card_orders", "shopify_orders", "shopify_entitlement_events"]) {
     assert.match(detailPage, new RegExp(`\\.from\\("${table}"\\)[\\s\\S]*?\\.eq\\("customer_id", id\\)`));
   }
   assert.match(detailPage, /if \(!customerResult\.data\) notFound\(\)/);
   assert.match(detailPage, /assertAdminCustomerQueriesSucceeded\(/);
+  for (const table of ["qr_codes", "profiles", "print_order_items", "print_qr_provisionings", "card_orders", "shopify_orders", "shopify_entitlement_events"]) {
+    const boundedList = new RegExp(
+      `\\.from\\("${table}"\\)\\.select\\([^\\n]+\\{ count: "exact" \\}\\)[^\\n]+\\.limit\\(CUSTOMER_DETAIL_LIST_LIMIT\\)`
+    );
+    assert.match(detailPage, boundedList);
+  }
+  assert.match(detailPage, /formatRecordSummary\(/);
+  assert.match(detailPage, /exact:\s*\{[\s\S]*?usedQrCodes: usedQrCountResult\.count \?\? 0/);
+  assert.doesNotMatch(detailPage, /\.from\("profile_leads"\)/);
+  assert.doesNotMatch(detailPage, /\.from\("profile_click_events"\)/);
   assert.doesNotMatch(detailPage, /\.(insert|update|upsert|delete)\(/);
   assert.doesNotMatch(detailPage, /<form/);
+});
+
+test("customer workflow markup remains pre-PR structure and admin cancellation is confirmed", () => {
+  const actions = readFileSync(
+    new URL("../components/print-orders/PrintOrderWorkflowActions.tsx", import.meta.url),
+    "utf8"
+  );
+  const customerStart = actions.indexOf('if (actorType !== "admin")');
+  const customerEnd = actions.indexOf("const adminCanUploadProof", customerStart);
+  const customerRenderer = actions.slice(customerStart, customerEnd);
+
+  assert.ok(customerStart >= 0);
+  assert.ok(customerEnd > customerStart);
+  assert.match(customerRenderer, /<section className="dashboard-card" aria-busy=\{busy\}>/);
+  assert.match(customerRenderer, /<h2>Your actions<\/h2>/);
+  assert.match(customerRenderer, /\{message \? <p role="status">\{message\}<\/p> : null\}/);
+  assert.match(customerRenderer, /<form className="admin-form"/);
+  assert.match(customerRenderer, /<label>Artwork file<input name="file"/);
+  assert.match(customerRenderer, /<button type="submit" disabled=\{busy\}>Upload artwork<\/button>/);
+  assert.doesNotMatch(customerRenderer, /styles\./);
+  assert.doesNotMatch(customerRenderer, /Current state:/);
+  assert.doesNotMatch(customerRenderer, /Workflow actions/);
+
+  assert.match(actions, /window\.confirm\(\s*"Cancel this order workflow\?/);
+  assert.match(actions, /onClick=\{confirmCancellation\}>Cancel workflow<\/button>/);
+  assert.doesNotMatch(actions, /onClick=\{\(\) => void transition\("cancel"\)\}>Cancel workflow/);
 });
