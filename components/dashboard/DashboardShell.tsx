@@ -2,6 +2,7 @@
 
 import SidebarNav from "@/components/dashboard/SidebarNav";
 import DashboardTopbar from "@/components/dashboard/DashboardTopbar";
+import AdminOperationsShell from "@/components/admin/AdminOperationsShell";
 import type { AccountAccess } from "@/lib/account-access";
 
 export type DashboardNavVariant = "default" | "connect-basic" | "onboarding";
@@ -29,6 +30,8 @@ export default function DashboardShell({
   showLeadInbox,
   children,
 }: DashboardShellProps) {
+  if (isAdmin) return <AdminOperationsShell>{children}</AdminOperationsShell>;
+
   return (
     <div className="ds-app-shell">
       <SidebarNav

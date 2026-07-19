@@ -1,0 +1,241 @@
+.page {
+  width: 100%;
+  max-width: 1540px;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+  color: #172033;
+}
+
+.page :global(.ds-page-header) {
+  min-height: 58px;
+  align-items: center;
+}
+
+.page :global(.ds-page-header h1) {
+  font-size: 28px;
+}
+
+.page :global(.ds-page-header-actions) {
+  flex: 0 0 auto;
+}
+
+.page :global(.dashboard-badges) {
+  min-width: 0;
+  height: auto;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.page :global(.dashboard-badges span) {
+  padding: 5px 8px;
+  border: 1px solid #e3e8ef;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.page :global(.dashboard-grid) {
+  gap: 12px;
+  margin-top: 0;
+}
+
+.page :global(.metric-card),
+.page :global(.card),
+.page :global(.analytics-card),
+.page :global(.admin-table-card) {
+  animation: none;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(31, 43, 61, 0.05);
+}
+
+.page :global(.metric-card) {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.page :global(.metric-label),
+.page :global(.eyebrow) {
+  color: #667085;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.page :global(.metric-value) {
+  margin: 5px 0;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.page :global(.metric-card p),
+.page :global(.muted) {
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.page :global(.admin-dashboard-grid) {
+  gap: 14px;
+  margin-top: 0;
+}
+
+.page :global(.card),
+.page :global(.analytics-card),
+.page :global(.admin-table-card) {
+  padding: 16px;
+}
+
+.page :global(.card h2),
+.page :global(.card h3) {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.page :global(.admin-form-grid),
+.page :global(.form) {
+  gap: 8px;
+}
+
+.page :global(.input) {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d8e0e9;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 11px;
+}
+
+.page :global(.btn) {
+  min-height: 38px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.page :global(.btn:hover:not(:disabled)) {
+  transform: none;
+  box-shadow: none;
+}
+
+.page :global(.btn.primary) {
+  background: #ffa665;
+  color: #29374d;
+}
+
+.page :global(.section-heading) {
+  margin: 4px 0 0;
+}
+
+.page :global(.section-heading h2) {
+  margin-top: 2px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.page :global(.analytics-grid) {
+  gap: 12px;
+}
+
+.page :global(.analytics-card h3) {
+  margin: 5px 0;
+  font-size: 18px;
+}
+
+.page :global(.analytics-list) {
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.page :global(.analytics-list li),
+.page :global(.admin-summary-list li) {
+  padding: 8px 0;
+  font-size: 10px;
+}
+
+.page :global(.admin-table-card) {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.page :global(.table) {
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.page :global(.table th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 11px;
+  background: #f7f9fb;
+  border-bottom: 1px solid #d8e0e9;
+  color: #667085;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.page :global(.table td) {
+  padding: 10px 11px;
+  border-bottom: 1px solid #edf0f4;
+  background: #ffffff;
+}
+
+.page :global(.table tbody tr:hover td) {
+  background: #fafbfc;
+}
+
+.page :global(.status-pill) {
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.errorState {
+  padding: 24px;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(31, 43, 61, 0.05);
+}
+
+.errorState h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.errorState p {
+  max-width: 680px;
+  margin: 8px 0 18px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.retryButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffa665;
+  color: #29374d;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.retryButton:focus-visible {
+  outline: 3px solid rgba(255, 166, 101, 0.35);
+  outline-offset: 2px;
+}
