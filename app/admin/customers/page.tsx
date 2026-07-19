@@ -487,8 +487,9 @@ export default async function AdminCustomersPage({ searchParams }: AdminPageProp
                 return (
                   <tr key={c.id}>
                     <td>
-                      <strong>{c.company_name || c.email}</strong>
+                      <strong><Link href={`/admin/customers/${c.id}`}>{c.company_name || c.email}</Link></strong>
                       <span className="admin-cell-subtext">{c.email}</span>
+                      <Link className="admin-cell-subtext" href={`/admin/customers/${c.id}`}>View account details</Link>
                     </td>
                     <td>
                       <span className="status-pill">{plan.name}</span>

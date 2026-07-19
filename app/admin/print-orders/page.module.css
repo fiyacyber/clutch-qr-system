@@ -89,6 +89,12 @@
   width: 100%;
   max-height: calc(100vh - 240px);
   overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.tableScroll:focus-visible {
+  outline: 3px solid rgba(255, 166, 101, 0.52);
+  outline-offset: -3px;
 }
 
 .tableScroll table {

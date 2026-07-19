@@ -48,7 +48,12 @@ export default async function AdminPrintOrdersPage({ searchParams }: { searchPar
 
         <section className={styles.tablePanel}>
           <div className={styles.tableMeta}><strong>{data?.length || 0} orders</strong>{searchQuery ? <span>Search: “{searchQuery}”</span> : null}</div>
-          <div className={styles.tableScroll}>
+          <div
+            className={styles.tableScroll}
+            role="region"
+            aria-label="Print orders table. Use Shift plus mouse wheel or the horizontal scrollbar to view all columns."
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Product</th><th>SKU / Material</th><th>Qty</th><th>Tracking</th><th>Campaign</th><th>Artwork method</th><th>Artwork</th><th>Proof</th><th>Production</th><th>Fulfillment</th><th>Provisioning</th><th>QR</th><th>Attention</th><th>Created</th></tr>
