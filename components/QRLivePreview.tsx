@@ -2,12 +2,14 @@
 
 import StyledQRPreview from "@/components/StyledQRPreview";
 import { qrUrl } from "@/lib/qr";
-import type {
-  QrBodyPattern,
-  QrCanvasShape,
-  QrColorMode,
-  QrEyeCenterShape,
-  QrEyeFrameShape,
+import {
+  getQrDesignScanIssues,
+  type AdvancedQrDesign,
+  type QrBodyPattern,
+  type QrCanvasShape,
+  type QrColorMode,
+  type QrEyeCenterShape,
+  type QrEyeFrameShape,
 } from "@/lib/qr-design";
 import styles from "./QRLivePreview.module.css";
 
@@ -63,6 +65,18 @@ type QRLivePreviewProps = {
   outerStrokeColor?: string;
 };
 
+function bodyPatternFromLegacy(dotStyle: DotStyle): QrBodyPattern {
+  if (dotStyle === "dots") return "circle";
+  if (dotStyle === "rounded" || dotStyle === "classy" || dotStyle === "classy-rounded" || dotStyle === "extra-rounded") return "rounded";
+  return "square";
+}
+
+function eyeFrameFromLegacy(cornerStyle: CornerStyle): QrEyeFrameShape {
+  if (cornerStyle === "dot") return "circle";
+  if (cornerStyle === "extra-rounded") return "rounded";
+  return "square";
+}
+
 export default function QRLivePreview({
   finalUrl,
   foregroundColor,
@@ -83,24 +97,50 @@ export default function QRLivePreview({
   canCreate,
   error,
   compact = false,
-  qrShape,
+  qrShape = "square",
   bodyPattern,
   eyeFrameShape,
-  eyeCenterShape,
-  colorMode,
-  gradientEndColor,
+  eyeCenterShape = "square",
+  colorMode = "solid",
+  gradientEndColor = "#ff7a1a",
   eyeFrameColor,
   eyeCenterColor,
-  outerStrokeEnabled,
-  outerStrokeColor,
+  outerStrokeEnabled = false,
+  outerStrokeColor = "#384862",
 }: QRLivePreviewProps) {
+  const resolvedBodyPattern = bodyPattern || bodyPatternFromLegacy(dotStyle);
+  const resolvedEyeFrame = eyeFrameShape || eyeFrameFromLegacy(cornerStyle);
+  const design: AdvancedQrDesign = {
+    qrShape,
+    bodyPattern: resolvedBodyPattern,
+    eyeFrameShape: resolvedEyeFrame,
+    eyeCenterShape,
+    colorMode,
+    bodyColor: foregroundColor,
+    gradientEndColor,
+    eyeFrameColor: eyeFrameColor || foregroundColor,
+    eyeCenterColor: eyeCenterColor || foregroundColor,
+    backgroundColor,
+    outerStrokeEnabled,
+    outerStrokeColor,
+  };
+  const designIssues = getQrDesignScanIssues(design);
   const previewLabel = finalUrl ? "Live preview" : "Draft preview";
-  const statusLabel = isLocked ? "Locked" : canCreate ? "Scan safe" : "Needs input";
+  const statusLabel = isLocked
+    ? "Locked"
+    : !canCreate
+      ? "Needs input"
+      : designIssues.length
+        ? "Adjust design"
+        : "Test scan required";
   const displayedPrintPiece = printPieceLabel?.trim() || PRINT_MOCKUP_LABELS[printMockupType];
 
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       {error ? <div className={styles.errorMessage}>{error}</div> : null}
+      {canCreate && designIssues.length ? (
+        <div className={styles.errorMessage}>{designIssues[0]}</div>
+      ) : null}
 
       <section className={styles.heroPreviewCard}>
         <div className={styles.previewHeader}>
@@ -123,8 +163,8 @@ export default function QRLivePreview({
               logoUrl={logoUrl}
               showExportMenu={false}
               qrShape={qrShape}
-              bodyPattern={bodyPattern}
-              eyeFrameShape={eyeFrameShape}
+              bodyPattern={resolvedBodyPattern}
+              eyeFrameShape={resolvedEyeFrame}
               eyeCenterShape={eyeCenterShape}
               colorMode={colorMode}
               gradientEndColor={gradientEndColor}
@@ -171,7 +211,7 @@ export default function QRLivePreview({
           <div className={styles.exportCard}>
             <p><span>Recommended resolution</span><strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong></p>
             <p><span>Formats</span><strong>PNG, SVG, JPG, PDF</strong></p>
-            <small>Once this QR is created, export options are available from the QR manager and editor.</small>
+            <small>Test-scan the downloaded file at its final printed size before production.</small>
           </div>
         </>
       )}
