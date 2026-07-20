@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PremiumColorPicker from "./PremiumColorPicker";
-import type {
-  QrBodyPattern,
-  QrCanvasShape,
-  QrColorMode,
-  QrEyeCenterShape,
-  QrEyeFrameShape,
+import {
+  SAFE_CIRCLE_BODY_PATTERNS,
+  SAFE_CIRCLE_EYE_CENTERS,
+  SAFE_CIRCLE_EYE_FRAMES,
+  getQrDesignScanIssues,
+  type AdvancedQrDesign,
+  type QrBodyPattern,
+  type QrCanvasShape,
+  type QrColorMode,
+  type QrEyeCenterShape,
+  type QrEyeFrameShape,
 } from "@/lib/qr-design";
 import styles from "./QRStylePanel.module.css";
 
@@ -152,13 +157,58 @@ export default function QRStylePanel({
 
   function selectBodyPattern(pattern: QrBodyPattern) {
     onBodyPatternChange?.(pattern);
-    onDotStyleChange(pattern === "circle" ? "dots" : pattern === "rounded" || pattern === "blob" || pattern === "connected" ? "rounded" : "square");
+    onDotStyleChange(
+      pattern === "circle"
+        ? "dots"
+        : pattern === "rounded" || pattern === "blob" || pattern === "connected"
+          ? "rounded"
+          : "square"
+    );
   }
 
   function selectEyeFrame(shape: QrEyeFrameShape) {
     onEyeFrameShapeChange?.(shape);
     onCornerStyleChange(shape === "circle" ? "dot" : shape === "rounded" ? "extra-rounded" : "square");
   }
+
+  function selectQrShape(shape: QrCanvasShape) {
+    onQrShapeChange?.(shape);
+    if (shape !== "circle") return;
+    if (!SAFE_CIRCLE_BODY_PATTERNS.has(bodyPattern)) selectBodyPattern("square");
+    if (!SAFE_CIRCLE_EYE_FRAMES.has(eyeFrameShape)) selectEyeFrame("square");
+    if (!SAFE_CIRCLE_EYE_CENTERS.has(eyeCenterShape)) onEyeCenterShapeChange?.("square");
+  }
+
+  const designIssues = useMemo(() => {
+    const design: AdvancedQrDesign = {
+      qrShape,
+      bodyPattern,
+      eyeFrameShape,
+      eyeCenterShape,
+      colorMode,
+      bodyColor: foregroundColor,
+      gradientEndColor,
+      eyeFrameColor,
+      eyeCenterColor,
+      backgroundColor,
+      outerStrokeEnabled,
+      outerStrokeColor,
+    };
+    return getQrDesignScanIssues(design);
+  }, [
+    backgroundColor,
+    bodyPattern,
+    colorMode,
+    eyeCenterColor,
+    eyeCenterShape,
+    eyeFrameColor,
+    eyeFrameShape,
+    foregroundColor,
+    gradientEndColor,
+    outerStrokeColor,
+    outerStrokeEnabled,
+    qrShape,
+  ]);
 
   const tabs: Array<{ value: DesignTab; label: string }> = [
     { value: "shape", label: "Shape" },
@@ -196,7 +246,7 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Overall shape</h3>
-              <span>Circle keeps the QR matrix inset inside a circular frame.</span>
+              <span>Circle preserves the complete square quiet zone inside a circular frame.</span>
             </div>
             <div className={styles.twoChoiceGrid} role="radiogroup" aria-label="Overall QR shape">
               {(["square", "circle"] as QrCanvasShape[]).map((shape) => (
@@ -204,7 +254,7 @@ export default function QRStylePanel({
                   key={shape}
                   type="button"
                   className={`${styles.choiceCard} ${qrShape === shape ? styles.active : ""}`}
-                  onClick={() => onQrShapeChange?.(shape)}
+                  onClick={() => selectQrShape(shape)}
                   aria-pressed={qrShape === shape}
                 >
                   <span className={styles.canvasSample} data-shape={shape} aria-hidden="true" />
@@ -217,21 +267,26 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Body pattern</h3>
-              <span>Nine distinct module styles.</span>
+              <span>{qrShape === "circle" ? "Conservative patterns only for circular output." : "Nine distinct module styles."}</span>
             </div>
             <div className={styles.patternGrid} role="radiogroup" aria-label="QR body pattern">
-              {BODY_PATTERNS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${styles.patternCard} ${bodyPattern === option.value ? styles.active : ""}`}
-                  onClick={() => selectBodyPattern(option.value)}
-                  aria-pressed={bodyPattern === option.value}
-                >
-                  <span className={styles.patternSample} data-pattern={option.value} aria-hidden="true" />
-                  <span><strong>{option.label}</strong><small>{option.helper}</small></span>
-                </button>
-              ))}
+              {BODY_PATTERNS.map((option) => {
+                const disabled = qrShape === "circle" && !SAFE_CIRCLE_BODY_PATTERNS.has(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`${styles.patternCard} ${bodyPattern === option.value ? styles.active : ""}`}
+                    onClick={() => selectBodyPattern(option.value)}
+                    aria-pressed={bodyPattern === option.value}
+                    disabled={disabled}
+                    title={disabled ? "Unavailable for circular QR scan safety." : undefined}
+                  >
+                    <span className={styles.patternSample} data-pattern={option.value} aria-hidden="true" />
+                    <span><strong>{option.label}</strong><small>{disabled ? "Square QR only" : option.helper}</small></span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -245,18 +300,23 @@ export default function QRStylePanel({
               <span>The outer finder shape.</span>
             </div>
             <div className={styles.eyeGrid} role="radiogroup" aria-label="Eye frame shape">
-              {EYE_FRAMES.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${styles.eyeCard} ${eyeFrameShape === option.value ? styles.active : ""}`}
-                  onClick={() => selectEyeFrame(option.value)}
-                  aria-pressed={eyeFrameShape === option.value}
-                >
-                  <span className={styles.eyeFrameSample} data-shape={option.value} aria-hidden="true"><i /></span>
-                  <strong>{option.label}</strong>
-                </button>
-              ))}
+              {EYE_FRAMES.map((option) => {
+                const disabled = qrShape === "circle" && !SAFE_CIRCLE_EYE_FRAMES.has(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`${styles.eyeCard} ${eyeFrameShape === option.value ? styles.active : ""}`}
+                    onClick={() => selectEyeFrame(option.value)}
+                    aria-pressed={eyeFrameShape === option.value}
+                    disabled={disabled}
+                    title={disabled ? "Unavailable for circular QR scan safety." : undefined}
+                  >
+                    <span className={styles.eyeFrameSample} data-shape={option.value} aria-hidden="true"><i /></span>
+                    <strong>{option.label}</strong>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -266,18 +326,23 @@ export default function QRStylePanel({
               <span>The solid center of each finder.</span>
             </div>
             <div className={styles.eyeGrid} role="radiogroup" aria-label="Eye center shape">
-              {EYE_CENTERS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${styles.eyeCard} ${eyeCenterShape === option.value ? styles.active : ""}`}
-                  onClick={() => onEyeCenterShapeChange?.(option.value)}
-                  aria-pressed={eyeCenterShape === option.value}
-                >
-                  <span className={styles.eyeCenterSample} data-shape={option.value} aria-hidden="true" />
-                  <strong>{option.label}</strong>
-                </button>
-              ))}
+              {EYE_CENTERS.map((option) => {
+                const disabled = qrShape === "circle" && !SAFE_CIRCLE_EYE_CENTERS.has(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`${styles.eyeCard} ${eyeCenterShape === option.value ? styles.active : ""}`}
+                    onClick={() => onEyeCenterShapeChange?.(option.value)}
+                    aria-pressed={eyeCenterShape === option.value}
+                    disabled={disabled}
+                    title={disabled ? "Unavailable for circular QR scan safety." : undefined}
+                  >
+                    <span className={styles.eyeCenterSample} data-shape={option.value} aria-hidden="true" />
+                    <strong>{option.label}</strong>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -288,7 +353,7 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Body color</h3>
-              <span>Solid, linear gradient, or radial gradient.</span>
+              <span>Dark modules on a light background are required for print reliability.</span>
             </div>
             <div className={styles.modeGrid} role="radiogroup" aria-label="QR color mode">
               {(["solid", "linear", "radial"] as QrColorMode[]).map((mode) => (
@@ -321,7 +386,7 @@ export default function QRStylePanel({
               checked={outerStrokeEnabled}
               onChange={(event) => onOuterStrokeEnabledChange?.(event.target.checked)}
             />
-            <span><strong>Outer stroke</strong><small>Add an outline around the square or circle QR.</small></span>
+            <span><strong>Outer stroke</strong><small>Add an outline outside the protected quiet zone.</small></span>
           </label>
           {outerStrokeEnabled && onOuterStrokeColorChange ? (
             <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} />
@@ -370,7 +435,13 @@ export default function QRStylePanel({
         </section>
       ) : null}
 
-      <p className={styles.scanNote}>Decorative styles use high error correction, but every final print should still be test-scanned at its actual size.</p>
+      <p className={styles.scanNote}>
+        {designIssues.length
+          ? designIssues[0]
+          : logoFile
+            ? "Logo designs require a final-size test scan before production."
+            : "The design passes structural guardrails. Test-scan the exported file at its actual print size before production."}
+      </p>
     </div>
   );
 }
