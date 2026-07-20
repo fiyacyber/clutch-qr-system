@@ -42,7 +42,7 @@ export const DEFAULT_QR_DESIGN: AdvancedQrDesign = {
   eyeCenterShape: "square",
   colorMode: "solid",
   bodyColor: "#384862",
-  gradientEndColor: "#ff7a1a",
+  gradientEndColor: "#9a3f00",
   eyeFrameColor: "#384862",
   eyeCenterColor: "#384862",
   backgroundColor: "#ffffff",
