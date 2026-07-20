@@ -2,6 +2,13 @@
 
 import StyledQRPreview from "@/components/StyledQRPreview";
 import { qrUrl } from "@/lib/qr";
+import type {
+  QrBodyPattern,
+  QrCanvasShape,
+  QrColorMode,
+  QrEyeCenterShape,
+  QrEyeFrameShape,
+} from "@/lib/qr-design";
 import styles from "./QRLivePreview.module.css";
 
 type DotStyle = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
@@ -41,14 +48,19 @@ type QRLivePreviewProps = {
   trackingPreview?: string;
   downloadSize: DownloadSize;
   isLocked?: boolean;
-  onNameChange?: (name: string) => void;
-  destinationUrl?: string;
-  onDestinationUrlChange?: (url: string) => void;
-  onSubmit?: (event: any) => void;
-  isSaving?: boolean;
   canCreate?: boolean;
   error?: string | null;
   compact?: boolean;
+  qrShape?: QrCanvasShape;
+  bodyPattern?: QrBodyPattern;
+  eyeFrameShape?: QrEyeFrameShape;
+  eyeCenterShape?: QrEyeCenterShape;
+  colorMode?: QrColorMode;
+  gradientEndColor?: string;
+  eyeFrameColor?: string;
+  eyeCenterColor?: string;
+  outerStrokeEnabled?: boolean;
+  outerStrokeColor?: string;
 };
 
 export default function QRLivePreview({
@@ -71,6 +83,16 @@ export default function QRLivePreview({
   canCreate,
   error,
   compact = false,
+  qrShape,
+  bodyPattern,
+  eyeFrameShape,
+  eyeCenterShape,
+  colorMode,
+  gradientEndColor,
+  eyeFrameColor,
+  eyeCenterColor,
+  outerStrokeEnabled,
+  outerStrokeColor,
 }: QRLivePreviewProps) {
   const previewLabel = finalUrl ? "Live preview" : "Draft preview";
   const statusLabel = isLocked ? "Locked" : canCreate ? "Scan safe" : "Needs input";
@@ -100,6 +122,16 @@ export default function QRLivePreview({
               cornerStyle={cornerStyle}
               logoUrl={logoUrl}
               showExportMenu={false}
+              qrShape={qrShape}
+              bodyPattern={bodyPattern}
+              eyeFrameShape={eyeFrameShape}
+              eyeCenterShape={eyeCenterShape}
+              colorMode={colorMode}
+              gradientEndColor={gradientEndColor}
+              eyeFrameColor={eyeFrameColor}
+              eyeCenterColor={eyeCenterColor}
+              outerStrokeEnabled={outerStrokeEnabled}
+              outerStrokeColor={outerStrokeColor}
             />
           </div>
         </div>
@@ -116,66 +148,29 @@ export default function QRLivePreview({
         </div>
 
         <div className={styles.previewStrip}>
-          <article>
-            <span>Status</span>
-            <strong>{statusLabel}</strong>
-          </article>
-          <article>
-            <span>Resolution</span>
-            <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
-          </article>
-          <article>
-            <span>Usage</span>
-            <strong>{used}/{limit}</strong>
-          </article>
+          <article><span>Status</span><strong>{statusLabel}</strong></article>
+          <article><span>Resolution</span><strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong></article>
+          <article><span>Usage</span><strong>{used}/{limit}</strong></article>
         </div>
       </section>
 
       {compact ? (
         <div className={styles.compactDetails}>
-          <p>
-            <span>Destination</span>
-            <strong>{destinationPreview || "Add a destination"}</strong>
-          </p>
-          <p>
-            <span>Type</span>
-            <strong>{destinationTypeLabel}</strong>
-          </p>
-          <p>
-            <span>Tracking</span>
-            <strong>{trackingPreview}</strong>
-          </p>
+          <p><span>Destination</span><strong>{destinationPreview || "Add a destination"}</strong></p>
+          <p><span>Type</span><strong>{destinationTypeLabel}</strong></p>
+          <p><span>Tracking</span><strong>{trackingPreview}</strong></p>
         </div>
       ) : (
         <>
           <div className={styles.destinationPreviewCard}>
-            <p>
-              <span>Type</span>
-              <strong>{destinationTypeLabel}</strong>
-            </p>
-            <p>
-              <span>Preview</span>
-              <strong>{destinationPreview || "Add destination details in the destination section."}</strong>
-            </p>
-            <p>
-              <span>Tracking</span>
-              <strong>{trackingPreview}</strong>
-            </p>
-            <p>
-              <span>Destination</span>
-              <strong>{finalUrl || "No destination yet"}</strong>
-            </p>
+            <p><span>Type</span><strong>{destinationTypeLabel}</strong></p>
+            <p><span>Preview</span><strong>{destinationPreview || "Add destination details in the destination section."}</strong></p>
+            <p><span>Tracking</span><strong>{trackingPreview}</strong></p>
+            <p><span>Destination</span><strong>{finalUrl || "No destination yet"}</strong></p>
           </div>
-
           <div className={styles.exportCard}>
-            <p>
-              <span>Recommended resolution</span>
-              <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
-            </p>
-            <p>
-              <span>Formats</span>
-              <strong>PNG, SVG, JPG, PDF</strong>
-            </p>
+            <p><span>Recommended resolution</span><strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong></p>
+            <p><span>Formats</span><strong>PNG, SVG, JPG, PDF</strong></p>
             <small>Once this QR is created, export options are available from the QR manager and editor.</small>
           </div>
         </>
