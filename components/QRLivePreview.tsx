@@ -10,9 +10,9 @@ type DownloadSize = "social" | "card" | "print";
 type PrintMockupType = "business_cards" | "flyers" | "brochures" | "door_hangers" | "postcards" | "yard_signs";
 
 const DOWNLOAD_SIZE_LABELS: Record<DownloadSize, string> = {
-  social: "512 x 512",
-  card: "600 x 600",
-  print: "2400 x 2400",
+  social: "512 × 512",
+  card: "600 × 600",
+  print: "2400 × 2400",
 };
 
 const PRINT_MOCKUP_LABELS: Record<PrintMockupType, string> = {
@@ -47,6 +47,7 @@ type QRLivePreviewProps = {
   isSaving?: boolean;
   canCreate?: boolean;
   error?: string | null;
+  compact?: boolean;
 };
 
 export default function QRLivePreview({
@@ -67,18 +68,20 @@ export default function QRLivePreview({
   isLocked,
   canCreate,
   error,
+  compact = false,
 }: QRLivePreviewProps) {
   const previewLabel = finalUrl ? "Live preview" : "Draft preview";
   const statusLabel = isLocked ? "Locked" : canCreate ? "Scan safe" : "Needs input";
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       {error ? <div className={styles.errorMessage}>{error}</div> : null}
+
       <section className={styles.heroPreviewCard}>
         <div className={styles.previewHeader}>
           <div>
             <span className={styles.previewKicker}>{previewLabel}</span>
-            <h3 className={styles.sectionTitle}>Live QR Preview</h3>
+            <h3 className={styles.sectionTitle}>QR Preview</h3>
           </div>
           <span className={styles.statusBadge}>{statusLabel}</span>
         </div>
@@ -100,8 +103,8 @@ export default function QRLivePreview({
 
         <div className={styles.previewTitleRow}>
           <div>
-            <p className={styles.metaLabel}>Campaign Name</p>
-            <p className={styles.campaignName}>{name || "Untitled QR Campaign"}</p>
+            <p className={styles.metaLabel}>QR Name</p>
+            <p className={styles.campaignName}>{name || "Untitled QR"}</p>
           </div>
           <div>
             <p className={styles.metaLabel}>Print Piece</p>
@@ -111,7 +114,7 @@ export default function QRLivePreview({
 
         <div className={styles.previewStrip}>
           <article>
-            <span>Scan Safe</span>
+            <span>Status</span>
             <strong>{statusLabel}</strong>
           </article>
           <article>
@@ -125,36 +128,55 @@ export default function QRLivePreview({
         </div>
       </section>
 
-      <div className={styles.destinationPreviewCard}>
-        <p>
-          <span>Type</span>
-          <strong>{destinationTypeLabel}</strong>
-        </p>
-        <p>
-          <span>Preview</span>
-          <strong>{destinationPreview || "Add destination details in the destination section."}</strong>
-        </p>
-        <p>
-          <span>Tracking</span>
-          <strong>{trackingPreview}</strong>
-        </p>
-        <p>
-          <span>Destination</span>
-          <strong>{finalUrl || "No destination yet"}</strong>
-        </p>
-      </div>
+      {compact ? (
+        <div className={styles.compactDetails}>
+          <p>
+            <span>Destination</span>
+            <strong>{destinationPreview || "Add a destination"}</strong>
+          </p>
+          <p>
+            <span>Type</span>
+            <strong>{destinationTypeLabel}</strong>
+          </p>
+          <p>
+            <span>Tracking</span>
+            <strong>{trackingPreview}</strong>
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className={styles.destinationPreviewCard}>
+            <p>
+              <span>Type</span>
+              <strong>{destinationTypeLabel}</strong>
+            </p>
+            <p>
+              <span>Preview</span>
+              <strong>{destinationPreview || "Add destination details in the destination section."}</strong>
+            </p>
+            <p>
+              <span>Tracking</span>
+              <strong>{trackingPreview}</strong>
+            </p>
+            <p>
+              <span>Destination</span>
+              <strong>{finalUrl || "No destination yet"}</strong>
+            </p>
+          </div>
 
-      <div className={styles.exportCard}>
-        <p>
-          <span>Recommended resolution</span>
-          <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
-        </p>
-        <p>
-          <span>Formats</span>
-          <strong>PNG, SVG, JPG, PDF</strong>
-        </p>
-        <small>Once this QR is created, export options are available from the QR manager and editor.</small>
-      </div>
+          <div className={styles.exportCard}>
+            <p>
+              <span>Recommended resolution</span>
+              <strong>{DOWNLOAD_SIZE_LABELS[downloadSize]}</strong>
+            </p>
+            <p>
+              <span>Formats</span>
+              <strong>PNG, SVG, JPG, PDF</strong>
+            </p>
+            <small>Once this QR is created, export options are available from the QR manager and editor.</small>
+          </div>
+        </>
+      )}
     </div>
   );
 }
