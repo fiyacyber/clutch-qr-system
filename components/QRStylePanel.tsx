@@ -142,7 +142,7 @@ export default function QRStylePanel({
   onEyeCenterShapeChange,
   colorMode = "solid",
   onColorModeChange,
-  gradientEndColor = "#ff7a1a",
+  gradientEndColor = "#9a3f00",
   onGradientEndColorChange,
   eyeFrameColor = foregroundColor,
   onEyeFrameColorChange,
@@ -246,7 +246,7 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Overall shape</h3>
-              <span>Circle preserves the complete square quiet zone inside a circular frame.</span>
+              <span>Circle protects the real QR inside a square and fills the outer ring with decorative modules.</span>
             </div>
             <div className={styles.twoChoiceGrid} role="radiogroup" aria-label="Overall QR shape">
               {(["square", "circle"] as QrCanvasShape[]).map((shape) => (
@@ -267,7 +267,7 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Body pattern</h3>
-              <span>{qrShape === "circle" ? "Conservative patterns only for circular output." : "Nine distinct module styles."}</span>
+              <span>{qrShape === "circle" ? "The same pattern is used for the real QR and decorative outer ring." : "Nine distinct module styles."}</span>
             </div>
             <div className={styles.patternGrid} role="radiogroup" aria-label="QR body pattern">
               {BODY_PATTERNS.map((option) => {
@@ -386,7 +386,7 @@ export default function QRStylePanel({
               checked={outerStrokeEnabled}
               onChange={(event) => onOuterStrokeEnabledChange?.(event.target.checked)}
             />
-            <span><strong>Outer stroke</strong><small>Add an outline outside the protected quiet zone.</small></span>
+            <span><strong>Outer stroke</strong><small>Add an outline around the complete QR artwork.</small></span>
           </label>
           {outerStrokeEnabled && onOuterStrokeColorChange ? (
             <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} />
