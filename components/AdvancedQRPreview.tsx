@@ -307,6 +307,7 @@ export default function AdvancedQRPreview({
               width={protectedSquare.size}
               height={protectedSquare.size}
               fill={design.backgroundColor}
+              aria-hidden="true"
             />
           ) : null}
           {coreQr}
