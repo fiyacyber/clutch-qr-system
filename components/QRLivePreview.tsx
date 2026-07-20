@@ -37,6 +37,7 @@ type QRLivePreviewProps = {
   destinationTypeLabel?: string;
   destinationPreview?: string;
   printMockupType?: PrintMockupType;
+  printPieceLabel?: string;
   trackingPreview?: string;
   downloadSize: DownloadSize;
   isLocked?: boolean;
@@ -63,6 +64,7 @@ export default function QRLivePreview({
   destinationTypeLabel = "Website",
   destinationPreview = "",
   printMockupType = "business_cards",
+  printPieceLabel,
   trackingPreview = "Campaign tags enabled",
   downloadSize,
   isLocked,
@@ -72,6 +74,7 @@ export default function QRLivePreview({
 }: QRLivePreviewProps) {
   const previewLabel = finalUrl ? "Live preview" : "Draft preview";
   const statusLabel = isLocked ? "Locked" : canCreate ? "Scan safe" : "Needs input";
+  const displayedPrintPiece = printPieceLabel?.trim() || PRINT_MOCKUP_LABELS[printMockupType];
 
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
@@ -108,7 +111,7 @@ export default function QRLivePreview({
           </div>
           <div>
             <p className={styles.metaLabel}>Print Piece</p>
-            <p className={styles.metaValue}>{PRINT_MOCKUP_LABELS[printMockupType]}</p>
+            <p className={styles.metaValue}>{displayedPrintPiece || "Not specified"}</p>
           </div>
         </div>
 
