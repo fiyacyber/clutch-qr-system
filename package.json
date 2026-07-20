@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run test:qr-scan-safety",
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib types --ext .ts,.tsx",
