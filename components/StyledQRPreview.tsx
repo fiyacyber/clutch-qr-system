@@ -67,10 +67,25 @@ export default function StyledQRPreview({
   outerStrokeColor = "#384862",
 }: StyledQRPreviewProps) {
   const exportSlug = url.split(/[?#]/)[0].split("/").filter(Boolean).pop();
+  const centeredWrapperStyle = {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    marginInline: "auto",
+    boxSizing: "border-box" as const,
+    display: "grid",
+    placeItems: "center",
+  };
 
   return (
-    <div className={`styled-qr-wrap${embedded ? " embedded" : ""}`}>
-      <div className={`qr-preview${embedded ? " embedded" : ""}`}>
+    <div
+      className={`styled-qr-wrap${embedded ? " embedded" : ""}`}
+      style={centeredWrapperStyle}
+    >
+      <div
+        className={`qr-preview${embedded ? " embedded" : ""}`}
+        style={{ ...centeredWrapperStyle, aspectRatio: "1 / 1" }}
+      >
         <AdvancedQRPreview
           url={url}
           qrShape={qrShape}
