@@ -2,12 +2,13 @@
 
 import { useId, useMemo, type ReactNode } from "react";
 import QRCode from "qrcode";
-import type {
-  QrBodyPattern,
-  QrCanvasShape,
-  QrColorMode,
-  QrEyeCenterShape,
-  QrEyeFrameShape,
+import {
+  normalizeCircleDesign,
+  type QrBodyPattern,
+  type QrCanvasShape,
+  type QrColorMode,
+  type QrEyeCenterShape,
+  type QrEyeFrameShape,
 } from "@/lib/qr-design";
 
 export type AdvancedQRPreviewProps = {
@@ -44,21 +45,6 @@ function isFinderCell(row: number, col: number, size: number) {
 function moduleIsDark(matrix: Matrix, row: number, col: number) {
   if (typeof matrix.get === "function") return Boolean(matrix.get(row, col));
   return Boolean(matrix.data?.[row * matrix.size + col]);
-}
-
-function hashText(value: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function cellNoise(seed: number, row: number, col: number) {
-  let value = seed ^ Math.imul(row + 1, 374761393) ^ Math.imul(col + 1, 668265263);
-  value = Math.imul(value ^ (value >>> 13), 1274126177);
-  return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
 }
 
 function octagonPoints(x: number, y: number, size: number) {
@@ -188,21 +174,41 @@ export default function AdvancedQRPreview({
   const rawId = useId();
   const safeId = rawId.replace(/[^a-z0-9]/gi, "");
   const gradientId = `qr-gradient-${safeId}`;
-  const circleClipId = `qr-circle-clip-${safeId}`;
   const matrix = useMemo(
     () => QRCode.create(url, { errorCorrectionLevel: "H" }).modules as unknown as Matrix,
     [url]
   );
-  const quiet = 4;
-  const total = matrix.size + quiet * 2;
-  const circleScale = qrShape === "circle" ? 0.84 : 1;
-  const offset = quiet + (matrix.size * (1 - circleScale)) / 2;
-  const bodyFill =
-    colorMode === "solid"
-      ? bodyColor
-      : colorMode === "radial"
-        ? `url(#${gradientId}-radial)`
-        : `url(#${gradientId})`;
+
+  const design = normalizeCircleDesign({
+    qrShape,
+    bodyPattern,
+    eyeFrameShape,
+    eyeCenterShape,
+    colorMode,
+    bodyColor,
+    gradientEndColor,
+    eyeFrameColor,
+    eyeCenterColor,
+    backgroundColor,
+    outerStrokeEnabled,
+    outerStrokeColor,
+  });
+
+  // A QR symbol requires a clear four-module quiet zone. For circular output,
+  // the complete square quiet zone is inscribed inside the circle instead of
+  // clipping it or filling it with decorative modules.
+  const quietZone = 4;
+  const quietSquareSize = matrix.size + quietZone * 2;
+  const total = design.qrShape === "circle"
+    ? Math.ceil(quietSquareSize * Math.SQRT2) + 2
+    : quietSquareSize;
+  const offset = (total - matrix.size) / 2;
+  const backgroundInset = design.outerStrokeEnabled ? 0.8 : 0.25;
+  const bodyFill = design.colorMode === "solid"
+    ? design.bodyColor
+    : design.colorMode === "radial"
+      ? `url(#${gradientId}-radial)`
+      : `url(#${gradientId})`;
   const modules: ReactNode[] = [];
 
   for (let row = 0; row < matrix.size; row += 1) {
@@ -213,7 +219,7 @@ export default function AdvancedQRPreview({
           key={`${row}-${col}`}
           x={col}
           y={row}
-          pattern={bodyPattern}
+          pattern={design.bodyPattern}
           fill={bodyFill}
           right={col + 1 < matrix.size && moduleIsDark(matrix, row, col + 1) && !isFinderCell(row, col + 1, matrix.size)}
           bottom={row + 1 < matrix.size && moduleIsDark(matrix, row + 1, col) && !isFinderCell(row + 1, col, matrix.size)}
@@ -222,61 +228,19 @@ export default function AdvancedQRPreview({
     }
   }
 
-  const backgroundInset = outerStrokeEnabled ? 0.8 : 0.25;
-  const circleRadius = total / 2 - backgroundInset;
-  const logoSize = Math.max(5, matrix.size * 0.2);
-  const logoX = (matrix.size - logoSize) / 2;
-  const decorations: ReactNode[] = [];
-
-  if (qrShape === "circle") {
-    const seed = hashText(url);
-    const center = total / 2;
-    const coreStart = offset;
-    const coreEnd = offset + matrix.size * circleScale;
-    const coreGap = 0.38;
-    const decorativePattern = bodyPattern === "connected" ? "rounded" : bodyPattern;
-
-    for (let row = 1; row < total - 1; row += 1) {
-      for (let col = 1; col < total - 1; col += 1) {
-        const cellX = col + 0.5;
-        const cellY = row + 0.5;
-        const distance = Math.hypot(cellX - center, cellY - center);
-        if (distance > circleRadius - 1.05) continue;
-
-        const touchesCore =
-          cellX >= coreStart - coreGap &&
-          cellX <= coreEnd + coreGap &&
-          cellY >= coreStart - coreGap &&
-          cellY <= coreEnd + coreGap;
-        if (touchesCore) continue;
-        if (cellNoise(seed, row, col) < 0.5) continue;
-
-        decorations.push(
-          <BodyModule
-            key={`decor-${row}-${col}`}
-            x={col}
-            y={row}
-            pattern={decorativePattern}
-            fill={bodyFill}
-            right={false}
-            bottom={false}
-          />
-        );
-      }
-    }
-  }
+  const logoSize = Math.max(5, matrix.size * 0.18);
+  const logoPosition = (matrix.size - logoSize) / 2;
 
   const coreQr = (
-    <g transform={`translate(${offset} ${offset}) scale(${circleScale})`}>
+    <g transform={`translate(${offset} ${offset})`}>
       {modules}
-      <EyeFrame x={0} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-      <EyeFrame x={matrix.size - 7} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-      <EyeFrame x={0} y={matrix.size - 7} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-
+      <EyeFrame x={0} y={0} frame={design.eyeFrameShape} center={design.eyeCenterShape} frameColor={design.eyeFrameColor} centerColor={design.eyeCenterColor} backgroundColor={design.backgroundColor} />
+      <EyeFrame x={matrix.size - 7} y={0} frame={design.eyeFrameShape} center={design.eyeCenterShape} frameColor={design.eyeFrameColor} centerColor={design.eyeCenterColor} backgroundColor={design.backgroundColor} />
+      <EyeFrame x={0} y={matrix.size - 7} frame={design.eyeFrameShape} center={design.eyeCenterShape} frameColor={design.eyeFrameColor} centerColor={design.eyeCenterColor} backgroundColor={design.backgroundColor} />
       {logoUrl ? (
         <g>
-          <rect x={logoX - 0.45} y={logoX - 0.45} width={logoSize + 0.9} height={logoSize + 0.9} rx={1.05} fill={backgroundColor} />
-          <image href={logoUrl} x={logoX} y={logoX} width={logoSize} height={logoSize} preserveAspectRatio="xMidYMid meet" />
+          <rect x={logoPosition - 0.5} y={logoPosition - 0.5} width={logoSize + 1} height={logoSize + 1} rx={1} fill={design.backgroundColor} />
+          <image href={logoUrl} x={logoPosition} y={logoPosition} width={logoSize} height={logoSize} preserveAspectRatio="xMidYMid meet" />
         </g>
       ) : null}
     </g>
@@ -288,51 +252,41 @@ export default function AdvancedQRPreview({
       role="img"
       aria-label="QR code preview"
       style={{ width: "100%", height: "auto", display: "block" }}
+      xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={bodyColor} />
-          <stop offset="100%" stopColor={gradientEndColor} />
+        <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={total} y2={total}>
+          <stop offset="0%" stopColor={design.bodyColor} />
+          <stop offset="100%" stopColor={design.gradientEndColor} />
         </linearGradient>
-        <radialGradient id={`${gradientId}-radial`} cx="50%" cy="50%" r="68%">
-          <stop offset="0%" stopColor={gradientEndColor} />
-          <stop offset="100%" stopColor={bodyColor} />
+        <radialGradient id={`${gradientId}-radial`} gradientUnits="userSpaceOnUse" cx={total / 2} cy={total / 2} r={total * 0.68}>
+          <stop offset="0%" stopColor={design.gradientEndColor} />
+          <stop offset="100%" stopColor={design.bodyColor} />
         </radialGradient>
-        <clipPath id={circleClipId}>
-          <circle cx={total / 2} cy={total / 2} r={circleRadius - 0.18} />
-        </clipPath>
       </defs>
 
-      {qrShape === "circle" ? (
-        <>
-          <circle
-            cx={total / 2}
-            cy={total / 2}
-            r={circleRadius}
-            fill={backgroundColor}
-            stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
-            strokeWidth={outerStrokeEnabled ? 0.8 : 0}
-          />
-          <g clipPath={`url(#${circleClipId})`}>
-            {decorations}
-            {coreQr}
-          </g>
-        </>
+      {design.qrShape === "circle" ? (
+        <circle
+          cx={total / 2}
+          cy={total / 2}
+          r={total / 2 - backgroundInset}
+          fill={design.backgroundColor}
+          stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
+          strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
+        />
       ) : (
-        <>
-          <rect
-            x={backgroundInset}
-            y={backgroundInset}
-            width={total - backgroundInset * 2}
-            height={total - backgroundInset * 2}
-            rx={1.1}
-            fill={backgroundColor}
-            stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
-            strokeWidth={outerStrokeEnabled ? 0.8 : 0}
-          />
-          {coreQr}
-        </>
+        <rect
+          x={backgroundInset}
+          y={backgroundInset}
+          width={total - backgroundInset * 2}
+          height={total - backgroundInset * 2}
+          rx={1.1}
+          fill={design.backgroundColor}
+          stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
+          strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
+        />
       )}
+      {coreQr}
     </svg>
   );
 }
