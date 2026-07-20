@@ -1,6 +1,6 @@
 "use client";
 
-import { type PointerEvent, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./PremiumColorPicker.module.css";
 
@@ -201,6 +201,8 @@ export default function PremiumColorPicker({
   const [rgbText, setRgbText] = useState({ r: "", g: "", b: "" });
   const [hsv, setHsv] = useState<HSV>({ h: 24, s: 0.6, v: 1 });
   const [isMounted, setIsMounted] = useState(false);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({ visibility: "hidden" });
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const { normalized, rgb } = modelFromHex(value);
   const textColor = useMemo(() => getReadableTextColor(normalized), [normalized]);
@@ -231,6 +233,49 @@ export default function PremiumColorPicker({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePopoverPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = window.innerWidth <= 560 ? 8 : 12;
+      const preferredWidth = window.innerWidth <= 560 ? 360 : 540;
+      const width = Math.min(preferredWidth, window.innerWidth - viewportPadding * 2);
+      const maxHeight = Math.min(window.innerHeight - viewportPadding * 2, window.innerWidth <= 560 ? 560 : 640);
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const availableAbove = rect.top - viewportPadding;
+      const placeAbove = availableBelow < Math.min(420, maxHeight) && availableAbove > availableBelow;
+      const left = clamp(rect.left, viewportPadding, Math.max(viewportPadding, window.innerWidth - width - viewportPadding));
+
+      const nextStyle: CSSProperties = {
+        left,
+        width,
+        maxHeight,
+        visibility: "visible",
+      };
+
+      if (placeAbove) {
+        nextStyle.bottom = window.innerHeight - rect.top + 8;
+      } else {
+        nextStyle.top = rect.bottom + 8;
+      }
+
+      setPopoverStyle(nextStyle);
+    };
+
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
   }, [open]);
 
   const syncLocalState = (nextHex: string) => {
@@ -331,9 +376,10 @@ export default function PremiumColorPicker({
     <div className={`${styles.root}${className ? ` ${className}` : ""}`.trim()}>
       {name ? <input type="hidden" name={name} value={normalized} /> : null}
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.trigger}${triggerClassName ? ` ${triggerClassName}` : ""}`.trim()}
-        onClick={() => !disabled && setOpen(true)}
+        onClick={() => !disabled && setOpen((current) => !current)}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -382,7 +428,13 @@ export default function PremiumColorPicker({
       {open && isMounted
         ? createPortal(
             <div className={styles.overlay} role="presentation" onMouseDown={() => setOpen(false)}>
-              <div className={styles.modal} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
+              <div
+                className={styles.modal}
+                role="dialog"
+                aria-label={ariaLabel}
+                style={popoverStyle}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
                 <div className={styles.header}>
                   <div>
                     <p className={styles.kicker}>Color Studio</p>
