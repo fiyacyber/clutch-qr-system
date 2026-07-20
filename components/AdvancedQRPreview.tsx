@@ -3,6 +3,7 @@
 import { useId, useMemo, type ReactNode } from "react";
 import QRCode from "qrcode";
 import {
+  getQrCanvasLayout,
   normalizeCircleDesign,
   type QrBodyPattern,
   type QrCanvasShape,
@@ -10,6 +11,10 @@ import {
   type QrEyeCenterShape,
   type QrEyeFrameShape,
 } from "@/lib/qr-design";
+import {
+  getCircularQrFillerCells,
+  getProtectedQrSquare,
+} from "@/lib/qr-circle-fill";
 
 export type AdvancedQRPreviewProps = {
   url: string;
@@ -163,7 +168,7 @@ export default function AdvancedQRPreview({
   eyeCenterShape = "square",
   colorMode = "solid",
   bodyColor = "#384862",
-  gradientEndColor = "#ff7a1a",
+  gradientEndColor = "#9a3f00",
   eyeFrameColor = "#384862",
   eyeCenterColor = "#384862",
   backgroundColor = "#ffffff",
@@ -174,6 +179,7 @@ export default function AdvancedQRPreview({
   const rawId = useId();
   const safeId = rawId.replace(/[^a-z0-9]/gi, "");
   const gradientId = `qr-gradient-${safeId}`;
+  const circleClipId = `qr-circle-clip-${safeId}`;
   const matrix = useMemo(
     () => QRCode.create(url, { errorCorrectionLevel: "H" }).modules as unknown as Matrix,
     [url]
@@ -194,16 +200,17 @@ export default function AdvancedQRPreview({
     outerStrokeColor,
   });
 
-  // A QR symbol requires a clear four-module quiet zone. For circular output,
-  // the complete square quiet zone is inscribed inside the circle instead of
-  // clipping it or filling it with decorative modules.
-  const quietZone = 4;
-  const quietSquareSize = matrix.size + quietZone * 2;
-  const total = design.qrShape === "circle"
-    ? Math.ceil(quietSquareSize * Math.SQRT2) + 2
-    : quietSquareSize;
-  const offset = (total - matrix.size) / 2;
+  const layout = getQrCanvasLayout(matrix.size, design.qrShape);
+  const { total, offset } = layout;
   const backgroundInset = design.outerStrokeEnabled ? 0.8 : 0.25;
+  const circleRadius = total / 2 - backgroundInset;
+  const protectedSquare = design.qrShape === "circle"
+    ? getProtectedQrSquare(matrix.size)
+    : null;
+  const fillerCells = useMemo(
+    () => qrShape === "circle" ? getCircularQrFillerCells(matrix.size, url) : [],
+    [matrix.size, qrShape, url]
+  );
   const bodyFill = design.colorMode === "solid"
     ? design.bodyColor
     : design.colorMode === "radial"
@@ -227,6 +234,18 @@ export default function AdvancedQRPreview({
       );
     }
   }
+
+  const fillerModules = fillerCells.map(({ row, col }) => (
+    <BodyModule
+      key={`filler-${row}-${col}`}
+      x={col}
+      y={row}
+      pattern={design.bodyPattern}
+      fill={bodyFill}
+      right={false}
+      bottom={false}
+    />
+  ));
 
   const logoSize = Math.max(5, matrix.size * 0.18);
   const logoPosition = (matrix.size - logoSize) / 2;
@@ -263,30 +282,50 @@ export default function AdvancedQRPreview({
           <stop offset="0%" stopColor={design.gradientEndColor} />
           <stop offset="100%" stopColor={design.bodyColor} />
         </radialGradient>
+        <clipPath id={circleClipId}>
+          <circle cx={total / 2} cy={total / 2} r={circleRadius - 0.15} />
+        </clipPath>
       </defs>
 
       {design.qrShape === "circle" ? (
-        <circle
-          cx={total / 2}
-          cy={total / 2}
-          r={total / 2 - backgroundInset}
-          fill={design.backgroundColor}
-          stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
-          strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
-        />
+        <>
+          <circle
+            cx={total / 2}
+            cy={total / 2}
+            r={circleRadius}
+            fill={design.backgroundColor}
+            stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
+            strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
+          />
+          <g clipPath={`url(#${circleClipId})`} aria-hidden="true">
+            {fillerModules}
+          </g>
+          {protectedSquare ? (
+            <rect
+              x={protectedSquare.start}
+              y={protectedSquare.start}
+              width={protectedSquare.size}
+              height={protectedSquare.size}
+              fill={design.backgroundColor}
+            />
+          ) : null}
+          {coreQr}
+        </>
       ) : (
-        <rect
-          x={backgroundInset}
-          y={backgroundInset}
-          width={total - backgroundInset * 2}
-          height={total - backgroundInset * 2}
-          rx={1.1}
-          fill={design.backgroundColor}
-          stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
-          strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
-        />
+        <>
+          <rect
+            x={backgroundInset}
+            y={backgroundInset}
+            width={total - backgroundInset * 2}
+            height={total - backgroundInset * 2}
+            rx={1.1}
+            fill={design.backgroundColor}
+            stroke={design.outerStrokeEnabled ? design.outerStrokeColor : "none"}
+            strokeWidth={design.outerStrokeEnabled ? 0.8 : 0}
+          />
+          {coreQr}
+        </>
       )}
-      {coreQr}
     </svg>
   );
 }
