@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import QRCode from "qrcode";
 import type {
   QrBodyPattern,
@@ -27,7 +27,11 @@ export type AdvancedQRPreviewProps = {
   logoUrl?: string | null;
 };
 
-type Matrix = { size: number; get?: (row: number, col: number) => boolean; data?: ArrayLike<number> };
+type Matrix = {
+  size: number;
+  get?: (row: number, col: number) => number | boolean;
+  data?: ArrayLike<number>;
+};
 
 function isFinderCell(row: number, col: number, size: number) {
   return (
@@ -168,13 +172,21 @@ export default function AdvancedQRPreview({
 }: AdvancedQRPreviewProps) {
   const rawId = useId();
   const gradientId = `qr-gradient-${rawId.replace(/[^a-z0-9]/gi, "")}`;
-  const matrix = useMemo(() => QRCode.create(url, { errorCorrectionLevel: "H" }).modules as Matrix, [url]);
+  const matrix = useMemo(
+    () => QRCode.create(url, { errorCorrectionLevel: "H" }).modules as unknown as Matrix,
+    [url]
+  );
   const quiet = 4;
   const total = matrix.size + quiet * 2;
   const circleScale = qrShape === "circle" ? 0.82 : 1;
   const offset = quiet + (matrix.size * (1 - circleScale)) / 2;
-  const bodyFill = colorMode === "solid" ? bodyColor : `url(#${gradientId})`;
-  const modules: React.ReactNode[] = [];
+  const bodyFill =
+    colorMode === "solid"
+      ? bodyColor
+      : colorMode === "radial"
+        ? `url(#${gradientId}-radial)`
+        : `url(#${gradientId})`;
+  const modules: ReactNode[] = [];
 
   for (let row = 0; row < matrix.size; row += 1) {
     for (let col = 0; col < matrix.size; col += 1) {
@@ -245,7 +257,7 @@ export default function AdvancedQRPreview({
       )}
 
       <g transform={`translate(${offset} ${offset}) scale(${circleScale})`}>
-        {colorMode === "radial" ? <g fill={`url(#${gradientId}-radial)`}>{modules}</g> : modules}
+        {modules}
         <EyeFrame x={0} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
         <EyeFrame x={matrix.size - 7} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
         <EyeFrame x={0} y={matrix.size - 7} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
