@@ -16,7 +16,9 @@ import {
   QR_COLOR_MODES,
   QR_EYE_CENTER_SHAPES,
   QR_EYE_FRAME_SHAPES,
+  getQrDesignScanIssues,
   isHexColor,
+  type AdvancedQrDesign,
   type QrBodyPattern,
   type QrCanvasShape,
   type QrColorMode,
@@ -91,6 +93,25 @@ export async function POST(req: NextRequest) {
     new URL(destinationUrl);
   } catch {
     return NextResponse.json({ error: "Enter a complete destination URL, such as https://example.com." }, { status: 400 });
+  }
+
+  const design: AdvancedQrDesign = {
+    qrShape,
+    bodyPattern,
+    eyeFrameShape,
+    eyeCenterShape,
+    colorMode,
+    bodyColor: foregroundColor,
+    gradientEndColor,
+    eyeFrameColor,
+    eyeCenterColor,
+    backgroundColor,
+    outerStrokeEnabled,
+    outerStrokeColor,
+  };
+  const designIssues = getQrDesignScanIssues(design);
+  if (designIssues.length) {
+    return NextResponse.json({ error: designIssues[0], issues: designIssues }, { status: 400 });
   }
 
   const supabase = await createSupabaseServerClient();
