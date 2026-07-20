@@ -11,6 +11,14 @@ export type ProtectedQrSquare = {
   size: number;
 };
 
+/**
+ * Keeps decorative modules outside the encoded matrix with a small visual
+ * separation. Whole-cell exclusion makes this approximately a one-module
+ * moat at common QR versions while avoiding the large blank square created by
+ * a full four-module quiet zone.
+ */
+export const CIRCULAR_QR_CORE_GAP = 0.5;
+
 function hashText(value: string) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -28,11 +36,12 @@ function cellNoise(seed: number, row: number, col: number) {
 
 export function getProtectedQrSquare(matrixSize: number): ProtectedQrSquare {
   const layout = getQrCanvasLayout(matrixSize, "circle");
-  const start = layout.offset - layout.quietZone;
+  const start = layout.offset - CIRCULAR_QR_CORE_GAP;
+  const size = matrixSize + CIRCULAR_QR_CORE_GAP * 2;
   return {
     start,
-    end: start + layout.quietSquareSize,
-    size: layout.quietSquareSize,
+    end: start + size,
+    size,
   };
 }
 
@@ -60,7 +69,7 @@ function fullCellFitsInsideCircle(row: number, col: number, total: number) {
 /**
  * Builds deterministic decorative modules for the circular silhouette.
  * These cells are never part of the encoded QR matrix and never intersect
- * the protected matrix-plus-quiet-zone square.
+ * the protected real-matrix square.
  */
 export function getCircularQrFillerCells(
   matrixSize: number,
