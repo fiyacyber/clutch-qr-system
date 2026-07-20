@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Exo_2, Montserrat } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import BuilderPreviewLinkBridge from "./BuilderPreviewLinkBridge";
 import "./globals.css";
 import "./builder-stabilization.css";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <BuilderPreviewLinkBridge />
         {children}
+        <Analytics />
       </body>
     </html>
   );
