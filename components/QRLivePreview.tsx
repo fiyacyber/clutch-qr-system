@@ -153,7 +153,14 @@ export default function QRLivePreview({
 
         <div className={styles.previewVisual}>
           <div className={styles.previewGlow} aria-hidden="true" />
-          <div className={styles.previewCanvas}>
+          <div
+            className={styles.previewCanvas}
+            style={{
+              width: "min(100%, 280px)",
+              marginInline: "auto",
+              justifySelf: "center",
+            }}
+          >
             <StyledQRPreview
               url={finalUrl || qrUrl("preview")}
               foregroundColor={foregroundColor}
