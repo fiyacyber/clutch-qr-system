@@ -78,15 +78,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 24px;
   animation: fadeIn 160ms ease;
 }
 
 .modal {
-  width: min(1100px, 100%);
-  max-height: min(90vh, 920px);
+  width: min(860px, calc(100vw - 48px));
+  max-height: min(82vh, 720px);
   overflow: auto;
-  border-radius: 28px;
+  border-radius: 22px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: radial-gradient(circle at top, rgba(255, 166, 101, 0.08), transparent 35%),
     linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
@@ -100,27 +100,27 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 22px 0;
+  padding: 16px 18px 0;
 }
 
 .kicker {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   color: rgba(255, 255, 255, 0.62);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.15em;
 }
 
 .title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   line-height: 1.2;
 }
 
 .closeBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.04);
   color: #e2e8f0;
@@ -129,9 +129,9 @@
 
 .body {
   display: grid;
-  grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
-  gap: 22px;
-  padding: 20px 22px 22px;
+  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 18px 18px;
   overflow: visible;
 }
 
@@ -142,7 +142,7 @@
 
 .wheelWrap {
   position: relative;
-  width: min(100%, 320px);
+  width: min(100%, 230px);
   aspect-ratio: 1;
   margin: 0 auto;
   border-radius: 999px;
@@ -163,10 +163,10 @@
 
 .marker {
   position: absolute;
-  width: 22px;
-  height: 22px;
-  margin-left: -11px;
-  margin-top: -11px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
   border-radius: 999px;
   border: 3px solid rgba(255, 255, 255, 0.96);
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.5), 0 8px 20px rgba(15, 23, 42, 0.28);
@@ -174,10 +174,10 @@
 
 .sliderRow {
   display: grid;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 7px;
+  margin-top: 12px;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .sliderRow input[type="range"] {
@@ -185,17 +185,17 @@
 }
 
 .previewCard {
-  min-height: 88px;
-  border-radius: 22px;
+  min-height: 64px;
+  border-radius: 16px;
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
-  padding: 16px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .previewLabel {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
@@ -203,43 +203,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(255, 255, 255, 0.78);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
 .nativeColorRow input {
-  width: 44px;
-  height: 34px;
+  width: 40px;
+  height: 30px;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   cursor: pointer;
 }
 
 .grid {
   display: grid;
-  gap: 14px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .rgbGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .inputGroup {
   display: grid;
-  gap: 6px;
-  font-size: 0.72rem;
+  gap: 5px;
+  font-size: 0.68rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.72);
   letter-spacing: 0.08em;
@@ -248,8 +248,8 @@
 
 .inputGroup input {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(255, 255, 255, 0.05);
   color: #f8fafc;
@@ -258,40 +258,41 @@
 
 .inputGroup input:focus {
   border-color: color-mix(in srgb, var(--b-accent, #FFA665) 52%, rgba(148, 163, 184, 0.2));
-  box-shadow: 0 0 0 4px rgba(255, 166, 101, 0.16);
+  box-shadow: 0 0 0 3px rgba(255, 166, 101, 0.16);
 }
 
 .section {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 0.8rem;
+  gap: 10px;
+  font-size: 0.76rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.8);
 }
 
 .swatchRow {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
 .swatchButton {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   border-radius: 999px;
-  padding: 8px 10px;
+  padding: 6px 9px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.04);
   color: #e2e8f0;
+  font-size: 0.78rem;
   cursor: pointer;
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
@@ -303,8 +304,8 @@
 }
 
 .swatch {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.38);
   flex-shrink: 0;
@@ -315,14 +316,15 @@
   background: rgba(255, 255, 255, 0.05);
   color: #f8fafc;
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
   cursor: pointer;
 }
 
 .emptyState {
   margin: 0;
   color: rgba(226, 232, 240, 0.66);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
 }
 
 @keyframes fadeIn {
@@ -346,71 +348,127 @@
 }
 
 @media (max-width: 860px) {
+  .overlay {
+    padding: 16px;
+  }
+
+  .modal {
+    width: min(720px, calc(100vw - 32px));
+    max-height: 86vh;
+  }
+
   .body {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .wheelWrap {
-    width: min(100%, 290px);
+    width: min(100%, 210px);
   }
 }
 
 @media (max-width: 560px) {
   .overlay {
-    padding: 0;
-    align-items: stretch;
+    padding: 12px;
+    align-items: center;
   }
 
   .modal {
-    width: 100%;
-    max-height: 100dvh;
-    border-right: none;
-    border-bottom: none;
-    border-left: none;
-    border-radius: 18px 18px 0 0;
+    width: min(100%, 420px);
+    max-height: calc(100dvh - 24px);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 18px;
   }
 
   .header,
   .body {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   .header {
     position: sticky;
     top: 0;
     z-index: 2;
-    padding-top: 16px;
-    padding-bottom: 12px;
+    padding-top: 13px;
+    padding-bottom: 10px;
     background: rgba(15, 23, 42, 0.96);
   }
 
+  .title {
+    font-size: 1.05rem;
+  }
+
+  .closeBtn {
+    width: 34px;
+    height: 34px;
+  }
+
   .body {
-    gap: 16px;
-    padding-top: 14px;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    gap: 12px;
+    padding-top: 12px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .wheelWrap {
-    width: min(100%, 240px);
+    width: min(100%, 190px);
+  }
+
+  .sliderRow {
+    margin-top: 10px;
   }
 
   .previewCard {
-    min-height: 72px;
-    border-radius: 16px;
+    min-height: 56px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .nativeColorRow {
+    padding: 7px 9px;
+  }
+
+  .grid {
+    gap: 8px;
+    margin-top: 10px;
   }
 
   .rgbGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .inputGroup input {
+    padding: 8px;
+  }
+
+  .section {
+    gap: 7px;
+    margin-top: 10px;
   }
 
   .swatchButton {
     max-width: 100%;
+    padding: 5px 8px;
+    font-size: 0.74rem;
   }
 
   .swatchButton span:last-child {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 380px) {
+  .overlay {
+    padding: 8px;
+  }
+
+  .modal {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .wheelWrap {
+    width: min(100%, 170px);
   }
 }
