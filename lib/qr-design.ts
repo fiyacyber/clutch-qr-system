@@ -28,6 +28,13 @@ export type AdvancedQrDesign = {
   outerStrokeColor: string;
 };
 
+export type QrCanvasLayout = {
+  quietZone: number;
+  quietSquareSize: number;
+  total: number;
+  offset: number;
+};
+
 export const DEFAULT_QR_DESIGN: AdvancedQrDesign = {
   qrShape: "square",
   bodyPattern: "square",
@@ -78,6 +85,35 @@ export const QR_COLOR_MODES = new Set<QrColorMode>(["solid", "linear", "radial"]
 export const SAFE_CIRCLE_BODY_PATTERNS = new Set<QrBodyPattern>(["square", "circle", "rounded"]);
 export const SAFE_CIRCLE_EYE_FRAMES = new Set<QrEyeFrameShape>(["square", "rounded", "circle"]);
 export const SAFE_CIRCLE_EYE_CENTERS = new Set<QrEyeCenterShape>(["square", "rounded", "circle"]);
+
+export function getQrCanvasLayout(matrixSize: number, qrShape: QrCanvasShape): QrCanvasLayout {
+  if (!Number.isInteger(matrixSize) || matrixSize <= 0) {
+    throw new Error("QR matrix size must be a positive integer.");
+  }
+
+  const quietZone = 4;
+  const quietSquareSize = matrixSize + quietZone * 2;
+  const total = qrShape === "circle"
+    ? Math.ceil(quietSquareSize * Math.SQRT2) + 2
+    : quietSquareSize;
+
+  return {
+    quietZone,
+    quietSquareSize,
+    total,
+    offset: (total - matrixSize) / 2,
+  };
+}
+
+export function circularCanvasContainsQuietZone(matrixSize: number, strokeInset = 0.8): boolean {
+  const layout = getQrCanvasLayout(matrixSize, "circle");
+  const requiredRadius = Math.hypot(
+    matrixSize / 2 + layout.quietZone,
+    matrixSize / 2 + layout.quietZone
+  );
+  const availableRadius = layout.total / 2 - strokeInset;
+  return availableRadius >= requiredRadius;
+}
 
 export function legacyDotStyle(pattern: QrBodyPattern): "square" | "rounded" | "dots" {
   if (pattern === "circle") return "dots";
