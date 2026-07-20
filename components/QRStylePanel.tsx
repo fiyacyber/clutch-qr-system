@@ -26,12 +26,10 @@ type QRStylePanelProps = {
   onLogoFileChange: (file: File | null) => void;
 };
 
-// These three patterns are meaningfully different at normal preview and print sizes.
-// The previously exposed classy variants were visually indistinguishable for most users.
-const DOT_STYLES: Array<{ value: DotStyle; label: string; helper: string }> = [
-  { value: "square", label: "Squares", helper: "Maximum contrast" },
-  { value: "dots", label: "Dots", helper: "Soft circular pattern" },
-  { value: "rounded", label: "Rounded", helper: "Balanced modern look" },
+const DOT_STYLES: Array<{ value: DotStyle; label: string; helper: string; sampleClass: string }> = [
+  { value: "square", label: "Squares", helper: "Maximum contrast", sampleClass: styles.sample_square },
+  { value: "dots", label: "Dots", helper: "Soft circular pattern", sampleClass: styles.sample_dots },
+  { value: "rounded", label: "Rounded", helper: "Balanced modern look", sampleClass: styles.sample_rounded },
 ];
 
 const CORNER_STYLES: Array<{ value: CornerStyle; label: string }> = [
@@ -121,7 +119,7 @@ export default function QRStylePanel({
                 onClick={() => onDotStyleChange(option.value)}
                 aria-pressed={dotStyle === option.value}
               >
-                <span className={`${styles.patternSample} ${styles[`sample_${option.value}`] || ""}`} aria-hidden="true" />
+                <span className={`${styles.patternSample} ${option.sampleClass}`} aria-hidden="true" />
                 <strong>{option.label}</strong>
                 <small>{option.helper}</small>
               </button>
