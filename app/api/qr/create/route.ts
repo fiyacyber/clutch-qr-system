@@ -30,19 +30,27 @@ const DOT_STYLES = new Set([
 
 const CORNER_STYLES = new Set(["square", "dot", "extra-rounded"]);
 const QR_TYPES = new Set(["url", "connect_profile"]);
+const DOWNLOAD_SIZES = new Set(["social", "card", "print"]);
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const name = String(form.get("name") || "").trim();
-  let destination_url = normalizeUrl(String(form.get("destination_url") || ""));
-  const foreground_color = String(form.get("foreground_color") || "#384862");
-  const background_color = String(form.get("background_color") || "#ffffff");
-  const dot_style = String(form.get("dot_style") || "square");
-  const corner_style = String(form.get("corner_style") || "square");
+  let destinationUrl = normalizeUrl(String(form.get("destination_url") || ""));
+  const foregroundColor = String(form.get("foreground_color") || "#384862");
+  const backgroundColor = String(form.get("background_color") || "#ffffff");
+  const dotStyle = String(form.get("dot_style") || "square");
+  const cornerStyle = String(form.get("corner_style") || "square");
   const requestedQrType = String(form.get("qr_type") || "url").trim();
-  const qr_type = QR_TYPES.has(requestedQrType) ? requestedQrType : "url";
-  const profile_id_raw = String(form.get("profile_id") || "").trim();
-  const theme = String(form.get("theme") || "default");
+  const qrType = QR_TYPES.has(requestedQrType) ? requestedQrType : "url";
+  const profileIdRaw = String(form.get("profile_id") || "").trim();
+  const requestedDownloadSize = String(form.get("download_size") || "print");
+  const downloadSize = DOWNLOAD_SIZES.has(requestedDownloadSize) ? requestedDownloadSize : "print";
+  const printPiece = String(form.get("print_piece") || "").trim().slice(0, 100);
+  const trackingEnabled = String(form.get("tracking_enabled") || "true") !== "false";
+  const campaignName = String(form.get("campaign_name") || "").trim().slice(0, 160);
+  const campaignOwner = String(form.get("campaign_owner") || "").trim().slice(0, 160);
+  const placement = String(form.get("placement") || "").trim().slice(0, 200);
+  const notes = String(form.get("notes") || "").trim().slice(0, 500);
 
   const logoEntry = form.get("logo");
   const logoFile =
@@ -50,25 +58,39 @@ export async function POST(req: NextRequest) {
       ? logoEntry
       : null;
 
-  // Validation
   if (!name) {
     return NextResponse.json({ error: "QR name is required." }, { status: 400 });
   }
 
-  if (!destination_url) {
+  if (!destinationUrl) {
     return NextResponse.json({ error: "Destination URL is required." }, { status: 400 });
   }
 
-  // Validate URL format
   try {
-    new URL(destination_url);
+    new URL(destinationUrl);
   } catch {
-    return NextResponse.json({ error: "Invalid URL format. Must start with https://" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Enter a complete destination URL, such as https://example.com." },
+      { status: 400 }
+    );
+  }
+
+  if (!DOT_STYLES.has(dotStyle)) {
+    return NextResponse.json({ error: "Invalid dot style." }, { status: 400 });
+  }
+
+  if (!CORNER_STYLES.has(cornerStyle)) {
+    return NextResponse.json({ error: "Invalid corner style." }, { status: 400 });
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const admin = createSupabaseAdminClient();
   const { data: customer } = await admin
@@ -83,7 +105,10 @@ export async function POST(req: NextRequest) {
 
   const access = await loadAccountAccess(admin, customer);
   if (!canPerformAccountAction(access, "create-qr")) {
-    return NextResponse.json({ error: "This account does not have available Clutch Codes creation capacity." }, { status: 403 });
+    return NextResponse.json(
+      { error: "This account does not have available Clutch Codes creation capacity." },
+      { status: 403 }
+    );
   }
 
   if (isCustomerSubscriptionLocked(customer)) {
@@ -93,7 +118,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check limit
   const { data: qrCodes } = await admin
     .from("qr_codes")
     .select("id", { count: "exact" })
@@ -112,25 +136,16 @@ export async function POST(req: NextRequest) {
             ? "Account limit reached. Upgrade to Agency for additional QR codes."
             : plan.code === "connect_basic" || plan.code === "connect_plus"
               ? "Dynamic QR campaigns are not included on your current plan. Upgrade to QR Pro to create dynamic QR codes."
-            : `You've reached your QR code limit (${limit}). Contact Clutch to increase it.`,
+              : `You've reached your QR code limit (${limit}). Contact Clutch to increase it.`,
       },
       { status: 400 }
     );
   }
 
   const slug = `clutch-${nanoid(8).toLowerCase()}`;
-
-  if (!DOT_STYLES.has(dot_style)) {
-    return NextResponse.json({ error: "Invalid dot style." }, { status: 400 });
-  }
-
-  if (!CORNER_STYLES.has(corner_style)) {
-    return NextResponse.json({ error: "Invalid corner style." }, { status: 400 });
-  }
-
-  let logo_enabled = false;
-  let logo_url: string | null = null;
-  let logo_path: string | null = null;
+  let logoEnabled = false;
+  let logoUrl: string | null = null;
+  let logoPath: string | null = null;
 
   if (logoFile) {
     const extension = ALLOWED_LOGO_TYPES.get(logoFile.type);
@@ -143,13 +158,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (logoFile.size > MAX_LOGO_SIZE) {
-      return NextResponse.json({ error: "File is too large. Maximum size is 1 MB." }, { status: 400 });
+      return NextResponse.json(
+        { error: "File is too large. Maximum size is 1 MB." },
+        { status: 400 }
+      );
     }
 
-    logo_path = `${customer.id}/${slug}/${nanoid(12)}.${extension}`;
+    logoPath = `${customer.id}/${slug}/${nanoid(12)}.${extension}`;
     const { error: uploadError } = await admin.storage
       .from(QR_LOGO_BUCKET)
-      .upload(logo_path, logoFile, {
+      .upload(logoPath, logoFile, {
         cacheControl: "3600",
         contentType: logoFile.type,
         upsert: false,
@@ -163,21 +181,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    logo_enabled = true;
-    logo_url = admin.storage.from(QR_LOGO_BUCKET).getPublicUrl(logo_path).data.publicUrl;
+    logoEnabled = true;
+    logoUrl = admin.storage.from(QR_LOGO_BUCKET).getPublicUrl(logoPath).data.publicUrl;
   }
 
-  let profile_id: string | null = null;
+  let profileId: string | null = null;
 
-  if (qr_type === "connect_profile") {
-    if (!profile_id_raw) {
+  if (qrType === "connect_profile") {
+    if (!profileIdRaw) {
       return NextResponse.json({ error: "Select a Clutch Connect profile." }, { status: 400 });
     }
 
     const { data: profile } = await admin
       .from("profiles")
       .select("id, slug")
-      .eq("id", profile_id_raw)
+      .eq("id", profileIdRaw)
       .eq("customer_id", customer.id)
       .maybeSingle();
 
@@ -185,79 +203,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Selected profile was not found." }, { status: 404 });
     }
 
-    profile_id = profile.id;
-    destination_url = clutchConnectProfileUrl(profile.slug);
+    profileId = profile.id;
+    destinationUrl = clutchConnectProfileUrl(profile.slug);
   }
 
-  const primaryInsertPayload: Record<string, any> = {
-    customer_id: customer.id,
-    name,
-    destination_url,
-    slug,
-    foreground_color,
-    background_color,
-    dot_style,
-    corner_style,
-    qr_type,
-    profile_id,
-    theme,
-    logo_enabled,
-    logo_url,
-    logo_path,
-    scan_count: 0,
-    is_active: true
+  const styleConfig = {
+    download_size: downloadSize,
+    print_piece: printPiece || null,
+    tracking: {
+      enabled: trackingEnabled,
+      campaign_name: campaignName || null,
+      owner: campaignOwner || null,
+      placement: placement || null,
+      notes: notes || null,
+    },
   };
 
-  let { data: createdQR, error } = await admin
+  const insertPayload = {
+    customer_id: customer.id,
+    name,
+    destination_url: destinationUrl,
+    slug,
+    foreground_color: foregroundColor,
+    background_color: backgroundColor,
+    dot_style: dotStyle,
+    corner_style: cornerStyle,
+    qr_type: qrType,
+    profile_id: profileId,
+    style_config: styleConfig,
+    logo_enabled: logoEnabled,
+    logo_url: logoUrl,
+    logo_path: logoPath,
+    scan_count: 0,
+    is_active: true,
+  };
+
+  const { data: createdQr, error } = await admin
     .from("qr_codes")
-    .insert(primaryInsertPayload)
+    .insert(insertPayload)
     .select()
     .single();
 
   if (error) {
-    const fallbackInsertPayload: Record<string, any> = {
-      customer_id: customer.id,
-      name,
-      destination_url,
-      slug,
-      foreground_color,
-      background_color,
-      dot_style,
-      corner_style,
-      logo_enabled,
-      logo_url,
-      logo_path,
-      scan_count: 0,
-      is_active: true,
-    };
-
-    if (qr_type === "connect_profile") {
-      fallbackInsertPayload.qr_type = "connect_profile";
-      fallbackInsertPayload.profile_id = profile_id;
+    if (logoPath) {
+      await admin.storage.from(QR_LOGO_BUCKET).remove([logoPath]);
     }
 
-    const fallbackResult = await admin
-      .from("qr_codes")
-      .insert(fallbackInsertPayload)
-      .select()
-      .single();
-
-    if (!fallbackResult.error) {
-      createdQR = fallbackResult.data;
-      error = null;
-    }
-  }
-
-  if (error) {
-    if (logo_path) {
-      await admin.storage.from(QR_LOGO_BUCKET).remove([logo_path]);
-    }
     console.error("QR creation error:", error);
-    return NextResponse.json({ error: "Failed to create QR code. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create QR code. Please try again." },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ 
-    success: true, 
-    qr: createdQR
+  return NextResponse.json({
+    success: true,
+    qr: createdQr,
   });
 }
