@@ -191,13 +191,6 @@ export default function AdvancedQRPreview({
   for (let row = 0; row < matrix.size; row += 1) {
     for (let col = 0; col < matrix.size; col += 1) {
       if (!moduleIsDark(matrix, row, col) || isFinderCell(row, col, matrix.size)) continue;
-
-      if (qrShape === "circle") {
-        const dx = col + 0.5 - matrix.size / 2;
-        const dy = row + 0.5 - matrix.size / 2;
-        if (Math.sqrt(dx * dx + dy * dy) > matrix.size * 0.5) continue;
-      }
-
       modules.push(
         <BodyModule
           key={`${row}-${col}`}
