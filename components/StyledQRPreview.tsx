@@ -84,7 +84,12 @@ export default function StyledQRPreview({
     >
       <div
         className={`qr-preview${embedded ? " embedded" : ""}`}
-        style={{ ...centeredWrapperStyle, aspectRatio: "1 / 1" }}
+        style={{
+          ...centeredWrapperStyle,
+          minHeight: 0,
+          height: "auto",
+          aspectRatio: "1 / 1",
+        }}
       >
         <AdvancedQRPreview
           url={url}
