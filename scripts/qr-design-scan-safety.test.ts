@@ -10,6 +10,10 @@ import {
   normalizeCircleDesign,
   type AdvancedQrDesign,
 } from "../lib/qr-design.ts";
+import {
+  getCircularQrFillerCells,
+  getProtectedQrSquare,
+} from "../lib/qr-circle-fill.ts";
 
 function design(overrides: Partial<AdvancedQrDesign> = {}): AdvancedQrDesign {
   return { ...DEFAULT_QR_DESIGN, ...overrides };
@@ -33,6 +37,45 @@ test("square layouts preserve the standard four-module quiet zone", () => {
     total: 37,
     offset: 4,
   });
+});
+
+test("circular filler creates a visible ring without entering the protected square", () => {
+  for (const matrixSize of [21, 29, 57]) {
+    const cells = getCircularQrFillerCells(matrixSize, "https://qr.clutchprintshop.com/qr/test");
+    const protectedSquare = getProtectedQrSquare(matrixSize);
+    assert.ok(cells.length > 0);
+
+    for (const { row, col } of cells) {
+      const intersectsProtectedSquare =
+        col + 1 > protectedSquare.start &&
+        col < protectedSquare.end &&
+        row + 1 > protectedSquare.start &&
+        row < protectedSquare.end;
+      assert.equal(intersectsProtectedSquare, false);
+    }
+  }
+});
+
+test("circular filler cells remain fully inside the circular boundary", () => {
+  const matrixSize = 29;
+  const layout = getQrCanvasLayout(matrixSize, "circle");
+  const center = layout.total / 2;
+  const radius = layout.total / 2 - 1.1;
+  const cells = getCircularQrFillerCells(matrixSize, "summer-campaign");
+
+  for (const { row, col } of cells) {
+    const farthestX = Math.max(Math.abs(col - center), Math.abs(col + 1 - center));
+    const farthestY = Math.max(Math.abs(row - center), Math.abs(row + 1 - center));
+    assert.ok(Math.hypot(farthestX, farthestY) <= radius);
+  }
+});
+
+test("circular filler is deterministic for the same destination", () => {
+  const first = getCircularQrFillerCells(29, "summer-campaign");
+  const second = getCircularQrFillerCells(29, "summer-campaign");
+  const different = getCircularQrFillerCells(29, "winter-campaign");
+  assert.deepEqual(first, second);
+  assert.notDeepEqual(first, different);
 });
 
 test("safe circular design passes structural checks", () => {
@@ -93,4 +136,9 @@ test("gradients and finder colors are checked independently", () => {
 test("invalid matrix dimensions are rejected", () => {
   assert.throws(() => getQrCanvasLayout(0, "circle"), /positive integer/i);
   assert.throws(() => getQrCanvasLayout(29.5, "circle"), /positive integer/i);
+});
+
+test("invalid circular filler density is rejected", () => {
+  assert.throws(() => getCircularQrFillerCells(29, "test", -0.1), /between 0 and 1/i);
+  assert.throws(() => getCircularQrFillerCells(29, "test", 1.1), /between 0 and 1/i);
 });
