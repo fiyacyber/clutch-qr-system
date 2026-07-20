@@ -46,6 +46,21 @@ function moduleIsDark(matrix: Matrix, row: number, col: number) {
   return Boolean(matrix.data?.[row * matrix.size + col]);
 }
 
+function hashText(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function cellNoise(seed: number, row: number, col: number) {
+  let value = seed ^ Math.imul(row + 1, 374761393) ^ Math.imul(col + 1, 668265263);
+  value = Math.imul(value ^ (value >>> 13), 1274126177);
+  return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+}
+
 function octagonPoints(x: number, y: number, size: number) {
   const cut = size * 0.27;
   return `${x + cut},${y} ${x + size - cut},${y} ${x + size},${y + cut} ${x + size},${y + size - cut} ${x + size - cut},${y + size} ${x + cut},${y + size} ${x},${y + size - cut} ${x},${y + cut}`;
@@ -171,14 +186,16 @@ export default function AdvancedQRPreview({
   logoUrl,
 }: AdvancedQRPreviewProps) {
   const rawId = useId();
-  const gradientId = `qr-gradient-${rawId.replace(/[^a-z0-9]/gi, "")}`;
+  const safeId = rawId.replace(/[^a-z0-9]/gi, "");
+  const gradientId = `qr-gradient-${safeId}`;
+  const circleClipId = `qr-circle-clip-${safeId}`;
   const matrix = useMemo(
     () => QRCode.create(url, { errorCorrectionLevel: "H" }).modules as unknown as Matrix,
     [url]
   );
   const quiet = 4;
   const total = matrix.size + quiet * 2;
-  const circleScale = qrShape === "circle" ? 0.82 : 1;
+  const circleScale = qrShape === "circle" ? 0.84 : 1;
   const offset = quiet + (matrix.size * (1 - circleScale)) / 2;
   const bodyFill =
     colorMode === "solid"
@@ -206,8 +223,64 @@ export default function AdvancedQRPreview({
   }
 
   const backgroundInset = outerStrokeEnabled ? 0.8 : 0.25;
+  const circleRadius = total / 2 - backgroundInset;
   const logoSize = Math.max(5, matrix.size * 0.2);
   const logoX = (matrix.size - logoSize) / 2;
+  const decorations: ReactNode[] = [];
+
+  if (qrShape === "circle") {
+    const seed = hashText(url);
+    const center = total / 2;
+    const coreStart = offset;
+    const coreEnd = offset + matrix.size * circleScale;
+    const coreGap = 0.38;
+    const decorativePattern = bodyPattern === "connected" ? "rounded" : bodyPattern;
+
+    for (let row = 1; row < total - 1; row += 1) {
+      for (let col = 1; col < total - 1; col += 1) {
+        const cellX = col + 0.5;
+        const cellY = row + 0.5;
+        const distance = Math.hypot(cellX - center, cellY - center);
+        if (distance > circleRadius - 1.05) continue;
+
+        const touchesCore =
+          cellX >= coreStart - coreGap &&
+          cellX <= coreEnd + coreGap &&
+          cellY >= coreStart - coreGap &&
+          cellY <= coreEnd + coreGap;
+        if (touchesCore) continue;
+        if (cellNoise(seed, row, col) < 0.5) continue;
+
+        decorations.push(
+          <BodyModule
+            key={`decor-${row}-${col}`}
+            x={col}
+            y={row}
+            pattern={decorativePattern}
+            fill={bodyFill}
+            right={false}
+            bottom={false}
+          />
+        );
+      }
+    }
+  }
+
+  const coreQr = (
+    <g transform={`translate(${offset} ${offset}) scale(${circleScale})`}>
+      {modules}
+      <EyeFrame x={0} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
+      <EyeFrame x={matrix.size - 7} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
+      <EyeFrame x={0} y={matrix.size - 7} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
+
+      {logoUrl ? (
+        <g>
+          <rect x={logoX - 0.45} y={logoX - 0.45} width={logoSize + 0.9} height={logoSize + 0.9} rx={1.05} fill={backgroundColor} />
+          <image href={logoUrl} x={logoX} y={logoX} width={logoSize} height={logoSize} preserveAspectRatio="xMidYMid meet" />
+        </g>
+      ) : null}
+    </g>
+  );
 
   return (
     <svg
@@ -225,43 +298,41 @@ export default function AdvancedQRPreview({
           <stop offset="0%" stopColor={gradientEndColor} />
           <stop offset="100%" stopColor={bodyColor} />
         </radialGradient>
+        <clipPath id={circleClipId}>
+          <circle cx={total / 2} cy={total / 2} r={circleRadius - 0.18} />
+        </clipPath>
       </defs>
 
       {qrShape === "circle" ? (
-        <circle
-          cx={total / 2}
-          cy={total / 2}
-          r={total / 2 - backgroundInset}
-          fill={backgroundColor}
-          stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
-          strokeWidth={outerStrokeEnabled ? 0.8 : 0}
-        />
-      ) : (
-        <rect
-          x={backgroundInset}
-          y={backgroundInset}
-          width={total - backgroundInset * 2}
-          height={total - backgroundInset * 2}
-          rx={1.1}
-          fill={backgroundColor}
-          stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
-          strokeWidth={outerStrokeEnabled ? 0.8 : 0}
-        />
-      )}
-
-      <g transform={`translate(${offset} ${offset}) scale(${circleScale})`}>
-        {modules}
-        <EyeFrame x={0} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-        <EyeFrame x={matrix.size - 7} y={0} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-        <EyeFrame x={0} y={matrix.size - 7} frame={eyeFrameShape} center={eyeCenterShape} frameColor={eyeFrameColor} centerColor={eyeCenterColor} backgroundColor={backgroundColor} />
-
-        {logoUrl ? (
-          <g>
-            <rect x={logoX - 0.45} y={logoX - 0.45} width={logoSize + 0.9} height={logoSize + 0.9} rx={1.05} fill={backgroundColor} />
-            <image href={logoUrl} x={logoX} y={logoX} width={logoSize} height={logoSize} preserveAspectRatio="xMidYMid meet" />
+        <>
+          <circle
+            cx={total / 2}
+            cy={total / 2}
+            r={circleRadius}
+            fill={backgroundColor}
+            stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
+            strokeWidth={outerStrokeEnabled ? 0.8 : 0}
+          />
+          <g clipPath={`url(#${circleClipId})`}>
+            {decorations}
+            {coreQr}
           </g>
-        ) : null}
-      </g>
+        </>
+      ) : (
+        <>
+          <rect
+            x={backgroundInset}
+            y={backgroundInset}
+            width={total - backgroundInset * 2}
+            height={total - backgroundInset * 2}
+            rx={1.1}
+            fill={backgroundColor}
+            stroke={outerStrokeEnabled ? outerStrokeColor : "none"}
+            strokeWidth={outerStrokeEnabled ? 0.8 : 0}
+          />
+          {coreQr}
+        </>
+      )}
     </svg>
   );
 }
