@@ -71,6 +71,14 @@ export const QR_EYE_CENTER_SHAPES = new Set<QrEyeCenterShape>([
 ]);
 export const QR_COLOR_MODES = new Set<QrColorMode>(["solid", "linear", "radial"]);
 
+/**
+ * Circular canvases use a conservative subset because narrow modules and
+ * heavily altered finder patterns lose reliability fastest at print size.
+ */
+export const SAFE_CIRCLE_BODY_PATTERNS = new Set<QrBodyPattern>(["square", "circle", "rounded"]);
+export const SAFE_CIRCLE_EYE_FRAMES = new Set<QrEyeFrameShape>(["square", "rounded", "circle"]);
+export const SAFE_CIRCLE_EYE_CENTERS = new Set<QrEyeCenterShape>(["square", "rounded", "circle"]);
+
 export function legacyDotStyle(pattern: QrBodyPattern): "square" | "rounded" | "dots" {
   if (pattern === "circle") return "dots";
   if (pattern === "rounded" || pattern === "blob" || pattern === "connected") return "rounded";
@@ -85,4 +93,88 @@ export function legacyCornerStyle(frame: QrEyeFrameShape): "square" | "dot" | "e
 
 export function isHexColor(value: string): boolean {
   return /^#[0-9a-f]{6}$/i.test(value);
+}
+
+function channelToLinear(channel: number) {
+  const normalized = channel / 255;
+  return normalized <= 0.04045
+    ? normalized / 12.92
+    : Math.pow((normalized + 0.055) / 1.055, 2.4);
+}
+
+export function relativeLuminance(color: string): number {
+  if (!isHexColor(color)) return 1;
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  return (
+    0.2126 * channelToLinear(red) +
+    0.7152 * channelToLinear(green) +
+    0.0722 * channelToLinear(blue)
+  );
+}
+
+export function contrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function hasPrintSafeContrast(foreground: string, background: string): boolean {
+  return (
+    isHexColor(foreground) &&
+    isHexColor(background) &&
+    relativeLuminance(foreground) < relativeLuminance(background) &&
+    contrastRatio(foreground, background) >= 4.5
+  );
+}
+
+export function getQrDesignScanIssues(design: AdvancedQrDesign): string[] {
+  const issues: string[] = [];
+
+  if (!hasPrintSafeContrast(design.bodyColor, design.backgroundColor)) {
+    issues.push("Body color must be substantially darker than the background.");
+  }
+  if (
+    design.colorMode !== "solid" &&
+    !hasPrintSafeContrast(design.gradientEndColor, design.backgroundColor)
+  ) {
+    issues.push("Both gradient colors must remain substantially darker than the background.");
+  }
+  if (!hasPrintSafeContrast(design.eyeFrameColor, design.backgroundColor)) {
+    issues.push("Eye-frame color must be substantially darker than the background.");
+  }
+  if (!hasPrintSafeContrast(design.eyeCenterColor, design.backgroundColor)) {
+    issues.push("Eye-center color must be substantially darker than the background.");
+  }
+
+  if (design.qrShape === "circle") {
+    if (!SAFE_CIRCLE_BODY_PATTERNS.has(design.bodyPattern)) {
+      issues.push("Circular QR codes support Square, Circle, or Rounded body modules only.");
+    }
+    if (!SAFE_CIRCLE_EYE_FRAMES.has(design.eyeFrameShape)) {
+      issues.push("Circular QR codes support Square, Rounded, or Circle eye frames only.");
+    }
+    if (!SAFE_CIRCLE_EYE_CENTERS.has(design.eyeCenterShape)) {
+      issues.push("Circular QR codes support Square, Rounded, or Circle eye centers only.");
+    }
+  }
+
+  return issues;
+}
+
+export function isQrDesignStructurallySafe(design: AdvancedQrDesign): boolean {
+  return getQrDesignScanIssues(design).length === 0;
+}
+
+export function normalizeCircleDesign(design: AdvancedQrDesign): AdvancedQrDesign {
+  if (design.qrShape !== "circle") return design;
+  return {
+    ...design,
+    bodyPattern: SAFE_CIRCLE_BODY_PATTERNS.has(design.bodyPattern) ? design.bodyPattern : "square",
+    eyeFrameShape: SAFE_CIRCLE_EYE_FRAMES.has(design.eyeFrameShape) ? design.eyeFrameShape : "square",
+    eyeCenterShape: SAFE_CIRCLE_EYE_CENTERS.has(design.eyeCenterShape) ? design.eyeCenterShape : "square",
+  };
 }
