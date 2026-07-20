@@ -1,11 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, Link2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import QRTypeSelector, { QRType } from "@/components/QRTypeSelector";
 import QRLivePreview from "@/components/QRLivePreview";
-import QRStylePanel, { DownloadSize, ThemePreset } from "@/components/QRStylePanel";
+import QRStylePanel, { DownloadSize } from "@/components/QRStylePanel";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
 import styles from "./QRCodeCreateStudioForm.module.css";
 
@@ -18,29 +17,7 @@ type DotStyle =
   | "extra-rounded";
 
 type CornerStyle = "square" | "dot" | "extra-rounded";
-
-type PrintAssetType =
-  | "standard_business_card"
-  | "flyer"
-  | "yard_sign"
-  | "poster"
-  | "brochure"
-  | "door_hanger"
-  | "direct_mail"
-  | "table_tent"
-  | "other_print";
-
-const PRINT_ASSET_OPTIONS: Array<{ value: PrintAssetType; label: string }> = [
-  { value: "standard_business_card", label: "Standard Business Card" },
-  { value: "flyer", label: "Flyer" },
-  { value: "yard_sign", label: "Yard Sign" },
-  { value: "poster", label: "Poster" },
-  { value: "brochure", label: "Brochure" },
-  { value: "door_hanger", label: "Door Hanger" },
-  { value: "direct_mail", label: "Direct Mail" },
-  { value: "table_tent", label: "Table Tent" },
-  { value: "other_print", label: "Other Print Piece" },
-];
+type DestinationMode = "url" | "connect_profile";
 
 const STEPS = [
   { label: "Destination", helper: "Name, link, and print piece" },
@@ -49,51 +26,31 @@ const STEPS = [
   { label: "Review", helper: "Confirm and create" },
 ] as const;
 
-const QR_TYPE_TO_PRINT_ASSET: Record<string, PrintAssetType> = {
-  business_cards: "standard_business_card",
-  flyers: "flyer",
-  brochures: "brochure",
-  postcards: "direct_mail",
-  door_hangers: "door_hanger",
-  yard_signs: "yard_sign",
-};
-
 function slugify(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-type QRCodeCreateStudioFormProps = {
-  used: number;
-  limit: number;
-  planName?: string;
-  isLocked?: boolean;
-  lockMessage?: string;
-  connectProfiles?: Array<{ id: string; slug: string; business_name?: string | null; contact_name?: string | null }>;
-};
-
 function appendCampaignParams({
   url,
   campaignName,
-  assetType,
+  printPiece,
   owner,
   pieceDetail,
   placement,
 }: {
   url: string;
   campaignName: string;
-  assetType: PrintAssetType;
+  printPiece?: string;
   owner?: string;
   pieceDetail?: string;
   placement?: string;
 }) {
-  const safe = normalizeUrl(url);
-  const parsed = new URL(safe);
-  parsed.searchParams.set("utm_source", assetType);
+  const parsed = new URL(normalizeUrl(url));
+  const source = slugify(printPiece || "print") || "print";
+
+  parsed.searchParams.set("utm_source", source);
   parsed.searchParams.set("utm_medium", "print");
-  parsed.searchParams.set(
-    "utm_campaign",
-    slugify(campaignName) || `print-${assetType.replace(/_/g, "-")}`
-  );
+  parsed.searchParams.set("utm_campaign", slugify(campaignName) || "print-campaign");
 
   const contentParts = [owner?.trim(), pieceDetail?.trim()].filter(Boolean);
   if (contentParts.length > 0) {
@@ -106,6 +63,20 @@ function appendCampaignParams({
 
   return parsed.toString();
 }
+
+type QRCodeCreateStudioFormProps = {
+  used: number;
+  limit: number;
+  planName?: string;
+  isLocked?: boolean;
+  lockMessage?: string;
+  connectProfiles?: Array<{
+    id: string;
+    slug: string;
+    business_name?: string | null;
+    contact_name?: string | null;
+  }>;
+};
 
 export default function QRCodeCreateStudioForm({
   used,
@@ -120,46 +91,32 @@ export default function QRCodeCreateStudioForm({
   const editorId = "qr-studio-editor";
 
   const [activeStep, setActiveStep] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
+  const [destinationMode, setDestinationMode] = useState<DestinationMode>("url");
   const [destinationUrl, setDestinationUrl] = useState("");
-  const [qrType, setQrType] = useState<QRType | "connect_profile">("flyers");
   const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [printPiece, setPrintPiece] = useState("");
 
   const [foregroundColor, setForegroundColor] = useState("#384862");
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [dotStyle, setDotStyle] = useState<DotStyle>("square");
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("square");
-  const [theme, setTheme] = useState<ThemePreset>("default");
   const [downloadSize, setDownloadSize] = useState<DownloadSize>("print");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [previewLogoUrl, setPreviewLogoUrl] = useState<string | undefined>(undefined);
 
   const [usePrintTracking, setUsePrintTracking] = useState(true);
-  const [printAssetType, setPrintAssetType] = useState<PrintAssetType>("flyer");
   const [campaignName, setCampaignName] = useState("");
   const [campaignOwner, setCampaignOwner] = useState("");
   const [pieceDetail, setPieceDetail] = useState("");
   const [placementNote, setPlacementNote] = useState("");
 
   const canCreate = !isLocked && used < limit;
-
-  useEffect(() => {
-    const presets: Record<ThemePreset, { fg: string; bg: string }> = {
-      default: { fg: "#384862", bg: "#ffffff" },
-      paper: { fg: "#6b5344", bg: "#f5dcc8" },
-      midnight: { fg: "#ffffff", bg: "#1e2a3a" },
-      pastel: { fg: "#384862", bg: "#ffd4b4" },
-    };
-
-    if (presets[theme]) {
-      setForegroundColor(presets[theme].fg);
-      setBackgroundColor(presets[theme].bg);
-    }
-  }, [theme]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -170,78 +127,82 @@ export default function QRCodeCreateStudioForm({
     const objectUrl = URL.createObjectURL(logoFile);
     setPreviewLogoUrl(objectUrl);
 
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
+    return () => URL.revokeObjectURL(objectUrl);
   }, [logoFile]);
-
-  const finalUrl = useMemo(() => {
-    let baseUrl = "";
-
-    if (qrType === "connect_profile") {
-      const profile = connectProfiles.find((item) => item.id === selectedProfileId);
-      baseUrl = profile ? clutchConnectProfileUrl(profile.slug) : "";
-    } else {
-      if (!destinationUrl.trim()) return "";
-      baseUrl = normalizeUrl(destinationUrl);
-    }
-
-    if (!baseUrl) return "";
-    if (!usePrintTracking) return baseUrl;
-
-    return appendCampaignParams({
-      url: baseUrl,
-      campaignName: campaignName || name || "print-campaign",
-      assetType: printAssetType,
-      owner: campaignOwner,
-      pieceDetail,
-      placement: placementNote,
-    });
-  }, [
-    qrType,
-    selectedProfileId,
-    connectProfiles,
-    destinationUrl,
-    usePrintTracking,
-    campaignName,
-    name,
-    printAssetType,
-    campaignOwner,
-    pieceDetail,
-    placementNote,
-  ]);
 
   const selectedProfile = useMemo(() => {
     if (!selectedProfileId) return null;
     return connectProfiles.find((item) => item.id === selectedProfileId) || null;
   }, [connectProfiles, selectedProfileId]);
 
-  const destinationSummary = qrType === "connect_profile"
+  const baseDestinationUrl = useMemo(() => {
+    if (destinationMode === "connect_profile") {
+      return selectedProfile ? clutchConnectProfileUrl(selectedProfile.slug) : "";
+    }
+
+    const raw = destinationUrl.trim();
+    if (!raw) return "";
+
+    try {
+      const normalized = normalizeUrl(raw);
+      new URL(normalized);
+      return normalized;
+    } catch {
+      // Partial input such as "https://" is normal while typing. Do not crash the page.
+      return "";
+    }
+  }, [destinationMode, destinationUrl, selectedProfile]);
+
+  const finalUrl = useMemo(() => {
+    if (!baseDestinationUrl) return "";
+    if (!usePrintTracking) return baseDestinationUrl;
+
+    try {
+      return appendCampaignParams({
+        url: baseDestinationUrl,
+        campaignName: campaignName || name || "print-campaign",
+        printPiece,
+        owner: campaignOwner,
+        pieceDetail,
+        placement: placementNote,
+      });
+    } catch {
+      return "";
+    }
+  }, [
+    baseDestinationUrl,
+    usePrintTracking,
+    campaignName,
+    name,
+    printPiece,
+    campaignOwner,
+    pieceDetail,
+    placementNote,
+  ]);
+
+  const destinationSummary = destinationMode === "connect_profile"
     ? selectedProfile
       ? `${selectedProfile.business_name || selectedProfile.contact_name || selectedProfile.slug} • ${selectedProfile.slug}`
       : "Select a Clutch Connect profile"
-    : destinationUrl.trim()
-      ? destinationUrl.trim()
-      : "Add a destination URL";
+    : destinationUrl.trim() || "Add a destination URL";
 
-  const printPieceLabel = useMemo(() => {
-    const selected = PRINT_ASSET_OPTIONS.find((option) => option.value === printAssetType);
-    return selected?.label || "Print piece";
-  }, [printAssetType]);
+  const printPieceLabel = printPiece.trim() || "Not specified";
 
   const trackingSummary = useMemo(() => {
     if (!usePrintTracking) return "Tracking disabled";
+
     const parts = [campaignName || name || "Campaign name pending", campaignOwner, placementNote]
       .map((item) => item.trim())
       .filter(Boolean);
-    return parts.length ? parts.join(" • ") : "Auto-attach print campaign UTM tracking";
+
+    return parts.length ? parts.join(" • ") : "Campaign name pending";
   }, [campaignName, campaignOwner, placementNote, name, usePrintTracking]);
 
-  const scanSafetyLabel = useMemo(() => {
-    if (!finalUrl) return "Needs destination";
-    if (downloadSize === "print") return "Print ready";
-    return "Preview ready";
-  }, [downloadSize, finalUrl]);
+  const scanSafetyLabel = !baseDestinationUrl
+    ? "Needs destination"
+    : downloadSize === "print"
+      ? "Print ready"
+      : "Preview ready";
 
   function focusEditor() {
     window.setTimeout(() => {
@@ -255,7 +216,7 @@ export default function QRCodeCreateStudioForm({
       return false;
     }
 
-    if (qrType === "connect_profile") {
+    if (destinationMode === "connect_profile") {
       if (!selectedProfileId) {
         setError("Select the Clutch Connect profile this QR should open.");
         return false;
@@ -269,7 +230,7 @@ export default function QRCodeCreateStudioForm({
       try {
         new URL(normalizeUrl(destinationUrl));
       } catch {
-        setError("Enter a valid destination URL.");
+        setError("Enter a complete destination URL, such as https://example.com.");
         return false;
       }
     }
@@ -279,14 +240,16 @@ export default function QRCodeCreateStudioForm({
   }
 
   function changeStep(nextStep: number) {
-    if (nextStep > 0 && !validateDestinationStep()) {
+    const boundedStep = Math.max(0, Math.min(STEPS.length - 1, nextStep));
+
+    if (boundedStep > activeStep && boundedStep > 0 && !validateDestinationStep()) {
       setActiveStep(0);
       focusEditor();
       return;
     }
 
     setError(null);
-    setActiveStep(Math.max(0, Math.min(STEPS.length - 1, nextStep)));
+    setActiveStep(boundedStep);
     focusEditor();
   }
 
@@ -296,9 +259,10 @@ export default function QRCodeCreateStudioForm({
   }
 
   function scrollToPreview() {
-    const element = document.getElementById(previewId);
-    element?.setAttribute("open", "");
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setPreviewOpen(true);
+    window.setTimeout(() => {
+      document.getElementById(previewId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -326,12 +290,8 @@ export default function QRCodeCreateStudioForm({
       return;
     }
 
-    let validatedUrl = "";
-    try {
-      validatedUrl = finalUrl || normalizeUrl(destinationUrl);
-      new URL(validatedUrl);
-    } catch {
-      setError("Please enter a valid destination URL.");
+    if (!finalUrl) {
+      setError("Enter a complete destination URL before creating the QR code.");
       setActiveStep(0);
       return;
     }
@@ -341,15 +301,20 @@ export default function QRCodeCreateStudioForm({
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
-      formData.append("destination_url", validatedUrl);
-      formData.append("qr_type", qrType === "connect_profile" ? "connect_profile" : "url");
+      formData.append("destination_url", finalUrl);
+      formData.append("qr_type", destinationMode);
       if (selectedProfileId) formData.append("profile_id", selectedProfileId);
       formData.append("foreground_color", foregroundColor);
       formData.append("background_color", backgroundColor);
       formData.append("dot_style", dotStyle);
       formData.append("corner_style", cornerStyle);
-      formData.append("theme", theme);
       formData.append("download_size", downloadSize);
+      formData.append("print_piece", printPiece.trim());
+      formData.append("tracking_enabled", String(usePrintTracking));
+      formData.append("campaign_name", (campaignName || name).trim());
+      formData.append("campaign_owner", campaignOwner.trim());
+      formData.append("placement", placementNote.trim());
+      formData.append("notes", pieceDetail.trim());
       if (logoFile) formData.append("logo", logoFile);
 
       const response = await fetch("/api/qr/create", {
@@ -358,20 +323,20 @@ export default function QRCodeCreateStudioForm({
         credentials: "same-origin",
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(data.error || "Failed to create QR code.");
+        setError(data.error || "Failed to create QR code. Please try again.");
         setIsSaving(false);
         return;
       }
 
       router.push("/portal/qr");
       router.refresh();
-    } catch (err) {
-      setError("Unexpected error while creating QR code.");
+    } catch (submitError) {
+      console.error("[QRCodeCreateStudioForm] QR creation failed", submitError);
+      setError("Unexpected error while creating QR code. Please try again.");
       setIsSaving(false);
-      console.error(err);
     }
   }
 
@@ -381,7 +346,7 @@ export default function QRCodeCreateStudioForm({
         <div>
           <span className={styles.studioKicker}>Guided QR Builder</span>
           <h2>Create your code in four quick steps.</h2>
-          <p>Only the name and destination are required. Design and campaign tracking are optional.</p>
+          <p>Only the name and destination are required. Design and tracking are optional.</p>
         </div>
         <div className={styles.accountSummary} aria-label="Current QR plan and usage">
           <span>{planName}</span>
@@ -413,7 +378,12 @@ export default function QRCodeCreateStudioForm({
       </nav>
 
       <div className={styles.studioGrid}>
-        <details className={styles.previewRail} id={previewId}>
+        <details
+          className={styles.previewRail}
+          id={previewId}
+          open={previewOpen}
+          onToggle={(event) => setPreviewOpen(event.currentTarget.open)}
+        >
           <summary className={styles.previewSummary}>
             <span><Eye size={17} /> Live preview</span>
             <strong>{scanSafetyLabel}</strong>
@@ -431,9 +401,9 @@ export default function QRCodeCreateStudioForm({
               limit={limit}
               isLocked={isLocked}
               name={name}
-              destinationTypeLabel={qrType === "connect_profile" ? "Clutch Connect" : "Website"}
+              destinationTypeLabel={destinationMode === "connect_profile" ? "Clutch Connect" : "Website"}
               destinationPreview={destinationSummary}
-              printMockupType={printAssetType === "standard_business_card" ? "business_cards" : printAssetType === "flyer" ? "flyers" : printAssetType === "brochure" ? "brochures" : printAssetType === "door_hanger" ? "door_hangers" : printAssetType === "yard_sign" ? "yard_signs" : printAssetType === "poster" ? "postcards" : "business_cards"}
+              printPieceLabel={printPieceLabel}
               trackingPreview={trackingSummary}
               downloadSize={downloadSize}
               canCreate={canCreate && Boolean(finalUrl) && Boolean(name.trim())}
@@ -451,10 +421,39 @@ export default function QRCodeCreateStudioForm({
                 <div>
                   <span className={styles.stepNumber}>Step 1 of 4</span>
                   <h2>Where should this QR code go?</h2>
-                  <p>Name the code, add its destination, and choose where it will be printed.</p>
+                  <p>Name the code, add its destination, and describe where it will be used.</p>
                 </div>
-                <span className={styles.stepPill}>{qrType === "connect_profile" ? "Profile" : "Website"}</span>
+                <span className={styles.stepPill}>{destinationMode === "connect_profile" ? "Profile" : "Website"}</span>
               </div>
+
+              {connectProfiles.length > 0 ? (
+                <div className={styles.destinationMode} role="radiogroup" aria-label="Destination type">
+                  <button
+                    type="button"
+                    className={destinationMode === "url" ? styles.destinationModeActive : ""}
+                    onClick={() => {
+                      setDestinationMode("url");
+                      setError(null);
+                    }}
+                    aria-pressed={destinationMode === "url"}
+                  >
+                    <Link2 size={18} />
+                    <span><strong>Website</strong><small>Send scans to any URL</small></span>
+                  </button>
+                  <button
+                    type="button"
+                    className={destinationMode === "connect_profile" ? styles.destinationModeActive : ""}
+                    onClick={() => {
+                      setDestinationMode("connect_profile");
+                      setError(null);
+                    }}
+                    aria-pressed={destinationMode === "connect_profile"}
+                  >
+                    <UserRound size={18} />
+                    <span><strong>Clutch Connect</strong><small>Open a digital profile</small></span>
+                  </button>
+                </div>
+              ) : null}
 
               <div className={styles.fieldGrid}>
                 <label className={styles.field}>
@@ -472,7 +471,7 @@ export default function QRCodeCreateStudioForm({
                   <span className={styles.hint}>Customers never see this. Use a name you will recognize in analytics.</span>
                 </label>
 
-                {qrType === "connect_profile" ? (
+                {destinationMode === "connect_profile" ? (
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Clutch Connect Profile</span>
                     <select
@@ -498,39 +497,32 @@ export default function QRCodeCreateStudioForm({
                       type="url"
                       className={styles.input}
                       value={destinationUrl}
-                      onChange={(event) => setDestinationUrl(event.target.value)}
+                      onChange={(event) => {
+                        setDestinationUrl(event.target.value);
+                        if (error) setError(null);
+                      }}
                       placeholder="https://yourwebsite.com/offer"
                       disabled={isSaving}
+                      inputMode="url"
                     />
                     <span className={styles.hint}>You can change this destination later without reprinting the QR code.</span>
                   </label>
                 )}
+
+                <label className={`${styles.field} ${styles.fieldWide}`}>
+                  <span className={styles.fieldLabel}>Print Piece or Placement</span>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={printPiece}
+                    onChange={(event) => setPrintPiece(event.target.value)}
+                    placeholder="Postcard, flyer, yard sign, front counter display..."
+                    maxLength={100}
+                    disabled={isSaving}
+                  />
+                  <span className={styles.hint}>Type the exact item or location. This is optional and helps organize reporting.</span>
+                </label>
               </div>
-
-              <div className={styles.subsectionHeader}>
-                <div>
-                  <span>Print piece</span>
-                  <h3>Where will customers scan it?</h3>
-                </div>
-                <small>This helps label the campaign correctly.</small>
-              </div>
-
-              <QRTypeSelector
-                value={qrType as QRType}
-                onChange={(type) => {
-                  const nextType = type as QRType | "connect_profile";
-                  setQrType(nextType);
-                  const mappedAsset = QR_TYPE_TO_PRINT_ASSET[String(type)];
-                  if (mappedAsset) setPrintAssetType(mappedAsset);
-
-                  const validTypes = ["flyers", "business_cards", "brochures", "postcards", "door_hangers", "yard_signs", "connect_profile"];
-                  if (!validTypes.includes(type)) {
-                    setError("This QR type is coming soon.");
-                  } else {
-                    setError(null);
-                  }
-                }}
-              />
 
               <div className={styles.destinationMeta}>
                 <article>
@@ -557,8 +549,6 @@ export default function QRCodeCreateStudioForm({
               </div>
 
               <QRStylePanel
-                theme={theme}
-                onThemeChange={setTheme}
                 foregroundColor={foregroundColor}
                 onForegroundColorChange={setForegroundColor}
                 backgroundColor={backgroundColor}
@@ -597,20 +587,6 @@ export default function QRCodeCreateStudioForm({
               {usePrintTracking ? (
                 <div className={styles.trackingFields}>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Print Piece Type</span>
-                    <select
-                      className={styles.select}
-                      value={printAssetType}
-                      onChange={(event) => setPrintAssetType(event.target.value as PrintAssetType)}
-                      disabled={isSaving}
-                    >
-                      {PRINT_ASSET_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className={styles.field}>
                     <span className={styles.fieldLabel}>Campaign Name</span>
                     <input
                       type="text"
@@ -623,7 +599,7 @@ export default function QRCodeCreateStudioForm({
                   </label>
 
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Team Member / Owner</span>
+                    <span className={styles.fieldLabel}>Team Member or Owner</span>
                     <input
                       type="text"
                       className={styles.input}
@@ -646,7 +622,7 @@ export default function QRCodeCreateStudioForm({
                     />
                   </label>
 
-                  <label className={`${styles.field} ${styles.fieldWide}`}>
+                  <label className={styles.field}>
                     <span className={styles.fieldLabel}>Internal Notes</span>
                     <input
                       type="text"
@@ -691,8 +667,8 @@ export default function QRCodeCreateStudioForm({
                   <strong>{printPieceLabel}</strong>
                 </article>
                 <article>
-                  <span>Theme</span>
-                  <strong>{theme}</strong>
+                  <span>Pattern</span>
+                  <strong>{dotStyle === "dots" ? "Dots" : dotStyle === "rounded" ? "Rounded" : "Squares"} · {cornerStyle === "dot" ? "Dot corners" : cornerStyle === "extra-rounded" ? "Rounded corners" : "Square corners"}</strong>
                 </article>
                 <article>
                   <span>Tracking</span>
@@ -715,46 +691,44 @@ export default function QRCodeCreateStudioForm({
           ) : null}
 
           <div className={styles.editorActions}>
-            <button
-              type="button"
-              className={styles.previewButton}
-              onClick={scrollToPreview}
-            >
+            <button type="button" className={styles.previewButton} onClick={scrollToPreview}>
               <Eye size={17} />
               Preview
             </button>
 
-            {activeStep > 0 ? (
-              <button
-                type="button"
-                className={styles.backButton}
-                onClick={() => changeStep(activeStep - 1)}
-                disabled={isSaving}
-              >
-                <ChevronLeft size={18} />
-                Back
-              </button>
-            ) : null}
+            <div className={styles.primaryActions}>
+              {activeStep > 0 ? (
+                <button
+                  type="button"
+                  className={styles.backButton}
+                  onClick={() => changeStep(activeStep - 1)}
+                  disabled={isSaving}
+                >
+                  <ChevronLeft size={18} />
+                  Back
+                </button>
+              ) : null}
 
-            {activeStep < STEPS.length - 1 ? (
-              <button
-                type="button"
-                className={styles.nextButton}
-                onClick={advanceStep}
-                disabled={isSaving}
-              >
-                Continue
-                <ChevronRight size={18} />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className={styles.nextButton}
-                disabled={!canCreate || isSaving || !finalUrl || !name.trim()}
-              >
-                {isSaving ? "Creating..." : "Create QR"}
-              </button>
-            )}
+              {activeStep < STEPS.length - 1 ? (
+                <button
+                  type="button"
+                  className={styles.nextButton}
+                  onClick={advanceStep}
+                  disabled={isSaving}
+                >
+                  Continue
+                  <ChevronRight size={18} />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className={styles.createButton}
+                  disabled={!canCreate || !finalUrl || !name.trim() || isSaving}
+                >
+                  {isSaving ? "Creating..." : "Create QR"}
+                </button>
+              )}
+            </div>
           </div>
         </section>
       </div>
