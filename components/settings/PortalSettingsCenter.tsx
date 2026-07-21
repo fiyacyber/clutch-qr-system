@@ -1,20 +1,49 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import {
   Bell,
   Building2,
+  ChevronRight,
+  CircleHelp,
+  CreditCard,
   Globe,
   HelpCircle,
   Mail,
   Palette,
+  Settings,
   ShieldCheck,
   Trash2,
+  UserRound,
+  type LucideIcon,
 } from "lucide-react";
+import styles from "./PortalSettingsCenter.module.css";
 
 type BillingAction = {
   label: string;
   href: string;
   tone: "primary" | "secondary";
+};
+
+type SettingsSection =
+  | "account"
+  | "plan"
+  | "profile"
+  | "qr"
+  | "notifications"
+  | "security"
+  | "support";
+
+type SettingsSectionDefinition = {
+  id: SettingsSection;
+  label: string;
+  description: string;
+  eyebrow: string;
+  title: string;
+  panelDescription: string;
+  icon: LucideIcon;
 };
 
 type PortalSettingsCenterProps = {
@@ -60,6 +89,72 @@ type PortalSettingsCenterProps = {
   helpCenterHref: string;
 };
 
+const settingsSections: SettingsSectionDefinition[] = [
+  {
+    id: "account",
+    label: "Account",
+    description: "Identity and company",
+    eyebrow: "Account",
+    title: "Account overview",
+    panelDescription: "Review the customer identity and company details associated with this workspace.",
+    icon: Settings,
+  },
+  {
+    id: "plan",
+    label: "Plan & billing",
+    description: "Access and upgrades",
+    eyebrow: "Subscription",
+    title: "Plan & billing",
+    panelDescription: "Review your current access, usage, subscription status, and available upgrade paths.",
+    icon: CreditCard,
+  },
+  {
+    id: "profile",
+    label: "Connect profile",
+    description: "Setup and publishing",
+    eyebrow: "Digital profile",
+    title: "Clutch Connect profile",
+    panelDescription: "Manage guided setup, publishing status, your public URL, and Profile Builder access.",
+    icon: UserRound,
+  },
+  {
+    id: "qr",
+    label: "QR defaults",
+    description: "Palette and export",
+    eyebrow: "Clutch Codes",
+    title: "QR defaults",
+    panelDescription: "Review the latest QR palette and the export settings currently associated with your account.",
+    icon: Palette,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Alerts and summaries",
+    eyebrow: "Communication",
+    title: "Notification preferences",
+    panelDescription: "Notification controls will become available as each preference is connected to persistent account settings.",
+    icon: Bell,
+  },
+  {
+    id: "security",
+    label: "Security",
+    description: "Password and access",
+    eyebrow: "Account protection",
+    title: "Security & access",
+    panelDescription: "Review authentication status, change your password, sign out, or request account deletion.",
+    icon: ShieldCheck,
+  },
+  {
+    id: "support",
+    label: "Support",
+    description: "Help and requests",
+    eyebrow: "Customer support",
+    title: "Help & support",
+    panelDescription: "Contact the Clutch team for account questions, product assistance, or feature requests.",
+    icon: CircleHelp,
+  },
+];
+
 export default function PortalSettingsCenter({
   accountName,
   accountEmail,
@@ -78,6 +173,9 @@ export default function PortalSettingsCenter({
   supportEmail,
   helpCenterHref,
 }: PortalSettingsCenterProps) {
+  const [activeSection, setActiveSection] = useState<SettingsSection>("account");
+  const activeDefinition = settingsSections.find((section) => section.id === activeSection) || settingsSections[0];
+  const ActiveIcon = activeDefinition.icon;
   const supportMailTo = `mailto:${supportEmail}`;
   const featureRequestMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Feature request for Clutch")}`;
   const deleteRequestMailTo = `mailto:${supportEmail}?subject=${encodeURIComponent("Account deletion request")}`;
@@ -95,307 +193,335 @@ export default function PortalSettingsCenter({
 
   return (
     <div className="ca-main">
-      <div className="ca-content ca-settings-content">
-        <section className="ca-card ca-settings-hero-card">
-          <div className="ca-settings-hero-copy">
-            <p className="ca-settings-kicker">Account</p>
-            <h2>Workspace settings</h2>
-            <p>
-              Manage your profile, plan, and team preferences for {accountName || "your account"}.
+      <div className={`ca-content ${styles.settingsPage}`}>
+        <section className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <p className={styles.kicker}>Account center</p>
+            <h1>Account settings</h1>
+            <p className={styles.heroDescription}>
+              Manage your account, plan, profile, security, and support settings without searching through one long page.
             </p>
           </div>
 
-          <div className="ca-settings-hero-meta">
-            <article>
-              <span>Current Plan</span>
+          <div className={styles.heroStats} aria-label="Account summary">
+            <article className={styles.heroStat}>
+              <span>Current plan</span>
               <strong>{plan.name}</strong>
             </article>
-            <article>
-              <span>Profile Status</span>
+            <article className={styles.heroStat}>
+              <span>Profile status</span>
               <strong>{profile.statusLabel}</strong>
             </article>
-            <article>
-              <span>Member Since</span>
+            <article className={styles.heroStat}>
+              <span>Member since</span>
               <strong>{memberSince}</strong>
             </article>
           </div>
         </section>
 
-        <div className="ca-settings-stack">
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Account Overview</h2>
-                <p className="ca-title-sub">Core account and customer identity details.</p>
+        <div className={styles.workspace}>
+          <nav className={styles.sectionNav} aria-label="Account settings sections" role="tablist">
+            {settingsSections.map((section) => {
+              const Icon = section.icon;
+              const selected = activeSection === section.id;
+
+              return (
+                <button
+                  key={section.id}
+                  id={`settings-tab-${section.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={`settings-panel-${section.id}`}
+                  className={`${styles.navButton} ${selected ? styles.navButtonActive : ""}`}
+                  onClick={() => setActiveSection(section.id)}
+                >
+                  <span className={styles.navIcon}>
+                    <Icon size={18} aria-hidden="true" />
+                  </span>
+                  <span className={styles.navText}>
+                    <strong>{section.label}</strong>
+                    <small>{section.description}</small>
+                  </span>
+                  <ChevronRight size={15} className={styles.navChevron} aria-hidden="true" />
+                </button>
+              );
+            })}
+          </nav>
+
+          <section
+            id={`settings-panel-${activeSection}`}
+            role="tabpanel"
+            aria-labelledby={`settings-tab-${activeSection}`}
+            className={styles.contentPanel}
+          >
+            <header className={styles.panelHeader}>
+              <div className={styles.panelTitleGroup}>
+                <p className={styles.panelEyebrow}>{activeDefinition.eyebrow}</p>
+                <h2>{activeDefinition.title}</h2>
+                <p className={styles.panelDescription}>{activeDefinition.panelDescription}</p>
               </div>
-            </div>
+              <span className={styles.panelIcon}>
+                <ActiveIcon size={20} aria-hidden="true" />
+              </span>
+            </header>
 
-            <div className="ca-settings-info-grid">
-              <article>
-                <span><Building2 size={14} /> Account name</span>
-                <strong>{accountName || "—"}</strong>
-              </article>
-              <article>
-                <span><Mail size={14} /> Email</span>
-                <strong>{accountEmail || "—"}</strong>
-              </article>
-              <article>
-                <span>Company name</span>
-                <strong>{companyName || "—"}</strong>
-              </article>
-              <article>
-                <span>Account type</span>
-                <strong>{accountType}</strong>
-              </article>
-              <article>
-                <span>Member since</span>
-                <strong>{memberSince}</strong>
-              </article>
-              <article>
-                <span>Last login</span>
-                <strong>{lastLogin}</strong>
-              </article>
-            </div>
-          </section>
-
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Plan & Billing</h2>
-                <p className="ca-title-sub">Subscription status, trial details, and upgrade paths.</p>
-              </div>
-              <div className="ca-settings-badge">{isAdmin ? "Admin" : plan.name}</div>
-            </div>
-
-            <CurrentPlanBadge
-              planCode={plan.code}
-              planName={plan.name}
-              priceLabel={plan.price}
-              description={plan.description}
-              usageLabel={plan.usageLabel}
-              subscriptionStatus={plan.subscriptionStatus}
-              trialStatus={plan.trialStatus}
-            />
-
-            <div className="ca-settings-plan-summary">
-              <article>
-                <span>Current plan</span>
-                <strong>{plan.name}</strong>
-              </article>
-              <article>
-                <span>Subscription status</span>
-                <strong>{plan.subscriptionStatus}</strong>
-              </article>
-              <article>
-                <span>Trial status</span>
-                <strong>{plan.trialStatus !== "none" ? plan.trialStatus : "Not in trial"}</strong>
-              </article>
-              <article>
-                <span>QR usage</span>
-                <strong>{qrUsageSummary}</strong>
-              </article>
-            </div>
-
-            {isAdmin ? (
-              <div className="ca-settings-soon">
-                <ShieldCheck size={15} />
-                <div>
-                  <strong>Admin checkout actions are hidden</strong>
-                  <p>Internal accounts bypass customer checkout flows.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="ca-settings-actions-row">
-                {billingActions.map((action) => (
-                  <a key={action.label} href={action.href} className={action.tone === "primary" ? "ca-primary-link-btn" : "ca-secondary-link-btn"}>
-                    {action.label}
-                  </a>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Clutch Connect Profile</h2>
-                <p className="ca-title-sub">Publishing status, guided setup access, and builder shortcuts.</p>
-              </div>
-              <Globe size={15} className="ca-section-icon" />
-            </div>
-
-            <div className="ca-settings-info-grid">
-              <article>
-                <span>Public profile</span>
-                <strong>{profile.statusLabel}</strong>
-              </article>
-              <article>
-                <span>Completion</span>
-                <strong>{profile.completionLabel}</strong>
-              </article>
-              <article className="ca-settings-info-wide">
-                <span>Public URL</span>
-                <strong>{publicProfileSummary}</strong>
-              </article>
-            </div>
-
-            <div className="ca-settings-actions-row">
-              <Link href={profile.guidedSetupHref} className="ca-primary-link-btn">Guided Setup</Link>
-              <Link href={profile.builderHref} className="ca-secondary-link-btn">{builderLabel}</Link>
-              {profile.publicUrl ? <Link href={profile.publicUrl} target="_blank" className="ca-secondary-link-btn">View Public Profile</Link> : null}
-            </div>
-
-            {profile.builderLocked ? (
-              <div className="ca-settings-soon">
-                <Palette size={15} />
-                <div>
-                  <strong>Advanced Builder requires an upgraded plan</strong>
-                  <p>Starter accounts stay on Guided Setup until Connect+ unlocks the full builder.</p>
+            {activeSection === "account" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.infoGrid}>
+                  <article className={styles.infoCard}>
+                    <span><Building2 size={14} aria-hidden="true" /> Account name</span>
+                    <strong>{accountName || "—"}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span><Mail size={14} aria-hidden="true" /> Email</span>
+                    <strong>{accountEmail || "—"}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span>Company name</span>
+                    <strong>{companyName || "—"}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span>Account type</span>
+                    <strong>{accountType}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span>Member since</span>
+                    <strong>{memberSince}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span>Last login</span>
+                    <strong>{lastLogin}</strong>
+                  </article>
                 </div>
               </div>
             ) : null}
-          </section>
 
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">QR Defaults</h2>
-                <p className="ca-title-sub">Latest QR palette preview and default export settings.</p>
-              </div>
-              <Palette size={15} className="ca-section-icon" />
-            </div>
+            {activeSection === "plan" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.planLayout}>
+                  <CurrentPlanBadge
+                    planCode={plan.code}
+                    planName={plan.name}
+                    priceLabel={plan.price}
+                    description={plan.description}
+                    usageLabel={plan.usageLabel}
+                    subscriptionStatus={plan.subscriptionStatus}
+                    trialStatus={plan.trialStatus}
+                  />
 
-            <div className="ca-settings-brand-grid">
-              <article className="ca-settings-brand-option">
-                <span>Foreground color</span>
-                <div className="ca-settings-color-row">
-                  <span className="ca-settings-color-swatch" style={{ background: qrDefaults.foreground }} />
-                  <strong>{qrDefaults.foreground}</strong>
-                </div>
-              </article>
-
-              <article className="ca-settings-brand-option">
-                <span>Background color</span>
-                <div className="ca-settings-color-row">
-                  <span className="ca-settings-color-swatch" style={{ background: qrDefaults.background, border: "1px solid #d8dde8" }} />
-                  <strong>{qrDefaults.background}</strong>
-                </div>
-              </article>
-
-              <article className="ca-settings-brand-option">
-                <span>Default export size</span>
-                <strong>{qrDefaults.exportSizeLabel}</strong>
-                <p>Editable default export controls are coming soon.</p>
-              </article>
-            </div>
-          </section>
-
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Notifications</h2>
-                <p className="ca-title-sub">Notification preferences are visible here once persistence is available.</p>
-              </div>
-              <Bell size={15} className="ca-section-icon" />
-            </div>
-
-            <div className="ca-settings-toggle-list">
-              {[
-                "Lead alerts",
-                "Weekly analytics summary",
-                "Product updates",
-              ].map((label) => (
-                <article key={label} className="ca-settings-toggle-item">
-                  <div>
-                    <strong>{label}</strong>
-                    <p>Coming soon</p>
+                  <div className={styles.planSide}>
+                    <div className={styles.planGrid}>
+                      <article className={styles.planCard}>
+                        <span>Current plan</span>
+                        <strong>{plan.name}</strong>
+                      </article>
+                      <article className={styles.planCard}>
+                        <span>Subscription</span>
+                        <strong>{plan.subscriptionStatus}</strong>
+                      </article>
+                      <article className={styles.planCard}>
+                        <span>Trial status</span>
+                        <strong>{plan.trialStatus !== "none" ? plan.trialStatus : "Not in trial"}</strong>
+                      </article>
+                      <article className={styles.planCard}>
+                        <span>QR usage</span>
+                        <strong>{qrUsageSummary}</strong>
+                      </article>
+                    </div>
                   </div>
-                  <span className="ca-settings-toggle-shell ca-settings-toggle-shell-disabled" aria-hidden="true"><span /></span>
-                </article>
-              ))}
-            </div>
-          </section>
+                </div>
 
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Security</h2>
-                <p className="ca-title-sub">Password controls, session access, and authentication status.</p>
+                {isAdmin ? (
+                  <div className={styles.notice}>
+                    <ShieldCheck size={17} aria-hidden="true" />
+                    <div>
+                      <strong>Admin checkout actions are hidden</strong>
+                      <p>Internal accounts bypass customer checkout flows.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.actions}>
+                    {billingActions.map((action) => (
+                      <a
+                        key={action.label}
+                        href={action.href}
+                        className={action.tone === "primary" ? styles.primaryButton : styles.secondaryButton}
+                      >
+                        {action.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
-              <ShieldCheck size={15} className="ca-section-icon" />
-            </div>
+            ) : null}
 
-            <div className="ca-settings-security-grid">
-              <article>
-                <span>Authentication</span>
-                <strong>{authenticationStatus || "Password login active"}</strong>
-              </article>
-              <article>
-                <span>Last login</span>
-                <strong>{lastLogin}</strong>
-              </article>
-              <article>
-                <span>Password</span>
-                <strong>Managed with Clutch login</strong>
-              </article>
-              <article>
-                <span>Two-factor auth</span>
-                <strong>Coming soon</strong>
-              </article>
-            </div>
+            {activeSection === "profile" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.profileSummary}>
+                  <article className={styles.infoCard}>
+                    <span>Public profile</span>
+                    <strong>{profile.statusLabel}</strong>
+                  </article>
+                  <article className={styles.infoCard}>
+                    <span>Completion</span>
+                    <strong>{profile.completionLabel}</strong>
+                  </article>
+                  <article className={`${styles.infoCard} ${styles.wideCard}`}>
+                    <span><Globe size={14} aria-hidden="true" /> Public URL</span>
+                    <strong>{publicProfileSummary}</strong>
+                  </article>
+                </div>
 
-            <div className="ca-settings-actions-row">
-              <Link href="/change-password" className="ca-primary-link-btn">Change Password</Link>
-              <form action="/auth/signout" method="post">
-                <button type="submit" className="ca-secondary-link-btn">Sign Out</button>
-              </form>
-            </div>
-          </section>
+                <div className={styles.actions}>
+                  <Link href={profile.guidedSetupHref} className={styles.primaryButton}>Guided Setup</Link>
+                  <Link href={profile.builderHref} className={styles.secondaryButton}>{builderLabel}</Link>
+                  {profile.publicUrl ? (
+                    <Link href={profile.publicUrl} target="_blank" className={styles.secondaryButton}>
+                      View Public Profile
+                    </Link>
+                  ) : null}
+                </div>
 
-          <section className="ca-card ca-settings-panel">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Support</h2>
-                <p className="ca-title-sub">Reach the Clutch team for help, features, or account questions.</p>
+                {profile.builderLocked ? (
+                  <div className={styles.notice}>
+                    <Palette size={17} aria-hidden="true" />
+                    <div>
+                      <strong>Profile Builder requires an upgraded plan</strong>
+                      <p>Starter accounts use Guided Setup until Connect+ unlocks the full Profile Builder.</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <HelpCircle size={15} className="ca-section-icon" />
-            </div>
+            ) : null}
 
-            <div className="ca-settings-support-grid">
-              <a href={supportMailTo} className="ca-primary-link-btn">Contact Support</a>
-              <a href={featureRequestMailTo} className="ca-secondary-link-btn">Request Feature</a>
-              <a href={helpCenterHref} className="ca-secondary-link-btn">Help Center</a>
-            </div>
+            {activeSection === "qr" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.colorGrid}>
+                  <article className={styles.colorCard}>
+                    <span>Foreground color</span>
+                    <div className={styles.colorRow}>
+                      <span className={styles.colorSwatch} style={{ background: qrDefaults.foreground }} />
+                      <strong>{qrDefaults.foreground}</strong>
+                    </div>
+                  </article>
+                  <article className={styles.colorCard}>
+                    <span>Background color</span>
+                    <div className={styles.colorRow}>
+                      <span
+                        className={styles.colorSwatch}
+                        style={{ background: qrDefaults.background, border: "1px solid #d8dde8" }}
+                      />
+                      <strong>{qrDefaults.background}</strong>
+                    </div>
+                  </article>
+                  <article className={styles.colorCard}>
+                    <span>Default export size</span>
+                    <strong>{qrDefaults.exportSizeLabel}</strong>
+                    <p>Editable account-level export defaults are coming soon.</p>
+                  </article>
+                </div>
 
-            <div className="ca-settings-support-email">
-              <Mail size={15} />
-              <span>{supportEmail}</span>
-            </div>
-          </section>
-
-          <section className="ca-card ca-settings-danger-card">
-            <div className="ca-card-head">
-              <div>
-                <h2 className="ca-card-title">Account Actions</h2>
-                <p className="ca-title-sub">Destructive actions are separated from the rest of your account controls.</p>
+                <div className={styles.notice}>
+                  <Palette size={17} aria-hidden="true" />
+                  <div>
+                    <strong>These values reflect your latest saved QR design</strong>
+                    <p>QR-specific design controls remain available inside the Create and Edit experiences.</p>
+                  </div>
+                </div>
               </div>
-              <Trash2 size={15} className="ca-section-icon" />
-            </div>
+            ) : null}
 
-            <div className="ca-settings-danger-actions">
-              <form action="/auth/signout" method="post">
-                <button type="submit" className="ca-secondary-link-btn">Sign Out</button>
-              </form>
-              <a href={deleteRequestMailTo} className="ca-danger-link-btn">Request Account Deletion</a>
-            </div>
-
-            <div className="ca-settings-soon">
-              <HelpCircle size={15} />
-              <div>
-                <strong>Account deletion is handled through support only</strong>
-                <p>Support verifies ownership before any records are removed.</p>
+            {activeSection === "notifications" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.notificationList}>
+                  {["Lead alerts", "Weekly analytics summary", "Product updates"].map((label) => (
+                    <article key={label} className={styles.notificationRow}>
+                      <div className={styles.notificationCopy}>
+                        <strong>{label}</strong>
+                        <p>Coming soon</p>
+                      </div>
+                      <span className={styles.disabledToggle} aria-hidden="true" />
+                    </article>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
+
+            {activeSection === "security" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.securityGrid}>
+                  <article className={styles.securityCard}>
+                    <span>Authentication</span>
+                    <strong>{authenticationStatus || "Password login active"}</strong>
+                  </article>
+                  <article className={styles.securityCard}>
+                    <span>Last login</span>
+                    <strong>{lastLogin}</strong>
+                  </article>
+                  <article className={styles.securityCard}>
+                    <span>Password</span>
+                    <strong>Managed with Clutch login</strong>
+                  </article>
+                  <article className={styles.securityCard}>
+                    <span>Two-factor auth</span>
+                    <strong>Coming soon</strong>
+                  </article>
+                </div>
+
+                <div className={styles.actions}>
+                  <Link href="/change-password" className={styles.primaryButton}>Change Password</Link>
+                  <form action="/auth/signout" method="post" className={styles.formInline}>
+                    <button type="submit" className={styles.secondaryButton}>Sign Out</button>
+                  </form>
+                </div>
+
+                <div className={styles.dangerZone}>
+                  <div className={styles.dangerTitle}>
+                    <Trash2 size={17} aria-hidden="true" />
+                    <h3>Account deletion</h3>
+                  </div>
+                  <p>Deletion requests are handled through support so account ownership can be verified before records are removed.</p>
+                  <div className={styles.actions}>
+                    <a href={deleteRequestMailTo} className={styles.dangerButton}>Request Account Deletion</a>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {activeSection === "support" ? (
+              <div className={styles.sectionBody}>
+                <div className={styles.securitySupportGrid}>
+                  <div className={styles.supportCard}>
+                    <h3>Contact the Clutch team</h3>
+                    <p>Use direct email support for account access, billing questions, product setup, or technical assistance.</p>
+                    <div className={styles.actions}>
+                      <a href={supportMailTo} className={styles.primaryButton}>Contact Support</a>
+                      <a href={featureRequestMailTo} className={styles.secondaryButton}>Request Feature</a>
+                    </div>
+                    <div className={styles.supportEmail}>
+                      <Mail size={16} aria-hidden="true" />
+                      <span>{supportEmail}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.supportCard}>
+                    <h3>Help center</h3>
+                    <p>Open the Clutch Print Shop website for product information and general customer resources.</p>
+                    <div className={styles.actions}>
+                      <a href={helpCenterHref} className={styles.secondaryButton}>Open Help Center</a>
+                    </div>
+                    <div className={styles.notice}>
+                      <HelpCircle size={17} aria-hidden="true" />
+                      <div>
+                        <strong>Include your account email</strong>
+                        <p>This helps support locate your workspace and respond faster.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
