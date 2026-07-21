@@ -114,8 +114,8 @@ export default function DashboardTopbar() {
               >
                 <Settings size={18} aria-hidden="true" />
                 <span className={styles.menuItemText}>
-                  <strong>Workspace settings</strong>
-                  <small>Account and company details</small>
+                  <strong>Account settings</strong>
+                  <small>Manage your account and company details</small>
                 </span>
               </Link>
 
