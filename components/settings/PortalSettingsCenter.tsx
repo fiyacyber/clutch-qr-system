@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import BrandColorsSettingsPanel from "@/components/settings/BrandColorsSettingsPanel";
 import {
   Bell,
   Building2,
@@ -31,7 +32,7 @@ type SettingsSection =
   | "account"
   | "plan"
   | "profile"
-  | "qr"
+  | "brand"
   | "notifications"
   | "security"
   | "support";
@@ -80,11 +81,7 @@ type PortalSettingsCenterProps = {
     builderHref: string;
     builderLocked: boolean;
   };
-  qrDefaults: {
-    foreground: string;
-    background: string;
-    exportSizeLabel: string;
-  };
+  brandColors: string[];
   supportEmail: string;
   helpCenterHref: string;
 };
@@ -118,12 +115,12 @@ const settingsSections: SettingsSectionDefinition[] = [
     icon: UserRound,
   },
   {
-    id: "qr",
-    label: "QR defaults",
-    description: "Palette and export",
-    eyebrow: "Clutch Codes",
-    title: "QR defaults",
-    panelDescription: "Review the latest QR palette and the export settings currently associated with your account.",
+    id: "brand",
+    label: "Brand colors",
+    description: "QR color picker palette",
+    eyebrow: "QR color picker",
+    title: "Brand colors",
+    panelDescription: "Choose reusable business colors that customers can select while creating a Clutch Code.",
     icon: Palette,
   },
   {
@@ -169,7 +166,7 @@ export default function PortalSettingsCenter({
   qrUsageUsed,
   qrUsageLimit,
   profile,
-  qrDefaults,
+  brandColors,
   supportEmail,
   helpCenterHref,
 }: PortalSettingsCenterProps) {
@@ -395,40 +392,9 @@ export default function PortalSettingsCenter({
               </div>
             ) : null}
 
-            {activeSection === "qr" ? (
+            {activeSection === "brand" ? (
               <div className={styles.sectionBody}>
-                <div className={styles.colorGrid}>
-                  <article className={styles.colorCard}>
-                    <span>Foreground color</span>
-                    <div className={styles.colorRow}>
-                      <span className={styles.colorSwatch} style={{ background: qrDefaults.foreground }} />
-                      <strong>{qrDefaults.foreground}</strong>
-                    </div>
-                  </article>
-                  <article className={styles.colorCard}>
-                    <span>Background color</span>
-                    <div className={styles.colorRow}>
-                      <span
-                        className={styles.colorSwatch}
-                        style={{ background: qrDefaults.background, border: "1px solid #d8dde8" }}
-                      />
-                      <strong>{qrDefaults.background}</strong>
-                    </div>
-                  </article>
-                  <article className={styles.colorCard}>
-                    <span>Default export size</span>
-                    <strong>{qrDefaults.exportSizeLabel}</strong>
-                    <p>Editable account-level export defaults are coming soon.</p>
-                  </article>
-                </div>
-
-                <div className={styles.notice}>
-                  <Palette size={17} aria-hidden="true" />
-                  <div>
-                    <strong>These values reflect your latest saved QR design</strong>
-                    <p>QR-specific design controls remain available inside the Create and Edit experiences.</p>
-                  </div>
-                </div>
+                <BrandColorsSettingsPanel initialColors={brandColors} />
               </div>
             ) : null}
 
