@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { resolvePostLoginRedirect } from "@/lib/onboarding-routing";
 import { sanitizeNextPath } from "@/lib/safe-redirect";
-import Link from "next/link";
+import LoginCredentialsFields from "./LoginCredentialsFields";
 import styles from "./login.module.css";
 
 async function handlePasswordSignIn(formData: FormData) {
@@ -74,35 +74,7 @@ export default async function LoginPage({
 
             <form className={styles.form} action={handlePasswordSignIn}>
               {next ? <input type="hidden" name="next" value={next} /> : null}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Email Address</label>
-                <input
-                  className={styles.input}
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="you@company.com"
-                  autoComplete="email"
-                  defaultValue={email}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <div className={styles.labelRow}>
-                  <label className={styles.label}>Password</label>
-                  <Link href="/forgot-password" className={styles.forgotLink}>
-                    Forgot password?
-                  </Link>
-                </div>
-                <input
-                  className={styles.input}
-                  name="password"
-                  type="password"
-                  required
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                />
-              </div>
+              <LoginCredentialsFields defaultEmail={email} />
 
               <button className={styles.submitButton} type="submit">
                 Sign In
@@ -113,7 +85,10 @@ export default async function LoginPage({
             <div className={styles.divider}>or</div>
 
             <p className={styles.helpText}>
-              Don't have an account? <a href="https://clutchprintshop.com" className={styles.signupLink}>Get started</a>
+              Don&apos;t have an account?{" "}
+              <a href="https://clutchprintshop.com" className={styles.signupLink}>
+                Get started
+              </a>
             </p>
           </div>
         </div>
