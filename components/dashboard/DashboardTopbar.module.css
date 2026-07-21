@@ -1,0 +1,184 @@
+.accountMenuWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.accountTrigger {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.accountTrigger:focus-visible {
+  outline: 3px solid rgba(255, 166, 101, 0.32);
+  outline-offset: 3px;
+}
+
+.chevron {
+  transition: transform 180ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.accountMenu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 250;
+  width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid var(--clutch-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(11, 31, 53, 0.18);
+  animation: account-menu-in 160ms ease-out;
+}
+
+.accountMenu::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--clutch-border);
+  border-left: 1px solid var(--clutch-border);
+  background: #fff;
+  transform: rotate(45deg);
+}
+
+.accountMenuHeader {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+}
+
+.accountAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #eaf0f7;
+  color: var(--clutch-navy);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.accountMenuHeader div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.accountMenuHeader strong {
+  color: var(--clutch-dark);
+  font-size: 0.82rem;
+}
+
+.accountMenuHeader span:last-child {
+  color: var(--clutch-muted);
+  font-size: 0.69rem;
+}
+
+.menuDivider {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--clutch-border);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 52px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  color: var(--clutch-navy);
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  outline: none;
+  background: var(--clutch-orange-soft);
+}
+
+.menuItem > svg {
+  flex: 0 0 auto;
+  color: var(--clutch-orange-strong);
+}
+
+.menuItemText {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.menuItemText strong {
+  color: var(--clutch-dark);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.menuItemText small {
+  color: var(--clutch-muted);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.signOut,
+.signOut .menuItemText strong,
+.signOut > svg {
+  color: #a33b2f;
+}
+
+.signOut:hover,
+.signOut:focus-visible {
+  background: #fff3f1;
+}
+
+@keyframes account-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 560px) {
+  .accountMenu {
+    right: -4px;
+    width: min(300px, calc(100vw - 20px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accountMenu {
+    animation: none;
+  }
+
+  .chevron,
+  .menuItem {
+    transition: none;
+  }
+}
+
+:global([data-theme="dark"]) .accountMenu,
+:global([data-theme="dark"]) .accountMenu::before {
+  background: var(--clutch-card);
+}
+
+:global([data-theme="dark"]) .accountAvatar {
+  background: #273044;
+}
