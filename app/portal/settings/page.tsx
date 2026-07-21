@@ -3,6 +3,7 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import PortalSettingsCenter from "@/components/settings/PortalSettingsCenter";
 import { requireCustomer } from "@/lib/auth";
+import { normalizeBrandColors } from "@/lib/brand-colors";
 import { isConnectProfilePublished, isConnectSetupComplete } from "@/lib/connect";
 import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit, hasEntitlement, isAdvancedBuilderUnlocked } from "@/lib/plans";
 import { clutchConnectDisplayUrl, clutchConnectProfileUrl } from "@/lib/qr";
@@ -41,7 +42,6 @@ export default async function PortalSettingsPage() {
 
   const [
     { data: qrRows, error: qrRowsError },
-    { data: latestQrRows, error: latestQrRowsError },
     { data: profile, error: profileError },
   ] = await Promise.all([
     admin
@@ -49,13 +49,6 @@ export default async function PortalSettingsPage() {
       .select("id")
       .eq("customer_id", customer.id)
       .neq("is_system", true),
-    admin
-      .from("qr_codes")
-      .select("name, foreground_color, background_color")
-      .eq("customer_id", customer.id)
-      .neq("is_system", true)
-      .order("created_at", { ascending: false })
-      .limit(1),
     admin
       .from("profiles")
       .select("*")
@@ -71,17 +64,6 @@ export default async function PortalSettingsPage() {
       message: qrRowsError.message ?? "Unknown error",
       details: qrRowsError.details ?? null,
       hint: qrRowsError.hint ?? null,
-    });
-  }
-
-  if (latestQrRowsError) {
-    console.error("[portal-data-error]", {
-      route: "/portal/settings",
-      endpoint: "supabase:qr_codes.latest_select",
-      code: latestQrRowsError.code ?? null,
-      message: latestQrRowsError.message ?? "Unknown error",
-      details: latestQrRowsError.details ?? null,
-      hint: latestQrRowsError.hint ?? null,
     });
   }
 
@@ -116,7 +98,6 @@ export default async function PortalSettingsPage() {
   }
 
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
-  const latestQr = latestQrRows?.[0] || null;
   const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
   const profilePublished = isConnectProfilePublished(profile || null);
@@ -212,11 +193,7 @@ export default async function PortalSettingsPage() {
           builderHref,
           builderLocked: !advancedBuilderUnlocked,
         }}
-        qrDefaults={{
-          foreground: latestQr?.foreground_color || "#384862",
-          background: latestQr?.background_color || "#ffffff",
-          exportSizeLabel: "1024 × 1024",
-        }}
+        brandColors={normalizeBrandColors((customer as any).brand_colors)}
         supportEmail="support@clutchprintshop.com"
         helpCenterHref="https://clutchprintshop.com"
       />
