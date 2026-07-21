@@ -7,6 +7,7 @@ import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/compo
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
+import { CLUTCH_CODES_PLANS, normalizeClutchCodesPlanCode } from "@/lib/clutch-codes";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -16,6 +17,12 @@ import { loadAccountAccess } from "@/lib/account-access-server";
 import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 import { resolveOwnedQrLibrary, visibleLibraryScanCount, type OwnedQrLibraryCode } from "@/lib/order-linked-library";
 import pageStyles from "./page.module.css";
+
+const CLUTCH_CODES_DISPLAY_NAMES = {
+  clutch_codes_starter: "Clutch Starter",
+  clutch_codes_growth: "Clutch Growth",
+  clutch_codes_pro: "Clutch Pro",
+} as const;
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -81,6 +88,19 @@ export default async function StoredQrCodesPage() {
   const used = qrCodes.length;
   const hasDynamicQr = access.canEditOwnedQr;
   const hasHeatmap = access.canUseCampaignAnalytics;
+  const activeClutchCodesPlanCode = hasActiveClutchCodesSubscription(customer)
+    ? normalizeClutchCodesPlanCode(customer.clutch_codes_plan_code)
+    : null;
+  const activeClutchCodesPlan = activeClutchCodesPlanCode
+    ? CLUTCH_CODES_PLANS[activeClutchCodesPlanCode]
+    : null;
+  const displayedPlanName = activeClutchCodesPlan
+    ? CLUTCH_CODES_DISPLAY_NAMES[activeClutchCodesPlan.code]
+    : plan.name;
+  const displayedPlanPrice = activeClutchCodesPlan?.monthlyPrice || plan.price;
+  const displayedPlanDescription = activeClutchCodesPlan
+    ? `Includes up to ${activeClutchCodesPlan.allowance} active Clutch Codes with editable destinations, customization, exports, and campaign analytics.`
+    : plan.description;
 
   const usageLabel = !hasDynamicQr
     ? "Dynamic QR campaigns are locked"
@@ -92,7 +112,11 @@ export default async function StoredQrCodesPage() {
   const usagePercent = plan.code === "admin" || limit <= 0
     ? 0
     : Math.min(100, Math.round((used / limit) * 100));
-  const subscriptionStatus = String(customer.subscription_status || customer.plan_status || "active").replace(/_/g, " ");
+  const subscriptionStatus = String(
+    activeClutchCodesPlan
+      ? customer.clutch_codes_subscription_status
+      : customer.subscription_status || customer.plan_status || "active"
+  ).replace(/_/g, " ");
 
   const libraryRows: StoredQrItem[] = qrCodes.map((code: OwnedQrLibraryCode) => ({
     id: code.id,
@@ -160,8 +184,8 @@ export default async function StoredQrCodesPage() {
               <span className={pageStyles.planName}>Current plan</span>
               <span className={pageStyles.statusPill}>{subscriptionStatus}</span>
             </div>
-            <h2>{plan.name}</h2>
-            <p>{plan.description}</p>
+            <h2>{displayedPlanName}</h2>
+            <p>{displayedPlanDescription}</p>
             <div className={pageStyles.planUsageLine}>
               <CheckCircle2 size={16} aria-hidden="true" />
               <span>{usageLabel}</span>
@@ -169,7 +193,7 @@ export default async function StoredQrCodesPage() {
           </div>
           <div className={pageStyles.planAside}>
             <span className={pageStyles.planAsideLabel}>Plan price</span>
-            <strong className={pageStyles.planPrice}>{plan.price}</strong>
+            <strong className={pageStyles.planPrice}>{displayedPlanPrice}</strong>
             <small>{plan.code === "admin" ? "Unlimited account capacity" : `${usagePercent}% of available QR capacity used`}</small>
             {plan.code !== "admin" ? (
               <span className={pageStyles.usageTrack} aria-hidden="true">
