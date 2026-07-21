@@ -129,7 +129,7 @@ const settingsSections: SettingsSectionDefinition[] = [
     description: "Alerts and summaries",
     eyebrow: "Communication",
     title: "Notification preferences",
-    panelDescription: "Notification controls will become available as each preference is connected to persistent account settings.",
+    panelDescription: "Clutch notifications are coming soon. Stay tuned!",
     icon: Bell,
   },
   {
