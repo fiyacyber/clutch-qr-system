@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PremiumColorPicker from "./PremiumColorPicker";
+import { useAccountBrandColors } from "@/components/qr/AccountBrandColorsContext";
 import {
   SAFE_CIRCLE_BODY_PATTERNS,
   SAFE_CIRCLE_EYE_CENTERS,
@@ -98,10 +99,12 @@ function ColorControl({
   label,
   value,
   onChange,
+  presets,
 }: {
   label: string;
   value: string;
   onChange: (color: string) => void;
+  presets: string[];
 }) {
   return (
     <label className={styles.colorPicker}>
@@ -111,6 +114,7 @@ function ColorControl({
         onChange={onChange}
         ariaLabel={label}
         buttonText={`Choose ${label.toLowerCase()}`}
+        presets={presets}
         className={styles.inlineColorPicker}
         triggerClassName={styles.inlineColorTrigger}
         valueClassName={styles.inlineColorValue}
@@ -154,6 +158,7 @@ export default function QRStylePanel({
   onOuterStrokeColorChange,
 }: QRStylePanelProps) {
   const [activeTab, setActiveTab] = useState<DesignTab>("shape");
+  const brandColors = useAccountBrandColors();
 
   function selectBodyPattern(pattern: QrBodyPattern) {
     onBodyPatternChange?.(pattern);
@@ -371,13 +376,13 @@ export default function QRStylePanel({
           </div>
 
           <div className={styles.colorGrid}>
-            <ColorControl label="Body color" value={foregroundColor} onChange={onForegroundColorChange} />
+            <ColorControl label="Body color" value={foregroundColor} onChange={onForegroundColorChange} presets={brandColors} />
             {colorMode !== "solid" && onGradientEndColorChange ? (
-              <ColorControl label="Gradient end" value={gradientEndColor} onChange={onGradientEndColorChange} />
+              <ColorControl label="Gradient end" value={gradientEndColor} onChange={onGradientEndColorChange} presets={brandColors} />
             ) : null}
-            <ColorControl label="Eye frame" value={eyeFrameColor} onChange={onEyeFrameColorChange || onForegroundColorChange} />
-            <ColorControl label="Eye center" value={eyeCenterColor} onChange={onEyeCenterColorChange || onForegroundColorChange} />
-            <ColorControl label="Background" value={backgroundColor} onChange={onBackgroundColorChange} />
+            <ColorControl label="Eye frame" value={eyeFrameColor} onChange={onEyeFrameColorChange || onForegroundColorChange} presets={brandColors} />
+            <ColorControl label="Eye center" value={eyeCenterColor} onChange={onEyeCenterColorChange || onForegroundColorChange} presets={brandColors} />
+            <ColorControl label="Background" value={backgroundColor} onChange={onBackgroundColorChange} presets={brandColors} />
           </div>
 
           <label className={styles.strokeToggle}>
@@ -389,7 +394,7 @@ export default function QRStylePanel({
             <span><strong>Outer stroke</strong><small>Add an outline around the complete QR artwork.</small></span>
           </label>
           {outerStrokeEnabled && onOuterStrokeColorChange ? (
-            <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} />
+            <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} presets={brandColors} />
           ) : null}
         </section>
       ) : null}
