@@ -7,7 +7,9 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import { AccountBrandColorsProvider } from "@/components/qr/AccountBrandColorsContext";
 import { requireCustomer } from "@/lib/auth";
+import { normalizeBrandColors } from "@/lib/brand-colors";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
@@ -77,6 +79,7 @@ export default async function CreatePortalPage() {
   const hasHeatmap = access.canUseCampaignHeatmap;
   const locked = isCustomerSubscriptionLocked(customer) || !hasDynamicQr;
   const lockMessage = getSubscriptionLockMessage(customer);
+  const brandColors = normalizeBrandColors((customer as any).brand_colors);
 
   return (
     <DashboardShell
@@ -151,14 +154,16 @@ export default async function CreatePortalPage() {
           />
         ) : null}
 
-        <QRCodeCreateStudioForm
-          used={used}
-          limit={hasDynamicQr ? limit : 0}
-          planName={plan.name}
-          isLocked={locked}
-          lockMessage={!hasDynamicQr ? "Dynamic QR is included in QR Pro and higher." : lockMessage}
-          connectProfiles={(profilesResult.data || []) as any}
-        />
+        <AccountBrandColorsProvider colors={brandColors}>
+          <QRCodeCreateStudioForm
+            used={used}
+            limit={hasDynamicQr ? limit : 0}
+            planName={plan.name}
+            isLocked={locked}
+            lockMessage={!hasDynamicQr ? "Dynamic QR is included in QR Pro and higher." : lockMessage}
+            connectProfiles={(profilesResult.data || []) as any}
+          />
+        </AccountBrandColorsProvider>
       </main>
     </DashboardShell>
   );
