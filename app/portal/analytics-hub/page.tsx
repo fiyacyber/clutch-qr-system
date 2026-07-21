@@ -79,7 +79,7 @@ export default async function MarketingAnalyticsHubPage({
     accountAccess: access,
     dependencies: {
       fetchFull: async () => runGuardedDashboardTask({
-        route: "/portal/analytics-hub",
+        route: "/portal/analytics",
         endpoint: "analytics:fetchUnifiedAnalyticsData",
         customerId: customer.id,
         fallback: {
