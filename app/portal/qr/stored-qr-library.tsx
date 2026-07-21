@@ -124,67 +124,72 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
 
   return (
     <section className={styles.shell}>
-      <div className={styles.topBar}>
-        <label className={styles.searchWrap}>
-          <Search size={19} aria-hidden="true" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className={styles.searchInput}
-            placeholder="Search by name or destination URL"
-            aria-label="Search QR codes"
-          />
-        </label>
+      {!showEmpty ? (
+        <div className={styles.topBar}>
+          <label className={styles.searchWrap}>
+            <Search size={19} aria-hidden="true" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className={styles.searchInput}
+              placeholder="Search by name or destination URL"
+              aria-label="Search QR codes"
+            />
+          </label>
 
-        <Link href="/portal/create" className={styles.createButton}>
-          <Plus size={18} aria-hidden="true" />
-          Create QR
-        </Link>
+          <Link href="/portal/create" className={styles.createButton}>
+            <Plus size={18} aria-hidden="true" />
+            Create QR
+          </Link>
 
-        <label className={`${styles.selectWrap} ${styles.statusControl}`}>
-          <span>Status</span>
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as FilterMode)}
-            className={styles.select}
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </select>
-        </label>
+          <label className={`${styles.selectWrap} ${styles.statusControl}`}>
+            <span>Status</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as FilterMode)}
+              className={styles.select}
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
 
-        <label className={`${styles.selectWrap} ${styles.sortControl}`}>
-          <span>Sort</span>
-          <select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className={styles.select}
-          >
-            <option value="newest">Newest</option>
-            <option value="most_scanned">Most scanned</option>
-            <option value="recently_scanned">Recently scanned</option>
-          </select>
-        </label>
+          <label className={`${styles.selectWrap} ${styles.sortControl}`}>
+            <span>Sort</span>
+            <select
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              className={styles.select}
+            >
+              <option value="newest">Newest</option>
+              <option value="most_scanned">Most scanned</option>
+              <option value="recently_scanned">Recently scanned</option>
+            </select>
+          </label>
 
-        <div className={styles.usageBadge}>
-          <div>
-            <span>QR Usage</span>
-            <strong>{formatUsage(usage.used, usage.limit)}</strong>
-            <small>{usage.limit === null ? "Unlimited capacity" : `${usagePercent}% used`}</small>
+          <div className={styles.usageBadge}>
+            <div>
+              <span>QR Usage</span>
+              <strong>{formatUsage(usage.used, usage.limit)}</strong>
+              <small>{usage.limit === null ? "Unlimited capacity" : `${usagePercent}% used`}</small>
+            </div>
+            <span className={styles.usageRing} style={usageRingStyle} aria-hidden="true">
+              <b>{usage.limit === null ? "∞" : `${usage.used}/${usage.limit}`}</b>
+            </span>
           </div>
-          <span className={styles.usageRing} style={usageRingStyle} aria-hidden="true">
-            <b>{usage.limit === null ? "∞" : `${usage.used}/${usage.limit}`}</b>
-          </span>
         </div>
-      </div>
+      ) : null}
 
       {showEmpty ? (
         <article className={styles.emptyState}>
           <h2>Create your first trackable QR code</h2>
           <p>Your QR library is empty. Start by creating your first campaign.</p>
-          <Link href="/portal/create" className={styles.createButton}>Create QR</Link>
+          <Link href="/portal/create" className={styles.createButton}>
+            <Plus size={18} aria-hidden="true" />
+            Create QR
+          </Link>
         </article>
       ) : (
         <div className={styles.grid}>
