@@ -97,7 +97,13 @@ export default async function PortalSettingsPage() {
     });
   }
 
-  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Account holder";
+  const customerFullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim();
+  const accountOwner = String(profile?.contact_name || customerFullName || "").trim() || "Add your name";
+  const businessName = String(profile?.business_name || customer.company_name || "").trim() || "Add your business name";
+  const accountAvatarUrl = typeof user.user_metadata?.account_avatar_url === "string"
+    ? user.user_metadata.account_avatar_url
+    : null;
+  const emailVerified = Boolean(user.email_confirmed_at || (user as any).confirmed_at);
   const hasDynamicQr = hasEntitlement(customer as any, "dynamicQr") || plan.code === "admin";
   const hasHeatmap = hasEntitlement(customer as any, "heatmapAnalytics") || plan.code === "admin";
   const profilePublished = isConnectProfilePublished(profile || null);
@@ -160,10 +166,11 @@ export default async function PortalSettingsPage() {
       }}
     >
       <PortalSettingsCenter
-        accountName={fullName}
+        accountOwner={accountOwner}
         accountEmail={user.email || null}
-        companyName={customer.company_name || "—"}
-        accountType={customer.is_admin ? "Admin" : "Customer"}
+        businessName={businessName}
+        accountAvatarUrl={accountAvatarUrl}
+        emailVerified={emailVerified}
         memberSince={formatDate(customer.created_at)}
         lastLogin={formatDate(user.last_sign_in_at)}
         authenticationStatus={customer.must_change_password ? "Password reset required" : "Password login active"}
