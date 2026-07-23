@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import PremiumColorPicker from "./PremiumColorPicker";
 import { useAccountBrandColors } from "@/components/qr/AccountBrandColorsContext";
 import {
@@ -39,6 +39,8 @@ type QRStylePanelProps = {
   onDownloadSizeChange: (size: DownloadSize) => void;
   logoFile: File | null;
   onLogoFileChange: (file: File | null) => void;
+  logoScale?: number;
+  onLogoScaleChange?: (scale: number) => void;
   qrShape?: QrCanvasShape;
   onQrShapeChange?: (shape: QrCanvasShape) => void;
   bodyPattern?: QrBodyPattern;
@@ -95,6 +97,10 @@ const DOWNLOAD_SIZES: Array<{ value: DownloadSize; label: string; size: string }
   { value: "print", label: "Print", size: "2400 × 2400" },
 ];
 
+const DEFAULT_LOGO_SCALE = 18;
+const MIN_LOGO_SCALE = 8;
+const MAX_LOGO_SCALE = 24;
+
 function ColorControl({
   label,
   value,
@@ -136,6 +142,8 @@ export default function QRStylePanel({
   onDownloadSizeChange,
   logoFile,
   onLogoFileChange,
+  logoScale = DEFAULT_LOGO_SCALE,
+  onLogoScaleChange,
   qrShape = "square",
   onQrShapeChange,
   bodyPattern = dotStyle === "dots" ? "circle" : dotStyle === "rounded" ? "rounded" : "square",
@@ -158,7 +166,9 @@ export default function QRStylePanel({
   onOuterStrokeColorChange,
 }: QRStylePanelProps) {
   const [activeTab, setActiveTab] = useState<DesignTab>("shape");
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const brandColors = useAccountBrandColors();
+  const safeLogoScale = Math.min(MAX_LOGO_SCALE, Math.max(MIN_LOGO_SCALE, Math.round(logoScale)));
 
   function selectBodyPattern(pattern: QrBodyPattern) {
     onBodyPatternChange?.(pattern);
@@ -182,6 +192,19 @@ export default function QRStylePanel({
     if (!SAFE_CIRCLE_BODY_PATTERNS.has(bodyPattern)) selectBodyPattern("square");
     if (!SAFE_CIRCLE_EYE_FRAMES.has(eyeFrameShape)) selectEyeFrame("square");
     if (!SAFE_CIRCLE_EYE_CENTERS.has(eyeCenterShape)) onEyeCenterShapeChange?.("square");
+  }
+
+  function chooseLogo() {
+    if (logoInputRef.current) {
+      logoInputRef.current.value = "";
+      logoInputRef.current.click();
+    }
+  }
+
+  function removeLogo() {
+    if (logoInputRef.current) logoInputRef.current.value = "";
+    onLogoFileChange(null);
+    onLogoScaleChange?.(DEFAULT_LOGO_SCALE);
   }
 
   const designIssues = useMemo(() => {
@@ -300,10 +323,7 @@ export default function QRStylePanel({
       {activeTab === "eyes" ? (
         <section className={styles.tabPanel} role="tabpanel">
           <div className={styles.controlBlock}>
-            <div className={styles.sectionHeading}>
-              <h3>Eye frame</h3>
-              <span>The outer finder shape.</span>
-            </div>
+            <div className={styles.sectionHeading}><h3>Eye frame</h3><span>The outer finder shape.</span></div>
             <div className={styles.eyeGrid} role="radiogroup" aria-label="Eye frame shape">
               {EYE_FRAMES.map((option) => {
                 const disabled = qrShape === "circle" && !SAFE_CIRCLE_EYE_FRAMES.has(option.value);
@@ -326,10 +346,7 @@ export default function QRStylePanel({
           </div>
 
           <div className={styles.controlBlock}>
-            <div className={styles.sectionHeading}>
-              <h3>Eye center</h3>
-              <span>The solid center of each finder.</span>
-            </div>
+            <div className={styles.sectionHeading}><h3>Eye center</h3><span>The solid center of each finder.</span></div>
             <div className={styles.eyeGrid} role="radiogroup" aria-label="Eye center shape">
               {EYE_CENTERS.map((option) => {
                 const disabled = qrShape === "circle" && !SAFE_CIRCLE_EYE_CENTERS.has(option.value);
@@ -356,10 +373,7 @@ export default function QRStylePanel({
       {activeTab === "colors" ? (
         <section className={styles.tabPanel} role="tabpanel">
           <div className={styles.controlBlock}>
-            <div className={styles.sectionHeading}>
-              <h3>Body color</h3>
-              <span>Dark modules on a light background are required for print reliability.</span>
-            </div>
+            <div className={styles.sectionHeading}><h3>Body color</h3><span>Dark modules on a light background are required for print reliability.</span></div>
             <div className={styles.modeGrid} role="radiogroup" aria-label="QR color mode">
               {(["solid", "linear", "radial"] as QrColorMode[]).map((mode) => (
                 <button
@@ -377,25 +391,17 @@ export default function QRStylePanel({
 
           <div className={styles.colorGrid}>
             <ColorControl label="Body color" value={foregroundColor} onChange={onForegroundColorChange} presets={brandColors} />
-            {colorMode !== "solid" && onGradientEndColorChange ? (
-              <ColorControl label="Gradient end" value={gradientEndColor} onChange={onGradientEndColorChange} presets={brandColors} />
-            ) : null}
+            {colorMode !== "solid" && onGradientEndColorChange ? <ColorControl label="Gradient end" value={gradientEndColor} onChange={onGradientEndColorChange} presets={brandColors} /> : null}
             <ColorControl label="Eye frame" value={eyeFrameColor} onChange={onEyeFrameColorChange || onForegroundColorChange} presets={brandColors} />
             <ColorControl label="Eye center" value={eyeCenterColor} onChange={onEyeCenterColorChange || onForegroundColorChange} presets={brandColors} />
             <ColorControl label="Background" value={backgroundColor} onChange={onBackgroundColorChange} presets={brandColors} />
           </div>
 
           <label className={styles.strokeToggle}>
-            <input
-              type="checkbox"
-              checked={outerStrokeEnabled}
-              onChange={(event) => onOuterStrokeEnabledChange?.(event.target.checked)}
-            />
+            <input type="checkbox" checked={outerStrokeEnabled} onChange={(event) => onOuterStrokeEnabledChange?.(event.target.checked)} />
             <span><strong>Outer stroke</strong><small>Add an outline around the complete QR artwork.</small></span>
           </label>
-          {outerStrokeEnabled && onOuterStrokeColorChange ? (
-            <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} presets={brandColors} />
-          ) : null}
+          {outerStrokeEnabled && onOuterStrokeColorChange ? <ColorControl label="Stroke color" value={outerStrokeColor} onChange={onOuterStrokeColorChange} presets={brandColors} /> : null}
         </section>
       ) : null}
 
@@ -404,25 +410,55 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Logo</h3>
-              <span>Optional. A simple mark scans more reliably.</span>
+              <span>Transparent PNG and SVG backgrounds are preserved. Keep the final logo simple and test-scan it.</span>
             </div>
-            <label className={styles.uploadBox}>
-              <span className={styles.uploadLabel}>{logoFile ? "Logo selected" : "+ Add logo"}</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                onChange={(event) => onLogoFileChange(event.currentTarget.files?.[0] || null)}
-                className={styles.fileInput}
-              />
-              <span className={styles.uploadHint}>PNG, JPG, WEBP, or SVG up to 1 MB</span>
-            </label>
+
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={(event) => onLogoFileChange(event.currentTarget.files?.[0] || null)}
+              className={styles.fileInput}
+            />
+
+            <div className={styles.uploadBox}>
+              <button type="button" className={styles.uploadLabel} onClick={chooseLogo}>
+                {logoFile ? "Replace logo" : "+ Add logo"}
+              </button>
+              <span className={styles.uploadHint}>
+                {logoFile ? logoFile.name : "PNG, JPG, WEBP, or SVG up to 1 MB"}
+              </span>
+            </div>
+
+            {logoFile ? (
+              <div style={{ display: "grid", gap: 14, marginTop: 14 }}>
+                <label style={{ display: "grid", gap: 8 }}>
+                  <span style={{ display: "flex", justifyContent: "space-between", gap: 12, fontWeight: 800 }}>
+                    <span>Logo size</span>
+                    <output>{safeLogoScale}%</output>
+                  </span>
+                  <input
+                    type="range"
+                    min={MIN_LOGO_SCALE}
+                    max={MAX_LOGO_SCALE}
+                    step={1}
+                    value={safeLogoScale}
+                    onChange={(event) => onLogoScaleChange?.(Number(event.target.value))}
+                    aria-label="Logo size"
+                  />
+                  <small>Resize the logo from {MIN_LOGO_SCALE}% to {MAX_LOGO_SCALE}% of the encoded QR width. Larger logos require more scan testing.</small>
+                </label>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                  <button type="button" className={styles.optionButton} onClick={chooseLogo}>Replace logo</button>
+                  <button type="button" className={styles.optionButton} onClick={removeLogo}>Remove logo</button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.controlBlock}>
-            <div className={styles.sectionHeading}>
-              <h3>Export size</h3>
-              <span>Other formats remain available after creation.</span>
-            </div>
+            <div className={styles.sectionHeading}><h3>Export size</h3><span>Other formats remain available after creation.</span></div>
             <div className={styles.sizeGrid}>
               {DOWNLOAD_SIZES.map((size) => (
                 <button
@@ -444,7 +480,7 @@ export default function QRStylePanel({
         {designIssues.length
           ? designIssues[0]
           : logoFile
-            ? "Logo designs require a final-size test scan before production."
+            ? `Logo enabled at ${safeLogoScale}%. Test-scan the final exported file at its actual print size.`
             : "The design passes structural guardrails. Test-scan the exported file at its actual print size before production."}
       </p>
     </div>
