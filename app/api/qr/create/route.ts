@@ -28,6 +28,9 @@ import {
 
 const QR_LOGO_BUCKET = "qr-logos";
 const MAX_LOGO_SIZE = 1024 * 1024;
+const MIN_LOGO_SCALE = 8;
+const MAX_LOGO_SCALE = 24;
+const DEFAULT_LOGO_SCALE = 18;
 const ALLOWED_LOGO_TYPES = new Map([
   ["image/png", "png"],
   ["image/jpeg", "jpg"],
@@ -44,6 +47,12 @@ function pickColor(value: FormDataEntryValue | null, fallback: string) {
   return isHexColor(color) ? color.toLowerCase() : fallback;
 }
 
+function pickLogoScale(value: FormDataEntryValue | null) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_LOGO_SCALE;
+  return Math.min(MAX_LOGO_SCALE, Math.max(MIN_LOGO_SCALE, Math.round(parsed)));
+}
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const name = String(form.get("name") || "").trim();
@@ -54,6 +63,7 @@ export async function POST(req: NextRequest) {
   const eyeFrameColor = pickColor(form.get("eye_frame_color"), foregroundColor);
   const eyeCenterColor = pickColor(form.get("eye_center_color"), foregroundColor);
   const outerStrokeColor = pickColor(form.get("outer_stroke_color"), foregroundColor);
+  const logoScale = pickLogoScale(form.get("logo_scale"));
 
   const requestedDotStyle = String(form.get("dot_style") || "square");
   const dotStyle = DOT_STYLES.has(requestedDotStyle) ? requestedDotStyle : "square";
@@ -209,6 +219,8 @@ export async function POST(req: NextRequest) {
       background_color: backgroundColor,
       outer_stroke_enabled: outerStrokeEnabled,
       outer_stroke_color: outerStrokeColor,
+      logo_scale: logoScale,
+      logo_transparency_preserved: true,
     },
     download_size: downloadSize,
     print_piece: printPiece || null,
