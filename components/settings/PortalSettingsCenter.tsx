@@ -253,6 +253,7 @@ export default function PortalSettingsCenter({
             role="tabpanel"
             aria-labelledby={`settings-tab-${activeSection}`}
             className={styles.contentPanel}
+            style={activeSection === "account" ? { minHeight: 0 } : undefined}
           >
             <header className={styles.panelHeader}>
               <div className={styles.panelTitleGroup}>
@@ -261,7 +262,7 @@ export default function PortalSettingsCenter({
                 <p className={styles.panelDescription}>{activeDefinition.panelDescription}</p>
               </div>
               {activeSection === "account" ? (
-                <Link href={profile.guidedSetupHref} className={styles.panelHeaderAction}>Edit details</Link>
+                <Link href={profile.guidedSetupHref} className={styles.secondaryButton}>Edit details</Link>
               ) : (
                 <span className={styles.panelIcon}>
                   <ActiveIcon size={20} aria-hidden="true" />
