@@ -108,6 +108,7 @@ export default function QRCodeCreateStudioForm({
   const [outerStrokeColor, setOuterStrokeColor] = useState(DEFAULT_QR_DESIGN.outerStrokeColor);
   const [downloadSize, setDownloadSize] = useState<DownloadSize>("print");
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoScale, setLogoScale] = useState(18);
   const [previewLogoUrl, setPreviewLogoUrl] = useState<string | undefined>();
 
   const [usePrintTracking, setUsePrintTracking] = useState(true);
@@ -296,6 +297,7 @@ export default function QRCodeCreateStudioForm({
       formData.append("outer_stroke_enabled", String(outerStrokeEnabled));
       formData.append("outer_stroke_color", outerStrokeColor);
       formData.append("download_size", downloadSize);
+      formData.append("logo_scale", String(logoScale));
       formData.append("print_piece", printPiece.trim());
       formData.append("tracking_enabled", String(usePrintTracking));
       formData.append("campaign_name", (campaignName || name).trim());
@@ -364,6 +366,7 @@ export default function QRCodeCreateStudioForm({
               dotStyle={dotStyle}
               cornerStyle={cornerStyle}
               logoUrl={previewLogoUrl}
+              logoScale={logoScale}
               used={used}
               limit={limit}
               isLocked={isLocked}
@@ -464,6 +467,8 @@ export default function QRCodeCreateStudioForm({
                 onDownloadSizeChange={setDownloadSize}
                 logoFile={logoFile}
                 onLogoFileChange={setLogoFile}
+                logoScale={logoScale}
+                onLogoScaleChange={setLogoScale}
                 qrShape={qrShape}
                 onQrShapeChange={setQrShape}
                 bodyPattern={bodyPattern}
@@ -516,6 +521,7 @@ export default function QRCodeCreateStudioForm({
                 <article><span>Destination</span><strong>{destinationSummary}</strong></article>
                 <article><span>Print Piece</span><strong>{printPieceLabel}</strong></article>
                 <article><span>Design</span><strong>{qrShape === "circle" ? "Circle" : "Square"} · {bodyPattern.replace(/-/g, " ")} · {eyeFrameShape} eyes</strong></article>
+                <article><span>Logo</span><strong>{logoFile ? `${logoScale}% scale` : "None"}</strong></article>
                 <article><span>Tracking</span><strong>{usePrintTracking ? trackingSummary : "Disabled"}</strong></article>
                 <article><span>Export Size</span><strong>{downloadSize === "print" ? "2400 × 2400" : downloadSize === "card" ? "600 × 600" : "512 × 512"}</strong></article>
               </div>
