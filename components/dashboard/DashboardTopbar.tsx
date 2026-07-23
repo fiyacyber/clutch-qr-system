@@ -29,6 +29,7 @@ const sectionLabels = {
 
 const ACCOUNT_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 const MAX_ACCOUNT_AVATAR_SIZE = 2 * 1024 * 1024;
+const ACCOUNT_AVATAR_EVENT = "clutch-account-avatar-updated";
 
 export default function DashboardTopbar() {
   const pathname = usePathname();
@@ -58,6 +59,18 @@ export default function DashboardTopbar() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleAvatarUpdate = (event: Event) => {
+      const avatarEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
+      if (avatarEvent.detail && "avatarUrl" in avatarEvent.detail) {
+        setAvatarUrl(avatarEvent.detail.avatarUrl || null);
+      }
+    };
+
+    window.addEventListener(ACCOUNT_AVATAR_EVENT, handleAvatarUpdate);
+    return () => window.removeEventListener(ACCOUNT_AVATAR_EVENT, handleAvatarUpdate);
   }, []);
 
   useEffect(() => {
@@ -127,6 +140,7 @@ export default function DashboardTopbar() {
       }
 
       setAvatarUrl(payload.avatar_url);
+      window.dispatchEvent(new CustomEvent(ACCOUNT_AVATAR_EVENT, { detail: { avatarUrl: payload.avatar_url } }));
     } catch (error) {
       setAvatarError(error instanceof Error ? error.message : "Profile photo upload failed.");
     } finally {
