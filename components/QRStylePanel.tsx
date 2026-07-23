@@ -100,6 +100,114 @@ const DOWNLOAD_SIZES: Array<{ value: DownloadSize; label: string; size: string }
 const DEFAULT_LOGO_SCALE = 18;
 const MIN_LOGO_SCALE = 8;
 const MAX_LOGO_SCALE = 24;
+const LOGO_ALPHA_THRESHOLD = 8;
+const MAX_OPTIMIZED_LOGO_DIMENSION = 1200;
+
+function loadLogoImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Logo image could not be loaded."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Logo image could not be optimized."));
+    }, "image/png");
+  });
+}
+
+async function trimTransparentLogo(file: File) {
+  if (file.type !== "image/png" && file.type !== "image/webp") {
+    return { file, trimmed: false };
+  }
+
+  const image = await loadLogoImage(file);
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = image.naturalWidth;
+  sourceCanvas.height = image.naturalHeight;
+  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  if (!sourceContext || !sourceCanvas.width || !sourceCanvas.height) {
+    return { file, trimmed: false };
+  }
+
+  sourceContext.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
+
+  let minX = sourceCanvas.width;
+  let minY = sourceCanvas.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < sourceCanvas.height; y += 1) {
+    for (let x = 0; x < sourceCanvas.width; x += 1) {
+      const alpha = pixels[(y * sourceCanvas.width + x) * 4 + 3];
+      if (alpha <= LOGO_ALPHA_THRESHOLD) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return { file, trimmed: false };
+
+  const contentWidth = maxX - minX + 1;
+  const contentHeight = maxY - minY + 1;
+  const padding = Math.max(2, Math.round(Math.max(contentWidth, contentHeight) * 0.02));
+  const sourceX = Math.max(0, minX - padding);
+  const sourceY = Math.max(0, minY - padding);
+  const sourceWidth = Math.min(sourceCanvas.width - sourceX, contentWidth + padding * 2);
+  const sourceHeight = Math.min(sourceCanvas.height - sourceY, contentHeight + padding * 2);
+
+  const removesMeaningfulPadding =
+    sourceWidth < sourceCanvas.width * 0.96 || sourceHeight < sourceCanvas.height * 0.96;
+  if (!removesMeaningfulPadding) return { file, trimmed: false };
+
+  const scale = Math.min(1, MAX_OPTIMIZED_LOGO_DIMENSION / Math.max(sourceWidth, sourceHeight));
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  outputCanvas.height = Math.max(1, Math.round(sourceHeight * scale));
+  const outputContext = outputCanvas.getContext("2d");
+  if (!outputContext) return { file, trimmed: false };
+
+  outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+  outputContext.imageSmoothingEnabled = true;
+  outputContext.imageSmoothingQuality = "high";
+  outputContext.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    outputCanvas.width,
+    outputCanvas.height
+  );
+
+  const blob = await canvasToPngBlob(outputCanvas);
+  const optimizedName = `${file.name.replace(/\.[^.]+$/, "")}.png`;
+  return {
+    file: new File([blob], optimizedName, {
+      type: "image/png",
+      lastModified: file.lastModified,
+    }),
+    trimmed: true,
+  };
+}
 
 function ColorControl({
   label,
@@ -166,7 +274,10 @@ export default function QRStylePanel({
   onOuterStrokeColorChange,
 }: QRStylePanelProps) {
   const [activeTab, setActiveTab] = useState<DesignTab>("shape");
+  const [isPreparingLogo, setIsPreparingLogo] = useState(false);
+  const [logoPreparationMessage, setLogoPreparationMessage] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoSelectionRef = useRef(0);
   const brandColors = useAccountBrandColors();
   const safeLogoScale = Math.min(MAX_LOGO_SCALE, Math.max(MIN_LOGO_SCALE, Math.round(logoScale)));
 
@@ -201,8 +312,43 @@ export default function QRStylePanel({
     }
   }
 
+  async function handleLogoSelection(file: File | null) {
+    const selectionId = logoSelectionRef.current + 1;
+    logoSelectionRef.current = selectionId;
+    setLogoPreparationMessage(null);
+
+    if (!file) {
+      onLogoFileChange(null);
+      return;
+    }
+
+    setIsPreparingLogo(true);
+    try {
+      const result = await trimTransparentLogo(file);
+      if (logoSelectionRef.current !== selectionId) return;
+      onLogoFileChange(result.file);
+      setLogoPreparationMessage(
+        result.trimmed
+          ? "Transparent padding was removed so the visible logo fills the selected size."
+          : file.type === "image/png" || file.type === "image/webp"
+            ? "The visible artwork already fills the image canvas."
+            : null
+      );
+    } catch (error) {
+      console.warn("QR logo auto-fit failed; using the original upload.", error);
+      if (logoSelectionRef.current !== selectionId) return;
+      onLogoFileChange(file);
+      setLogoPreparationMessage("The original logo was used because automatic fitting was unavailable.");
+    } finally {
+      if (logoSelectionRef.current === selectionId) setIsPreparingLogo(false);
+    }
+  }
+
   function removeLogo() {
+    logoSelectionRef.current += 1;
     if (logoInputRef.current) logoInputRef.current.value = "";
+    setIsPreparingLogo(false);
+    setLogoPreparationMessage(null);
     onLogoFileChange(null);
     onLogoScaleChange?.(DEFAULT_LOGO_SCALE);
   }
@@ -410,24 +556,25 @@ export default function QRStylePanel({
           <div className={styles.controlBlock}>
             <div className={styles.sectionHeading}>
               <h3>Logo</h3>
-              <span>Transparent PNG and SVG backgrounds are preserved. Keep the final logo simple and test-scan it.</span>
+              <span>Transparent PNG and WebP padding is fitted automatically. SVG transparency is preserved.</span>
             </div>
 
             <input
               ref={logoInputRef}
               type="file"
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              onChange={(event) => onLogoFileChange(event.currentTarget.files?.[0] || null)}
+              onChange={(event) => void handleLogoSelection(event.currentTarget.files?.[0] || null)}
               className={styles.fileInput}
             />
 
             <div className={styles.uploadBox}>
-              <button type="button" className={styles.uploadLabel} onClick={chooseLogo}>
-                {logoFile ? "Replace logo" : "+ Add logo"}
+              <button type="button" className={styles.uploadLabel} onClick={chooseLogo} disabled={isPreparingLogo}>
+                {isPreparingLogo ? "Fitting logo..." : logoFile ? "Replace logo" : "+ Add logo"}
               </button>
               <span className={styles.uploadHint}>
-                {logoFile ? logoFile.name : "PNG, JPG, WEBP, or SVG up to 1 MB"}
+                {isPreparingLogo ? "Removing unused transparent space" : logoFile ? logoFile.name : "PNG, JPG, WEBP, or SVG up to 1 MB"}
               </span>
+              {logoPreparationMessage ? <small>{logoPreparationMessage}</small> : null}
             </div>
 
             {logoFile ? (
@@ -446,11 +593,11 @@ export default function QRStylePanel({
                     onChange={(event) => onLogoScaleChange?.(Number(event.target.value))}
                     aria-label="Logo size"
                   />
-                  <small>Resize the logo from {MIN_LOGO_SCALE}% to {MAX_LOGO_SCALE}% of the encoded QR width. Larger logos require more scan testing.</small>
+                  <small>Size is based on the visible, fitted artwork rather than unused transparent canvas space. Larger logos require more scan testing.</small>
                 </label>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-                  <button type="button" className={styles.optionButton} onClick={chooseLogo}>Replace logo</button>
+                  <button type="button" className={styles.optionButton} onClick={chooseLogo} disabled={isPreparingLogo}>Replace logo</button>
                   <button type="button" className={styles.optionButton} onClick={removeLogo}>Remove logo</button>
                 </div>
               </div>
