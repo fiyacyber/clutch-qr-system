@@ -40,6 +40,7 @@ type QRLivePreviewProps = {
   dotStyle: DotStyle;
   cornerStyle: CornerStyle;
   logoUrl?: string;
+  logoScale?: number;
   used: number;
   limit: number;
   name: string;
@@ -84,6 +85,7 @@ export default function QRLivePreview({
   dotStyle,
   cornerStyle,
   logoUrl,
+  logoScale = 18,
   used,
   limit,
   name,
@@ -138,9 +140,7 @@ export default function QRLivePreview({
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       {error ? <div className={styles.errorMessage}>{error}</div> : null}
-      {canCreate && designIssues.length ? (
-        <div className={styles.errorMessage}>{designIssues[0]}</div>
-      ) : null}
+      {canCreate && designIssues.length ? <div className={styles.errorMessage}>{designIssues[0]}</div> : null}
 
       <section className={styles.heroPreviewCard}>
         <div className={styles.previewHeader}>
@@ -155,11 +155,7 @@ export default function QRLivePreview({
           <div className={styles.previewGlow} aria-hidden="true" />
           <div
             className={styles.previewCanvas}
-            style={{
-              width: "min(100%, 280px)",
-              marginInline: "auto",
-              justifySelf: "center",
-            }}
+            style={{ width: "min(100%, 280px)", marginInline: "auto", justifySelf: "center" }}
           >
             <StyledQRPreview
               url={finalUrl || qrUrl("preview")}
@@ -168,6 +164,7 @@ export default function QRLivePreview({
               dotStyle={dotStyle}
               cornerStyle={cornerStyle}
               logoUrl={logoUrl}
+              logoScale={logoScale}
               showExportMenu={false}
               qrShape={qrShape}
               bodyPattern={resolvedBodyPattern}
@@ -184,14 +181,8 @@ export default function QRLivePreview({
         </div>
 
         <div className={styles.previewTitleRow}>
-          <div>
-            <p className={styles.metaLabel}>QR Name</p>
-            <p className={styles.campaignName}>{name || "Untitled QR"}</p>
-          </div>
-          <div>
-            <p className={styles.metaLabel}>Print Piece</p>
-            <p className={styles.metaValue}>{displayedPrintPiece || "Not specified"}</p>
-          </div>
+          <div><p className={styles.metaLabel}>QR Name</p><p className={styles.campaignName}>{name || "Untitled QR"}</p></div>
+          <div><p className={styles.metaLabel}>Print Piece</p><p className={styles.metaValue}>{displayedPrintPiece || "Not specified"}</p></div>
         </div>
 
         <div className={styles.previewStrip}>
