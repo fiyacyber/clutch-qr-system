@@ -20,6 +20,7 @@ type StyledQRPreviewProps = {
   dotStyle?: DotStyle;
   cornerStyle?: CornerStyle;
   logoUrl?: string | null;
+  logoScale?: number;
   showExportMenu?: boolean;
   embedded?: boolean;
   qrShape?: QrCanvasShape;
@@ -53,6 +54,7 @@ export default function StyledQRPreview({
   dotStyle = "square",
   cornerStyle = "square",
   logoUrl,
+  logoScale = 18,
   showExportMenu = true,
   embedded = false,
   qrShape = "square",
@@ -106,6 +108,7 @@ export default function StyledQRPreview({
           outerStrokeEnabled={outerStrokeEnabled}
           outerStrokeColor={outerStrokeColor}
           logoUrl={logoUrl}
+          logoScale={logoScale}
         />
       </div>
       {showExportMenu && exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
