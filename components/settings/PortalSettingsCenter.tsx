@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
+import AccountDetailsPanel from "@/components/settings/AccountDetailsPanel";
 import BrandColorsSettingsPanel from "@/components/settings/BrandColorsSettingsPanel";
 import {
   Bell,
-  Building2,
   ChevronRight,
   CircleHelp,
   CreditCard,
@@ -48,10 +48,11 @@ type SettingsSectionDefinition = {
 };
 
 type PortalSettingsCenterProps = {
-  accountName: string;
+  accountOwner: string;
   accountEmail: string | null;
-  companyName: string;
-  accountType: string;
+  businessName: string;
+  accountAvatarUrl: string | null;
+  emailVerified: boolean;
   memberSince: string;
   lastLogin: string;
   authenticationStatus: string;
@@ -90,10 +91,10 @@ const settingsSections: SettingsSectionDefinition[] = [
   {
     id: "account",
     label: "Account",
-    description: "Identity and company",
+    description: "Personal and business details",
     eyebrow: "Account",
-    title: "Account overview",
-    panelDescription: "Review the customer identity and company details associated with this workspace.",
+    title: "Account details",
+    panelDescription: "Manage the personal and business information used across your Clutch account.",
     icon: Settings,
   },
   {
@@ -153,10 +154,11 @@ const settingsSections: SettingsSectionDefinition[] = [
 ];
 
 export default function PortalSettingsCenter({
-  accountName,
+  accountOwner,
   accountEmail,
-  companyName,
-  accountType,
+  businessName,
+  accountAvatarUrl,
+  emailVerified,
   memberSince,
   lastLogin,
   authenticationStatus,
@@ -258,39 +260,26 @@ export default function PortalSettingsCenter({
                 <h2>{activeDefinition.title}</h2>
                 <p className={styles.panelDescription}>{activeDefinition.panelDescription}</p>
               </div>
-              <span className={styles.panelIcon}>
-                <ActiveIcon size={20} aria-hidden="true" />
-              </span>
+              {activeSection === "account" ? (
+                <Link href={profile.guidedSetupHref} className={styles.panelHeaderAction}>Edit details</Link>
+              ) : (
+                <span className={styles.panelIcon}>
+                  <ActiveIcon size={20} aria-hidden="true" />
+                </span>
+              )}
             </header>
 
             {activeSection === "account" ? (
               <div className={styles.sectionBody}>
-                <div className={styles.infoGrid}>
-                  <article className={styles.infoCard}>
-                    <span><Building2 size={14} aria-hidden="true" /> Account name</span>
-                    <strong>{accountName || "—"}</strong>
-                  </article>
-                  <article className={styles.infoCard}>
-                    <span><Mail size={14} aria-hidden="true" /> Email</span>
-                    <strong>{accountEmail || "—"}</strong>
-                  </article>
-                  <article className={styles.infoCard}>
-                    <span>Company name</span>
-                    <strong>{companyName || "—"}</strong>
-                  </article>
-                  <article className={styles.infoCard}>
-                    <span>Account type</span>
-                    <strong>{accountType}</strong>
-                  </article>
-                  <article className={styles.infoCard}>
-                    <span>Member since</span>
-                    <strong>{memberSince}</strong>
-                  </article>
-                  <article className={styles.infoCard}>
-                    <span>Last login</span>
-                    <strong>{lastLogin}</strong>
-                  </article>
-                </div>
+                <AccountDetailsPanel
+                  accountOwner={accountOwner}
+                  accountEmail={accountEmail}
+                  businessName={businessName}
+                  memberSince={memberSince}
+                  emailVerified={emailVerified}
+                  avatarUrl={accountAvatarUrl}
+                  guidedSetupHref={profile.guidedSetupHref}
+                />
               </div>
             ) : null}
 
