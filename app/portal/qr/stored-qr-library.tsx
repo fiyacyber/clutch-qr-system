@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { BarChart3, Copy, Download, Ellipsis, ExternalLink, Pencil } from "lucide-react";
+import { useMemo, useState, type CSSProperties } from "react";
+import { BarChart3, Copy, Download, Ellipsis, ExternalLink, Pencil, Plus, Search } from "lucide-react";
 import { qrServerImageUrl, qrUrl } from "@/lib/qr";
 import styles from "./stored-qr-library.module.css";
 
@@ -90,6 +90,10 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
   }, [items, search, statusFilter, sortMode]);
 
   const showEmpty = items.length === 0;
+  const usagePercent = usage.limit && usage.limit > 0
+    ? Math.min(100, Math.round((usage.used / usage.limit) * 100))
+    : 0;
+  const usageRingStyle = { "--usage-progress": `${usagePercent}%` } as CSSProperties;
 
   async function copyText(value: string) {
     if (navigator.clipboard?.writeText) {
@@ -120,24 +124,26 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
 
   return (
     <section className={styles.shell}>
-      <div className={styles.topBar}>
-        <div className={styles.searchWrap}>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className={styles.searchInput}
-            placeholder="Search by name or destination URL"
-            aria-label="Search QR codes"
-          />
-        </div>
+      {!showEmpty ? (
+        <div className={styles.topBar}>
+          <label className={styles.searchWrap}>
+            <Search size={19} aria-hidden="true" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className={styles.searchInput}
+              placeholder="Search by name or destination URL"
+              aria-label="Search QR codes"
+            />
+          </label>
 
-        <div className={styles.controlRow}>
-          <Link href="/portal/create" className="btn primary">
+          <Link href="/portal/create" className={styles.createButton}>
+            <Plus size={18} aria-hidden="true" />
             Create QR
           </Link>
 
-          <label className={styles.selectWrap}>
+          <label className={`${styles.selectWrap} ${styles.statusControl}`}>
             <span>Status</span>
             <select
               value={statusFilter}
@@ -150,7 +156,7 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
             </select>
           </label>
 
-          <label className={styles.selectWrap}>
+          <label className={`${styles.selectWrap} ${styles.sortControl}`}>
             <span>Sort</span>
             <select
               value={sortMode}
@@ -164,17 +170,26 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
           </label>
 
           <div className={styles.usageBadge}>
-            <span>QR Usage</span>
-            <strong>{formatUsage(usage.used, usage.limit)}</strong>
+            <div>
+              <span>QR Usage</span>
+              <strong>{formatUsage(usage.used, usage.limit)}</strong>
+              <small>{usage.limit === null ? "Unlimited capacity" : `${usagePercent}% used`}</small>
+            </div>
+            <span className={styles.usageRing} style={usageRingStyle} aria-hidden="true">
+              <b>{usage.limit === null ? "∞" : `${usage.used}/${usage.limit}`}</b>
+            </span>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {showEmpty ? (
         <article className={styles.emptyState}>
           <h2>Create your first trackable QR code</h2>
           <p>Your QR library is empty. Start by creating your first campaign.</p>
-          <Link href="/portal/create" className="btn primary">Create QR</Link>
+          <Link href="/portal/create" className={styles.createButton}>
+            <Plus size={18} aria-hidden="true" />
+            Create QR
+          </Link>
         </article>
       ) : (
         <div className={styles.grid}>
@@ -206,14 +221,14 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
                 <span className={styles.cardHeaderRow}>
                   <strong className={styles.name}>{item.name}</strong>
                   <span className={`${styles.status} ${item.status === "Active" && item.accessState !== "expired_included_access" ? styles.active : styles.archived}`}>
-                    {item.accessState === "expired_included_access" ? "Included access expired" : item.status}
+                    {item.accessState === "expired_included_access" ? "Access expired" : item.status}
                   </span>
                 </span>
-                <span className={styles.url}>{destination}</span>
+                <span className={styles.url} title={destination}>{destination}</span>
                 <span className={styles.metrics}>
                   {item.canViewAnalytics ? <span><b>{item.scanCount}</b> scans</span> : null}
-                  {item.canViewAnalytics ? <span>Last scanned {formatDate(item.lastScannedAt)}</span> : null}
-                  {item.accessState === "expired_included_access" ? <span>Access expired {formatDate(item.accessExpiresAt)}</span> : null}
+                  {item.canViewAnalytics ? <span>Last scanned <b>{formatDate(item.lastScannedAt)}</b></span> : null}
+                  {item.accessState === "expired_included_access" ? <span>Expired <b>{formatDate(item.accessExpiresAt)}</b></span> : null}
                 </span>
               </span>
             </>;
@@ -225,75 +240,87 @@ export default function StoredQrLibrary({ items, usage }: StoredQrLibraryProps) 
                 </Link> : <div className={styles.cardTapTarget}>{cardContent}</div>}
 
                 <div className={styles.actionsRow}>
-                  {item.canViewAnalytics ? <Link className={styles.actionBtn} href={analyticsHref}>
-                    <BarChart3 size={16} />
-                    <span>Analytics</span>
-                  </Link> : null}
+                  <div className={styles.primaryActions}>
+                    {item.canViewAnalytics ? <Link className={`${styles.actionBtn} ${styles.analyticsAction}`} href={analyticsHref}>
+                      <BarChart3 size={16} aria-hidden="true" />
+                      <span>Analytics</span>
+                    </Link> : null}
 
-                  {item.canManage ? <Link className={styles.actionBtn} href={editHref}>
-                    <Pencil size={16} />
-                    <span>Edit QR</span>
-                  </Link> : null}
+                    {item.canManage ? <Link className={styles.actionBtn} href={editHref}>
+                      <Pencil size={16} aria-hidden="true" />
+                      <span>Edit QR</span>
+                    </Link> : null}
+                  </div>
 
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
-                    onClick={async () => {
-                      await copyText(publicLink);
-                      notify("QR link copied.");
-                    }}
-                  >
-                    <Copy size={16} />
-                    <span>Copy Link</span>
-                  </button>
-
-                  <a className={styles.actionBtn} href={downloadLink} target="_blank" rel="noreferrer">
-                    <Download size={16} />
-                    <span>Download</span>
-                  </a>
-
-                  <div className={styles.menuWrap}>
+                  <div className={styles.utilityActions}>
                     <button
                       type="button"
                       className={styles.iconBtn}
-                      aria-haspopup="menu"
-                      aria-expanded={openMenuFor === item.id}
-                      onClick={() => setOpenMenuFor((current) => (current === item.id ? null : item.id))}
+                      aria-label={`Copy public link for ${item.name}`}
+                      title="Copy public link"
+                      onClick={async () => {
+                        await copyText(publicLink);
+                        notify("QR link copied.");
+                      }}
                     >
-                      <Ellipsis size={18} />
+                      <Copy size={17} aria-hidden="true" />
                     </button>
-                    {openMenuFor === item.id ? (
-                      <div className={styles.menu} role="menu">
-                        {item.canViewAnalytics ? <Link role="menuitem" href={analyticsHref} onClick={closeMenu}>
-                          <BarChart3 size={15} />
-                          <span>View analytics</span>
-                        </Link> : null}
-                        {item.canManage ? <Link role="menuitem" href={editHref} onClick={closeMenu}>
-                          <Pencil size={15} />
-                          <span>Edit QR</span>
-                        </Link> : null}
-                        <button
-                          role="menuitem"
-                          type="button"
-                          onClick={async () => {
-                            await copyText(publicLink);
-                            notify("QR link copied.");
-                            closeMenu();
-                          }}
-                        >
-                          <Copy size={15} />
-                          <span>Copy public link</span>
-                        </button>
-                        <a role="menuitem" href={downloadLink} target="_blank" rel="noreferrer" onClick={closeMenu}>
-                          <Download size={15} />
-                          <span>Download QR</span>
-                        </a>
-                        <a role="menuitem" href={publicLink} target="_blank" rel="noreferrer" onClick={closeMenu}>
-                          <ExternalLink size={15} />
-                          <span>Open redirect link</span>
-                        </a>
-                      </div>
-                    ) : null}
+
+                    <a
+                      className={styles.iconBtn}
+                      href={downloadLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Download ${item.name} QR code`}
+                      title="Download QR"
+                    >
+                      <Download size={17} aria-hidden="true" />
+                    </a>
+
+                    <div className={styles.menuWrap}>
+                      <button
+                        type="button"
+                        className={styles.iconBtn}
+                        aria-label={`More actions for ${item.name}`}
+                        aria-haspopup="menu"
+                        aria-expanded={openMenuFor === item.id}
+                        onClick={() => setOpenMenuFor((current) => (current === item.id ? null : item.id))}
+                      >
+                        <Ellipsis size={18} aria-hidden="true" />
+                      </button>
+                      {openMenuFor === item.id ? (
+                        <div className={styles.menu} role="menu">
+                          {item.canViewAnalytics ? <Link role="menuitem" href={analyticsHref} onClick={closeMenu}>
+                            <BarChart3 size={15} aria-hidden="true" />
+                            <span>View analytics</span>
+                          </Link> : null}
+                          {item.canManage ? <Link role="menuitem" href={editHref} onClick={closeMenu}>
+                            <Pencil size={15} aria-hidden="true" />
+                            <span>Edit QR</span>
+                          </Link> : null}
+                          <button
+                            role="menuitem"
+                            type="button"
+                            onClick={async () => {
+                              await copyText(publicLink);
+                              notify("QR link copied.");
+                              closeMenu();
+                            }}
+                          >
+                            <Copy size={15} aria-hidden="true" />
+                            <span>Copy public link</span>
+                          </button>
+                          <a role="menuitem" href={downloadLink} target="_blank" rel="noreferrer" onClick={closeMenu}>
+                            <Download size={15} aria-hidden="true" />
+                            <span>Download QR</span>
+                          </a>
+                          <a role="menuitem" href={publicLink} target="_blank" rel="noreferrer" onClick={closeMenu}>
+                            <ExternalLink size={15} aria-hidden="true" />
+                            <span>Open redirect link</span>
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </article>

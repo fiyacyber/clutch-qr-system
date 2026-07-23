@@ -1,0 +1,325 @@
+.panel {
+  display: grid;
+  gap: 12px;
+}
+
+.identityCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #dfe7ef;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(255, 166, 101, 0.17), transparent 32%),
+    linear-gradient(145deg, #f8fafc 0%, #fff 100%);
+  box-shadow: 0 10px 24px rgba(11, 31, 53, 0.055);
+}
+
+.avatarButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 74px;
+  padding: 4px;
+  border: 2px solid #ffa665;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(255, 166, 101, 0.12), 0 10px 24px rgba(11, 31, 53, 0.12);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.avatarButton:hover:not(:disabled),
+.avatarButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: #ff7a1a;
+  box-shadow: 0 0 0 6px rgba(255, 166, 101, 0.18), 0 13px 28px rgba(11, 31, 53, 0.15);
+  transform: translateY(-1px);
+}
+
+.avatarButton:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.avatarCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #eaf0f7;
+  color: #384862;
+}
+
+.avatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarInitials {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.avatarAction {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #ff7a1a;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(11, 31, 53, 0.18);
+}
+
+.avatarSpinner {
+  animation: account-avatar-spin 850ms linear infinite;
+}
+
+.fileInput {
+  display: none;
+}
+
+.identityCopy {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #718096;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.identityCopy h3 {
+  margin: 0;
+  color: #0b1f35;
+  font-family: var(--font-exo2), Arial, sans-serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.45rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.identityCopy p {
+  margin: 6px 0 0;
+  color: #718096;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.changePhotoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #d7e1eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #384862;
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.changePhotoButton:hover:not(:disabled),
+.changePhotoButton:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: #ffa665;
+  background: #fff7f1;
+}
+
+.changePhotoButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.statusMessage {
+  margin: -2px 2px 0;
+  color: #18794e;
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.statusMessageError {
+  color: #b42318;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.55fr);
+  gap: 10px;
+}
+
+.detailCard,
+.businessCard {
+  min-width: 0;
+  padding: 14px 15px;
+  border: 1px solid #e2e9f1;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #f8fafc 0%, #fff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.detailLabel,
+.businessLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #718096;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.detailValueRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.detailValueRow strong,
+.businessCopy strong {
+  color: #0b1f35;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid rgba(24, 121, 78, 0.2);
+  border-radius: 999px;
+  background: rgba(24, 121, 78, 0.08);
+  color: #18794e;
+  font-size: 0.61rem;
+  font-weight: 900;
+}
+
+.businessCard {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(255, 166, 101, 0.15), transparent 30%),
+    linear-gradient(145deg, #fff9f5 0%, #fff 100%);
+  border-color: #f0dfd2;
+}
+
+.businessIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff1e7;
+  color: #ff7a1a;
+}
+
+.businessCopy {
+  min-width: 0;
+}
+
+.businessCopy strong {
+  display: block;
+  margin-top: 5px;
+}
+
+.businessCopy p {
+  margin: 4px 0 0;
+  color: #7b8798;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.editBusinessLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 122, 26, 0.28);
+  border-radius: 10px;
+  background: #fff;
+  color: #c45400;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.editBusinessLink:hover,
+.editBusinessLink:focus-visible {
+  outline: none;
+  border-color: #ff7a1a;
+  background: #fff5ed;
+}
+
+@keyframes account-avatar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .identityCard {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .changePhotoButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .businessCard {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .editBusinessLink {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarButton {
+    transition: none;
+  }
+
+  .avatarSpinner {
+    animation-duration: 1.6s;
+  }
+}

@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import AdvancedQRPreview from "@/components/AdvancedQRPreview";
 import QRExportMenu from "@/components/QRExportMenu";
+import type {
+  QrBodyPattern,
+  QrCanvasShape,
+  QrColorMode,
+  QrEyeCenterShape,
+  QrEyeFrameShape,
+} from "@/lib/qr-design";
 
-type DotStyle =
-  | "square"
-  | "rounded"
-  | "dots"
-  | "classy"
-  | "classy-rounded"
-  | "extra-rounded";
-
+type DotStyle = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
 type CornerStyle = "square" | "dot" | "extra-rounded";
 
 type StyledQRPreviewProps = {
@@ -20,9 +20,32 @@ type StyledQRPreviewProps = {
   dotStyle?: DotStyle;
   cornerStyle?: CornerStyle;
   logoUrl?: string | null;
+  logoScale?: number;
   showExportMenu?: boolean;
   embedded?: boolean;
+  qrShape?: QrCanvasShape;
+  bodyPattern?: QrBodyPattern;
+  eyeFrameShape?: QrEyeFrameShape;
+  eyeCenterShape?: QrEyeCenterShape;
+  colorMode?: QrColorMode;
+  gradientEndColor?: string;
+  eyeFrameColor?: string;
+  eyeCenterColor?: string;
+  outerStrokeEnabled?: boolean;
+  outerStrokeColor?: string;
 };
+
+function bodyPatternFromLegacy(dotStyle: DotStyle): QrBodyPattern {
+  if (dotStyle === "dots") return "circle";
+  if (dotStyle === "rounded" || dotStyle === "classy" || dotStyle === "classy-rounded" || dotStyle === "extra-rounded") return "rounded";
+  return "square";
+}
+
+function eyeFrameFromLegacy(cornerStyle: CornerStyle): QrEyeFrameShape {
+  if (cornerStyle === "dot") return "circle";
+  if (cornerStyle === "extra-rounded") return "rounded";
+  return "square";
+}
 
 export default function StyledQRPreview({
   url,
@@ -31,81 +54,63 @@ export default function StyledQRPreview({
   dotStyle = "square",
   cornerStyle = "square",
   logoUrl,
+  logoScale = 18,
   showExportMenu = true,
   embedded = false,
+  qrShape = "square",
+  bodyPattern,
+  eyeFrameShape,
+  eyeCenterShape = "square",
+  colorMode = "solid",
+  gradientEndColor = "#ff7a1a",
+  eyeFrameColor,
+  eyeCenterColor,
+  outerStrokeEnabled = false,
+  outerStrokeColor = "#384862",
 }: StyledQRPreviewProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const exportSlug = url.split(/[?#]/)[0].split("/").filter(Boolean).pop();
-
-  useEffect(() => {
-    let isMounted = true;
-    const container = ref.current;
-
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    async function renderQr() {
-      try {
-        const QRCodeStyling = (await import("qr-code-styling")).default;
-
-        if (!isMounted || !container) return;
-
-        container.innerHTML = "";
-
-        const qrCode = new QRCodeStyling({
-          width: 280,
-          height: 280,
-          type: "svg",
-          data: url,
-          image: logoUrl || undefined,
-          margin: 8,
-          qrOptions: {
-            errorCorrectionLevel: "H",
-          },
-          dotsOptions: {
-            color: foregroundColor,
-            type: dotStyle,
-          },
-          backgroundOptions: {
-            color: backgroundColor,
-          },
-          cornersSquareOptions: {
-            color: foregroundColor,
-            type: cornerStyle,
-          },
-          cornersDotOptions: {
-            color: foregroundColor,
-            type: cornerStyle === "square" ? "square" : "dot",
-          },
-          imageOptions: {
-            crossOrigin: "anonymous",
-            margin: 6,
-            imageSize: 0.28,
-          },
-        });
-
-        qrCode.append(container);
-      } catch (error) {
-        // Keep the page functional even if saved style values are invalid.
-        if (isMounted && container) {
-          container.textContent = "QR preview unavailable";
-        }
-        console.error("[StyledQRPreview] Failed to render QR preview", error);
-      }
-    }
-
-    renderQr();
-
-    return () => {
-      isMounted = false;
-      container.innerHTML = "";
-    };
-  }, [url, foregroundColor, backgroundColor, dotStyle, cornerStyle, logoUrl]);
+  const centeredWrapperStyle = {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    marginInline: "auto",
+    boxSizing: "border-box" as const,
+    display: "grid",
+    placeItems: "center",
+  };
 
   return (
-    <div className={`styled-qr-wrap${embedded ? " embedded" : ""}`}>
-      <div className={`qr-preview${embedded ? " embedded" : ""}`} ref={ref} />
+    <div
+      className={`styled-qr-wrap${embedded ? " embedded" : ""}`}
+      style={centeredWrapperStyle}
+    >
+      <div
+        className={`qr-preview${embedded ? " embedded" : ""}`}
+        style={{
+          ...centeredWrapperStyle,
+          minHeight: 0,
+          height: "auto",
+          aspectRatio: "1 / 1",
+        }}
+      >
+        <AdvancedQRPreview
+          url={url}
+          qrShape={qrShape}
+          bodyPattern={bodyPattern || bodyPatternFromLegacy(dotStyle)}
+          eyeFrameShape={eyeFrameShape || eyeFrameFromLegacy(cornerStyle)}
+          eyeCenterShape={eyeCenterShape}
+          colorMode={colorMode}
+          bodyColor={foregroundColor}
+          gradientEndColor={gradientEndColor}
+          eyeFrameColor={eyeFrameColor || foregroundColor}
+          eyeCenterColor={eyeCenterColor || foregroundColor}
+          backgroundColor={backgroundColor}
+          outerStrokeEnabled={outerStrokeEnabled}
+          outerStrokeColor={outerStrokeColor}
+          logoUrl={logoUrl}
+          logoScale={logoScale}
+        />
+      </div>
       {showExportMenu && exportSlug ? <QRExportMenu slug={exportSlug} /> : null}
     </div>
   );

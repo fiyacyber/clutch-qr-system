@@ -60,6 +60,15 @@ export function proxy(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    req.nextUrl.pathname === "/portal/analytics"
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/portal/analytics-hub";
+    return NextResponse.rewrite(url);
+  }
+
   const publicConnectHost = getPublicConnectHost();
   const allowedHosts = getAllowedPublicConnectHosts(publicConnectHost);
   const requestHost = normalizeHost(req.headers.get("host") || "");

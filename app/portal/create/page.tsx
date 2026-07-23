@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, LayoutGrid, ShieldCheck, Sparkles } from "lucide-react";
+import { BarChart3, LayoutGrid } from "lucide-react";
 import QRCodeCreateStudioForm from "@/components/QRCodeCreateStudioForm";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
+import { AccountBrandColorsProvider } from "@/components/qr/AccountBrandColorsContext";
 import { requireCustomer } from "@/lib/auth";
+import { normalizeBrandColors } from "@/lib/brand-colors";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { loadAccountAccess } from "@/lib/account-access-server";
@@ -71,19 +72,14 @@ export default async function CreatePortalPage() {
   const used = qrCodesResult.data?.length || 0;
   const access = await loadAccountAccess(admin, customer);
   if (!canPerformAccountAction(access, "create-qr")) redirect("/portal?access=qr-creation-locked");
+
   const limit = getEffectiveQrLimit(customer);
   const plan = getCustomerPlan(customer);
   const hasDynamicQr = access.canCreateQr;
   const hasHeatmap = access.canUseCampaignHeatmap;
   const locked = isCustomerSubscriptionLocked(customer) || !hasDynamicQr;
   const lockMessage = getSubscriptionLockMessage(customer);
-  const usageLabel = !hasDynamicQr
-    ? "Dynamic QR campaigns are locked"
-    : plan.code === "agency"
-      ? `${used} / 250+ QR codes used`
-      : plan.code === "admin"
-        ? `${used} / Unlimited QR codes used`
-        : `${used} / ${limit} QR codes used`;
+  const brandColors = normalizeBrandColors((customer as any).brand_colors);
 
   return (
     <DashboardShell
@@ -98,30 +94,20 @@ export default async function CreatePortalPage() {
       <main className="container create-studio-shell">
         <DashboardHeader
           title="Create QR"
-          subtitle="Build a trackable QR code in minutes."
+          subtitle="Set the destination, choose a design, and publish."
           actions={(
-            <div className="qr-studio-status-cards">
-              <article className="qr-studio-status-card">
-                <span><ShieldCheck size={14} /> Account type</span>
-                <strong>{plan.name}</strong>
-              </article>
-              <article className="qr-studio-status-card">
-                <span><LayoutGrid size={14} /> QR usage</span>
-                <strong>{hasDynamicQr ? `${used}/${plan.code === "admin" ? "Unlimited" : limit}` : "Locked"}</strong>
-              </article>
-              <article className="qr-studio-status-card">
-                <span><Sparkles size={14} /> Builder</span>
-                <strong>Mobile-ready</strong>
-              </article>
+            <div className="create-page-nav">
+              <Link className="btn ghost" href="/portal/qr">
+                <LayoutGrid size={16} />
+                Stored QR Codes
+              </Link>
+              <Link className="btn secondary" href="/portal/analytics">
+                <BarChart3 size={16} />
+                Analytics
+              </Link>
             </div>
           )}
         />
-
-        <section className="create-page-nav qr-studio-top-actions">
-          <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
-          <Link className="btn secondary" href="/portal/qr">Stored QR Codes</Link>
-          <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link>
-        </section>
 
         {panelIssues.length ? (
           <RetryNotice
@@ -130,16 +116,6 @@ export default async function CreatePortalPage() {
             details={panelIssues.slice(1)}
           />
         ) : null}
-
-        <CurrentPlanBadge
-          planCode={plan.code}
-          planName={plan.name}
-          priceLabel={plan.price}
-          description={plan.description}
-          usageLabel={usageLabel}
-          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
-          trialStatus={String(customer.trial_status || "none")}
-        />
 
         {!hasDynamicQr ? (
           <LockedFeatureCard
@@ -178,13 +154,16 @@ export default async function CreatePortalPage() {
           />
         ) : null}
 
-        <QRCodeCreateStudioForm
-          used={used}
-          limit={hasDynamicQr ? limit : 0}
-          isLocked={locked}
-          lockMessage={!hasDynamicQr ? "Dynamic QR is included in QR Pro and higher." : lockMessage}
-          connectProfiles={(profilesResult.data || []) as any}
-        />
+        <AccountBrandColorsProvider colors={brandColors}>
+          <QRCodeCreateStudioForm
+            used={used}
+            limit={hasDynamicQr ? limit : 0}
+            planName={plan.name}
+            isLocked={locked}
+            lockMessage={!hasDynamicQr ? "Dynamic QR is included in QR Pro and higher." : lockMessage}
+            connectProfiles={(profilesResult.data || []) as any}
+          />
+        </AccountBrandColorsProvider>
       </main>
     </DashboardShell>
   );

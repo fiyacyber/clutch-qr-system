@@ -1,6 +1,13 @@
 "use client";
 
-import { type PointerEvent, useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  type PointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import styles from "./PremiumColorPicker.module.css";
 
@@ -72,9 +79,7 @@ function rgbToHsv(r: number, g: number, b: number): HSV {
   }
 
   if (hue < 0) hue += 360;
-
-  const saturation = max === 0 ? 0 : delta / max;
-  return { h: hue, s: saturation, v: max };
+  return { h: hue, s: max === 0 ? 0 : delta / max, v: max };
 }
 
 function hsvToRgb(h: number, s: number, v: number) {
@@ -156,15 +161,37 @@ function writeStorageList(key: string, values: string[]) {
   try {
     window.localStorage.setItem(key, JSON.stringify(values.slice(0, 24)));
   } catch {
-    // noop
+    // Storage is optional. The picker still works without it.
   }
+}
+
+function compactRecentColors(values: string[], limit = 8) {
+  const compacted: string[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeHex(value);
+    if (!normalized) continue;
+
+    const nextRgb = hexToRgb(normalized);
+    const isDuplicateOrNearDuplicate = compacted.some((existing) => {
+      const existingRgb = hexToRgb(existing);
+      const redDelta = nextRgb.r - existingRgb.r;
+      const greenDelta = nextRgb.g - existingRgb.g;
+      const blueDelta = nextRgb.b - existingRgb.b;
+      return Math.sqrt(redDelta ** 2 + greenDelta ** 2 + blueDelta ** 2) <= 10;
+    });
+
+    if (!isDuplicateOrNearDuplicate) compacted.push(normalized);
+    if (compacted.length >= limit) break;
+  }
+
+  return compacted;
 }
 
 function modelFromHex(value: string) {
   const normalized = normalizeHex(value) || "#FFA665";
   const rgb = hexToRgb(normalized);
-  const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
-  return { normalized, rgb, hsv };
+  return { normalized, rgb, hsv: rgbToHsv(rgb.r, rgb.g, rgb.b) };
 }
 
 interface PremiumColorPickerProps {
@@ -201,9 +228,62 @@ export default function PremiumColorPicker({
   const [rgbText, setRgbText] = useState({ r: "", g: "", b: "" });
   const [hsv, setHsv] = useState<HSV>({ h: 24, s: 0.6, v: 1 });
   const [isMounted, setIsMounted] = useState(false);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({ visibility: "hidden" });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const currentColorRef = useRef(modelFromHex(value).normalized);
+  const hasUncommittedRecentRef = useRef(false);
 
-  const { normalized, rgb } = modelFromHex(value);
+  const { normalized } = modelFromHex(value);
   const textColor = useMemo(() => getReadableTextColor(normalized), [normalized]);
+
+  const syncLocalState = (nextHex: string) => {
+    const model = modelFromHex(nextHex);
+    setHexText(model.normalized);
+    setRgbText({ r: String(model.rgb.r), g: String(model.rgb.g), b: String(model.rgb.b) });
+    setHsv(model.hsv);
+    return model.normalized;
+  };
+
+  const rememberRecentColor = (color = currentColorRef.current) => {
+    const cleanHex = normalizeHex(color);
+    if (!cleanHex) return;
+
+    setRecents((current) => {
+      const stored = readStorageList(storageKey);
+      const next = compactRecentColors([cleanHex, ...current, ...stored]);
+      writeStorageList(storageKey, next);
+      return next;
+    });
+  };
+
+  const applyColor = (nextColor: string) => {
+    const nextHex = normalizeHex(nextColor);
+    if (!nextHex) return null;
+
+    const cleanHex = syncLocalState(nextHex);
+    if (cleanHex !== currentColorRef.current) hasUncommittedRecentRef.current = true;
+    currentColorRef.current = cleanHex;
+    onChange(cleanHex);
+    return cleanHex;
+  };
+
+  const finalizeCurrentColor = () => {
+    if (!hasUncommittedRecentRef.current) return;
+    rememberRecentColor(currentColorRef.current);
+    hasUncommittedRecentRef.current = false;
+  };
+
+  const selectColor = (nextColor: string) => {
+    const cleanHex = applyColor(nextColor);
+    if (!cleanHex) return;
+    rememberRecentColor(cleanHex);
+    hasUncommittedRecentRef.current = false;
+  };
+
+  const closePicker = () => {
+    finalizeCurrentColor();
+    setOpen(false);
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -214,46 +294,68 @@ export default function PremiumColorPicker({
     setHexText(nextModel.normalized);
     setRgbText({ r: String(nextModel.rgb.r), g: String(nextModel.rgb.g), b: String(nextModel.rgb.b) });
     setHsv(nextModel.hsv);
+    currentColorRef.current = nextModel.normalized;
   }, [value]);
 
   useEffect(() => {
     if (!open) return;
-    setRecents(readStorageList(storageKey));
-    setSavedColors(readStorageList(SAVED_STORAGE_KEY));
+
+    const nextRecents = compactRecentColors(readStorageList(storageKey));
+    setRecents(nextRecents);
+    writeStorageList(storageKey, nextRecents);
+    setSavedColors(compactRecentColors(readStorageList(SAVED_STORAGE_KEY), 12));
   }, [open, storageKey]);
 
   useEffect(() => {
     if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closePicker();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  const syncLocalState = (nextHex: string) => {
-    const model = modelFromHex(nextHex);
-    setHexText(model.normalized);
-    setRgbText({ r: String(model.rgb.r), g: String(model.rgb.g), b: String(model.rgb.b) });
-    setHsv(model.hsv);
-    return model.normalized;
-  };
+  useEffect(() => {
+    if (!open) return;
 
-  const commitColor = (nextColor: string) => {
-    const nextHex = normalizeHex(nextColor);
-    if (!nextHex) return;
+    const updatePopoverPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
 
-    const cleanHex = syncLocalState(nextHex);
-    onChange(cleanHex);
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = window.innerWidth <= 560 ? 8 : 12;
+      const preferredWidth = window.innerWidth <= 560 ? 360 : 540;
+      const width = Math.min(preferredWidth, window.innerWidth - viewportPadding * 2);
+      const maxHeight = Math.min(window.innerHeight - viewportPadding * 2, window.innerWidth <= 560 ? 560 : 640);
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const availableAbove = rect.top - viewportPadding;
+      const placeAbove = availableBelow < Math.min(420, maxHeight) && availableAbove > availableBelow;
+      const left = clamp(rect.left, viewportPadding, Math.max(viewportPadding, window.innerWidth - width - viewportPadding));
 
-    setRecents((current) => {
-      const next = [cleanHex, ...current.filter((item) => item !== cleanHex)].slice(0, 8);
-      writeStorageList(storageKey, next);
-      return next;
-    });
-  };
+      const nextStyle: CSSProperties = {
+        left,
+        width,
+        maxHeight,
+        visibility: "visible",
+      };
+
+      if (placeAbove) nextStyle.bottom = window.innerHeight - rect.top + 8;
+      else nextStyle.top = rect.bottom + 8;
+
+      setPopoverStyle(nextStyle);
+    };
+
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [open]);
 
   const updateFromHsv = (nextHsv: HSV) => {
     const safeHsv = {
@@ -266,15 +368,14 @@ export default function PremiumColorPicker({
     setHexText(nextHex);
     const nextRgb = hexToRgb(nextHex);
     setRgbText({ r: String(nextRgb.r), g: String(nextRgb.g), b: String(nextRgb.b) });
-    commitColor(nextHex);
+    applyColor(nextHex);
   };
 
   const updateFromHex = (nextValue: string) => {
     const draft = coerceHexDraft(nextValue);
     setHexText(draft);
     const nextHex = normalizeHex(nextValue);
-    if (!nextHex) return;
-    commitColor(nextHex);
+    if (nextHex) applyColor(nextHex);
   };
 
   const updateFromRgb = (channel: "r" | "g" | "b", nextValue: string) => {
@@ -288,15 +389,16 @@ export default function PremiumColorPicker({
     setRgbText({ r: String(nextRgb.r), g: String(nextRgb.g), b: String(nextRgb.b) });
     setHexText(nextHex);
     setHsv(rgbToHsv(nextRgb.r, nextRgb.g, nextRgb.b));
-    commitColor(nextHex);
+    applyColor(nextHex);
   };
 
   const saveCustomColor = () => {
     const nextHex = normalizeHex(hexText) || normalized;
-    commitColor(nextHex);
+    selectColor(nextHex);
 
     setSavedColors((current) => {
-      const next = [nextHex, ...current.filter((item) => item !== nextHex)].slice(0, 12);
+      const stored = readStorageList(SAVED_STORAGE_KEY);
+      const next = compactRecentColors([nextHex, ...current, ...stored], 12);
       writeStorageList(SAVED_STORAGE_KEY, next);
       return next;
     });
@@ -314,14 +416,13 @@ export default function PremiumColorPicker({
     const distance = Math.sqrt(dx * dx + dy * dy);
     const saturation = clamp(distance / radius, 0, 1);
     const hue = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
-    const value = hsv.v < 0.12 ? 0.9 : hsv.v;
+    const brightness = hsv.v < 0.12 ? 0.9 : hsv.v;
 
-    updateFromHsv({ h: hue, s: saturation, v: value });
+    updateFromHsv({ h: hue, s: saturation, v: brightness });
   };
 
   const markerX = 50 + Math.cos((hsv.h * Math.PI) / 180) * Math.min(50, hsv.s * 50);
   const markerY = 50 + Math.sin((hsv.h * Math.PI) / 180) * Math.min(50, hsv.s * 50);
-
   const wheelBackground = `
     radial-gradient(circle at center, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.72) 10%, rgba(255,255,255,0) 48%),
     conic-gradient(from 0deg, #ff004c, #ff8a00, #fff000, #00d46a, #00d7ff, #2f55ff, #aa00ff, #ff004c)
@@ -331,9 +432,18 @@ export default function PremiumColorPicker({
     <div className={`${styles.root}${className ? ` ${className}` : ""}`.trim()}>
       {name ? <input type="hidden" name={name} value={normalized} /> : null}
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.trigger}${triggerClassName ? ` ${triggerClassName}` : ""}`.trim()}
-        onClick={() => !disabled && setOpen(true)}
+        onClick={() => {
+          if (disabled) return;
+          if (open) closePicker();
+          else {
+            hasUncommittedRecentRef.current = false;
+            currentColorRef.current = normalized;
+            setOpen(true);
+          }
+        }}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -348,30 +458,29 @@ export default function PremiumColorPicker({
         className={`${styles.valueChip}${valueClassName ? ` ${valueClassName}` : ""}`.trim()}
         style={{ background: normalized, color: textColor }}
         value={hexText}
-        onChange={(event) => {
-          const draft = coerceHexDraft(event.target.value);
-          setHexText(draft);
-          if (draft.length === 7) updateFromHex(draft);
-        }}
-        onBlur={(event) => updateFromHex(normalizeHex(event.target.value) || normalized)}
+        onChange={(event) => updateFromHex(event.target.value)}
+        onBlur={(event) => selectColor(normalizeHex(event.target.value) || normalized)}
         onKeyDown={(event) => {
           const target = event.target as HTMLInputElement;
-          if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
+          if (
+            (event.key === "Backspace" || event.key === "Delete") &&
+            target.selectionStart !== null &&
+            target.selectionStart <= 1 &&
+            target.selectionEnd !== null &&
+            target.selectionEnd <= 1
+          ) {
             event.preventDefault();
             return;
           }
           if (event.key === "Enter") {
             event.preventDefault();
-            updateFromHex(normalizeHex(target.value) || normalized);
+            selectColor(normalizeHex(target.value) || normalized);
             target.blur();
           }
         }}
         onPaste={(event) => {
           event.preventDefault();
-          const pasted = event.clipboardData.getData("text");
-          const draft = coerceHexDraft(pasted);
-          setHexText(draft);
-          if (draft.length === 7) updateFromHex(draft);
+          updateFromHex(event.clipboardData.getData("text"));
         }}
         onFocus={(event) => event.currentTarget.select()}
         aria-label={`${ariaLabel} hex value`}
@@ -381,14 +490,20 @@ export default function PremiumColorPicker({
 
       {open && isMounted
         ? createPortal(
-            <div className={styles.overlay} role="presentation" onMouseDown={() => setOpen(false)}>
-              <div className={styles.modal} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.overlay} role="presentation" onMouseDown={closePicker}>
+              <div
+                className={styles.modal}
+                role="dialog"
+                aria-label={ariaLabel}
+                style={popoverStyle}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
                 <div className={styles.header}>
                   <div>
                     <p className={styles.kicker}>Color Studio</p>
                     <h3 className={styles.title}>{ariaLabel}</h3>
                   </div>
-                  <button type="button" className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close color picker">
+                  <button type="button" className={styles.closeBtn} onClick={closePicker} aria-label="Close color picker">
                     ✕
                   </button>
                 </div>
@@ -400,6 +515,8 @@ export default function PremiumColorPicker({
                       style={{ background: wheelBackground }}
                       onPointerDown={handleWheelPointer}
                       onPointerMove={(event) => event.buttons === 1 && handleWheelPointer(event)}
+                      onPointerUp={finalizeCurrentColor}
+                      onPointerCancel={finalizeCurrentColor}
                       role="application"
                       aria-label={`${ariaLabel} hue and saturation`}
                     >
@@ -418,6 +535,9 @@ export default function PremiumColorPicker({
                         step="0.01"
                         value={hsv.v}
                         onChange={(event) => updateFromHsv({ ...hsv, v: Number(event.target.value) })}
+                        onPointerUp={finalizeCurrentColor}
+                        onKeyUp={finalizeCurrentColor}
+                        onBlur={finalizeCurrentColor}
                       />
                     </label>
                   </div>
@@ -429,64 +549,55 @@ export default function PremiumColorPicker({
                       </span>
                     </div>
 
-                    <label className={styles.nativeColorRow}>
-                      <span>Native color picker</span>
-                      <input
-                        type="color"
-                        value={normalized}
-                        onChange={(event) => updateFromHex(event.target.value)}
-                        aria-label={`${ariaLabel} native color picker`}
-                      />
-                    </label>
-
                     <div className={styles.grid}>
                       <label className={styles.inputGroup}>
                         <span>HEX</span>
                         <input
                           type="text"
                           value={hexText}
-                          onChange={(event) => {
-                            const draft = coerceHexDraft(event.target.value);
-                            setHexText(draft);
-                            if (draft.length === 7) updateFromHex(draft);
-                          }}
-                          onBlur={(event) => updateFromHex(normalizeHex(event.target.value) || normalized)}
+                          onChange={(event) => updateFromHex(event.target.value)}
+                          onBlur={(event) => selectColor(normalizeHex(event.target.value) || normalized)}
                           onKeyDown={(event) => {
                             const target = event.target as HTMLInputElement;
-                            if ((event.key === "Backspace" || event.key === "Delete") && target.selectionStart !== null && target.selectionStart <= 1 && target.selectionEnd !== null && target.selectionEnd <= 1) {
+                            if (
+                              (event.key === "Backspace" || event.key === "Delete") &&
+                              target.selectionStart !== null &&
+                              target.selectionStart <= 1 &&
+                              target.selectionEnd !== null &&
+                              target.selectionEnd <= 1
+                            ) {
                               event.preventDefault();
                               return;
                             }
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              updateFromHex(normalizeHex(target.value) || normalized);
+                              selectColor(normalizeHex(target.value) || normalized);
                               target.blur();
                             }
                           }}
                           onPaste={(event) => {
                             event.preventDefault();
-                            const pasted = event.clipboardData.getData("text");
-                            const draft = coerceHexDraft(pasted);
-                            setHexText(draft);
-                            if (draft.length === 7) updateFromHex(draft);
+                            updateFromHex(event.clipboardData.getData("text"));
                           }}
                           placeholder="#FFFFFF"
                         />
                       </label>
 
                       <div className={styles.rgbGrid}>
-                        <label className={styles.inputGroup}>
-                          <span>R</span>
-                          <input type="number" min="0" max="255" value={rgbText.r} onChange={(event) => updateFromRgb("r", event.target.value)} />
-                        </label>
-                        <label className={styles.inputGroup}>
-                          <span>G</span>
-                          <input type="number" min="0" max="255" value={rgbText.g} onChange={(event) => updateFromRgb("g", event.target.value)} />
-                        </label>
-                        <label className={styles.inputGroup}>
-                          <span>B</span>
-                          <input type="number" min="0" max="255" value={rgbText.b} onChange={(event) => updateFromRgb("b", event.target.value)} />
-                        </label>
+                        {(["r", "g", "b"] as const).map((channel) => (
+                          <label key={channel} className={styles.inputGroup}>
+                            <span>{channel.toUpperCase()}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="255"
+                              value={rgbText[channel]}
+                              onChange={(event) => updateFromRgb(channel, event.target.value)}
+                              onBlur={finalizeCurrentColor}
+                              onKeyUp={(event) => event.key === "Enter" && finalizeCurrentColor()}
+                            />
+                          </label>
+                        ))}
                       </div>
                     </div>
 
@@ -497,7 +608,13 @@ export default function PremiumColorPicker({
                         </div>
                         <div className={styles.swatchRow}>
                           {presets.map((preset) => (
-                            <button key={preset} type="button" className={styles.swatchButton} onClick={() => commitColor(preset)} aria-label={`Use preset ${preset}`}>
+                            <button
+                              key={preset}
+                              type="button"
+                              className={styles.swatchButton}
+                              onClick={() => selectColor(preset)}
+                              aria-label={`Use preset ${preset}`}
+                            >
                               <span className={styles.swatch} style={{ background: preset }} />
                               <span>{preset}</span>
                             </button>
@@ -511,27 +628,49 @@ export default function PremiumColorPicker({
                         <span>Recent colors</span>
                       </div>
                       <div className={styles.swatchRow}>
-                        {recents.length > 0 ? recents.map((color) => (
-                          <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use recent color ${color}`}>
-                            <span className={styles.swatch} style={{ background: color }} />
-                            <span>{color}</span>
-                          </button>
-                        )) : <p className={styles.emptyState}>Recent colors will appear here as you pick them.</p>}
+                        {recents.length > 0 ? (
+                          recents.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className={styles.swatchButton}
+                              onClick={() => selectColor(color)}
+                              aria-label={`Use recent color ${color}`}
+                            >
+                              <span className={styles.swatch} style={{ background: color }} />
+                              <span>{color}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className={styles.emptyState}>Recent colors appear after you finish selecting a color.</p>
+                        )}
                       </div>
                     </div>
 
                     <div className={styles.section}>
                       <div className={styles.sectionHeader}>
                         <span>Saved custom colors</span>
-                        <button type="button" className={styles.secondaryBtn} onClick={saveCustomColor}>Save current</button>
+                        <button type="button" className={styles.secondaryBtn} onClick={saveCustomColor}>
+                          Save current
+                        </button>
                       </div>
                       <div className={styles.swatchRow}>
-                        {savedColors.length > 0 ? savedColors.map((color) => (
-                          <button key={color} type="button" className={styles.swatchButton} onClick={() => commitColor(color)} aria-label={`Use saved color ${color}`}>
-                            <span className={styles.swatch} style={{ background: color }} />
-                            <span>{color}</span>
-                          </button>
-                        )) : <p className={styles.emptyState}>Save a custom color to keep it handy for this browser.</p>}
+                        {savedColors.length > 0 ? (
+                          savedColors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className={styles.swatchButton}
+                              onClick={() => selectColor(color)}
+                              aria-label={`Use saved color ${color}`}
+                            >
+                              <span className={styles.swatch} style={{ background: color }} />
+                              <span>{color}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className={styles.emptyState}>Save a custom color to keep it handy for this browser.</p>
+                        )}
                       </div>
                     </div>
                   </div>

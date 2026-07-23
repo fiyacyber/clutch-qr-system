@@ -1,617 +1,546 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Eye, Link2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import QRTypeSelector, { QRType } from "@/components/QRTypeSelector";
 import QRLivePreview from "@/components/QRLivePreview";
-import QRStylePanel, { DownloadSize, ThemePreset } from "@/components/QRStylePanel";
+import QRStylePanel, { type DownloadSize } from "@/components/QRStylePanel";
 import { clutchConnectProfileUrl, normalizeUrl } from "@/lib/qr";
+import {
+  DEFAULT_QR_DESIGN,
+  legacyCornerStyle,
+  legacyDotStyle,
+  type QrBodyPattern,
+  type QrCanvasShape,
+  type QrColorMode,
+  type QrEyeCenterShape,
+  type QrEyeFrameShape,
+} from "@/lib/qr-design";
 import styles from "./QRCodeCreateStudioForm.module.css";
 
-type DotStyle =
-  | "square"
-  | "rounded"
-  | "dots"
-  | "classy"
-  | "classy-rounded"
-  | "extra-rounded";
+type DestinationMode = "url" | "connect_profile";
 
-type CornerStyle = "square" | "dot" | "extra-rounded";
-
-type PrintAssetType =
-  | "standard_business_card"
-  | "flyer"
-  | "yard_sign"
-  | "poster"
-  | "brochure"
-  | "door_hanger"
-  | "direct_mail"
-  | "table_tent"
-  | "other_print";
-
-const PRINT_ASSET_OPTIONS: Array<{ value: PrintAssetType; label: string }> = [
-  { value: "standard_business_card", label: "Standard Business Card" },
-  { value: "flyer", label: "Flyer" },
-  { value: "yard_sign", label: "Yard Sign" },
-  { value: "poster", label: "Poster" },
-  { value: "brochure", label: "Brochure" },
-  { value: "door_hanger", label: "Door Hanger" },
-  { value: "direct_mail", label: "Direct Mail" },
-  { value: "table_tent", label: "Table Tent" },
-  { value: "other_print", label: "Other Print Piece" },
-];
+const STEPS = [
+  { label: "Destination", helper: "Name, link, and print piece" },
+  { label: "Design", helper: "Shape, eyes, colors, and logo" },
+  { label: "Tracking", helper: "Optional campaign details" },
+  { label: "Review", helper: "Confirm and create" },
+] as const;
 
 function slugify(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-type QRCodeCreateStudioFormProps = {
-  used: number;
-  limit: number;
-  isLocked?: boolean;
-  lockMessage?: string;
-  connectProfiles?: Array<{ id: string; slug: string; business_name?: string | null; contact_name?: string | null }>;
-};
-
 function appendCampaignParams({
   url,
   campaignName,
-  assetType,
+  printPiece,
   owner,
-  pieceDetail,
+  notes,
   placement,
 }: {
   url: string;
   campaignName: string;
-  assetType: PrintAssetType;
+  printPiece?: string;
   owner?: string;
-  pieceDetail?: string;
+  notes?: string;
   placement?: string;
 }) {
-  const safe = normalizeUrl(url);
-  const parsed = new URL(safe);
-  parsed.searchParams.set("utm_source", assetType);
+  const parsed = new URL(normalizeUrl(url));
+  parsed.searchParams.set("utm_source", slugify(printPiece || "print") || "print");
   parsed.searchParams.set("utm_medium", "print");
-  parsed.searchParams.set(
-    "utm_campaign",
-    slugify(campaignName) || `print-${assetType.replace(/_/g, "-")}`
-  );
+  parsed.searchParams.set("utm_campaign", slugify(campaignName) || "print-campaign");
 
-  const contentParts = [owner?.trim(), pieceDetail?.trim()].filter(Boolean);
-  if (contentParts.length > 0) {
-    parsed.searchParams.set("utm_content", contentParts.join(" | "));
-  }
-
-  if (placement?.trim()) {
-    parsed.searchParams.set("utm_term", slugify(placement) || placement.trim());
-  }
-
+  const contentParts = [owner?.trim(), notes?.trim()].filter(Boolean);
+  if (contentParts.length) parsed.searchParams.set("utm_content", contentParts.join(" | "));
+  if (placement?.trim()) parsed.searchParams.set("utm_term", slugify(placement) || placement.trim());
   return parsed.toString();
 }
+
+type QRCodeCreateStudioFormProps = {
+  used: number;
+  limit: number;
+  planName?: string;
+  isLocked?: boolean;
+  lockMessage?: string;
+  connectProfiles?: Array<{
+    id: string;
+    slug: string;
+    business_name?: string | null;
+    contact_name?: string | null;
+  }>;
+};
 
 export default function QRCodeCreateStudioForm({
   used,
   limit,
+  planName = "Clutch Codes",
   isLocked = false,
   lockMessage,
   connectProfiles = [],
 }: QRCodeCreateStudioFormProps) {
   const router = useRouter();
   const previewId = "qr-studio-preview";
+  const editorId = "qr-studio-editor";
 
+  const [activeStep, setActiveStep] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Basic QR Fields
   const [name, setName] = useState("");
+  const [destinationMode, setDestinationMode] = useState<DestinationMode>("url");
   const [destinationUrl, setDestinationUrl] = useState("");
-  const [qrType, setQrType] = useState<QRType | "connect_profile">("flyers");
   const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [printPiece, setPrintPiece] = useState("");
 
-  // Style Fields
-  const [foregroundColor, setForegroundColor] = useState("#384862");
-  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
-  const [dotStyle, setDotStyle] = useState<DotStyle>("square");
-  const [cornerStyle, setCornerStyle] = useState<CornerStyle>("square");
-  const [theme, setTheme] = useState<ThemePreset>("default");
+  const [qrShape, setQrShape] = useState<QrCanvasShape>(DEFAULT_QR_DESIGN.qrShape);
+  const [bodyPattern, setBodyPattern] = useState<QrBodyPattern>(DEFAULT_QR_DESIGN.bodyPattern);
+  const [eyeFrameShape, setEyeFrameShape] = useState<QrEyeFrameShape>(DEFAULT_QR_DESIGN.eyeFrameShape);
+  const [eyeCenterShape, setEyeCenterShape] = useState<QrEyeCenterShape>(DEFAULT_QR_DESIGN.eyeCenterShape);
+  const [colorMode, setColorMode] = useState<QrColorMode>(DEFAULT_QR_DESIGN.colorMode);
+  const [foregroundColor, setForegroundColor] = useState(DEFAULT_QR_DESIGN.bodyColor);
+  const [gradientEndColor, setGradientEndColor] = useState(DEFAULT_QR_DESIGN.gradientEndColor);
+  const [eyeFrameColor, setEyeFrameColor] = useState(DEFAULT_QR_DESIGN.eyeFrameColor);
+  const [eyeCenterColor, setEyeCenterColor] = useState(DEFAULT_QR_DESIGN.eyeCenterColor);
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_QR_DESIGN.backgroundColor);
+  const [outerStrokeEnabled, setOuterStrokeEnabled] = useState(DEFAULT_QR_DESIGN.outerStrokeEnabled);
+  const [outerStrokeColor, setOuterStrokeColor] = useState(DEFAULT_QR_DESIGN.outerStrokeColor);
   const [downloadSize, setDownloadSize] = useState<DownloadSize>("print");
-
-  // Logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [previewLogoUrl, setPreviewLogoUrl] = useState<string | undefined>(undefined);
+  const [logoScale, setLogoScale] = useState(18);
+  const [previewLogoUrl, setPreviewLogoUrl] = useState<string | undefined>();
 
-  // Print Tracking
   const [usePrintTracking, setUsePrintTracking] = useState(true);
-  const [printAssetType, setPrintAssetType] = useState<PrintAssetType>("standard_business_card");
   const [campaignName, setCampaignName] = useState("");
   const [campaignOwner, setCampaignOwner] = useState("");
-  const [pieceDetail, setPieceDetail] = useState("");
+  const [notes, setNotes] = useState("");
   const [placementNote, setPlacementNote] = useState("");
 
+  const dotStyle = legacyDotStyle(bodyPattern);
+  const cornerStyle = legacyCornerStyle(eyeFrameShape);
   const canCreate = !isLocked && used < limit;
-
-  // Apply theme presets
-  useEffect(() => {
-    const presets: Record<ThemePreset, { fg: string; bg: string }> = {
-      default: { fg: "#384862", bg: "#ffffff" },
-      paper: { fg: "#6b5344", bg: "#f5dcc8" },
-      midnight: { fg: "#ffffff", bg: "#1e2a3a" },
-      pastel: { fg: "#384862", bg: "#ffd4b4" },
-    };
-
-    if (presets[theme]) {
-      setForegroundColor(presets[theme].fg);
-      setBackgroundColor(presets[theme].bg);
-    }
-  }, [theme]);
-
-  const finalUrl = useMemo(() => {
-    let baseUrl = "";
-
-    if (qrType === "connect_profile") {
-      const profile = connectProfiles.find((item) => item.id === selectedProfileId);
-      baseUrl = profile ? clutchConnectProfileUrl(profile.slug) : "";
-    } else {
-      // All mailing piece types use destination URL
-      if (!destinationUrl.trim()) return "";
-      baseUrl = normalizeUrl(destinationUrl);
-    }
-
-    if (!baseUrl) return "";
-    if (!usePrintTracking) return baseUrl;
-
-    return appendCampaignParams({
-      url: baseUrl,
-      campaignName: campaignName || name || "print-campaign",
-      assetType: printAssetType,
-      owner: campaignOwner,
-      pieceDetail,
-      placement: placementNote,
-    });
-  }, [
-    qrType,
-    selectedProfileId,
-    connectProfiles,
-    destinationUrl,
-    usePrintTracking,
-    campaignName,
-    name,
-    printAssetType,
-    campaignOwner,
-    pieceDetail,
-    placementNote,
-  ]);
-
-  const selectedProfile = useMemo(() => {
-    if (!selectedProfileId) return null;
-    return connectProfiles.find((item) => item.id === selectedProfileId) || null;
-  }, [connectProfiles, selectedProfileId]);
-
-  const destinationSummary = qrType === "connect_profile"
-    ? selectedProfile
-      ? `${selectedProfile.business_name || selectedProfile.contact_name || selectedProfile.slug} • ${selectedProfile.slug}`
-      : "Select a Clutch Connect profile"
-    : destinationUrl.trim()
-      ? destinationUrl.trim()
-      : "Add a destination URL";
-
-  const printPieceLabel = useMemo(() => {
-    const selected = PRINT_ASSET_OPTIONS.find((option) => option.value === printAssetType);
-    return selected?.label || "Print piece";
-  }, [printAssetType]);
-
-  const trackingSummary = useMemo(() => {
-    if (!usePrintTracking) return "Tracking disabled";
-    const parts = [campaignName || name || "Campaign name pending", campaignOwner, placementNote]
-      .map((item) => item.trim())
-      .filter(Boolean);
-    return parts.length ? parts.join(" • ") : "Auto-attach print campaign UTM tracking";
-  }, [campaignName, campaignOwner, placementNote, name, usePrintTracking]);
-
-  const scanSafetyLabel = useMemo(() => {
-    if (!finalUrl) return "Scan safe preview";
-    if (downloadSize === "print") return "Print-ready scan safe";
-    return "Preview ready";
-  }, [downloadSize, finalUrl]);
-
-  function scrollToPreview() {
-    const element = document.getElementById(previewId);
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const usesDecorativeStyle =
+    qrShape === "circle" ||
+    !["square", "circle", "rounded"].includes(bodyPattern) ||
+    eyeFrameShape === "octagon" ||
+    eyeFrameShape === "diamond" ||
+    eyeCenterShape === "star";
 
   useEffect(() => {
     if (!logoFile) {
       setPreviewLogoUrl(undefined);
       return;
     }
-
     const objectUrl = URL.createObjectURL(logoFile);
     setPreviewLogoUrl(objectUrl);
-
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
+    return () => URL.revokeObjectURL(objectUrl);
   }, [logoFile]);
+
+  const selectedProfile = useMemo(() => {
+    if (!selectedProfileId) return null;
+    return connectProfiles.find((item) => item.id === selectedProfileId) || null;
+  }, [connectProfiles, selectedProfileId]);
+
+  const baseDestinationUrl = useMemo(() => {
+    if (destinationMode === "connect_profile") {
+      return selectedProfile ? clutchConnectProfileUrl(selectedProfile.slug) : "";
+    }
+    const raw = destinationUrl.trim();
+    if (!raw) return "";
+    try {
+      const normalized = normalizeUrl(raw);
+      new URL(normalized);
+      return normalized;
+    } catch {
+      return "";
+    }
+  }, [destinationMode, destinationUrl, selectedProfile]);
+
+  const finalUrl = useMemo(() => {
+    if (!baseDestinationUrl) return "";
+    if (!usePrintTracking) return baseDestinationUrl;
+    try {
+      return appendCampaignParams({
+        url: baseDestinationUrl,
+        campaignName: campaignName || name || "print-campaign",
+        printPiece,
+        owner: campaignOwner,
+        notes,
+        placement: placementNote,
+      });
+    } catch {
+      return "";
+    }
+  }, [baseDestinationUrl, usePrintTracking, campaignName, name, printPiece, campaignOwner, notes, placementNote]);
+
+  const destinationSummary = destinationMode === "connect_profile"
+    ? selectedProfile
+      ? `${selectedProfile.business_name || selectedProfile.contact_name || selectedProfile.slug} • ${selectedProfile.slug}`
+      : "Select a Clutch Connect profile"
+    : destinationUrl.trim() || "Add a destination URL";
+
+  const printPieceLabel = printPiece.trim() || "Not specified";
+  const trackingSummary = useMemo(() => {
+    if (!usePrintTracking) return "Tracking disabled";
+    const parts = [campaignName || name || "Campaign name pending", campaignOwner, placementNote]
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return parts.length ? parts.join(" • ") : "Campaign name pending";
+  }, [campaignName, campaignOwner, placementNote, name, usePrintTracking]);
+
+  const scanSafetyLabel = !baseDestinationUrl
+    ? "Needs destination"
+    : usesDecorativeStyle
+      ? "Test scan"
+      : downloadSize === "print"
+        ? "Print ready"
+        : "Preview ready";
+
+  function focusEditor() {
+    window.setTimeout(() => document.getElementById(editorId)?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  function validateDestinationStep() {
+    if (!name.trim()) {
+      setError("Add a clear QR name so you can identify it later.");
+      return false;
+    }
+    if (destinationMode === "connect_profile") {
+      if (!selectedProfileId) {
+        setError("Select the Clutch Connect profile this QR should open.");
+        return false;
+      }
+    } else {
+      if (!destinationUrl.trim()) {
+        setError("Add the website or landing-page URL this QR should open.");
+        return false;
+      }
+      try {
+        new URL(normalizeUrl(destinationUrl));
+      } catch {
+        setError("Enter a complete destination URL, such as https://example.com.");
+        return false;
+      }
+    }
+    setError(null);
+    return true;
+  }
+
+  function changeStep(nextStep: number) {
+    const bounded = Math.max(0, Math.min(STEPS.length - 1, nextStep));
+    if (bounded > activeStep && bounded > 0 && !validateDestinationStep()) {
+      setActiveStep(0);
+      focusEditor();
+      return;
+    }
+    setError(null);
+    setActiveStep(bounded);
+    focusEditor();
+  }
+
+  function advanceStep() {
+    if (activeStep === 0 && !validateDestinationStep()) return;
+    changeStep(activeStep + 1);
+  }
+
+  function scrollToPreview() {
+    setPreviewOpen(true);
+    window.setTimeout(() => document.getElementById(previewId)?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    if (activeStep < STEPS.length - 1) {
+      advanceStep();
+      return;
+    }
 
+    setError(null);
     if (isLocked) {
       setError(lockMessage || "Your subscription is currently locked.");
       return;
     }
-
     if (used >= limit) {
-      setError("Account limit reached. Upgrade plan to create more QR codes.");
+      setError("Account limit reached. Upgrade your plan to create more QR codes.");
       return;
     }
-
-    if (!name.trim()) {
-      setError("QR name is required.");
+    if (!validateDestinationStep()) {
+      setActiveStep(0);
       return;
     }
-
-    if (qrType !== "connect_profile" && !destinationUrl.trim()) {
-      setError("Destination URL is required.");
-      return;
-    }
-
-    if (qrType === "connect_profile" && !selectedProfileId) {
-      setError("Select a Clutch Connect profile.");
-      return;
-    }
-
-    let validatedUrl = "";
-    try {
-      validatedUrl = finalUrl || normalizeUrl(destinationUrl);
-      new URL(validatedUrl);
-    } catch {
-      setError("Please enter a valid destination URL.");
+    if (!finalUrl) {
+      setError("Enter a complete destination URL before creating the QR code.");
+      setActiveStep(0);
       return;
     }
 
     setIsSaving(true);
-
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
-      formData.append("destination_url", validatedUrl);
-      formData.append("qr_type", qrType === "connect_profile" ? "connect_profile" : "url");
+      formData.append("destination_url", finalUrl);
+      formData.append("qr_type", destinationMode);
       if (selectedProfileId) formData.append("profile_id", selectedProfileId);
       formData.append("foreground_color", foregroundColor);
       formData.append("background_color", backgroundColor);
       formData.append("dot_style", dotStyle);
       formData.append("corner_style", cornerStyle);
-      formData.append("theme", theme);
+      formData.append("qr_shape", qrShape);
+      formData.append("body_pattern", bodyPattern);
+      formData.append("eye_frame_shape", eyeFrameShape);
+      formData.append("eye_center_shape", eyeCenterShape);
+      formData.append("color_mode", colorMode);
+      formData.append("gradient_end_color", gradientEndColor);
+      formData.append("eye_frame_color", eyeFrameColor);
+      formData.append("eye_center_color", eyeCenterColor);
+      formData.append("outer_stroke_enabled", String(outerStrokeEnabled));
+      formData.append("outer_stroke_color", outerStrokeColor);
       formData.append("download_size", downloadSize);
+      formData.append("logo_scale", String(logoScale));
+      formData.append("print_piece", printPiece.trim());
+      formData.append("tracking_enabled", String(usePrintTracking));
+      formData.append("campaign_name", (campaignName || name).trim());
+      formData.append("campaign_owner", campaignOwner.trim());
+      formData.append("placement", placementNote.trim());
+      formData.append("notes", notes.trim());
       if (logoFile) formData.append("logo", logoFile);
 
-      const response = await fetch("/api/qr/create", {
-        method: "POST",
-        body: formData,
-        credentials: "same-origin",
-      });
-
-      const data = await response.json();
-
+      const response = await fetch("/api/qr/create", { method: "POST", body: formData, credentials: "same-origin" });
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(data.error || "Failed to create QR code.");
+        setError(data.error || "Failed to create QR code. Please try again.");
         setIsSaving(false);
         return;
       }
-
-      router.push("/portal");
+      router.push("/portal/qr");
       router.refresh();
-    } catch (err) {
-      setError("Unexpected error while creating QR code.");
+    } catch (submitError) {
+      console.error("[QRCodeCreateStudioForm] QR creation failed", submitError);
+      setError("Unexpected error while creating QR code. Please try again.");
       setIsSaving(false);
-      console.error(err);
     }
   }
 
   return (
     <form className={styles.container} onSubmit={handleSubmit}>
-      <section className={styles.hero}>
+      <section className={styles.studioIntro}>
         <div>
-          <span className={styles.heroKicker}>Create QR</span>
-          <h1 className={styles.heroTitle}>Build a trackable QR code in minutes.</h1>
-          <p className={styles.heroSubtitle}>
-            A mobile-first studio for destinations, print pieces, appearance, and campaign tracking.
-          </p>
+          <span className={styles.studioKicker}>Guided QR Builder</span>
+          <h2>Create your code in four quick steps.</h2>
+          <p>Only the name and destination are required. Design and tracking are optional.</p>
         </div>
-
-        <div className={styles.heroMeta}>
-          <article>
-            <span>Usage</span>
-            <strong>{used}/{limit}</strong>
-          </article>
-          <article>
-            <span>Mode</span>
-            <strong>{isLocked ? "Locked" : canCreate ? "Ready" : "Limited"}</strong>
-          </article>
-          <article>
-            <span>Safe area</span>
-            <strong>320px+</strong>
-          </article>
+        <div className={styles.accountSummary} aria-label="Current QR plan and usage">
+          <span>{planName}</span><strong>{used}/{limit} codes used</strong>
         </div>
       </section>
 
-      <section className={styles.previewRail} id={previewId}>
-        <QRLivePreview
-          finalUrl={finalUrl}
-          foregroundColor={foregroundColor}
-          backgroundColor={backgroundColor}
-          dotStyle={dotStyle}
-          cornerStyle={cornerStyle}
-          logoUrl={previewLogoUrl}
-          used={used}
-          limit={limit}
-          isLocked={isLocked}
-          name={name}
-          destinationTypeLabel={qrType === "connect_profile" ? "Clutch Connect" : "Website"}
-          destinationPreview={destinationSummary}
-          printMockupType={printAssetType === "standard_business_card" ? "business_cards" : printAssetType === "flyer" ? "flyers" : printAssetType === "brochure" ? "brochures" : printAssetType === "door_hanger" ? "door_hangers" : printAssetType === "yard_sign" ? "yard_signs" : printAssetType === "poster" ? "postcards" : "business_cards"}
-          trackingPreview={trackingSummary}
-          downloadSize={downloadSize}
-          canCreate={canCreate}
-          error={error}
-        />
-      </section>
+      <nav className={styles.stepper} aria-label="QR creation progress">
+        {STEPS.map((step, index) => {
+          const isActive = activeStep === index;
+          const isComplete = index < activeStep;
+          return (
+            <button
+              key={step.label}
+              type="button"
+              className={`${styles.stepButton} ${isActive ? styles.stepButtonActive : ""} ${isComplete ? styles.stepButtonComplete : ""}`}
+              onClick={() => changeStep(index)}
+              aria-current={isActive ? "step" : undefined}
+            >
+              <span className={styles.stepIndex}>{isComplete ? <Check size={16} /> : index + 1}</span>
+              <span className={styles.stepCopy}><strong>{step.label}</strong><small>{step.helper}</small></span>
+            </button>
+          );
+        })}
+      </nav>
 
-      <section className={styles.workspace}>
-        <section className={styles.stepCard}>
-          <div className={styles.stepHeader}>
-            <div>
-              <span className={styles.stepNumber}>Step 1</span>
-              <h2>Destination</h2>
-            </div>
-            <span className={styles.stepPill}>{qrType === "connect_profile" ? "Clutch Connect" : "Website"}</span>
+      <div className={styles.studioGrid}>
+        <details className={styles.previewRail} id={previewId} open={previewOpen} onToggle={(event) => setPreviewOpen(event.currentTarget.open)}>
+          <summary className={styles.previewSummary}><span><Eye size={17} /> Live preview</span><strong>{scanSafetyLabel}</strong></summary>
+          <div className={styles.previewSticky}>
+            <QRLivePreview
+              compact
+              finalUrl={finalUrl}
+              foregroundColor={foregroundColor}
+              backgroundColor={backgroundColor}
+              dotStyle={dotStyle}
+              cornerStyle={cornerStyle}
+              logoUrl={previewLogoUrl}
+              logoScale={logoScale}
+              used={used}
+              limit={limit}
+              isLocked={isLocked}
+              name={name}
+              destinationTypeLabel={destinationMode === "connect_profile" ? "Clutch Connect" : "Website"}
+              destinationPreview={destinationSummary}
+              printPieceLabel={printPieceLabel}
+              trackingPreview={trackingSummary}
+              downloadSize={downloadSize}
+              canCreate={canCreate && Boolean(finalUrl) && Boolean(name.trim())}
+              error={error}
+              qrShape={qrShape}
+              bodyPattern={bodyPattern}
+              eyeFrameShape={eyeFrameShape}
+              eyeCenterShape={eyeCenterShape}
+              colorMode={colorMode}
+              gradientEndColor={gradientEndColor}
+              eyeFrameColor={eyeFrameColor}
+              eyeCenterColor={eyeCenterColor}
+              outerStrokeEnabled={outerStrokeEnabled}
+              outerStrokeColor={outerStrokeColor}
+            />
           </div>
+        </details>
 
-          <div className={styles.fieldGrid}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>QR Name</span>
-              <input
-                type="text"
-                className={styles.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Summer campaign 2026"
-                maxLength={100}
-                disabled={isSaving}
+        <section className={styles.editorColumn} id={editorId}>
+          {error ? <div className={styles.errorBanner}>{error}</div> : null}
+
+          {activeStep === 0 ? (
+            <section className={styles.stepCard}>
+              <div className={styles.stepHeader}>
+                <div><span className={styles.stepNumber}>Step 1 of 4</span><h2>Where should this QR code go?</h2><p>Name the code, add its destination, and describe where it will be used.</p></div>
+                <span className={styles.stepPill}>{destinationMode === "connect_profile" ? "Profile" : "Website"}</span>
+              </div>
+
+              {connectProfiles.length ? (
+                <div className={styles.destinationMode} role="radiogroup" aria-label="Destination type">
+                  <button type="button" className={destinationMode === "url" ? styles.destinationModeActive : ""} onClick={() => { setDestinationMode("url"); setError(null); }} aria-pressed={destinationMode === "url"}>
+                    <Link2 size={18} /><span><strong>Website</strong><small>Send scans to any URL</small></span>
+                  </button>
+                  <button type="button" className={destinationMode === "connect_profile" ? styles.destinationModeActive : ""} onClick={() => { setDestinationMode("connect_profile"); setError(null); }} aria-pressed={destinationMode === "connect_profile"}>
+                    <UserRound size={18} /><span><strong>Clutch Connect</strong><small>Open a digital profile</small></span>
+                  </button>
+                </div>
+              ) : null}
+
+              <div className={styles.fieldGrid}>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>QR Name</span>
+                  <input type="text" className={styles.input} value={name} onChange={(event) => setName(event.target.value)} placeholder="Summer postcard campaign" maxLength={100} disabled={isSaving} autoFocus />
+                  <span className={styles.hint}>Customers never see this. Use a name you will recognize in analytics.</span>
+                </label>
+                {destinationMode === "connect_profile" ? (
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Clutch Connect Profile</span>
+                    <select className={styles.select} value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)} disabled={isSaving} required>
+                      <option value="">Select profile</option>
+                      {connectProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.business_name || profile.contact_name || profile.slug} ({profile.slug})</option>)}
+                    </select>
+                    <span className={styles.hint}>This QR will open the selected digital profile.</span>
+                  </label>
+                ) : (
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Destination URL</span>
+                    <input type="url" className={styles.input} value={destinationUrl} onChange={(event) => { setDestinationUrl(event.target.value); if (error) setError(null); }} placeholder="https://yourwebsite.com/offer" disabled={isSaving} inputMode="url" />
+                    <span className={styles.hint}>You can change this destination later without reprinting the QR code.</span>
+                  </label>
+                )}
+                <label className={`${styles.field} ${styles.fieldWide}`}>
+                  <span className={styles.fieldLabel}>Print Piece or Placement</span>
+                  <input type="text" className={styles.input} value={printPiece} onChange={(event) => setPrintPiece(event.target.value)} placeholder="Postcard, flyer, yard sign, front counter display..." maxLength={100} disabled={isSaving} />
+                  <span className={styles.hint}>Optional. Type the exact item or location to organize reporting.</span>
+                </label>
+              </div>
+              <div className={styles.destinationMeta}>
+                <article><span>Destination</span><strong>{destinationSummary}</strong></article>
+                <article><span>Print piece</span><strong>{printPieceLabel}</strong></article>
+              </div>
+            </section>
+          ) : null}
+
+          {activeStep === 1 ? (
+            <section className={styles.stepCard}>
+              <div className={styles.stepHeader}>
+                <div><span className={styles.stepNumber}>Step 2 of 4</span><h2>Design your QR code.</h2><p>Shape, body modules, finder eyes, colors, gradients, stroke, logo, and output size.</p></div>
+                <span className={styles.stepPill}>{scanSafetyLabel}</span>
+              </div>
+              <QRStylePanel
+                foregroundColor={foregroundColor}
+                onForegroundColorChange={setForegroundColor}
+                backgroundColor={backgroundColor}
+                onBackgroundColorChange={setBackgroundColor}
+                dotStyle={dotStyle}
+                onDotStyleChange={() => undefined}
+                cornerStyle={cornerStyle}
+                onCornerStyleChange={() => undefined}
+                downloadSize={downloadSize}
+                onDownloadSizeChange={setDownloadSize}
+                logoFile={logoFile}
+                onLogoFileChange={setLogoFile}
+                logoScale={logoScale}
+                onLogoScaleChange={setLogoScale}
+                qrShape={qrShape}
+                onQrShapeChange={setQrShape}
+                bodyPattern={bodyPattern}
+                onBodyPatternChange={setBodyPattern}
+                eyeFrameShape={eyeFrameShape}
+                onEyeFrameShapeChange={setEyeFrameShape}
+                eyeCenterShape={eyeCenterShape}
+                onEyeCenterShapeChange={setEyeCenterShape}
+                colorMode={colorMode}
+                onColorModeChange={setColorMode}
+                gradientEndColor={gradientEndColor}
+                onGradientEndColorChange={setGradientEndColor}
+                eyeFrameColor={eyeFrameColor}
+                onEyeFrameColorChange={setEyeFrameColor}
+                eyeCenterColor={eyeCenterColor}
+                onEyeCenterColorChange={setEyeCenterColor}
+                outerStrokeEnabled={outerStrokeEnabled}
+                onOuterStrokeEnabledChange={setOuterStrokeEnabled}
+                outerStrokeColor={outerStrokeColor}
+                onOuterStrokeColorChange={setOuterStrokeColor}
               />
-            </label>
+            </section>
+          ) : null}
 
-            {qrType === "connect_profile" ? (
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Clutch Connect Profile</span>
-                <select
-                  className={styles.select}
-                  value={selectedProfileId}
-                  onChange={(e) => setSelectedProfileId(e.target.value)}
-                  disabled={isSaving}
-                  required
-                >
-                  <option value="">Select profile</option>
-                  {connectProfiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.business_name || profile.contact_name || profile.slug} ({profile.slug})
-                    </option>
-                  ))}
-                </select>
-                <span className={styles.hint}>This QR will open your Clutch Connect profile.</span>
-              </label>
-            ) : (
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Destination URL</span>
-                <input
-                  type="url"
-                  className={styles.input}
-                  value={destinationUrl}
-                  onChange={(e) => setDestinationUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  disabled={isSaving}
-                />
-                <span className={styles.hint}>Website, landing page, or tracked destination link.</span>
-              </label>
-            )}
-          </div>
+          {activeStep === 2 ? (
+            <section className={styles.stepCard}>
+              <div className={styles.stepHeader}>
+                <div><span className={styles.stepNumber}>Step 3 of 4</span><h2>Add campaign tracking.</h2><p>These optional details make reports easier to understand later.</p></div>
+                <label className={styles.toggle}><input type="checkbox" checked={usePrintTracking} onChange={(event) => setUsePrintTracking(event.target.checked)} disabled={isSaving} /><span>{usePrintTracking ? "Enabled" : "Disabled"}</span></label>
+              </div>
+              {usePrintTracking ? (
+                <div className={styles.trackingFields}>
+                  <label className={styles.field}><span className={styles.fieldLabel}>Campaign Name</span><input type="text" className={styles.input} value={campaignName} onChange={(event) => setCampaignName(event.target.value)} placeholder={name || "Summer campaign 2026"} disabled={isSaving} /></label>
+                  <label className={styles.field}><span className={styles.fieldLabel}>Team Member or Owner</span><input type="text" className={styles.input} value={campaignOwner} onChange={(event) => setCampaignOwner(event.target.value)} placeholder="Jane — Sales" disabled={isSaving} /></label>
+                  <label className={styles.field}><span className={styles.fieldLabel}>Placement</span><input type="text" className={styles.input} value={placementNote} onChange={(event) => setPlacementNote(event.target.value)} placeholder="Front counter, mail route, event table" disabled={isSaving} /></label>
+                  <label className={styles.field}><span className={styles.fieldLabel}>Internal Notes</span><input type="text" className={styles.input} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Version B, front side, July promotion" disabled={isSaving} /></label>
+                </div>
+              ) : <div className={styles.emptyTracking}>The QR will still count scans. Campaign tags and placement details will not be attached.</div>}
+            </section>
+          ) : null}
 
-          <div className={styles.destinationMeta}>
-            <article>
-              <span>Preview</span>
-              <strong>{destinationSummary}</strong>
-            </article>
-            <article>
-              <span>Validation</span>
-              <strong>{finalUrl ? "Ready" : "Incomplete"}</strong>
-            </article>
-            <article>
-              <span>Redirect</span>
-              <strong>{finalUrl ? finalUrl.replace(/^https?:\/\//, "") : "Waiting for input"}</strong>
-            </article>
-          </div>
-        </section>
+          {activeStep === 3 ? (
+            <section className={styles.stepCard}>
+              <div className={styles.stepHeader}>
+                <div><span className={styles.stepNumber}>Step 4 of 4</span><h2>Review and create.</h2><p>Confirm the destination and design before publishing.</p></div>
+                <span className={styles.stepPill}>{canCreate && finalUrl ? "Ready" : "Needs attention"}</span>
+              </div>
+              <div className={styles.reviewGrid}>
+                <article><span>QR Name</span><strong>{name || "Not added"}</strong></article>
+                <article><span>Destination</span><strong>{destinationSummary}</strong></article>
+                <article><span>Print Piece</span><strong>{printPieceLabel}</strong></article>
+                <article><span>Design</span><strong>{qrShape === "circle" ? "Circle" : "Square"} · {bodyPattern.replace(/-/g, " ")} · {eyeFrameShape} eyes</strong></article>
+                <article><span>Logo</span><strong>{logoFile ? `${logoScale}% scale` : "None"}</strong></article>
+                <article><span>Tracking</span><strong>{usePrintTracking ? trackingSummary : "Disabled"}</strong></article>
+                <article><span>Export Size</span><strong>{downloadSize === "print" ? "2400 × 2400" : downloadSize === "card" ? "600 × 600" : "512 × 512"}</strong></article>
+              </div>
+              <div className={styles.reviewNotice}><Check size={18} /><div><strong>Your destination can be edited later.</strong><span>The printed QR image stays the same while Clutch redirects scans to the updated URL.</span></div></div>
+            </section>
+          ) : null}
 
-        <section className={styles.stepCard}>
-          <div className={styles.stepHeader}>
-            <div>
-              <span className={styles.stepNumber}>Step 2</span>
-              <h2>Print Piece</h2>
+          <div className={styles.editorActions}>
+            <button type="button" className={styles.previewButton} onClick={scrollToPreview}><Eye size={17} />Preview</button>
+            <div className={styles.primaryActions}>
+              {activeStep > 0 ? <button type="button" className={styles.backButton} onClick={() => changeStep(activeStep - 1)} disabled={isSaving}><ChevronLeft size={18} />Back</button> : null}
+              {activeStep < STEPS.length - 1 ? (
+                <button type="button" className={styles.nextButton} onClick={advanceStep} disabled={isSaving}>Continue<ChevronRight size={18} /></button>
+              ) : (
+                <button type="submit" className={styles.createButton} disabled={!canCreate || !finalUrl || !name.trim() || isSaving}>{isSaving ? "Creating..." : "Create QR"}</button>
+              )}
             </div>
           </div>
-          <QRTypeSelector
-            value={qrType as QRType}
-            onChange={(type) => {
-              setQrType(type as QRType | "connect_profile");
-              const validTypes = ["flyers", "business_cards", "brochures", "postcards", "door_hangers", "yard_signs", "connect_profile"];
-              if (!validTypes.includes(type)) {
-                setError("This QR type is coming soon!");
-              } else {
-                setError(null);
-              }
-            }}
-          />
         </section>
-
-        <section className={styles.stepCard}>
-          <div className={styles.stepHeader}>
-            <div>
-              <span className={styles.stepNumber}>Step 3</span>
-              <h2>Appearance</h2>
-            </div>
-            <span className={styles.stepPill}>{scanSafetyLabel}</span>
-          </div>
-          <QRStylePanel
-            theme={theme}
-            onThemeChange={setTheme}
-            foregroundColor={foregroundColor}
-            onForegroundColorChange={setForegroundColor}
-            backgroundColor={backgroundColor}
-            onBackgroundColorChange={setBackgroundColor}
-            dotStyle={dotStyle}
-            onDotStyleChange={setDotStyle}
-            cornerStyle={cornerStyle}
-            onCornerStyleChange={setCornerStyle}
-            downloadSize={downloadSize}
-            onDownloadSizeChange={setDownloadSize}
-            logoFile={logoFile}
-            onLogoFileChange={setLogoFile}
-          />
-        </section>
-
-        <section className={styles.stepCard}>
-          <div className={styles.stepHeader}>
-            <div>
-              <span className={styles.stepNumber}>Step 4</span>
-              <h2>Campaign Tracking</h2>
-            </div>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={usePrintTracking}
-                onChange={(e) => setUsePrintTracking(e.target.checked)}
-                disabled={isSaving}
-              />
-              <span>Enabled</span>
-            </label>
-          </div>
-
-          {usePrintTracking ? (
-            <div className={styles.trackingFields}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Print Piece Type</span>
-                <select
-                  className={styles.select}
-                  value={printAssetType}
-                  onChange={(e) => setPrintAssetType(e.target.value as PrintAssetType)}
-                  disabled={isSaving}
-                >
-                  {PRINT_ASSET_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Campaign Name</span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="summer-campaign-2026"
-                  disabled={isSaving}
-                />
-              </label>
-
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Team Member / Owner</span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={campaignOwner}
-                  onChange={(e) => setCampaignOwner(e.target.value)}
-                  placeholder="Jane - Sales"
-                  disabled={isSaving}
-                />
-              </label>
-
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Placement</span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={placementNote}
-                  onChange={(e) => setPlacementNote(e.target.value)}
-                  placeholder="Downtown route or lobby"
-                  disabled={isSaving}
-                />
-              </label>
-
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Notes</span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={pieceDetail}
-                  onChange={(e) => setPieceDetail(e.target.value)}
-                  placeholder="Front side, version B"
-                  disabled={isSaving}
-                />
-              </label>
-            </div>
-          ) : (
-            <div className={styles.emptyTracking}>Tracking is off for this QR. Turn it on to add UTM parameters.</div>
-          )}
-        </section>
-
-        <section className={styles.stepCard}>
-          <div className={styles.stepHeader}>
-            <div>
-              <span className={styles.stepNumber}>Step 5</span>
-              <h2>Review</h2>
-            </div>
-            <span className={styles.stepPill}>{canCreate ? "Ready to create" : "Needs attention"}</span>
-          </div>
-
-          <div className={styles.reviewGrid}>
-            <article>
-              <span>Destination</span>
-              <strong>{destinationSummary}</strong>
-            </article>
-            <article>
-              <span>Campaign</span>
-              <strong>{campaignName || name || "Untitled campaign"}</strong>
-            </article>
-            <article>
-              <span>Print Piece</span>
-              <strong>{printPieceLabel}</strong>
-            </article>
-            <article>
-              <span>Theme</span>
-              <strong>{theme}</strong>
-            </article>
-            <article>
-              <span>Tracking</span>
-              <strong>{usePrintTracking ? "Enabled" : "Disabled"}</strong>
-            </article>
-            <article>
-              <span>Scanability</span>
-              <strong>{scanSafetyLabel}</strong>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <div className={styles.bottomBar}>
-        <button type="button" className={styles.bottomSecondary} onClick={scrollToPreview}>
-          Preview
-        </button>
-        <button type="submit" className={styles.bottomPrimary} disabled={!canCreate || isSaving}>
-          {isSaving ? "Creating..." : "Create QR"}
-        </button>
       </div>
     </form>
   );

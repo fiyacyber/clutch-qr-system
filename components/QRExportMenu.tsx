@@ -28,7 +28,9 @@ export default function QRExportMenu({ slug }: QRExportMenuProps) {
     setError(null);
 
     try {
-      await exportQrCode(slug, format);
+      const wrapper = event.currentTarget.closest(".styled-qr-wrap");
+      const renderedSvg = wrapper?.querySelector("svg") as SVGSVGElement | null;
+      await exportQrCode(slug, format, renderedSvg);
     } catch (exportError) {
       console.error("QR EXPORT ERROR:", exportError);
       setError("Export failed. Please try again.");
@@ -52,6 +54,7 @@ export default function QRExportMenu({ slug }: QRExportMenuProps) {
           </button>
         ))}
       </div>
+      <small>Exports match the rendered design. Test-scan the final file at print size.</small>
       {error ? <p className={styles.error}>{error}</p> : null}
     </div>
   );

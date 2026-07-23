@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, PlusCircle } from "lucide-react";
+import { ArrowLeft, BarChart3, CheckCircle2, QrCode } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { PortalAccountNotActive, PortalCustomerLookupUnavailable } from "@/components/dashboard/PortalAccountState";
 import RetryNotice from "@/components/dashboard/RetryNotice";
-import CurrentPlanBadge from "@/components/plans/CurrentPlanBadge";
 import LockedFeatureCard from "@/components/plans/LockedFeatureCard";
 import { requireCustomer } from "@/lib/auth";
+import { CLUTCH_CODES_PLANS, normalizeClutchCodesPlanCode } from "@/lib/clutch-codes";
 import { runGuardedDashboardTask } from "@/lib/dashboard-guard";
 import { PLAN_DEFINITIONS, getCustomerPlan, getEffectiveQrLimit } from "@/lib/plans";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
@@ -16,6 +16,13 @@ import type { StoredQrItem } from "./stored-qr-library";
 import { loadAccountAccess } from "@/lib/account-access-server";
 import { hasActiveClutchCodesSubscription, loadOrderLinkedQrAccess } from "@/lib/order-linked-access";
 import { resolveOwnedQrLibrary, visibleLibraryScanCount, type OwnedQrLibraryCode } from "@/lib/order-linked-library";
+import pageStyles from "./page.module.css";
+
+const CLUTCH_CODES_DISPLAY_NAMES = {
+  clutch_codes_starter: "Clutch Starter",
+  clutch_codes_growth: "Clutch Growth",
+  clutch_codes_pro: "Clutch Pro",
+} as const;
 
 export default async function StoredQrCodesPage() {
   const { user, customer, customerLookupError } = await requireCustomer();
@@ -81,6 +88,19 @@ export default async function StoredQrCodesPage() {
   const used = qrCodes.length;
   const hasDynamicQr = access.canEditOwnedQr;
   const hasHeatmap = access.canUseCampaignAnalytics;
+  const activeClutchCodesPlanCode = hasActiveClutchCodesSubscription(customer)
+    ? normalizeClutchCodesPlanCode(customer.clutch_codes_plan_code)
+    : null;
+  const activeClutchCodesPlan = activeClutchCodesPlanCode
+    ? CLUTCH_CODES_PLANS[activeClutchCodesPlanCode]
+    : null;
+  const displayedPlanName = activeClutchCodesPlan
+    ? CLUTCH_CODES_DISPLAY_NAMES[activeClutchCodesPlan.code]
+    : plan.name;
+  const displayedPlanPrice = activeClutchCodesPlan?.monthlyPrice || plan.price;
+  const displayedPlanDescription = activeClutchCodesPlan
+    ? `Includes up to ${activeClutchCodesPlan.allowance} active Clutch Codes with editable destinations, customization, exports, and campaign analytics.`
+    : plan.description;
 
   const usageLabel = !hasDynamicQr
     ? "Dynamic QR campaigns are locked"
@@ -89,6 +109,14 @@ export default async function StoredQrCodesPage() {
       : plan.code === "admin"
         ? `${used} / Unlimited QR codes used`
         : `${used} / ${limit} QR codes used`;
+  const usagePercent = plan.code === "admin" || limit <= 0
+    ? 0
+    : Math.min(100, Math.round((used / limit) * 100));
+  const subscriptionStatus = String(
+    activeClutchCodesPlan
+      ? customer.clutch_codes_subscription_status
+      : customer.subscription_status || customer.plan_status || "active"
+  ).replace(/_/g, " ");
 
   const libraryRows: StoredQrItem[] = qrCodes.map((code: OwnedQrLibraryCode) => ({
     id: code.id,
@@ -118,7 +146,7 @@ export default async function StoredQrCodesPage() {
         heatmap: !hasHeatmap,
       }}
     >
-      <main className="container stored-qr-shell">
+      <main className={`container stored-qr-shell ${pageStyles.page}`}>
         {panelIssues.length ? (
           <RetryNotice
             title="Some QR library data is temporarily unavailable"
@@ -132,23 +160,48 @@ export default async function StoredQrCodesPage() {
           title="Marketing Assets"
           subtitle="Manage Clutch Codes, printed campaigns, connected profiles, and their performance."
           actions={(
-            <div className="qr-studio-top-actions">
-              <Link className="btn ghost" href="/portal">Back to Dashboard</Link>
-              {hasHeatmap ? <Link className="btn secondary" href="/portal/analytics"><BarChart3 size={16} />View Analytics</Link> : null}
-              {access.canCreateQr ? <Link className="btn primary" href="/portal/create"><PlusCircle size={16} />Create QR</Link> : null}
+            <div className={pageStyles.headerActions}>
+              <Link className={pageStyles.headerAction} href="/portal">
+                <ArrowLeft size={16} aria-hidden="true" />
+                Back to Dashboard
+              </Link>
+              {hasHeatmap ? (
+                <Link className={`${pageStyles.headerAction} ${pageStyles.headerActionPrimary}`} href="/portal/analytics">
+                  <BarChart3 size={16} aria-hidden="true" />
+                  View Analytics
+                </Link>
+              ) : null}
             </div>
           )}
         />
 
-        <CurrentPlanBadge
-          planCode={plan.code}
-          planName={plan.name}
-          priceLabel={plan.price}
-          description={plan.description}
-          usageLabel={usageLabel}
-          subscriptionStatus={String(customer.subscription_status || customer.plan_status || "active")}
-          trialStatus={String(customer.trial_status || "none")}
-        />
+        <section className={pageStyles.planSummary} aria-label="Current marketing plan">
+          <span className={pageStyles.planIcon} aria-hidden="true">
+            <QrCode size={31} strokeWidth={1.8} />
+          </span>
+          <div className={pageStyles.planContent}>
+            <div className={pageStyles.planTopline}>
+              <span className={pageStyles.planName}>Current plan</span>
+              <span className={pageStyles.statusPill}>{subscriptionStatus}</span>
+            </div>
+            <h2>{displayedPlanName}</h2>
+            <p>{displayedPlanDescription}</p>
+            <div className={pageStyles.planUsageLine}>
+              <CheckCircle2 size={16} aria-hidden="true" />
+              <span>{usageLabel}</span>
+            </div>
+          </div>
+          <div className={pageStyles.planAside}>
+            <span className={pageStyles.planAsideLabel}>Plan price</span>
+            <strong className={pageStyles.planPrice}>{displayedPlanPrice}</strong>
+            <small>{plan.code === "admin" ? "Unlimited account capacity" : `${usagePercent}% of available QR capacity used`}</small>
+            {plan.code !== "admin" ? (
+              <span className={pageStyles.usageTrack} aria-hidden="true">
+                <span style={{ width: `${usagePercent}%` }} />
+              </span>
+            ) : null}
+          </div>
+        </section>
 
         {!hasDynamicQr ? (
           <LockedFeatureCard
