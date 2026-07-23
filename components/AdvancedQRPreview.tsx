@@ -31,6 +31,7 @@ export type AdvancedQRPreviewProps = {
   outerStrokeEnabled?: boolean;
   outerStrokeColor?: string;
   logoUrl?: string | null;
+  logoScale?: number;
 };
 
 type Matrix = {
@@ -175,6 +176,7 @@ export default function AdvancedQRPreview({
   outerStrokeEnabled = false,
   outerStrokeColor = "#384862",
   logoUrl,
+  logoScale = 18,
 }: AdvancedQRPreviewProps) {
   const rawId = useId();
   const safeId = rawId.replace(/[^a-z0-9]/gi, "");
@@ -247,7 +249,8 @@ export default function AdvancedQRPreview({
     />
   ));
 
-  const logoSize = Math.max(5, matrix.size * 0.18);
+  const safeLogoScale = Math.min(24, Math.max(8, Number.isFinite(logoScale) ? logoScale : 18));
+  const logoSize = Math.max(5, matrix.size * (safeLogoScale / 100));
   const logoPosition = (matrix.size - logoSize) / 2;
 
   const coreQr = (
@@ -257,10 +260,15 @@ export default function AdvancedQRPreview({
       <EyeFrame x={matrix.size - 7} y={0} frame={design.eyeFrameShape} center={design.eyeCenterShape} frameColor={design.eyeFrameColor} centerColor={design.eyeCenterColor} backgroundColor={design.backgroundColor} />
       <EyeFrame x={0} y={matrix.size - 7} frame={design.eyeFrameShape} center={design.eyeCenterShape} frameColor={design.eyeFrameColor} centerColor={design.eyeCenterColor} backgroundColor={design.backgroundColor} />
       {logoUrl ? (
-        <g>
-          <rect x={logoPosition - 0.5} y={logoPosition - 0.5} width={logoSize + 1} height={logoSize + 1} rx={1} fill={design.backgroundColor} />
-          <image href={logoUrl} x={logoPosition} y={logoPosition} width={logoSize} height={logoSize} preserveAspectRatio="xMidYMid meet" />
-        </g>
+        <image
+          href={logoUrl}
+          x={logoPosition}
+          y={logoPosition}
+          width={logoSize}
+          height={logoSize}
+          preserveAspectRatio="xMidYMid meet"
+          data-qr-logo="true"
+        />
       ) : null}
     </g>
   );
